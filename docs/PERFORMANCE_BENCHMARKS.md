@@ -411,6 +411,44 @@ workspace (`build_workspace.get_node_payload`, `fetch_edge_page`, `_upsert`).
 API `/health` p95 during ingest stayed under 100 ms on both trees except SQLite
 at 5,000 agents in rounds 2 and 3 (139 to 209 ms on both trees).
 
+#### Bulk snapshot writes and graph statistics, 2026-11-15
+
+PostgreSQL snapshots are now written with `COPY` plus one upsert per table and
+batch, the graph tables are analyzed after a save of 20,000 rows or more, and
+the copy throttle is off by default (behaviour: `docs/RUNTIME_FAIL_MODES.md`,
+Current graph refresh). Three Qualification rounds (`lanes=performance`)
+against `main` at cc851f55c, dispatch order alternating: main 43666517524,
+43669347471, 43671673552; change 43666526481, 43669339602, 43671683679. The
+Perf Scale Evidence workflow budget run on the change, 43666535331, passed.
+Median (range); times in ms:
+
+| Backend | Agents | Tree | Graph p50 | Graph p95 | Findings p95 | Push stored (s) |
+| --- | --- | --- | ---: | ---: | ---: | ---: |
+| PostgreSQL | 1,000 | main | 923 (830–1,088) | 1,206 (1,013–1,434) | 329 (83–394) | 94 (77–115) |
+| PostgreSQL | 1,000 | change | 747 (499–775) | 976 (648–1,054) | 77 (53–113) | 58 (39–64) |
+| PostgreSQL | 5,000 | main | 1,063 (773–1,405) | 2,092 (1,814–2,656) | 472 (416–2,521) | 484 (417–592) |
+| PostgreSQL | 5,000 | change | 901 (606–903) | 1,126 (757–1,325) | 2,291 (2,277–2,417) | 313 (192–344) |
+| SQLite | 1,000 | main | 441 (391–494) | 1,225 (985–1,563) | 36 (33–62) | 37 (35–48) |
+| SQLite | 1,000 | change | 468 (280–475) | 1,468 (743–1,656) | 44 (24–80) | 42 (24–45) |
+| SQLite | 5,000 | main | 480 (403–514) | 602 (486–603) | 2,066 (2,065–2,086) | 202 (190–263) |
+| SQLite | 5,000 | change | 558 (399–581) | 680 (473–830) | 2,431 (2,075–2,435) | 235 (143–246) |
+
+On PostgreSQL the 5,000-agent graph p95 is under 2 s in all three rounds
+(757 to 1,325 ms against 1,814 to 2,656 ms), the 1,000-agent median is under
+1 s, and the 5,000-agent push stores in 313 s median against 484 s, a 35%
+saving (192 s at best). A local profile of the push showed the edge writes
+falling from about 82 s to about 11 s; the node upsert is about the same as
+before (about 58 s), consistent with index maintenance on `graph_nodes` and
+`graph_node_search` rather than the number of statements.
+
+The PostgreSQL 5,000-agent findings p95 regressed from 472 ms to 2,291 ms. The
+graph reads now finish about seven seconds sooner, so the first findings reads
+arrive while the post-push projection build is still running; each such cold
+read spends the 2 s read-your-writes budget and returns with reachability
+unassessed. `main` shows the same 2.5 s value in one round of three. The
+SQLite rows are not touched by these changes; their differences sit within the
+run-to-run ranges except the 5,000-agent findings p95, which is not explained.
+
 ### How to measure the operator targets
 
 Run against the deployment you actually intend to operate:
