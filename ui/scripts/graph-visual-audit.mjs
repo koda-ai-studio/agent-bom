@@ -58,3 +58,57 @@ export function auditRenderedGraph({ edges }) {
   }));
   return { renderedEdges: curves.length, crossings, logos, misalignedHandles };
 }
+
+function straightRuns(points) {
+  const runs = [];
+  for (let index = 1; index < points.length; index++) {
+    const a = points[index - 1], b = points[index];
+    const axis = Math.abs(a.y - b.y) <= 0.5 && Math.abs(a.x - b.x) > 0.5 ? "h" : Math.abs(a.x - b.x) <= 0.5 && Math.abs(a.y - b.y) > 0.5 ? "v" : null;
+    if (!axis) continue;
+    const at = axis === "h" ? (a.y + b.y) / 2 : (a.x + b.x) / 2;
+    const [from, to] = axis === "h" ? [Math.min(a.x, b.x), Math.max(a.x, b.x)] : [Math.min(a.y, b.y), Math.max(a.y, b.y)];
+    const last = runs.at(-1);
+    if (last && last.axis === axis && Math.abs(last.at - at) <= 0.5 && Math.abs(last.to - from) <= 0.5) last.to = Math.max(last.to, to);
+    else runs.push({ axis, at, from, to });
+  }
+  return runs;
+}
+
+/**
+ * Pairs of lines of different relationship types drawn along one straight run
+ * (within `tolerance` screen pixels, over at least `minRun`), where their dashes
+ * would interleave into one ambiguous line. One type may bundle on a shared trunk.
+ */
+export function sharedRelationshipRuns(curves, { tolerance = 3, minRun = 8 } = {}) {
+  const runs = curves.map(curve => straightRuns(curve.points));
+  const shared = [];
+  for (let i = 0; i < curves.length; i++) {
+    for (let j = i + 1; j < curves.length; j++) {
+      if (curves[i].relationship === curves[j].relationship) continue;
+      let length = 0;
+      for (const left of runs[i]) for (const right of runs[j]) {
+        if (left.axis !== right.axis || Math.abs(left.at - right.at) > tolerance) continue;
+        length += Math.max(0, Math.min(left.to, right.to) - Math.max(left.from, right.from));
+      }
+      if (length >= minRun) shared.push({ edges: [curves[i].id, curves[j].id], length: Math.round(length) });
+    }
+  }
+  return shared;
+}
+
+/** Runs inside Playwright's page context: every drawn relationship line, in screen pixels, with its type. */
+export function renderedRelationshipCurves() {
+  return [...document.querySelectorAll(".react-flow__edge")].flatMap(element => {
+    const path = element.querySelector(".react-flow__edge-path");
+    const matrix = path?.getScreenCTM();
+    const relationship = element.querySelector("[data-relationship]")?.getAttribute("data-relationship");
+    if (!path || !matrix || !relationship) return [];
+    const length = path.getTotalLength();
+    const steps = Math.max(2, Math.ceil(length / 2));
+    const points = Array.from({ length: steps + 1 }, (_, i) => {
+      const point = path.getPointAtLength(length * i / steps);
+      return { x: matrix.a * point.x + matrix.c * point.y + matrix.e, y: matrix.b * point.x + matrix.d * point.y + matrix.f };
+    });
+    return [{ id: element.getAttribute("data-id"), relationship, points }];
+  });
+}
