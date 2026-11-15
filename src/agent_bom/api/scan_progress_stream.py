@@ -78,7 +78,7 @@ async def scan_progress_events(job_id: str, tenant_id: str) -> AsyncIterator[dic
                 from agent_bom.security import sanitize_error, sanitize_text
 
                 # The job id is caller-supplied; keep it out of the log line.
-                _logger.warning("Scan stream durable read failed: %s", sanitize_text(sanitize_error(exc, generic=True)))
+                _logger.warning("Scan stream durable read failed: %s: %s", type(exc).__name__, sanitize_text(sanitize_error(exc)))
                 await asyncio.sleep(interval)
                 continue
             if snapshot is None:

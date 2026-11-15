@@ -67,7 +67,7 @@ def persist_side_scan_graph(*, tenant_id: str, execution_id: str, records: list[
         _jobs_put(job.job_id, job, compact_terminal=True)
         _persist_graph_snapshot(job, report_json)
     except Exception as exc:  # noqa: BLE001 — the scan result stays readable; the graph gap is reported
-        logger.error("side-scan graph persistence failed: %s", sanitize_text(sanitize_error(exc, generic=True)))
+        logger.error("side-scan graph persistence failed: %s: %s", type(exc).__name__, sanitize_text(sanitize_error(exc)))
         return {"status": "failed", "scan_id": scan_id}
     persisted = (job.result or {}).get("graph_persistence") if isinstance(job.result, dict) else None
     status = persisted.get("status", "persisted") if isinstance(persisted, dict) else "persisted"

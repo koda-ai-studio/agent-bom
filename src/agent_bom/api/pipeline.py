@@ -409,7 +409,7 @@ def _persist_graph_best_effort(ctx: ScanContext, report_json: dict[str, Any]) ->
         ctx.pipeline.update_step("output", "Persisting unified graph...")
         _persist_graph_snapshot(job, report_json, lock=lock)
     except Exception as graph_exc:  # noqa: BLE001
-        _logger.warning("Unified graph persistence failed: %s", sanitize_text(sanitize_error(graph_exc, generic=True)))
+        _logger.warning("Unified graph persistence failed: %s: %s", type(graph_exc).__name__, sanitize_text(sanitize_error(graph_exc)))
         _record_graph_persistence(job, status="failed", lock=lock)
         ctx.progress("Graph persistence failed; scan evidence remains available")
 

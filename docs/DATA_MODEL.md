@@ -840,7 +840,8 @@ time. Source IDs remain as provenance in `source_ids`.
 
 Graph node IDs such as `agent:cfg-<hash>:claude-desktop` and
 `pkg:npm:express@4.18.0` stay readable and stable for API/UI consumers; an agent
-id carries its endpoint or config scope so same-named agents never merge, and a
+id carries its endpoint or config scope so same-named agents never merge (a
+host-scoped project agent carries both, since one host holds many projects), and a
 configured MCP server id carries its declaring agent. `canonical_id` is an
 additional join key for scan history, deduplication, and saved investigations.
 The demo-estate showcase derives its agent, server, tool, credential and provider

@@ -122,6 +122,20 @@ describe("control drawer evidence", () => {
     expect(params.get("selected_path")).toBe(`${path.source}::${path.target}::${path.hops.join("->")}`);
   });
 
+  it("decodes an unlabeled path endpoint id in the row and its tooltip", async () => {
+    const encoded = { ...path, source: "agent:Team%205", hops: ["agent:Team%205", ...path.hops.slice(1)] };
+    getGraphAttackPaths.mockResolvedValue({ attack_paths: [encoded], pagination: { total: 1, offset: 0, limit: 5, has_more: false }, nodes: [] });
+    open();
+    await screen.findByRole("list", { name: "Findings mapped to GOVERN-6.1" });
+    fireEvent.click(screen.getByRole("button", { name: /Attack paths/ }));
+    const list = await screen.findByRole("list", { name: "Attack paths supporting GOVERN-6.1" });
+    const row = within(list).getAllByRole("listitem")[0]!;
+    expect(row).toHaveTextContent("agent:Team 5");
+    for (const element of row.querySelectorAll("[title], [aria-label]")) {
+      expect(`${element.getAttribute("title") ?? ""} ${element.getAttribute("aria-label") ?? ""}`).not.toMatch(/%[0-9A-F]{2}/i);
+    }
+  });
+
   it("says plainly when the API returns no mapped findings", async () => {
     listFindings.mockResolvedValue({ findings: [], total: 0, count: 0, has_more: false });
     getGraphAttackPaths.mockResolvedValue({ attack_paths: [], pagination: { total: 0, offset: 0, limit: 5, has_more: false }, nodes: [] });

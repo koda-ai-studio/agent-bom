@@ -9654,6 +9654,8 @@ export interface components {
             ecosystems: {
                 [key: string]: number;
             };
+            /** Mcp Server Configurations */
+            mcp_server_configurations?: number | null;
             /** Mcp Servers */
             mcp_servers: number;
             /** Not Configured */

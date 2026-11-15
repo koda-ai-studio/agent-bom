@@ -454,7 +454,9 @@ async def receive_push(request: Request, body: PushPayload) -> dict | Response:
                             tenant_id=tenant_id, scan_id=graph_scan_id, expected_generation=graph_write_generation
                         )
                     except Exception as rollback_exc:  # noqa: BLE001
-                        _logger.error("Graph rollback failed: %s", sanitize_text(sanitize_error(rollback_exc, generic=True)))
+                        _logger.error(
+                            "Graph rollback failed (%s): %s", type(rollback_exc).__name__, sanitize_text(sanitize_error(rollback_exc))
+                        )
                 if endpoint_persisted and body.source_id:
                     try:
                         if previous_endpoint is None:
@@ -462,12 +464,16 @@ async def receive_push(request: Request, body: PushPayload) -> dict | Response:
                         else:
                             fleet_store.put_endpoint(previous_endpoint)
                     except Exception as rollback_exc:  # noqa: BLE001
-                        _logger.error("Endpoint rollback failed: %s", sanitize_text(sanitize_error(rollback_exc, generic=True)))
+                        _logger.error(
+                            "Endpoint rollback failed (%s): %s", type(rollback_exc).__name__, sanitize_text(sanitize_error(rollback_exc))
+                        )
                 if job_persisted:
                     try:
                         job_store.delete(job.job_id, tenant_id=tenant_id)
                     except Exception as rollback_exc:  # noqa: BLE001
-                        _logger.error("Job rollback failed: %s", sanitize_text(sanitize_error(rollback_exc, generic=True)))
+                        _logger.error(
+                            "Job rollback failed (%s): %s", type(rollback_exc).__name__, sanitize_text(sanitize_error(rollback_exc))
+                        )
                 raise
         return job_result
 
@@ -511,7 +517,7 @@ async def receive_push(request: Request, body: PushPayload) -> dict | Response:
                 request_hash=request_hash,
                 owner_token=idempotency_owner,
             )
-        _logger.error("Pushed-result commit failed: %s", sanitize_text(sanitize_error(exc, generic=True)))
+        _logger.error("Pushed-result commit failed (%s): %s", type(exc).__name__, sanitize_text(sanitize_error(exc)))
         raise HTTPException(status_code=503, detail="Pushed result could not be committed") from exc
     finally:
         if idempotency_heartbeat is not None:
@@ -590,7 +596,7 @@ async def _admit_async_push(
         )
         if isinstance(exc, HTTPException):
             raise
-        _logger.error("Pushed-result admission failed: %s", sanitize_text(sanitize_error(exc, generic=True)))
+        _logger.error("Pushed-result admission failed (%s): %s", type(exc).__name__, sanitize_text(sanitize_error(exc)))
         raise HTTPException(status_code=503, detail="Pushed result could not be committed") from exc
     return accepted_response(accepted_push_receipt(job.job_id, source_id=body.source_id or ""))
 

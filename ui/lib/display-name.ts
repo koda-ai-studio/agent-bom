@@ -11,6 +11,7 @@ const TOKEN_CASING: Record<string, string> = {
   ai: "AI",
   api: "API",
   aws: "AWS",
+  ci: "CI",
   cli: "CLI",
   db: "DB",
   gcp: "GCP",
@@ -26,8 +27,12 @@ const TOKEN_CASING: Record<string, string> = {
   pii: "PII",
   postgres: "PostgreSQL",
   rag: "RAG",
+  rbac: "RBAC",
   s3: "S3",
+  sdk: "SDK",
   sql: "SQL",
+  sre: "SRE",
+  sso: "SSO",
   ui: "UI",
 };
 

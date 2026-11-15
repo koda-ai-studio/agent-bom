@@ -131,6 +131,6 @@ def finish_local_scan_dispatch(job: ScanJob) -> None:
                 return
         except Exception as exc:  # broad-except: the job stays durably pending for the next dispatch or reconciliation
             release_local_dispatch(rerun)
-            _logger.warning("Re-dispatch of job=%s failed: %s", rerun.job_id, sanitize_text(sanitize_error(exc, generic=True)))
+            _logger.warning("Re-dispatch of job=%s failed: %s: %s", rerun.job_id, type(exc).__name__, sanitize_text(sanitize_error(exc)))
             return
         rerun = finish_local_dispatch(rerun)

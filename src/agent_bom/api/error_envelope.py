@@ -199,19 +199,21 @@ def install_error_envelope(application: object) -> None:
                 media_type="application/scim+json",
                 headers=response_headers,
             )
+        correlation_id = _correlation_id(request)
         return _build_error_envelope(
             status_code=exc.status_code,
             detail=exc.detail,
-            correlation_id=_correlation_id(request),
-            headers=getattr(exc, "headers", None),
+            correlation_id=correlation_id,
+            headers=_storage_retry_headers(request, exc, correlation_id),
         )
 
     async def starlette_http_exception_handler(request: StarletteRequest, exc: StarletteHTTPException) -> JSONResponse:
+        correlation_id = _correlation_id(request)
         return _build_error_envelope(
             status_code=exc.status_code,
             detail=exc.detail,
-            correlation_id=_correlation_id(request),
-            headers=getattr(exc, "headers", None),
+            correlation_id=correlation_id,
+            headers=_storage_retry_headers(request, exc, correlation_id),
         )
 
     async def validation_exception_handler(request: StarletteRequest, exc: RequestValidationError) -> JSONResponse:
@@ -292,6 +294,39 @@ def with_middleware_error_envelope(
         return _with_middleware_error_envelope(request, response)
 
     return wrapped
+
+
+def _storage_outage_cause(exc: BaseException) -> Exception | None:
+    """The storage outage a route converted into its own error, if any."""
+    seen: set[int] = set()
+    cause = exc.__cause__ or exc.__context__
+    while cause is not None and id(cause) not in seen:
+        if isinstance(cause, Exception) and _is_backend_unavailable(cause):
+            return cause
+        seen.add(id(cause))
+        cause = cause.__cause__ or cause.__context__
+    return None
+
+
+def _storage_retry_headers(request: StarletteRequest, exc: Exception, correlation_id: str) -> dict[str, str] | None:
+    """A route's 503 raised from a storage outage gets the same Retry-After as an unhandled one."""
+    headers = dict(getattr(exc, "headers", None) or {})
+    if getattr(exc, "status_code", None) != 503 or "Retry-After" in headers:
+        return headers or None
+    cause = _storage_outage_cause(exc)
+    if cause is None:
+        return headers or None
+    path = getattr(request, "url", None)
+    _logger.warning(
+        "storage unavailable on %s %s (%s): %s; correlation_id=%s",
+        request.method,
+        path.path if path is not None else "",
+        type(cause).__name__,
+        sanitize_error(cause),
+        correlation_id,
+    )
+    headers["Retry-After"] = str(STORAGE_RETRY_AFTER_SECONDS)
+    return headers
 
 
 def _is_backend_unavailable(exc: BaseException) -> bool:

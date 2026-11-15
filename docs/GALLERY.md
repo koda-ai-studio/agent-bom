@@ -136,11 +136,12 @@ prove reachability or effective access.
 These three views use explicitly labeled synthetic UI fixtures. Each is captured
 through its actual **View & layers** preset; none is live-cloud evidence.
 
-**Start with one component.** The selected package stays beside its MCP server
-and vulnerability. The inspector links to that package's findings in the same
-snapshot. This capture uses labeled synthetic UI fixtures.
+**Start with one agent.** developer-copilot opens beside the MCP servers it
+uses: github-enterprise with the tool, credential and package it exposes, and
+filesystem with its tool and the other agent that uses it. Show more connections
+widens the map. This capture uses labeled synthetic UI fixtures.
 
-<picture><source media="(prefers-color-scheme: light)" srcset="images/context-map-light-live.png"><img src="images/context-map-live.png" alt="Selected Next.js package with its MCP server, vulnerability and scoped findings action" width="1440"></picture>
+<picture><source media="(prefers-color-scheme: light)" srcset="images/context-map-light-live.png"><img src="images/context-map-live.png" alt="developer-copilot with its two MCP servers, the tool, credential and package github-enterprise exposes, and filesystem's tool" width="1440"></picture>
 
 **Open the relationship evidence.** Select an arrow to inspect its direction,
 snapshot, first/last seen timestamps and source receipt. In the reference lab

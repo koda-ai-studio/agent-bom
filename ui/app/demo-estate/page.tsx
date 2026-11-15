@@ -345,7 +345,7 @@ function EnterpriseDemoEstatePage() {
             </span>
           ))}
           <span className="text-[11px] text-[color:var(--text-tertiary)]">
-            = {posture.total} findings
+            = {posture.total.toLocaleString()} findings
           </span>
         </div>
 

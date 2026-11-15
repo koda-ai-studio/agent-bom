@@ -528,25 +528,25 @@ function RemediationPage() {
   }[] = [
     {
       key: "all",
-      label: `All (${items.length})`,
+      label: `All (${items.length.toLocaleString()})`,
       color: "text-ink-secondary",
     },
     {
       key: "critical",
-      label: `Critical (${counts.critical})`,
+      label: `Critical (${counts.critical.toLocaleString()})`,
       color: "text-red-400",
     },
     {
       key: "high",
-      label: `High (${counts.high})`,
+      label: `High (${counts.high.toLocaleString()})`,
       color: "text-orange-400",
     },
     {
       key: "medium",
-      label: `Medium (${counts.medium})`,
+      label: `Medium (${counts.medium.toLocaleString()})`,
       color: "text-yellow-400",
     },
-    { key: "low", label: `Low (${counts.low})`, color: "text-blue-400" },
+    { key: "low", label: `Low (${counts.low.toLocaleString()})`, color: "text-blue-400" },
   ];
 
   const FRAMEWORK_FILTERS: {
@@ -584,7 +584,7 @@ function RemediationPage() {
             {workflowIntent ? "Finding remediation and verification" : "Package remediation plan"}
           </h1>
           <p className="text-ink-secondary text-sm mt-1">
-            {items.length} packages prioritized by reach, severity, and available fixes{windowLabel ? ` · ${windowLabel}` : ""}
+            {items.length.toLocaleString()} package upgrade{items.length === 1 ? "" : "s"} prioritized by reach, severity, and available fixes{windowLabel ? ` · ${windowLabel}` : ""}
           </p>
           {mappings.packages > 0 && (
             <p className="text-ink-tertiary text-xs mt-1">
@@ -714,7 +714,7 @@ function RemediationPage() {
                 below is a slice, not the whole list (mirrors Findings). */}
             <p className="flex flex-wrap items-center gap-x-1.5 text-xs text-ink-tertiary">
               <span className="font-semibold text-ink-secondary">
-                {displayed.length} matching package{displayed.length === 1 ? "" : "s"}
+                {displayed.length.toLocaleString()} matching package upgrade{displayed.length === 1 ? "" : "s"}
               </span>
               <span aria-hidden="true">·</span>
               <span>{paged.length} on this page</span>

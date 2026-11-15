@@ -140,3 +140,125 @@ def test_postgres_connection_failure_is_a_503(monkeypatch: pytest.MonkeyPatch, p
     assert response.headers["Retry-After"] == "5"
     assert SECRET not in response.text
     assert "10.0.0.5" not in response.text
+
+
+def _locked(*_args, **_kwargs):
+    raise sqlite3.OperationalError(f"database is locked at /srv/agent-bom/jobs.db password={SECRET}")
+
+
+def _push(client: TestClient, *, key: str | None, prefer: str | None = None):
+    headers = proxy_headers(role="admin", tenant=f"t-{uuid.uuid4().hex[:8]}")
+    if key:
+        headers["Idempotency-Key"] = key
+    if prefer:
+        headers["Prefer"] = prefer
+    return client.post("/v1/results/push", json={"source_id": f"src-{uuid.uuid4().hex[:6]}", "findings": []}, headers=headers)
+
+
+def _logged(caplog: pytest.LogCaptureFixture) -> str:
+    return "\n".join(record.getMessage() for record in caplog.records)
+
+
+def _assert_storage_logged(caplog: pytest.LogCaptureFixture) -> None:
+    text = _logged(caplog)
+    assert "OperationalError" in text, text
+    assert "database is locked" in text, text
+    assert SECRET not in text
+    assert "/srv/agent-bom" not in text
+    assert "An internal error occurred" not in text
+
+
+@pytest.mark.parametrize("key", [None, "commit-locked-1"])
+def test_push_commit_hitting_a_locked_store_is_a_retryable_envelope(
+    key: str | None, proxied, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    from agent_bom.api.routes import observability
+
+    monkeypatch.setattr(stores, "_idempotency_store", None)
+    monkeypatch.setattr(observability, "_persist_graph_snapshot", _locked)
+    client = TestClient(app, raise_server_exceptions=False)
+    with caplog.at_level("WARNING", logger="agent_bom"):
+        response = _push(client, key=key)
+
+    _assert_envelope(response, status=503, code="SERVICE_UNAVAILABLE")
+    assert response.headers["Retry-After"] == "5"
+    assert SECRET not in response.text
+    _assert_storage_logged(caplog)
+
+
+def test_async_push_admission_hitting_a_locked_store_is_a_retryable_envelope(
+    proxied, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    from agent_bom.api.routes import observability
+
+    monkeypatch.setattr(stores, "_idempotency_store", None)
+    monkeypatch.setattr(observability, "admitted_push_result", _locked)
+    client = TestClient(app, raise_server_exceptions=False)
+    with caplog.at_level("WARNING", logger="agent_bom"):
+        response = _push(client, key="async-locked-1", prefer="respond-async")
+
+    _assert_envelope(response, status=503, code="SERVICE_UNAVAILABLE")
+    assert response.headers["Retry-After"] == "5"
+    _assert_storage_logged(caplog)
+
+
+def test_push_commit_failure_that_is_not_storage_logs_its_class_and_sanitized_cause(
+    proxied, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    from agent_bom.api.routes import observability
+
+    def broken(*_args, **_kwargs):
+        raise ValueError(f"graph shape rejected at /srv/agent-bom/graph.db password={SECRET}")
+
+    monkeypatch.setattr(stores, "_idempotency_store", None)
+    monkeypatch.setattr(observability, "_persist_graph_snapshot", broken)
+    client = TestClient(app, raise_server_exceptions=False)
+    with caplog.at_level("WARNING", logger="agent_bom"):
+        response = _push(client, key=None)
+
+    _assert_envelope(response, status=503, code="SERVICE_UNAVAILABLE")
+    assert SECRET not in response.text
+    text = _logged(caplog)
+    assert "ValueError" in text and "graph shape rejected" in text, text
+    assert SECRET not in text and "/srv/agent-bom" not in text
+
+
+def test_a_route_503_raised_from_a_storage_outage_carries_retry_after() -> None:
+    from fastapi import FastAPI, HTTPException
+
+    from agent_bom.api.error_envelope import install_error_envelope
+
+    probe = FastAPI()
+    install_error_envelope(probe)
+
+    @probe.get("/locked")
+    def locked() -> None:
+        try:
+            _locked()
+        except sqlite3.OperationalError as exc:
+            raise HTTPException(status_code=503, detail="Activity storage unavailable") from exc
+
+    @probe.get("/not-configured")
+    def not_configured() -> None:
+        raise HTTPException(status_code=503, detail="Feature is not configured")
+
+    client = TestClient(probe, raise_server_exceptions=False)
+    response = client.get("/locked")
+    _assert_envelope(response, status=503, code="SERVICE_UNAVAILABLE")
+    assert response.headers["Retry-After"] == "5"
+    assert response.json()["error"]["message"] == "Activity storage unavailable"
+    assert "Retry-After" not in client.get("/not-configured").headers
+
+
+def test_api_failure_logs_name_the_failure_class() -> None:
+    """A log line reading only "An internal error occurred" cannot be triaged."""
+    from pathlib import Path
+
+    root = Path(stores.__file__).parent  # the agent_bom.api package directory
+    offenders = [
+        f"{path.relative_to(root)}:{number}"
+        for path in sorted(root.rglob("*.py"))
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1)
+        if "logger." in line and "generic=True" in line
+    ]
+    assert offenders == []

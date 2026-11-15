@@ -1,7 +1,7 @@
 import { agentDisplayName } from "@/lib/display-name";
 import { entityNames } from "@/lib/entity-names";
 import { findingAssetKind } from "@/lib/finding-exposure";
-import { decodeNodeIdPart, nodeIdTail as lastSegment } from "@/lib/node-id-tail";
+import { decodeNodeIdPart, nodeIdTail as lastSegment, readableNodeId } from "@/lib/node-id-tail";
 
 export interface ReachingEntity {
   kind: "agent" | "workload" | "MCP server" | "cloud resource" | "asset";
@@ -45,7 +45,7 @@ export function findingHolder(vuln: HolderInput): FindingHolder {
   if (reacher) {
     const entity = reachingEntity(reacher);
     const kind = entity.kind.charAt(0).toUpperCase() + entity.kind.slice(1);
-    return { label: `${kind} ${entity.name}`, kind: "reacher", title: entity.id };
+    return { label: `${kind} ${entity.name}`, kind: "reacher", title: readableNodeId(entity.id) };
   }
   const assetKind = findingAssetKind(vuln);
   return { label: `${assetKind} · no agent linked`, kind: "none", title: `No agent, MCP server or reaching workload is recorded for this ${assetKind.toLowerCase()}.` };

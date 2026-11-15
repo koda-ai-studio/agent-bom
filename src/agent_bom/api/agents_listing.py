@@ -16,6 +16,7 @@ from typing import Annotated, Any, Literal
 
 from fastapi import HTTPException, Query
 
+from agent_bom.canonical_ids import mcp_server_graph_id_for
 from agent_bom.constants import is_credential_key
 from agent_bom.domain.mcp_model import server_dict_counts_as_mcp_server
 from agent_bom.security import sanitize_error
@@ -179,10 +180,16 @@ def _sort_key(sort: AgentSortKey) -> Any:
     return lambda agent: agent_metrics(agent)[sort]
 
 
+def _is_remote(server: dict[str, Any]) -> bool:
+    return any(t in str(server.get("transport") or "").lower() for t in ("sse", "http"))
+
+
 def population_summary(agents: list[dict[str, Any]]) -> dict[str, Any]:
     """Totals for the KPI strip over every agent in scope, independent of the page."""
     servers = [server for agent in agents for server in _servers(agent)]
-    mcp_servers = [server for agent in agents for server in mcp_servers_of(agent)]
+    configured_servers = [(server, agent) for agent in agents for server in mcp_servers_of(agent)]
+    # One server node per graph identity: agents that configure one remote endpoint share it.
+    unique_servers = {mcp_server_graph_id_for(server, agent): server for server, agent in configured_servers}
     credentials: set[str] = set()
     for server in servers:
         credentials.update(_env_credential_keys(server))
@@ -193,8 +200,9 @@ def population_summary(agents: list[dict[str, Any]]) -> dict[str, Any]:
         "agents": len(agents),
         "configured": configured,
         "not_configured": len(agents) - configured,
-        "mcp_servers": len(mcp_servers),
-        "remote_servers": sum(1 for server in servers if any(t in str(server.get("transport") or "").lower() for t in ("sse", "http"))),
+        "mcp_servers": len(unique_servers),
+        "mcp_server_configurations": len(configured_servers),
+        "remote_servers": sum(1 for server in unique_servers.values() if _is_remote(server)),
         "packages": sum(len(_packages(server)) for server in servers),
         "ecosystems": dict(sorted(ecosystems.items())),
         "unique_credentials": len(credentials),

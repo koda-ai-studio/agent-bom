@@ -7,6 +7,7 @@ import { PaginationBar } from "@/components/pagination-bar";
 import { JobPipelinePanel } from "@/components/job-pipeline-panel";
 import { ScanPipeline } from "@/components/scan-pipeline";
 import { api, formatDate, type JobListItem, type JobStatus, type ScanSchedule, type SourceRecord } from "@/lib/api";
+import { jobEvidenceSummary } from "@/lib/job-evidence-summary";
 import { complianceHref, findingsHref, securityGraphHref } from "@/lib/page-links";
 import {
   CheckCircle2,
@@ -75,26 +76,6 @@ function sourceForJob(
   const sourceId = sourceIdForJob(job);
   if (sourceId) return sourceById.get(sourceId);
   return sourceByLastJobId.get(job.job_id);
-}
-
-function evidenceSummary(job: JobListItem): string {
-  const summary = job.summary;
-  if (!summary) return "Evidence metrics unavailable";
-  const metric = (value: number | undefined) => value == null ? "Unavailable" : String(value);
-  const packages = `${metric(summary.total_packages)} packages`;
-  if (typeof summary.total_findings === "number") {
-    const critical = summary.critical_unified_findings;
-    const criticalPart =
-      typeof critical === "number" && critical <= summary.total_findings ? ` · ${critical} critical` : "";
-    return `${summary.total_findings} findings${criticalPart} · ${packages}`;
-  }
-  // Legacy summaries: blast-radius criticals are only shown when they cannot
-  // read as more criticals than the CVE total they sit beside.
-  const vulns = summary.total_vulnerabilities;
-  const critical = summary.critical_findings;
-  const criticalPart =
-    typeof critical === "number" && typeof vulns === "number" && critical <= vulns ? ` · ${critical} critical` : "";
-  return `${metric(vulns)} CVEs${criticalPart} · ${packages}`;
 }
 
 function scanOutcome(job: JobListItem): "complete" | "partial" | "failed" | undefined {
@@ -464,7 +445,7 @@ function JobsPageContent() {
                                 Partial evidence · {job.warning_count ?? 0} warning{job.warning_count === 1 ? "" : "s"}
                               </p>
                             ) : null}
-                            <p className="text-[11px] text-[var(--text-tertiary)]">{evidenceSummary(job)}</p>
+                            <p className="text-[11px] text-[var(--text-tertiary)]">{jobEvidenceSummary(job)}</p>
                             <div className="flex flex-wrap gap-1.5">
                               {[
                                 { href: findingsHref({ scan: job.job_id }), label: "Findings" },

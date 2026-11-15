@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import copy
 
-from agent_bom.canonical_ids import agent_graph_id_for
+from agent_bom.canonical_ids import agent_graph_id_for, previous_agent_graph_ids
 from agent_bom.cli.agents.scan_pipeline.report_source_ids import with_endpoint_source_ids
 from agent_bom.push import sanitize_results
 
@@ -31,7 +31,11 @@ def test_saved_report_agent_takes_the_direct_push_graph_id(monkeypatch) -> None:
     assert report == before
     agent = saved["agents"][0]
     assert agent["source_id"] == "host-a"
-    assert agent_graph_id_for(agent) == agent_graph_id_for(pushed["agents"][0]) == "agent:host-a:project%3AprojA"
+    graph_id = agent_graph_id_for(agent)
+    assert graph_id == agent_graph_id_for(pushed["agents"][0])
+    # The host scope plus this agent's config receipt, so another same-named agent on the host keeps its own node.
+    assert graph_id.startswith("agent:host-a.cfg-") and graph_id.endswith(":project%3AprojA")
+    assert "agent:host-a:project%3AprojA" in previous_agent_graph_ids(agent)
     assert agent["canonical_id"] == _AGENT["canonical_id"]
     # The id the saved report used to give this agent stays resolvable.
     assert agent_graph_id_for(_AGENT).startswith("agent:cfg-")

@@ -513,7 +513,7 @@ export function BlastRadiusRadial({ data }: { data: BlastRadius[] }) {
           <div key={d.name} className="flex items-center gap-2 text-[10px]">
             <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: d.fill }} />
             <span className="font-mono text-ink-secondary truncate flex-1">{d.name}</span>
-            <span className="font-mono text-ink-tertiary">{d.vulnerabilityCount} findings</span>
+            <span className="font-mono text-ink-tertiary">{d.vulnerabilityCount.toLocaleString()} findings</span>
             <span className="font-mono text-ink-tertiary">{d.score.toFixed(0)}</span>
           </div>
         ))}

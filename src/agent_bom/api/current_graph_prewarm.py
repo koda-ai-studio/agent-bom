@@ -128,7 +128,7 @@ def _run() -> None:
     except Exception as exc:  # broad-except: a failed warm-up must release readiness, not hold it for the full bound
         _LAST_RUN.clear()
         _LAST_RUN.update(status="incomplete", reason="prewarm_failed")
-        logger.warning("Current graph prewarm failed: %s", sanitize_text(sanitize_error(exc, generic=True)))
+        logger.warning("Current graph prewarm failed: %s: %s", type(exc).__name__, sanitize_text(sanitize_error(exc)))
         return
     _LAST_RUN.clear()
     _LAST_RUN.update(summary)

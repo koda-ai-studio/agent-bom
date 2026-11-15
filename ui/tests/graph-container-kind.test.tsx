@@ -42,4 +42,11 @@ describe("container kind", () => {
     const inspectorIcon = container.querySelector('[data-testid="graph-entity-drawer"] svg');
     expect(inspectorIcon?.innerHTML).toBe(nodeIcon?.innerHTML);
   });
+
+  it("keeps a two-word occurrence chip on one line", () => {
+    const Renderer = lineageNodeTypes.containerNode;
+    const data = { label: "reference-evidence-api", nodeType: "container" as const, entityType: "container", occurrenceRole: "Image inventory", attributes: {} };
+    render(<ReactFlowProvider><Renderer data={data} /></ReactFlowProvider>);
+    expect(screen.getByTestId("graph-occurrence-role")).toHaveClass("whitespace-nowrap");
+  });
 });

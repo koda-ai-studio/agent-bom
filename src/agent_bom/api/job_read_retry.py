@@ -20,6 +20,6 @@ def read_job_riding_out_blips(store: Any, job: ScanJob) -> ScanJob | None:
         try:
             return store.get(job.job_id, tenant_id=job.tenant_id)
         except Exception as exc:  # broad-except: a store error of any kind says nothing about the report being read
-            _logger.warning("Could not read job=%s: %s", job.job_id, sanitize_text(sanitize_error(exc, generic=True)))
+            _logger.warning("Could not read job=%s: %s: %s", job.job_id, type(exc).__name__, sanitize_text(sanitize_error(exc)))
             time.sleep(delay)
     return store.get(job.job_id, tenant_id=job.tenant_id)
