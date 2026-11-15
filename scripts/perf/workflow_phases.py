@@ -37,11 +37,11 @@ from scripts.perf.workflow_profiles import (
     PROFILES,
     WORKFLOW_PUSH_SOURCE_ID,
     WorkflowProfile,
-    cli_push_body,
     expected_findings,
     inventory_from_estate,
     vulnerable_versions,
 )
+from scripts.perf.workflow_scan_child import client_artifacts
 
 
 def _footprint(workdir: Path) -> Any:
@@ -165,7 +165,8 @@ def _scan_estate(profile: WorkflowProfile, workdir: Path) -> tuple[bytes, set[tu
     receipt = scan_in_child(inventory_path, report_path, vulnerable_versions(report))
     if receipt["blocked_connections"]:
         raise RuntimeError(f"scan attempted live network: {receipt['blocked_connections']}")
-    return cli_push_body(report_path.read_bytes()), expected_findings(report, inventory), receipt["upstream"]
+    push_path, _rows_path = client_artifacts(report_path)
+    return push_path.read_bytes(), expected_findings(report, inventory), receipt["upstream"]
 
 
 async def _cancel_victim(profile: WorkflowProfile, workdir: Path) -> dict[str, Any]:
@@ -184,7 +185,7 @@ async def _cancel_victim(profile: WorkflowProfile, workdir: Path) -> dict[str, A
 
 async def _recover(workdir: Path) -> dict[str, Any]:
     integrity = None if os.environ.get("AGENT_BOM_POSTGRES_URL") else _sqlite_integrity(workdir)
-    body = cli_push_body((workdir / "cancel-report.json").read_bytes())
+    body = client_artifacts(workdir / "cancel-report.json")[0].read_bytes()
     expected = json.loads((workdir / "cancel-expected.json").read_text(encoding="utf-8"))
     async with _client() as client:
         http = _Http(client)

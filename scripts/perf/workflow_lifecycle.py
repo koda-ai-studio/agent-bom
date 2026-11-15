@@ -26,7 +26,8 @@ from scripts.perf.workflow_equivalence import (
     projection_digest,
     projection_mismatches,
 )
-from scripts.perf.workflow_profiles import cli_push_body, expected_findings, vulnerable_versions
+from scripts.perf.workflow_profiles import expected_findings, vulnerable_versions
+from scripts.perf.workflow_scan_child import client_artifacts
 
 _OPEN = {"open", "reopened"}
 # How long the current graph may keep a removed package after the update push is stored.
@@ -123,16 +124,19 @@ async def graph_refresh(http: Any, name: str, version: str, deadline: float = GR
         await asyncio.sleep(0.25)
 
 
-def _scan_mutated(report: dict[str, Any], inventory: dict[str, Any], path: Path, scan: Any) -> tuple[Any, ...]:
-    """Rewrite the inventory file in place, as an operator updating it would, and rescan it in its own process."""
+def _scan_mutated(report: dict[str, Any], inventory: dict[str, Any], path: Path, scan: Any, *, source_id: str) -> tuple[Any, ...]:
+    """Rewrite the inventory file in place, as an operator updating it would, and rescan it in its own process.
+
+    Returns the push body the CLI sends and the scanned rows, both written by the scan child.
+    """
     mutated, change = mutate_inventory(report, inventory)
     path.write_text(json.dumps(mutated), encoding="utf-8")
     output = path.with_name("report-mutated.json")
-    receipt = scan(path, output, vulnerable_versions(report))
+    receipt = scan(path, output, vulnerable_versions(report), push_source_id=source_id)
     if receipt["blocked_connections"]:
         raise RuntimeError(f"mutated scan attempted live network: {receipt['blocked_connections']}")
-    body = output.read_bytes()
-    return body, json.loads(body).get("blast_radius") or [], expected_findings(report, mutated), change
+    push_path, rows_path = client_artifacts(output)
+    return push_path.read_bytes(), json.loads(rows_path.read_text(encoding="utf-8")), expected_findings(report, mutated), change
 
 
 async def update_delete(
@@ -147,10 +151,12 @@ async def update_delete(
     """Push the mutated estate and return every equivalence check on the stored and served state."""
     from scripts.perf.workflow_budget import _push, scan_in_child
 
-    body, scanned, expected, change = await asyncio.to_thread(_scan_mutated, report, inventory, inventory_path, scan_in_child)
+    body, scanned, expected, change = await asyncio.to_thread(
+        _scan_mutated, report, inventory, inventory_path, scan_in_child, source_id=source_id
+    )
     deleted, widened = change["deleted"], change["widened"]
     graph_before = await package_nodes(http, deleted[1], deleted[2])
-    pushed = await _push(http, cli_push_body(body, source_id=source_id), 600)
+    pushed = await _push(http, body, 600)
     stored = await stored_rows(http, str(pushed["job_id"]))
     after = await findings_view(http)
     resolved = await resolved_rows(http, deleted[0])

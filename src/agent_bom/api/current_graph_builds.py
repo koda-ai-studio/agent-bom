@@ -98,7 +98,10 @@ class CurrentBuildQueue:
                 del self.pending[key]
             if len(self.pending) >= self.capacity:
                 return None
-            return self._start(key, prepared)
+            try:
+                return self._start(key, prepared)
+            except RuntimeError:  # executor shut down at exit: the next process's read or prewarm rebuilds
+                return None
 
     def _start(self, key: tuple[Any, str], prepared: tuple[Any, ...] | None) -> Future[str]:
         """Start one build; callers hold ``lock``."""

@@ -348,17 +348,34 @@ jobs:
           import psycopg
 
           with psycopg.connect(os.environ["AGENT_BOM_POSTGRES_ADMIN_URL"], autocommit=True) as connection:
-              connection.execute("ALTER DATABASE agent_bom SET init.app_password = 'benchmark_app'")
-              connection.execute("ALTER DATABASE agent_bom SET init.maintenance_password = 'benchmark_maintenance'")
+              connection.execute("CREATE DATABASE agent_bom_replicas")
+              for database in ("agent_bom", "agent_bom_replicas"):
+                  connection.execute(f"ALTER DATABASE {database} SET init.app_password = 'benchmark_app'")
+                  connection.execute(f"ALTER DATABASE {database} SET init.maintenance_password = 'benchmark_maintenance'")
           PY
           uv run alembic -c deploy/supabase/postgres/alembic.ini upgrade head
+          ALEMBIC_DATABASE_URL=postgresql+psycopg://agent_bom:agent_bom@localhost:5432/agent_bom_replicas \
+            uv run alembic -c deploy/supabase/postgres/alembic.ini upgrade head
 
-      - name: Measure the Postgres workflow profiles
+      - name: Measure the single-API Postgres profile
         run: >-
           uv run python scripts/run_workflow_resource_benchmark.py
-          --profile small-self-hosted-postgres --profile multi-replica-local
+          --profile small-self-hosted-postgres
           --postgres-url "$AGENT_BOM_POSTGRES_URL"
           --output workflow-resource-budget-postgres.json
+
+      # Its own database: after the single-API profile, the shared tenant also held that
+      # profile's estate, so each replica's current graph carried three estates, not two.
+      - name: Measure two API replicas on a fresh database
+        if: ${{ !cancelled() }}
+        env:
+          REPLICAS_POSTGRES_URL: postgresql://agent_bom_app:benchmark_app@localhost:5432/agent_bom_replicas
+          AGENT_BOM_POSTGRES_MAINTENANCE_URL: postgresql://agent_bom_maintenance:benchmark_maintenance@localhost:5432/agent_bom_replicas
+        run: >-
+          uv run python scripts/run_workflow_resource_benchmark.py
+          --profile multi-replica-local
+          --postgres-url "$REPLICAS_POSTGRES_URL"
+          --output workflow-resource-budget-replicas.json
 
       - name: Record hot-read query plans
         if: always()
@@ -375,6 +392,7 @@ jobs:
           name: workflow-resource-budget-postgres
           path: |
             workflow-resource-budget-postgres.json
+            workflow-resource-budget-replicas.json
             workflow-query-plans.json
             ${{ runner.temp }}/workflow-query-plans/hot-reads/*.json
           if-no-files-found: ignore

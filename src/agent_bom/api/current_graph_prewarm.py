@@ -27,6 +27,7 @@ from collections.abc import Callable
 from typing import Any, cast
 
 from agent_bom.api import stores
+from agent_bom.api.background_exit import register_exit_wait
 from agent_bom.api.models import JobStatus
 from agent_bom.api.tenant_worker import run_tenant_bound
 from agent_bom.core.settings import SettingError, env_bool, env_raw
@@ -158,7 +159,13 @@ def start_current_graph_prewarm() -> threading.Thread | None:
         _LAST_RUN.clear()
         _LAST_RUN.update(status="incomplete", reason="thread_unavailable")
         return None
+    register_exit_wait("current_graph_prewarm", lambda seconds: _joined(thread, seconds))
     return thread
+
+
+def _joined(thread: threading.Thread, seconds: float) -> bool:
+    thread.join(seconds)
+    return not thread.is_alive()
 
 
 def reset_current_graph_prewarm() -> None:

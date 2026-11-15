@@ -32,6 +32,7 @@ from typing import Any
 
 from starlette.requests import Request
 
+from agent_bom.api.background_exit import register_exit_wait, stopping
 from agent_bom.api.finding_suppression import suppression_revision
 from agent_bom.api.tenant_worker import run_tenant_bound
 from agent_bom.config import _bool
@@ -143,8 +144,9 @@ def schedule_posture_precompute(tenant_id: str | None) -> None:
     computation after ``POSTURE_PRECOMPUTE_DEBOUNCE_SECONDS`` of quiet.
     """
     global _PRECOMPUTE_WORKER
-    if not tenant_id or not posture_precompute_enabled():
+    if not tenant_id or not posture_precompute_enabled() or stopping():
         return
+    register_exit_wait("posture_counts_precompute", wait_for_running_posture_precompute)
     with _PRECOMPUTE_COND:
         _PRECOMPUTE_PENDING[tenant_id] = time.monotonic() + POSTURE_PRECOMPUTE_DEBOUNCE_SECONDS
         if _PRECOMPUTE_WORKER is None or not _PRECOMPUTE_WORKER.is_alive():
@@ -167,13 +169,13 @@ def _next_due_tenant() -> str:
         while True:
             now = time.monotonic()
             due = [tenant for tenant, at in _PRECOMPUTE_PENDING.items() if at <= now and tenant not in _PRECOMPUTE_RUNNING]
-            if due:
+            if due and not stopping():
                 tenant_id = min(due, key=_PRECOMPUTE_PENDING.__getitem__)
                 del _PRECOMPUTE_PENDING[tenant_id]
                 _PRECOMPUTE_RUNNING.add(tenant_id)
                 return tenant_id
             waiting = [at for tenant, at in _PRECOMPUTE_PENDING.items() if tenant not in _PRECOMPUTE_RUNNING]
-            _PRECOMPUTE_COND.wait(max(0.01, min(waiting) - now) if waiting else None)
+            _PRECOMPUTE_COND.wait(max(0.01, min(waiting) - now) if waiting and not stopping() else None)
 
 
 def _precompute_loop() -> None:

@@ -19,6 +19,7 @@ import threading
 from collections import OrderedDict
 from typing import Any, Callable
 
+from agent_bom.api.background_exit import register_exit_wait, stopping
 from agent_bom.api.finding_reachability import project_persisted_graph_reachability
 from agent_bom.api.graph_commit_hooks import register_commit_hook
 from agent_bom.api.graph_warmup_slot import warmup_slot
@@ -54,6 +55,8 @@ def _enabled() -> bool:
 def _next() -> tuple[str, Callable[[], Any]] | None:
     global _WORKER
     with _LOCK:
+        if stopping():
+            _PENDING.clear()
         if not _PENDING:
             _WORKER = None
             _IDLE.set()
@@ -74,8 +77,9 @@ def _drain() -> None:
 def schedule_reachability_prewarm(store_factory: Callable[[], Any], *, tenant_id: str) -> bool:
     """Queue a warm-up of ``tenant_id``'s latest snapshot; False when disabled."""
     global _WORKER
-    if not _enabled():
+    if not _enabled() or stopping():
         return False
+    register_exit_wait("finding_reachability_prewarm", wait_idle)
     with _LOCK:
         _PENDING[tenant_id] = store_factory
         _PENDING.move_to_end(tenant_id)

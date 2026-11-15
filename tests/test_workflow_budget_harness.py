@@ -272,9 +272,24 @@ def test_nightly_postgres_workflow_job_migrates_like_postgres_scale_evidence_and
         assert required in migrate
     assert "--extra postgres" in steps["Install agent-bom (from source)"]["run"]
 
-    measure = steps["Measure the Postgres workflow profiles"]["run"]
-    assert "--profile small-self-hosted-postgres" in measure and "--profile multi-replica-local" in measure
+    measure = steps["Measure the single-API Postgres profile"]["run"]
+    assert "--profile small-self-hosted-postgres" in measure and "multi-replica-local" not in measure
     assert '--postgres-url "$AGENT_BOM_POSTGRES_URL"' in measure
+
+    # The replica profile measures two estates in one tenant. Run after the single-API profile in the
+    # same database, its current graph also carried that profile's estate: 1.8-2.1 GiB per replica
+    # instead of 1.1-1.3 GiB (2026-11-14). It gets a database of its own, migrated the same way.
+    assert "CREATE DATABASE agent_bom_replicas" in migrate
+    assert migrate.count("alembic -c deploy/supabase/postgres/alembic.ini upgrade head") == 2
+    replicas_step = steps["Measure two API replicas on a fresh database"]
+    replicas = replicas_step["run"]
+    assert "--profile multi-replica-local" in replicas and "small-self-hosted-postgres" not in replicas
+    assert '--postgres-url "$REPLICAS_POSTGRES_URL"' in replicas
+    replica_env = replicas_step["env"]
+    assert replica_env["REPLICAS_POSTGRES_URL"].endswith("/agent_bom_replicas")
+    assert replica_env["REPLICAS_POSTGRES_URL"].startswith("postgresql://agent_bom_app:")
+    assert replica_env["AGENT_BOM_POSTGRES_MAINTENANCE_URL"].endswith("/agent_bom_replicas")
+    assert replicas_step["if"] == "${{ !cancelled() }}"
 
     plans = steps["Record hot-read query plans"]["run"]
     assert "scripts/run_graph_postgres_explain.py" in plans and "--run" in plans and "--hot-reads" in plans
@@ -282,6 +297,7 @@ def test_nightly_postgres_workflow_job_migrates_like_postgres_scale_evidence_and
     upload = next(step for step in job["steps"] if step.get("uses", "").startswith("actions/upload-artifact@"))
     assert upload["if"] == "always()"
     assert "workflow-resource-budget-postgres.json" in upload["with"]["path"]
+    assert "workflow-resource-budget-replicas.json" in upload["with"]["path"]
 
 
 def test_update_delete_fails_when_the_current_graph_refresh_misses_its_budget() -> None:
@@ -301,3 +317,44 @@ def test_update_delete_fails_when_the_current_graph_refresh_misses_its_budget() 
     assert update_delete_failures(passing) == []
     stale = {**passing, "graph_package_nodes_after": 1, "graph_refresh_seconds": 30.2}
     assert update_delete_failures(stale) == ["graph package nodes 1 -> 1 after 30.2 s (current graph refresh budget 30 s)"]
+
+
+def test_scan_child_builds_the_cli_push_body_and_finding_rows_beside_the_report(tmp_path) -> None:
+    """The CLI's own work (parse the report, sanitize, add the push scope) runs in the scan child, as on a collector host."""
+    from scripts.perf.workflow_profiles import cli_push_body
+    from scripts.perf.workflow_scan_child import client_artifacts, write_client_artifacts
+
+    output = tmp_path / "report.json"
+    report = {"agents": [{"name": "a", "config_path": "/secret/path"}], "blast_radius": [{"vulnerability_id": "CVE-1"}]}
+    output.write_text(json.dumps(report), encoding="utf-8")
+
+    write_client_artifacts(output, source_id="host-7")
+    push_path, rows_path = client_artifacts(output)
+
+    assert push_path.read_bytes() == cli_push_body(output.read_bytes(), source_id="host-7")
+    assert json.loads(rows_path.read_text(encoding="utf-8")) == report["blast_radius"]
+
+
+def test_update_delete_rescan_hands_the_measured_process_bytes_and_rows_not_the_parsed_report(tmp_path) -> None:
+    """The API process the run measures must not parse the 50-70 MB report the CLI produced (about 480 MiB of heap)."""
+    from scripts.perf.workflow_lifecycle import _scan_mutated
+    from scripts.perf.workflow_scan_child import client_artifacts
+
+    report, _summary = generate_estate(agents=12, seed=2145, vulnerable_package_rate=0.3)
+    inventory = inventory_from_estate(report)
+    seen: dict[str, str] = {}
+
+    def fake_scan(path, output, vulnerable, *, push_source_id):  # noqa: ANN001, ANN202
+        seen["source_id"] = push_source_id
+        output.write_text("not json: the measured process must not parse the report", encoding="utf-8")
+        push_path, rows_path = client_artifacts(output)
+        push_path.write_bytes(b'{"pushed": "body"}')
+        rows_path.write_text(json.dumps([{"vulnerability_id": "CVE-1"}]), encoding="utf-8")
+        return {"blocked_connections": []}
+
+    body, scanned, expected, change = _scan_mutated(report, inventory, tmp_path / "inventory.json", fake_scan, source_id="host-7")
+
+    assert body == b'{"pushed": "body"}'
+    assert scanned == [{"vulnerability_id": "CVE-1"}]
+    assert seen["source_id"] == "host-7"
+    assert change["deleted"] and expected
