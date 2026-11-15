@@ -28,6 +28,7 @@ from urllib.parse import urlencode
 
 from starlette.requests import Request
 
+from agent_bom.api.background_exit import register_exit_wait, stopping
 from agent_bom.api.graph_warmup_slot import warmup_slot
 from agent_bom.api.routes.brief import get_executive_brief
 from agent_bom.api.routes.compliance import get_compliance_summary, get_posture_counts
@@ -81,6 +82,8 @@ async def warm_exec_reads(tenant_id: str) -> dict[str, bool]:
     """Run every exec read once for ``tenant_id``; returns which ones completed."""
     outcome: dict[str, bool] = {}
     for endpoint, path, params in EXEC_READS:
+        if stopping():
+            break
         try:
             await endpoint(_warm_request(tenant_id, path, params), **params)
             outcome[endpoint.__name__] = True
@@ -94,6 +97,8 @@ def _drain() -> None:
     global _WORKER
     while True:
         with _LOCK:
+            if stopping():
+                _PENDING.clear()
             if not _PENDING:
                 _WORKER = None
                 return
@@ -107,9 +112,10 @@ def _drain() -> None:
 
 def schedule_exec_prewarm(tenant_id: str) -> bool:
     """Queue a warm-up for ``tenant_id``; returns whether one is now pending or running."""
-    if not exec_prewarm_enabled() or not tenant_id:
+    if not exec_prewarm_enabled() or not tenant_id or stopping():
         return False
     global _WORKER
+    register_exit_wait("exec_read_prewarm", wait_idle)
     with _LOCK:
         _PENDING.add(tenant_id)
         if _WORKER is None or not _WORKER.is_alive():

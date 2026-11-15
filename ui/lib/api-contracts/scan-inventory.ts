@@ -398,6 +398,8 @@ export interface GraphCollectionCoverage {
   reason_codes?: string[] | undefined;
   refresh_status?: "building" | undefined;
   freshness?: "previous_generation" | undefined;
+  /** When the previous generation's evidence was recorded (ISO 8601); present with freshness. */
+  as_of?: string | undefined;
 }
 
 export interface UnifiedGraphResponse extends Omit<

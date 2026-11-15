@@ -585,13 +585,81 @@ expiry and rotation are still read from the committed key row on every request.
 
 ## Current graph refresh
 
-A current-estate request retains the previous complete generation while waiting
-for a background refresh. A concurrent promotion cannot delete that generation
-until the request's read scope ends. Responses using retained evidence declare
-`freshness: previous_generation`; they do not claim the latest source evidence.
-A cold request with no complete generation still returns a bounded, retryable
-503 while building. Explicit stale generation continuations still fail with 409,
-and generation retention does not cross tenant boundaries.
+This is the canonical description of what a current-estate read serves while a
+new generation builds.
+
+A current-estate read (no `scan_id`) whose tenant already has a promoted
+generation does not wait for the rebuild a push started: it queues the rebuild
+and answers at once from the last promoted generation. That generation is the
+one this worker promoted or, for a restarted or sibling worker with no
+in-process record, the one named in the tenant's shared promotion stamp, used
+only when the stamp was written by the same projection format and release. A
+concurrent promotion cannot delete that generation until the request's read
+scope ends, and every store call in one request reads the same generation, so a
+response never mixes generations. Responses using it declare
+`collection_coverage.refresh_status: building`,
+`collection_coverage.freshness: previous_generation` and
+`collection_coverage.as_of` (when that generation's evidence was recorded);
+they never claim the latest source evidence. This holds for `/v1/graph` (every
+`view`), `/v1/graph/rollup`, `/v1/graph/search` and
+`/v1/graph/incident-edges`. The dashboard shows "Updating graph · showing data
+from <time>" on the graph.
+
+`/v1/findings` never waits on a graph build. Its rows come from the finding
+store and are always current: a pushed finding is listed at once. Only graph
+reachability depends on the graph, and while a build is under way, whether a
+newer generation is replacing a previous one or it is the tenant's first build,
+each row on the page carries `graph_reachable: null` and
+`graph_reachability_not_assessed_reason: "graph_refreshing"` (shown as "Not
+assessed (refreshing)"), and the envelope carries `graph_freshness` with
+`refresh_status: building`. When a previous generation is being replaced it
+also carries `freshness: previous_generation` and its `as_of`; during a first
+build there is no previous graph, so it carries neither. Reachability is filled
+in on the first read after the build is promoted.
+
+Graph reads on a cold start (no promoted generation for the tenant) wait for
+read-your-writes, up to `AGENT_BOM_CURRENT_GRAPH_BUILD_WAIT_MS` (default
+2,000 ms), and past that return a retryable 503 `current_estate_building`.
+Reads that name a `scan_id` are exact reads of that recorded scan and are never
+answered from a projection. Explicit stale generation continuations still fail
+with 409, and neither generations nor promotion stamps cross tenant boundaries.
+
+A PostgreSQL snapshot save streams its nodes, node search rows and edges with
+`COPY` into transaction-scoped `TEMP` staging tables, then writes each table
+with one `INSERT ... SELECT DISTINCT ON (key) ... ON CONFLICT`, in the save's
+single transaction and as the app role under row-level security. It writes the
+same rows as the previous one-row-at-a-time path: duplicates inside one write
+resolve last-wins, edges carry `first_seen`/`valid_from` forward from the
+superseded scan, and a failure at any point, including mid-`COPY`, rolls back
+the whole save and leaves the prior snapshot in place. A role refused `TEMP`
+tables falls back to the row path inside a savepoint, and
+`AGENT_BOM_PG_GRAPH_BULK_WRITE=0` selects the row path for this release.
+
+After a PostgreSQL snapshot save of 20,000 rows or more, the API refreshes the
+planner statistics of `graph_nodes` and `graph_edges` through
+`public.abom_analyze_graph_tables()` (migration `20261114_01`; privilege
+boundary in `docs/THREAT_MODEL.md`), so the reads right after a large push do
+not plan without statistics until autovacuum reaches the new rows. The call is
+skipped when another is running or both tables were analyzed in the last
+minute, and a failure (for example a database not yet migrated) is logged and
+leaves the committed save in place.
+
+On PostgreSQL a one-source projection is copied as rows by a child process.
+With `AGENT_BOM_PG_COPY_THROTTLE=1` (off by default), between 2,000-row batches
+the child yields PostgreSQL to the graph and findings requests its API process
+has in flight. It is off by default because, measured on a 4-vCPU runner at
+5,000 agents, it lowered the graph median after a push but nearly doubled the
+copy (22.8 s to 41.7 s), and the first findings read then waited the full 2 s
+cold-start budget (`docs/PERFORMANCE_BENCHMARKS.md`). When on, it waits while any is in flight, at
+most 0.5 s per batch and 30 s per copy, so constant reads lengthen the build
+by at most 30 s and never stop it. With no reads in flight there is no pause.
+The API publishes its in-flight count in a private 8-byte file under the
+projection cache directory; reads in other workers or replicas are not seen,
+and a missing or unreadable count never pauses the copy. A request stops
+counting while it waits on a current-graph build, so a cold read never makes
+the copy yield to its own waiter. The yield changes when rows are read, never
+which rows are written. The API logs each copy's time and the share spent
+yielding at info level.
 
 After a push the API also warms the roll-up views, the reachability index, the
 executive reads and the posture counts. These warm-ups load the estate into

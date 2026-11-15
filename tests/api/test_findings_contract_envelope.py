@@ -49,9 +49,10 @@ def _client(tenant: str = "tenant-alpha", role: str = "admin") -> TestClient:
 def _assert_canonical_envelope(body: dict) -> None:
     # ``total_approximate``, the default-read-window echo ``window`` (#4009) and
     # ``scope_completeness`` (only under a scope filter), and the projection
-    # ``include`` echo (only on the scan findings list) are optional extras;
-    # every other key is fixed.
+    # ``include`` echo (only on the scan findings list) and ``graph_freshness``
+    # (only while a current graph builds) are optional extras; every other key is fixed.
     keys = set(body) - {
+        "graph_freshness",
         "total_approximate",
         "window",
         "facets",

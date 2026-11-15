@@ -37,9 +37,10 @@ the seeded graph.
 
 Two further cases admit an asynchronous push at each size while probing health,
 graph and findings. They require a durable stored receipt, idempotent replay,
-generation refresh and a foreign-tenant denial. A refresh waits at most 50 ms
-when a prior complete graph exists, reports `previous_generation` while the
-worker finishes, and leaves graph reachability unassessed during that interval.
+generation refresh and a foreign-tenant denial. A refresh does not wait when a
+prior complete graph exists: it reports `previous_generation` with `as_of`
+while the worker finishes, and leaves graph reachability unassessed during that
+interval (see `docs/RUNTIME_FAIL_MODES.md`, Current graph refresh).
 The cold-start build allowance remains two seconds; explicit snapshots remain
 exact reads. These are request budgets, not ingest-completion deadlines.
 

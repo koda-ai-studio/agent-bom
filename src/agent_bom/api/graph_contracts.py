@@ -65,6 +65,10 @@ class IncidentEdgePageResponse(BaseModel):
     edges: list[dict[str, Any]]
     next_cursor: str | None
     completeness: IncidentEdgePageCompleteness
+    collection_coverage: dict[str, Any] | None = Field(
+        default=None,
+        description="Current-estate reads only; freshness=previous_generation with as_of while a newer generation is prepared.",
+    )
 
 
 class ScopedGraphCompleteness(BaseModel):

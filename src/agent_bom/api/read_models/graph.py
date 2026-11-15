@@ -485,6 +485,7 @@ class GraphSearchFilters(ReadModel):
 
 
 class GraphSearchResponse(ReadResponse):
+    collection_coverage: Row | None = None
     snapshot_generation: str | None
     query: str
     filters: GraphSearchFilters

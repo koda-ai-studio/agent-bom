@@ -48,11 +48,11 @@ from scripts.perf.workflow_profiles import (
     WORKFLOW_PUSH_SOURCE_ID,
     MockUpstream,
     WorkflowProfile,
-    cli_push_body,
     expected_findings,
     inventory_from_estate,
     vulnerable_versions,
 )
+from scripts.perf.workflow_scan_child import client_artifacts
 
 MIB = 1024 * 1024
 TENANT = "default"
@@ -240,12 +240,27 @@ _ROOT = Path(__file__).resolve().parents[2]
 
 
 def scan_in_child(
-    inventory_path: Path, output: Path, vulnerable: dict[tuple[str, str], str], *, fail_first_batches: int = 0
+    inventory_path: Path,
+    output: Path,
+    vulnerable: dict[tuple[str, str], str],
+    *,
+    fail_first_batches: int = 0,
+    push_source_id: str = WORKFLOW_PUSH_SOURCE_ID,
 ) -> dict[str, Any]:
-    """Run the CLI scan in its own process (see ``workflow_scan_child``); return its receipt and rusage."""
+    """Run the CLI scan in its own process (see ``workflow_scan_child``); return its receipt and rusage.
+
+    The child also writes the CLI push body and the finding rows
+    (``workflow_scan_child.client_artifacts``), so this process never parses the report.
+    """
     spec = output.with_name(f"{output.name}.spec.json")
     triples = [[name, version, advisory] for (name, version), advisory in sorted(vulnerable.items())]
-    request = {"inventory": str(inventory_path), "output": str(output), "vulnerable": triples, "fail_first_batches": fail_first_batches}
+    request = {
+        "inventory": str(inventory_path),
+        "output": str(output),
+        "vulnerable": triples,
+        "fail_first_batches": fail_first_batches,
+        "push_source_id": push_source_id,
+    }
     spec.write_text(json.dumps(request), encoding="utf-8")
     env = {**os.environ, "PYTHONPATH": os.pathsep.join([str(_ROOT / "src"), str(_ROOT)])}
     process = subprocess.Popen([sys.executable, str(_SCAN_CHILD), str(spec)], env=env)
@@ -414,13 +429,19 @@ async def run_workflow(
             # The CLI runs on a collector host, not in the API process this run measures:
             # its CPU and peak RSS are the child's own (``scan_process``).
             child = await asyncio.to_thread(
-                scan_in_child, inventory_path, report_path, vulnerable_versions(report), fail_first_batches=fail_first_batches
+                scan_in_child,
+                inventory_path,
+                report_path,
+                vulnerable_versions(report),
+                fail_first_batches=fail_first_batches,
+                push_source_id=source_id,
             )
             guard.blocked.extend(child["blocked_connections"])
             guard.callers.extend(child["blocked_callers"])
-            # The harness is the client in this process: keep only the rows it compares, not
-            # the whole parsed report (120 MiB at 200 agents), so RSS stays the API's.
-            scanned_rows = json.loads(report_path.read_text(encoding="utf-8")).get("blast_radius") or []
+            # The harness is the client in this process: the scan child parsed the report and
+            # built the push body, so this process holds only the rows it compares and the bytes it sends.
+            push_path, rows_path = client_artifacts(report_path)
+            scanned_rows = json.loads(rows_path.read_text(encoding="utf-8"))
             scanned = _finding_keys(scanned_rows)
             info.update(
                 exit_code=child["exit_code"],
@@ -431,7 +452,7 @@ async def run_workflow(
                 cpu_seconds=child["process"]["cpu_seconds"],
             )
 
-        body = cli_push_body(report_path.read_bytes(), source_id=source_id)
+        body = push_path.read_bytes()
         storage_before = footprint()
         async with httpx.AsyncClient(
             transport=httpx.ASGITransport(app=app), base_url="http://workflow", timeout=ingest_deadline_seconds

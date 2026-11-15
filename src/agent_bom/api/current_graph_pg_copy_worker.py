@@ -20,6 +20,7 @@ from types import TracebackType
 from agent_bom.api.current_graph_pg_copy import copy_postgres_rows
 from agent_bom.api.current_graph_pg_copy_child import EXIT_COPIED, EXIT_DECLINED, EXIT_FAILED, EXIT_UNREACHABLE, REQUEST_FIELDS
 from agent_bom.api.postgres_common import _get_pool, set_current_tenant
+from agent_bom.api.read_gauge import CopyThrottle
 
 PARENT_POLL_SECONDS = 1.0
 
@@ -71,7 +72,11 @@ def main() -> int:
     request = json.loads(sys.stdin.buffer.read())
     _watch_parent(int(request["parent_pid"]))
     set_current_tenant(str(request["tenant"]))
-    copied = copy_postgres_rows(_get_pool(), str(request["cache_path"]), **{name: str(request[name]) for name in REQUEST_FIELDS})
+    throttle = CopyThrottle(str(request.get("read_gauge") or "") or None)
+    fields = {name: str(request[name]) for name in REQUEST_FIELDS}
+    copied = copy_postgres_rows(_get_pool(), str(request["cache_path"]), throttle=throttle, **fields)
+    sys.stdout.write(json.dumps({"paused_seconds": round(throttle.paused_seconds, 3)}) + "\n")
+    sys.stdout.flush()
     return EXIT_COPIED if copied else EXIT_DECLINED
 
 

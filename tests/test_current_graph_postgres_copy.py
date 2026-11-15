@@ -308,3 +308,36 @@ def test_a_child_that_dies_mid_copy_promotes_nothing_and_the_build_rebuilds(
     identity = store._cache[TENANT][2]
     assert identity == identity_before
     assert _dump(store, identity)["graph_nodes"]
+
+
+def test_a_throttled_copy_writes_exactly_the_unthrottled_projection(
+    tmp_path,
+    monkeypatch,
+    caplog,
+    migrated_fresh_database,  # noqa: F811
+) -> None:
+    """Yielding to reads changes when the child reads rows, never which rows it writes."""
+    import logging
+
+    from agent_bom.api import read_gauge
+
+    jobs = _seed(tmp_path, 60)
+    monkeypatch.setenv("AGENT_BOM_PG_COPY_THROTTLE", "1")
+    monkeypatch.setenv("AGENT_BOM_STATE_DIR", str(tmp_path / "gauge-state"))
+    read_gauge.reset_for_tests()
+    calls = _spy(monkeypatch)
+    caplog.set_level(logging.INFO, logger="agent_bom.api.current_graph_pg_copy_child")
+    idle_store, idle_identity = _build(jobs, tmp_path / "idle", monkeypatch)
+    idle_log = caplog.text
+    caplog.clear()
+    read_gauge.enter()  # A graph read stays in flight for the whole second copy.
+    try:
+        busy_store, busy_identity = _build(jobs, tmp_path / "busy", monkeypatch)
+    finally:
+        read_gauge.leave()
+        read_gauge.reset_for_tests()
+    assert calls == [True, True]
+    assert "0.0 s of it yielding" in idle_log
+    assert "0.0 s of it yielding" not in caplog.text and "s of it yielding" in caplog.text
+    assert idle_identity == busy_identity
+    assert _dump(idle_store, idle_identity) == _dump(busy_store, busy_identity)

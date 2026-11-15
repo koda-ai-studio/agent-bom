@@ -541,6 +541,14 @@ export interface UnifiedFinding {
   workload_runtime_evidence?: WorkloadRuntimeEvidence | undefined;
 }
 
+export interface GraphFreshness {
+  refresh_status: "building";
+  /** Present while a newer graph replaces an existing one; absent during a tenant's first build. */
+  freshness?: "previous_generation" | undefined;
+  /** When the previous graph's evidence was recorded (ISO 8601). */
+  as_of?: string | undefined;
+}
+
 /**
  * Canonical finding-list envelope (#3666). Every finding-list surface
  * (`/v1/findings`, `/v1/compliance/hub/findings`, `/v1/governance/findings`)
@@ -563,6 +571,8 @@ export interface FindingListEnvelope<T> {
   next_cursor: string;
   has_more: boolean;
   warnings: string[];
+  /** Present only while a newer graph builds: reachability on this page is unassessed. */
+  graph_freshness?: GraphFreshness | undefined;
   grouping?: {
     status: "complete" | "partial";
     scanned_occurrences: number;

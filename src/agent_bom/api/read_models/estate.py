@@ -133,7 +133,23 @@ class FindingRow(ReadModel):
     vex_suppressed: bool | None = None
 
 
+class GraphFreshness(ReadModel):
+    """A graph is building, so reachability on this page is unassessed (``graph_refreshing`` on each row).
+
+    During a tenant's first build only ``refresh_status`` is set. While a newer
+    generation replaces an existing one, ``freshness`` and ``as_of`` name the
+    previous complete graph.
+    """
+
+    refresh_status: Literal["building"]
+    freshness: Literal["previous_generation"] | None = None
+    as_of: str | None = Field(default=None, description="When the evidence behind the previous graph was recorded (ISO 8601).")
+
+
 class FindingsResponse(ReadResponse):
+    graph_freshness: GraphFreshness | None = Field(
+        default=None, description="Present only while a newer graph builds; reachability on this page is then unassessed."
+    )
     facets: dict[str, Any] | None = None
     lane_counts_approximate: bool | None = None
     schema_version: str

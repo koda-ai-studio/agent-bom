@@ -17537,6 +17537,17 @@
             "title": "Findings",
             "type": "array"
           },
+          "graph_freshness": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GraphFreshness"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Present only while a newer graph builds; reachability on this page is then unassessed."
+          },
           "has_more": {
             "title": "Has More",
             "type": "boolean"
@@ -25681,6 +25692,46 @@
         "title": "GraphExposurePathsResponse",
         "type": "object"
       },
+      "GraphFreshness": {
+        "additionalProperties": true,
+        "description": "A graph is building, so reachability on this page is unassessed (``graph_refreshing`` on each row).\n\nDuring a tenant's first build only ``refresh_status`` is set. While a newer\ngeneration replaces an existing one, ``freshness`` and ``as_of`` name the\nprevious complete graph.",
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the evidence behind the previous graph was recorded (ISO 8601).",
+            "title": "As Of"
+          },
+          "freshness": {
+            "anyOf": [
+              {
+                "const": "previous_generation",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Freshness"
+          },
+          "refresh_status": {
+            "const": "building",
+            "title": "Refresh Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "refresh_status"
+        ],
+        "title": "GraphFreshness",
+        "type": "object"
+      },
       "GraphGovernanceResponse": {
         "additionalProperties": true,
         "properties": {
@@ -28393,6 +28444,18 @@
       "GraphSearchResponse": {
         "additionalProperties": true,
         "properties": {
+          "collection_coverage": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collection Coverage"
+          },
           "completeness": {
             "$ref": "#/components/schemas/GraphCompleteness"
           },
@@ -29688,6 +29751,19 @@
       "IncidentEdgePageResponse": {
         "description": "Recorded relationship page, not a permission or collection-coverage verdict.",
         "properties": {
+          "collection_coverage": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Current-estate reads only; freshness=previous_generation with as_of while a newer generation is prepared.",
+            "title": "Collection Coverage"
+          },
           "completeness": {
             "$ref": "#/components/schemas/IncidentEdgePageCompleteness"
           },

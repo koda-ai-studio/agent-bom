@@ -1771,6 +1771,50 @@ BEGIN
 END
 $tenant_binding_roles$;
 
+-- Graph planner statistics after a large save (migration 20261114_01): the
+-- DML-only app role may analyze graph_nodes and graph_edges through this one
+-- function and nothing else.
+CREATE OR REPLACE FUNCTION public.abom_analyze_graph_tables()
+RETURNS INTEGER
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path = pg_catalog, pg_temp
+AS $analyze$
+DECLARE
+  v_analyzed INTEGER := 0;
+  v_recent TIMESTAMPTZ;
+BEGIN
+  -- One caller at a time; a concurrent call returns at once instead of queueing.
+  IF NOT pg_try_advisory_xact_lock(hashtext('agent_bom.analyze_graph_tables')) THEN
+    RETURN 0;
+  END IF;
+  SELECT greatest(last_analyze, last_autoanalyze) INTO v_recent
+    FROM pg_stat_user_tables WHERE relid = 'public.graph_nodes'::regclass;
+  IF v_recent IS NULL OR v_recent < clock_timestamp() - interval '60 seconds' THEN
+    ANALYZE public.graph_nodes;
+    v_analyzed := v_analyzed + 1;
+  END IF;
+  SELECT greatest(last_analyze, last_autoanalyze) INTO v_recent
+    FROM pg_stat_user_tables WHERE relid = 'public.graph_edges'::regclass;
+  IF v_recent IS NULL OR v_recent < clock_timestamp() - interval '60 seconds' THEN
+    ANALYZE public.graph_edges;
+    v_analyzed := v_analyzed + 1;
+  END IF;
+  RETURN v_analyzed;
+END
+$analyze$;
+
+REVOKE ALL ON FUNCTION public.abom_analyze_graph_tables() FROM PUBLIC;
+
+DO $analyze_roles$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'agent_bom_app') THEN
+    GRANT EXECUTE ON FUNCTION public.abom_analyze_graph_tables() TO agent_bom_app;
+  END IF;
+END
+$analyze_roles$;
+
 -- ══════════════════════════════════════════════════════════════════════════════
 -- TENANT ISOLATION: strip RLS-bypassing attributes from the app/admin role (#3665)
 -- ══════════════════════════════════════════════════════════════════════════════
