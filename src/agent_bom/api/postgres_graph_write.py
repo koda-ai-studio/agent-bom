@@ -363,10 +363,12 @@ def _write_nodes(conn: Any, nodes: Iterable[Any], *, scan: str, tenant: str, bat
 
     def _flush_nodes() -> None:
         if bulk:
-            # Both staging COPYs share one ordinal sequence; each row's search mirror follows it.
+            # One upsert per batch keeps each statement inside the statement timeout; batches apply in
+            # order, so a duplicate in a later batch still wins through ON CONFLICT, as on the row path.
             if node_batch:
                 bulk_write.copy_stage(conn, "abom_stage_nodes", node_batch, start=ordinal[0])
                 ordinal[0] = bulk_write.copy_stage(conn, "abom_stage_node_search", search_batch, start=ordinal[0])
+                bulk_write.flush_nodes(conn)
                 node_batch.clear()
                 search_batch.clear()
             return
@@ -388,8 +390,6 @@ def _write_nodes(conn: Any, nodes: Iterable[Any], *, scan: str, tenant: str, bat
         if len(node_batch) >= batch_size:
             _flush_nodes()
     _flush_nodes()
-    if bulk:
-        bulk_write.flush_nodes(conn)
     return node_count, severity_counts, type_counts
 
 
@@ -397,10 +397,10 @@ def write_edges(conn: Any, rows: Iterable[Sequence[Any]], *, scope_predicate: st
     """Write edge rows: staged and upserted once when the node write opened the bulk stages, else one row at a time."""
     if bulk_write.staged(conn):
         ordinal = 0
+        upsert = _edge_upsert_sql(scope_predicate, f"({bulk_write.latest_edges_sql()}) AS incoming")
         for batch in _batched_rows(rows, batch_size):
             ordinal = bulk_write.copy_stage(conn, "abom_stage_edges", batch, start=ordinal)
-        staged = f"({bulk_write.latest_edges_sql()}) AS incoming"
-        bulk_write.flush_edges(conn, select_sql=_edge_upsert_sql(scope_predicate, staged), previous_scan=previous_scan)
+            bulk_write.flush_edges(conn, select_sql=upsert, previous_scan=previous_scan)
         return
     _execute_many_batched(conn, _edge_upsert_sql(scope_predicate), rows, batch_size=batch_size)
 

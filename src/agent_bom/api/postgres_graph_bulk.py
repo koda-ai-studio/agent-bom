@@ -2,13 +2,16 @@
 
 The row-at-a-time path sent one ``INSERT ... ON CONFLICT`` per node, search
 row and edge; at 5,000 agents that was about half of a push. Here each batch of
-rows is streamed with ``COPY`` into a transaction-scoped ``TEMP`` table (with an
-ordinal), and one ``INSERT ... SELECT DISTINCT ON (key) ... ORDER BY key,
-ordinal DESC ... ON CONFLICT`` per table writes them. That keeps the row path's
-rules exactly:
+rows (``AGENT_BOM_GRAPH_WRITE_BATCH_SIZE``, default 1,000) is streamed with
+``COPY`` into a transaction-scoped ``TEMP`` table with an ordinal, then written
+by one ``INSERT ... SELECT DISTINCT ON (key) ... ORDER BY key, ordinal DESC ...
+ON CONFLICT`` per table. One statement per batch, not per write, keeps each
+statement well inside the session statement timeout (one statement for 229,000
+edges exceeded the 15 s default). That keeps the row path's rules exactly:
 
-* duplicates inside one write resolve last-wins (the row path's ``ON CONFLICT
-  DO UPDATE`` sets every non-key column from the later row);
+* duplicates inside one write resolve last-wins: within a batch by the ordinal,
+  across batches, applied in order, by the same ``ON CONFLICT DO UPDATE`` of
+  every non-key column the row path uses;
 * edges carry ``first_seen``/``valid_from`` forward from the superseded scan
   through the same join and scope predicate;
 * the insert runs as the app role under row-level security, in the save's one

@@ -142,7 +142,10 @@ def _spy_bulk(monkeypatch) -> list[str]:
     return used
 
 
-def test_bulk_and_row_paths_write_identical_rows(migrated_fresh_database, monkeypatch) -> None:  # noqa: F811
+@pytest.mark.parametrize("batch", [None, "7"])
+def test_bulk_and_row_paths_write_identical_rows(migrated_fresh_database, monkeypatch, batch) -> None:  # noqa: F811
+    if batch:
+        monkeypatch.setenv("AGENT_BOM_GRAPH_WRITE_BATCH_SIZE", batch)  # duplicates then span batches
     used = _spy_bulk(monkeypatch)
     _with_path(monkeypatch, bulk=False)
     row_counts = _push_history("tenant-row")
