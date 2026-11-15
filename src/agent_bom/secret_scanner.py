@@ -34,6 +34,7 @@ from agent_bom.core.path_context import CONTEXT_SEVERITY
 from agent_bom.core.scan_budget import budget_stop_detail, current_source_budget
 from agent_bom.redaction.entropy import shannon_entropy as _shannon_entropy
 from agent_bom.runtime.patterns import PII_PATTERNS
+from agent_bom.runtime.pii_numbers import pii_value_valid
 from agent_bom.scanners.aws_secret_validation import AwsCredentialValidator, aws_secret_candidates, nearest_aws_secret
 from agent_bom.scanners.build_metadata import mask_build_config_quantities
 from agent_bom.scanners.credential_validation import CredentialValidator, ValidationStatus
@@ -46,7 +47,7 @@ from agent_bom.scanners.secret_models import SecretScanResult as SecretScanResul
 from agent_bom.scanners.secret_path_context import apply_path_context as apply_path_context
 from agent_bom.scanners.secret_path_context import credential_severity as _credential_severity
 from agent_bom.scanners.secret_value_shape import QUOTED_STRING_EXTENSIONS, LineLocators, is_translation_file
-from agent_bom.scanners.source_pii import machine_identity_match, source_pii_match
+from agent_bom.scanners.source_pii import bare_number_has_field, machine_identity_match, source_pii_match
 from agent_bom.traversal import iter_discovery_files
 
 logger = logging.getLogger(__name__)
@@ -338,6 +339,8 @@ def _pii_type(file_path: Path, line: str) -> str | None:
                 continue
             locators = locators or LineLocators(line)
             if locators.contains(match.start(), match.end()):
+                continue
+            if not pii_value_valid(name, match.group(0)) or not bare_number_has_field(line, name, match):
                 continue
             if file_path.suffix.lower() in _PII_CODE_EXTENSIONS and not source_pii_match(line, name, match):
                 break

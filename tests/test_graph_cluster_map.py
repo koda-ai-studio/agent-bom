@@ -92,7 +92,8 @@ def test_clusters_follow_tier_and_type_and_cover_every_node_once() -> None:
     assert {"cloud_resource:instance", "cloud_resource:s3"} <= keys
     assert _cluster(view, "package:npm")["member_count"] == 10
     assert _cluster(view, "package:npm")["label"] == "Packages · npm"
-    assert _cluster(view, "finding:critical")["label"] == "Findings · critical"
+    # The Findings page opens on the Vulnerabilities lane; the map names the same population.
+    assert _cluster(view, "finding:critical")["label"] == "Vulnerabilities · critical"
     # Every node belongs to exactly one cluster, and the per-type totals equal the inventory.
     by_type: Counter[str] = Counter()
     for cluster in view["clusters"]:
@@ -219,6 +220,35 @@ def test_first_frame_never_draws_more_than_the_element_budget() -> None:
     assert any(node["kind"] == "cluster" and node["cluster_key"].startswith("cloud_resource:") for node in opened["nodes"])
     assert not any(node["kind"] == "cluster" and node["cluster_key"] == "other" for node in opened["nodes"])
     _assert_edges_conserved(opened, graph)
+
+
+def test_governance_findings_are_not_counted_with_vulnerabilities() -> None:
+    graph = estate()
+    _node(graph, "vuln:med", E.VULNERABILITY, "CVE-med", "medium")
+    _node(graph, "finding:eval-gap", E.MISCONFIGURATION, "No safety eval", "medium", finding_type="EVAL_COVERAGE_GAP")
+    _edge(graph, "finding:eval-gap", "agent:a", R.AFFECTS)
+    view = cluster_map_view(ClusterIndex.from_graph(graph))
+    assert _cluster(view, "finding:medium")["member_count"] == 1
+    assert _cluster(view, "finding:medium")["label"] == "Vulnerabilities · medium"
+    other = _cluster(view, "finding:policy:medium")
+    assert other["member_count"] == 1 and other["label"] == "Policy findings · medium"
+    assert other["tier_label"] == "Findings"
+
+
+def test_ai_layer_groups_are_drawn_even_when_low_risk_groups_fold() -> None:
+    graph = _wide_estate()
+    _node(graph, "agent:x", E.AGENT, "x")
+    for i in range(2):
+        _node(graph, f"eval_suite:{i}", E.EVAL_SUITE, f"safety-{i}")
+        _edge(graph, f"eval_suite:{i}", "agent:x", R.EVALUATES)
+    view = cluster_map_view(ClusterIndex.from_graph(graph))
+    drawn = {node["cluster_key"]: node for node in view["nodes"] if node["kind"] == "cluster"}
+    assert drawn["other"]["folded_cluster_count"] > 0
+    assert drawn["type:eval_suite"]["label"] == "Eval suites" and drawn["type:eval_suite"]["member_count"] == 2
+    assert drawn["type:eval_suite"]["tier_label"] == "AI layer"
+    assert {"type:agent", "type:model"} <= set(drawn)
+    assert view["summary"]["element_count"] <= FIRST_FRAME_ELEMENT_BUDGET
+    _assert_edges_conserved(view, graph)
 
 
 def test_risky_only_keeps_risky_groups_and_reports_what_it_hides() -> None:

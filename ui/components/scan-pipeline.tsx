@@ -161,7 +161,7 @@ function LaneFindings({ data }: { data: PipelineNodeData }) {
             : "border-[var(--status-success-border)] bg-[var(--status-success-bg)] text-[color:var(--status-success)]"
         }`}
       >
-        {data.detail ?? (hasFindings ? `${data.findings} findings` : "clean")}
+        {data.detail ?? (hasFindings ? `${data.findings.toLocaleString()} findings` : "clean")}
       </span>
     </div>
   );

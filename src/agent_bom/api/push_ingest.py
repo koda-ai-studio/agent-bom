@@ -156,7 +156,7 @@ class RequestPushLease:
             try:
                 self._store.renew_leases({key: self._owner}, self._lease_seconds)
             except Exception as exc:  # broad-except: a missed beat is retried; only a long outage lets the lease lapse
-                _logger.warning("Push lease renewal failed: %s", sanitize_text(sanitize_error(exc, generic=True)))
+                _logger.warning("Push lease renewal failed: %s: %s", type(exc).__name__, sanitize_text(sanitize_error(exc)))
 
     def store_job(self) -> None:
         """Publish the job; the first write carries the lease so a crash cannot leave one without the other."""
@@ -173,7 +173,7 @@ class RequestPushLease:
         try:
             self._store.complete_dispatch(self._job.job_id, tenant_id=self._job.tenant_id, claim_owner=self._owner)
         except Exception as exc:  # broad-except: the outcome is already durable and must not be rolled back
-            _logger.warning("Push lease release failed: %s", sanitize_text(sanitize_error(exc, generic=True)))
+            _logger.warning("Push lease release failed: %s: %s", type(exc).__name__, sanitize_text(sanitize_error(exc)))
 
 
 def redispatch_pending_push(job: ScanJob) -> None:

@@ -29,6 +29,7 @@ import {
 import { getOsvVulnerabilityUrl } from "@/lib/vulnerabilities";
 import { controlLabels, triageForFinding } from "@/lib/findings-workspace";
 import { humanizeEnum } from "@/lib/enum-labels";
+import { readableNodeId } from "@/lib/node-id-tail";
 import { reachabilitySource, reachabilitySourceLabel } from "@/lib/reachability-source";
 import { formatProbabilityPercent } from "@/lib/probability-format";
 
@@ -53,7 +54,7 @@ function ReachabilityBadge({
     const viaLabel = source ? ` · via ${reachabilitySourceLabel(source)}` : "";
     return (
       <span
-        title={source ? `An inbound graph path from ${source} reaches this finding` : "An inbound graph path reaches this finding"}
+        title={source ? `An inbound graph path from ${readableNodeId(source)} reaches this finding` : "An inbound graph path reaches this finding"}
         className="text-xs font-mono bg-[color:var(--severity-medium-bg)] border border-[color:var(--severity-medium-border)] text-[color:var(--severity-medium)] rounded px-1.5 py-0.5"
       >
         Reachable{hopLabel}{viaLabel}
@@ -531,7 +532,7 @@ function OccurrenceDisclosure({
 }) {
   const count = vuln.occurrence_count ?? 1;
   if (count <= 1) return null;
-  const label = `${expanded ? "Hide" : "Show"} ${count} findings by asset`;
+  const label = `${expanded ? "Hide" : "Show"} ${count.toLocaleString()} findings by asset`;
   return (
     <div className="mt-2">
       <button
@@ -545,7 +546,7 @@ function OccurrenceDisclosure({
         className="inline-flex items-center gap-1 rounded border border-outline px-2 py-1 text-[11px] font-medium text-ink-secondary transition hover:border-outline-strong hover:text-foreground"
       >
         {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-        {count} findings
+        {count.toLocaleString()} findings
       </button>
       {openOccurrenceLabel(vuln.open_occurrence_count, vuln.resolved_occurrence_count) ? <span className="ml-2 text-[11px] text-ink-tertiary">{openOccurrenceLabel(vuln.open_occurrence_count, vuln.resolved_occurrence_count)}</span> : null}
       {expanded && showDetails ? <OccurrenceList vuln={vuln} /> : null}

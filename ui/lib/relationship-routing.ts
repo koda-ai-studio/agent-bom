@@ -1,4 +1,5 @@
 import { getBezierPath, getSmoothStepPath, Position, type EdgeProps } from "@xyflow/react";
+import { LANE_GAP, type RelationshipLane } from "@/lib/relationship-lanes";
 
 type Obstacle = { id: string; x: number; y: number; width: number; height: number };
 type Endpoints = Pick<EdgeProps, "source" | "target" | "sourceX" | "sourceY" | "targetX" | "targetY" | "sourcePosition" | "targetPosition">;
@@ -90,8 +91,32 @@ function endpointCaptionRoute(edge: Endpoints, obstacles: Obstacle[], path: stri
   return [roundedRoute(forward ? candidate.route : candidate.route.reverse()), candidate.x, (firstLane + lastLane) / 2];
 }
 
+/** How far a lane's turn moves per unit of lane offset, so same-direction lanes nest instead of crossing. */
+const LANE_TURN_SHIFT = 1.2;
+/** Horizontal spacing between the turn columns of lines bound for different targets. */
+const CHANNEL_GAP = 16;
+
+/**
+ * A different relationship type leaving or entering the same port runs on its
+ * own parallel lane and turns at its own column, so its dash never shares a
+ * run with another type's line.
+ */
+function laneRoute(edge: Endpoints, lane: RelationshipLane | undefined): [string, number, number] | null {
+  if (!lane || (!lane.source && !lane.target && !lane.channel)) return null;
+  if (edge.sourcePosition !== Position.Right || edge.targetPosition !== Position.Left || edge.targetX - edge.sourceX < 48) return null;
+  // Channels share at most half the gap, so the outermost still turns well clear of both columns.
+  const channelGap = Math.min(CHANNEL_GAP, (edge.targetX - edge.sourceX) / 2 / Math.max(1, (lane.channels ?? 1) - 1));
+  const sourceY = edge.sourceY + lane.source;
+  let targetY = edge.targetY + lane.target;
+  // A line between ports on one row stays straight rather than jogging by a lane's width.
+  if (Math.abs(edge.targetY - edge.sourceY) < 1 && Math.abs(targetY - sourceY) <= LANE_GAP) targetY = sourceY;
+  const shift = (targetY > sourceY ? -1 : 1) * (lane.source + lane.target) * LANE_TURN_SHIFT;
+  const turnX = (edge.sourceX + edge.targetX) / 2 + (lane.channel ?? 0) * channelGap + shift;
+  return [roundedRoute([[edge.sourceX, sourceY], [turnX, sourceY], [turnX, targetY], [edge.targetX, targetY]]), turnX, (sourceY + targetY) / 2];
+}
+
 /** Route bounded relationships around captions and intervening entities. */
-export function relationshipPath(edge: Endpoints, obstacles: Obstacle[]): [string, number, number] {
+export function relationshipPath(edge: Endpoints, obstacles: Obstacle[], portLane?: RelationshipLane): [string, number, number] {
   // The caption check samples the direct curve between the ports; the drawn line is always right-angle runs.
   const [path] = getBezierPath(edge);
   const captionRoute = endpointCaptionRoute(edge, obstacles, path);
@@ -114,10 +139,11 @@ export function relationshipPath(edge: Endpoints, obstacles: Obstacle[]): [strin
   }
   // Every other relationship draws as right-angle runs with rounded corners, matching the attack-path graph.
   const [stepPath, stepX, stepY] = getSmoothStepPath({ ...edge, borderRadius: 12 });
+  const laned = laneRoute(edge, portLane);
   // Keep dense/vertical layouts on the standard renderer. This correction is
   // bounded to short investigations and does not change relationship direction.
   if (obstacles.length > ROUTED_NODE_LIMIT || edge.targetX - edge.sourceX < 240
-      || edge.sourcePosition !== Position.Right || edge.targetPosition !== Position.Left) return [stepPath, stepX, stepY];
+      || edge.sourcePosition !== Position.Right || edge.targetPosition !== Position.Left) return laned ?? [stepPath, stepX, stepY];
   const between = obstacles.filter(node => node.id !== edge.source && node.id !== edge.target
     && node.x > edge.sourceX + 24 && node.x + node.width < edge.targetX - 24);
   // The drawn route turns once, midway between the ends; test each of its runs, not its bounding box.
@@ -131,7 +157,7 @@ export function relationshipPath(edge: Endpoints, obstacles: Obstacle[]): [strin
     const steps = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / 8));
     for (let step = 0; step <= steps && !blocked; step++) blocked = intersects(ax + (bx - ax) * step / steps, ay + (by - ay) * step / steps, 2, 2);
   }
-  if (!blocked) return [stepPath, stepX, stepY];
+  if (!blocked) return laned ?? [stepPath, stepX, stepY];
   // A fixed 40-unit offset can skip a clear gap between sibling rows and send
   // the connector outside the fitted node envelope. Include those interior
   // lanes before choosing the shortest clear route.

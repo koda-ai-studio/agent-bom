@@ -83,8 +83,10 @@ async function labelCollisions(page: Page) {
   return page.locator(".react-flow").evaluate(canvas => {
     const visible = (el: Element) => { const s = getComputedStyle(el); const r = el.getBoundingClientRect(); return s.display !== "none" && s.visibility !== "hidden" && Number(s.opacity) > 0 && r.width > 0 && r.height > 0; };
     const labels = [...canvas.querySelectorAll(".graph-relationship-label")].filter(visible).map(el => ({ text: el.textContent?.trim() ?? "", r: el.getBoundingClientRect() }));
+    // A glyph's outline and arrowheads shrink with zoom, as the label placer measures them, so below 1x its ring does too.
     const cards = [...canvas.querySelectorAll(".react-flow__node [data-graph-entity]")].flatMap(el => [...el.children].map(child => {
-      const r = child.getBoundingClientRect(), pad = child.classList.contains("graph-entity-glyph") ? 8 : 0;
+      const r = child.getBoundingClientRect(), width = (child as HTMLElement).offsetWidth;
+      const pad = child.classList.contains("graph-entity-glyph") ? 8 * Math.min(1, width > 0 ? r.width / width : 1) : 0;
       return { text: el.getAttribute("title") ?? "", r: new DOMRect(r.left - pad, r.top - pad, r.width + pad * 2, r.height + pad * 2) };
     }));
     const overlap = (a: DOMRect, b: DOMRect) => a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;
@@ -106,6 +108,18 @@ async function cardOverlaps(page: Page) {
     });
     return boxes.flatMap((a, i) => boxes.slice(i + 1).filter(b => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top).map(b => `${a.label} overlaps ${b.label}`));
   });
+}
+
+/** Connections whose drawn line runs well beyond both of its ends sideways, wrapping around a column. */
+async function edgesAroundColumns(page: Page) {
+  return page.locator(".react-flow__edge").evaluateAll(groups => groups.flatMap(group => {
+    const path = group.querySelector<SVGPathElement>(".react-flow__edge-path");
+    const length = path?.getTotalLength();
+    if (!path || !length) return [];
+    const ends = [path.getPointAtLength(0).x, path.getPointAtLength(length).x];
+    const box = path.getBBox();
+    return box.x < Math.min(...ends) - 24 || box.x + box.width > Math.max(...ends) + 24 ? [group.getAttribute("data-id")] : [];
+  }));
 }
 
 async function visibleLabelTexts(page: Page) {
@@ -209,6 +223,97 @@ for (const theme of ["light", "dark"] as const) test(`reference correlation read
     ids.filter(id => id.scrollWidth > id.clientWidth + 1).map(id => id.textContent));
   expect(clippedIds).toEqual([]);
   await page.screenshot({ path: info.outputPath(`reference-correlation-${theme}.png`), animations: "disabled" });
+});
+
+// The README context map: one agent, the MCP servers it uses, and what each server exposes.
+// The capture's sample estate, in its recorded order, so a bounded query keeps the same nodes.
+const AGENT_ESTATE: [string, string, string][] = [
+  ["provider:aws-prod", "env:prod-ai", "hosts"], ["env:prod-ai", "cluster:eks-ai", "hosts"], ["cluster:eks-ai", "container:agent-gateway", "hosts"],
+  ["container:agent-gateway", "policy:gateway-default-deny", "manages"], ["user:contractor", "sa:jit-review", "acted_as"],
+  ["sa:jit-review", "role:prod-admin", "assumes"], ["role:prod-admin", "agent:developer-copilot", "can_access"],
+  ["agent:developer-copilot", "server:github", "uses"], ["agent:developer-copilot", "server:filesystem", "uses"],
+  ["agent:sre-runbook", "server:filesystem", "uses"], ["agent:sre-runbook", "server:slack", "uses"],
+  ["agent:finance-rag", "server:snowflake", "uses"], ["agent:finance-rag", "server:slack", "uses"],
+  ["agent:developer-copilot", "agent:sre-runbook", "shares_server"], ["agent:sre-runbook", "agent:finance-rag", "shares_cred"],
+  ["server:github", "tool:repo-write", "provides_tool"], ["server:filesystem", "tool:exec", "provides_tool"],
+  ["server:snowflake", "tool:query", "provides_tool"], ["server:slack", "tool:post", "provides_tool"],
+  ["server:github", "cred:github", "exposes_cred"], ["server:snowflake", "cred:snowflake", "exposes_cred"],
+  ["server:filesystem", "cred:aws", "exposes_cred"], ["server:github", "pkg:next", "depends_on"],
+  ["server:filesystem", "pkg:urllib3", "depends_on"], ["server:snowflake", "pkg:protobuf", "depends_on"],
+  ["server:snowflake", "pkg:langchain", "depends_on"], ["pkg:next", "cve:next", "vulnerable_to"],
+  ["pkg:urllib3", "cve:urllib3", "vulnerable_to"], ["pkg:protobuf", "cve:protobuf", "vulnerable_to"],
+  ["server:snowflake", "dataset:finance-docs", "accessed"], ["agent:finance-rag", "model:gpt-prod", "uses"],
+  ["policy:gateway-default-deny", "tool:exec", "manages"],
+];
+// Inventory relationships two hops out, after one "Show more connections": both servers, github's
+// tool, credential and package, filesystem's tool, and the agent sharing filesystem MCP.
+const CONTEXT_MAP_IDS = ["agent:developer-copilot", "agent:sre-runbook", "cred:github", "pkg:next", "server:filesystem", "server:github",
+  "tool:exec", "tool:repo-write"];
+const ESTATE_TYPES: Record<string, string> = { provider: "provider", env: "environment", cluster: "cluster", container: "container", policy: "policy",
+  user: "user", sa: "service_account", role: "role", agent: "agent", server: "server", tool: "tool", cred: "credential", pkg: "package",
+  cve: "vulnerability", dataset: "dataset", model: "model" };
+
+for (const theme of ["light", "dark"] as const) for (const width of [1440, 1000]) test(`an agent's context map reads as servers, tools, credentials and packages ${theme} ${width}`, async ({ page }, info) => {
+  await page.addInitScript(t => localStorage.setItem("agent-bom-theme", t), theme);
+  await page.setViewportSize({ width, height: 900 });
+  const ids = [...new Set(AGENT_ESTATE.flatMap(([source, target]) => [source, target]))];
+  const nodes = ids.map(id => node(id, ESTATE_TYPES[id.split(":")[0]!]!, id.split(":")[1]!));
+  const edges = AGENT_ESTATE.map(([source, target, relationship]) => edge(source, target, relationship));
+  await fixture(page, nodes, edges);
+  // The same bounded walk the API runs: requested relationship types, depth and node budget.
+  await page.route("**/v1/graph/query", route => {
+    const request = route.request().postDataJSON();
+    const allowed = request.relationship_types?.length ? new Set(request.relationship_types) : null;
+    const walk = edges.filter(item => !allowed || allowed.has(item.relationship));
+    const depth = new Map<string, number>(request.roots.map((id: string) => [id, 0]));
+    const queue = [...depth.keys()];
+    for (let index = 0; index < queue.length; index++) {
+      const id = queue[index]!;
+      if (depth.get(id)! >= request.max_depth) continue;
+      for (const item of walk) {
+        const next = item.source === id && request.direction !== "reverse" ? item.target : item.target === id && request.direction !== "forward" ? item.source : null;
+        if (next && !depth.has(next)) { depth.set(next, depth.get(id)! + 1); queue.push(next); }
+      }
+    }
+    const kept = new Set(queue.slice(0, request.max_nodes));
+    const shown = nodes.filter(item => kept.has(item.id));
+    const links = walk.filter(item => kept.has(item.source) && kept.has(item.target));
+    return route.fulfill({ json: { scan_id: "snapshot", tenant_id: "fixture", created_at: stamp, nodes: shown, edges: links, attack_paths: [], interaction_risks: [],
+      stats: { total_nodes: shown.length, total_edges: links.length, severity_counts: {} }, roots: request.roots, direction: request.direction,
+      max_depth: request.max_depth, budget: { nodes: request.max_nodes, edges: request.max_edges }, truncated: queue.length > kept.size,
+      missing_roots: [], depth_by_node: Object.fromEntries([...depth].filter(([id]) => kept.has(id))), filters: {} } });
+  });
+  await page.goto("/graph?scan=snapshot&root=agent%3Adeveloper-copilot&lens=context&capture=1");
+  await expect(page.locator('.react-flow__node[data-id="server:github"]')).toBeVisible();
+  // A rooted investigation opens one hop out over every relationship; widen it with the same controls a reader uses.
+  await page.getByRole("button", { name: "View & layers", exact: true }).click();
+  await page.getByRole("button", { name: /^Edges/ }).click();
+  await page.getByLabel("Relationship scope", { exact: true }).selectOption("inventory");
+  await page.getByRole("button", { name: /^Traversal/ }).click();
+  await page.getByLabel("Graph traversal depth", { exact: true }).selectOption("2");
+  await page.getByRole("button", { name: "View & layers", exact: true }).click();
+  await expect(page.locator('.react-flow__node[data-id="tool:repo-write"]')).toBeVisible();
+  const before = await page.locator(".react-flow__node").count();
+  await page.getByRole("button", { name: "Show more connections", exact: true }).click();
+  await expect.poll(() => page.locator(".react-flow__node").count()).toBeGreaterThan(before);
+  // The root opens its inspector; the README frame is the map alone.
+  const drawer = page.getByTestId("graph-entity-drawer");
+  if (await drawer.isVisible()) await drawer.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(drawer).toBeHidden();
+  await page.locator(".react-flow__controls-fitview").click();
+  await settle(page);
+  const shown = await page.locator(".react-flow__node").evaluateAll(items => items.map(item => item.getAttribute("data-id")).sort());
+  expect(shown).toEqual(CONTEXT_MAP_IDS);
+  expect(await cardOverlaps(page)).toEqual([]);
+  expect(await edgesThroughNodes(page)).toEqual([]);
+  expect(await labelCollisions(page)).toEqual([]);
+  expect(await edgesAroundColumns(page)).toEqual([]);
+  const smallestName = await page.locator("[data-graph-entity] > p:first-of-type").evaluateAll(labels => {
+    const zoom = new DOMMatrixReadOnly(getComputedStyle(document.querySelector(".react-flow__viewport")!).transform).a;
+    return Math.min(...labels.map(label => parseFloat(getComputedStyle(label).fontSize) * zoom));
+  });
+  expect(smallestName, "entity names stay readable at README width").toBeGreaterThanOrEqual(12);
+  await page.screenshot({ path: info.outputPath(`agent-context-map-${theme}-${width}.png`), animations: "disabled" });
 });
 
 test("reset view restores the investigation defaults for the same root", async ({ page }) => {
@@ -399,6 +504,8 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     expect(await cardOverlaps(page)).toEqual([]);
     expect(await edgesThroughNodes(page)).toEqual([]);
     expect(await labelCollisions(page)).toEqual([]);
+    // A containing account sits before what it contains, so no link loops around a column.
+    expect(await edgesAroundColumns(page)).toEqual([]);
     // The provider plate must clear the name even at the expanded graph's fit zoom.
     expect(await page.locator("[data-graph-source-badge]").evaluateAll(badges => badges.flatMap(badge => {
       const a = badge.getBoundingClientRect();

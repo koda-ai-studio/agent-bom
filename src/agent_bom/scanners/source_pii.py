@@ -12,12 +12,32 @@ _NUMERIC_FIELDS = {
     "US Phone Number": re.compile(r"(?i)(?:^|[^a-z0-9])(?:[a-z]+_)*(?:phone|phone_?number|telephone|mobile|tel)['\"]?\s*[=:]\s*['\"]?\s*$"),
 }
 
+# A bare digit run is a phone or card number only under a field that says so.
+_BARE_NUMBER_FIELD = re.compile(
+    r"(?i)(?:^|[^a-z0-9])(?:[a-z]+[_-])*(?:phone|telephone|mobile|tel|fax|cell|card|credit_?card|cc|pan)"
+    r"(?:[_-]?(?:number|num|no))?['\"]?\s*[=:]\s*['\"]?\s*$"
+)
+_BARE_NUMBER = re.compile(r"\+?\d+")
+_BARE_NUMBER_TYPES = frozenset({"US Phone Number", "Credit Card (Visa)", "Credit Card (Mastercard)", "Credit Card (Amex)"})
+
 _GCP_SERVICE_ACCOUNT = re.compile(r"[a-z0-9-]+@[a-z0-9-]+\.iam\.gserviceaccount\.com", re.IGNORECASE)
 
 
 def machine_identity_match(name: str, match: re.Match[str]) -> bool:
     """A provider-issued service-account address identifies a machine, not a person."""
     return name == "Email Address" and bool(_GCP_SERVICE_ACCOUNT.fullmatch(match.group()))
+
+
+def bare_number_has_field(line: str, name: str, match: re.Match[str]) -> bool:
+    """A phone or card value with no separators needs a phone or card field name.
+
+    Byte counts, epoch timestamps, limits and ids are bare ten- and
+    sixteen-digit runs in JSON and YAML; formatted values carry their own
+    evidence.
+    """
+    if name not in _BARE_NUMBER_TYPES or not _BARE_NUMBER.fullmatch(match.group()):
+        return True
+    return bool(_BARE_NUMBER_FIELD.search(line[: match.start()]))
 
 
 def source_pii_match(line: str, name: str, match: re.Match[str]) -> bool:

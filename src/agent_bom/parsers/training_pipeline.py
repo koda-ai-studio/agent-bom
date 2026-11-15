@@ -24,6 +24,7 @@ from pathlib import Path
 
 from agent_bom.parsers.compliance_tags import tag_training_run
 from agent_bom.runtime.patterns import PII_PATTERNS, RESPONSE_INJECTION_PATTERNS
+from agent_bom.runtime.pii_numbers import pii_matches
 from agent_bom.traversal import iter_discovery_files
 
 logger = logging.getLogger(__name__)
@@ -169,7 +170,7 @@ def _content_security_flags(text: str, *, source: str) -> list[dict[str, str]]:
     for pii_type, pattern in PII_PATTERNS:
         if pii_type not in _PIPELINE_PII_TYPES:
             continue
-        if pattern.search(text):
+        if pii_matches(pii_type, pattern, text):
             flags.append(
                 {
                     "severity": "MEDIUM",

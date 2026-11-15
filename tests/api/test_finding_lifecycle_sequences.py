@@ -133,6 +133,10 @@ def assert_at(value: Any, expected: str) -> None:
     assert _instant(value) == _instant(expected)
 
 
+def _no_campaign_reconciliation() -> None:
+    return None
+
+
 @pytest.fixture(scope="module")
 def client():
     # Starting the app is most of this suite's cost, and CI's Postgres job has a fixed budget.
@@ -142,8 +146,13 @@ def client():
         from agent_bom.api import postgres_common
 
         postgres_common.reset_pool()
-    with TestClient(app) as shared:
-        yield shared
+    # The maintenance loop binds the poller when the app starts, so a later per-test
+    # patch never reaches it. Left running, it walks every pending tenant in a shared
+    # database and its scan projections land inside tests that count their own.
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr("agent_bom.api.campaign_reconciliation.poll_campaign_reconciliation", _no_campaign_reconciliation)
+        with TestClient(app) as shared:
+            yield shared
     if postgres:
         pool = postgres_common._pool
         if pool is not None:
@@ -154,7 +163,6 @@ def client():
 @pytest.fixture(params=["sqlite", "postgres"])
 def store_kind(request, tmp_path, monkeypatch, client):
     original = stores._store
-    monkeypatch.setattr("agent_bom.api.campaign_reconciliation.poll_campaign_reconciliation", lambda: None)
     monkeypatch.setenv("AGENT_BOM_NO_UPDATE_CHECK", "1")
     if request.param == "postgres":
         if not os.environ.get("AGENT_BOM_POSTGRES_URL"):
@@ -182,6 +190,21 @@ def store_kind(request, tmp_path, monkeypatch, client):
 @pytest.fixture(params=["push", "bulk"])
 def estate(request, store_kind, client):
     return Estate(client, request.param, f"lifecycle-{uuid4().hex[:10]}")
+
+
+def test_the_shared_app_runs_no_background_campaign_reconciliation(client):
+    """The app's maintenance loop must not walk other tenants' scans while a test counts its own reads."""
+    import time
+
+    from agent_bom.api import server
+
+    task = server._cleanup_task
+    assert task is not None and not task.done()
+    frame = task.get_coro().cr_frame
+    deadline = time.monotonic() + 10
+    while "poll_campaign_reconciliation" not in frame.f_locals and time.monotonic() < deadline:
+        time.sleep(0.05)
+    assert frame.f_locals["poll_campaign_reconciliation"] is _no_campaign_reconciliation
 
 
 # ── Sequences 1-5: appear, persist, resolve, change version, reopen ──────────

@@ -10,6 +10,7 @@ import re
 
 from agent_bom.runtime.credential_tokens import OPENAI_KEY as _OPENAI_KEY
 from agent_bom.runtime.credential_tokens import token as _token
+from agent_bom.runtime.pii_numbers import NUMBER_END, NUMBER_START
 
 # ─── Credential patterns in tool responses ───────────────────────────────────
 
@@ -93,11 +94,11 @@ _US_SSN = re.compile(rf"(?<![\w-]){_SSN_DIGITS}(?![\w-])|{_SSN_FIELD}(?!000|666)
 # Personal Identifiable Information patterns for detection and redaction
 PII_PATTERNS: list[tuple[str, re.Pattern]] = [
     ("Email Address", re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")),
-    ("US Phone Number", re.compile(r"\b(?:\+1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b")),
+    ("US Phone Number", re.compile(NUMBER_START + r"(?:\+1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}" + NUMBER_END)),
     ("US SSN", _US_SSN),
-    ("Credit Card (Visa)", re.compile(r"\b4\d{3}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b")),
-    ("Credit Card (Mastercard)", re.compile(r"\b5[1-5]\d{2}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b")),
-    ("Credit Card (Amex)", re.compile(r"\b3[47]\d{2}[-\s]?\d{6}[-\s]?\d{5}\b")),
+    ("Credit Card (Visa)", re.compile(NUMBER_START + r"4\d{3}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}" + NUMBER_END)),
+    ("Credit Card (Mastercard)", re.compile(NUMBER_START + r"5[1-5]\d{2}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}" + NUMBER_END)),
+    ("Credit Card (Amex)", re.compile(NUMBER_START + r"3[47]\d{2}[-\s]?\d{6}[-\s]?\d{5}" + NUMBER_END)),
     ("IP Address (IPv4)", re.compile(r"\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\b")),
     ("Date of Birth", re.compile(r"\b(?:DOB|date\s*of\s*birth|birthday)\s*[=:]\s*\d{1,4}[/\-]\d{1,2}[/\-]\d{1,4}\b", re.IGNORECASE)),
     ("Passport Number", re.compile(r"\b(?:passport)\s*[#:]\s*[A-Z0-9]{6,9}\b", re.IGNORECASE)),

@@ -69,6 +69,7 @@ def _display_path(path: str) -> str:
 
 # Wide enough for most skill names at 80 columns; longer ones end in an ellipsis.
 _SKILL_LABEL_WIDTH = 24
+_SURFACE_LEGEND = "Action: handling · Prov.: provenance · Find.: findings · Refs: packages, servers"
 
 
 def _skill_labels(paths: list[str]) -> dict[str, str]:
@@ -89,14 +90,25 @@ def _skill_labels(paths: list[str]) -> dict[str, str]:
 
 def _instruction_surface_table(report: Any, labels: dict[str, str], label_width: int) -> Table:
     """One row per scanned file, named by skill, sized to fit an 80-column terminal."""
-    # No vertical rules: seven columns plus a skill name must fit 80 columns.
-    files_table = Table(title="Instruction Surface", expand=True, box=box.SIMPLE_HEAD, show_edge=False, collapse_padding=True)
+    # The box's one-space divider is the only gap: with cell padding on top, the
+    # widest values (a 24-character name, "unavailable", "high_risk") overflow
+    # 80 columns and Rich crops the last columns away.
+    files_table = Table(
+        title="Instruction Surface",
+        caption=_SURFACE_LEGEND,
+        caption_justify="left",
+        expand=True,
+        box=box.SIMPLE_HEAD,
+        show_edge=False,
+        padding=(0, 0),
+        pad_edge=False,
+    )
     files_table.add_column("Skill / file", no_wrap=True, overflow="ellipsis", min_width=label_width)
     files_table.add_column("Status", no_wrap=True)
     files_table.add_column("Verdict", no_wrap=True)
-    files_table.add_column("Review", no_wrap=True)
+    files_table.add_column("Action", no_wrap=True)
     files_table.add_column("Prov.", min_width=8)
-    files_table.add_column("Findings", justify="right", no_wrap=True)
+    files_table.add_column("Find.", justify="right", no_wrap=True)
     files_table.add_column("Refs", justify="right", no_wrap=True)
 
     verdict_style = {"benign": "green", "suspicious": "yellow", "malicious": "red"}

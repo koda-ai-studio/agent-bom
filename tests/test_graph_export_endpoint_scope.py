@@ -85,13 +85,13 @@ def test_stdout_and_graph_html_use_the_saved_json_scope(tmp_path, monkeypatch) -
 
     stdout = json.loads(_scan(["-p", str(project), "--format", "graph", "--output", "-"]))
     stdout_ids = _node_ids(stdout["elements"])
-    assert [nid for nid in stdout_ids if nid.startswith("directory:repository:host-a:")]
+    assert [nid for nid in stdout_ids if nid.startswith("directory:repository:host-a.cfg-")]
     assert not [nid for nid in stdout_ids if ":cfg-" in nid]
 
     html = tmp_path / "graph.html"
     _scan(["-p", str(project), "--format", "graph-html", "--output", str(html)])
     text = html.read_text()
-    assert "directory:repository:host-a:" in text and "directory:repository:cfg-" not in text
+    assert "directory:repository:host-a.cfg-" in text and "directory:repository:cfg-" not in text
 
 
 def test_demo_graph_carries_no_host_scope(monkeypatch) -> None:

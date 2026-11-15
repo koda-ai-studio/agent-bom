@@ -2,6 +2,8 @@ import type { AttackPathLayout } from "@/lib/attack-path-graph-layout";
 
 /** Frame padding in screen px; the bottom keeps nodes clear of the zoom controls in that corner. */
 export const ATTACK_PATH_FIT_PADDING = { top: 24, right: 24, bottom: 56, left: 24 } as const;
+/** How far a node's findings badge ("1 medium +2") reaches past the right of its box at zoom 1. */
+export const FINDING_BADGE_OVERHANG = 64;
 
 export type AttackPathViewport = {
   x: number;
@@ -39,7 +41,8 @@ export function attackPathViewport(
   floor: number,
   options: { maxZoom?: number; minZoom?: number } = {},
 ): AttackPathViewport {
-  const pad = ATTACK_PATH_FIT_PADDING;
+  // A left-to-right layout keeps room on the right for the last column's findings badges.
+  const pad = layout.direction === "TB" ? ATTACK_PATH_FIT_PADDING : { ...ATTACK_PATH_FIT_PADDING, right: ATTACK_PATH_FIT_PADDING.right + FINDING_BADGE_OVERHANG };
   const usableWidth = Math.max(1, pane.width - pad.left - pad.right);
   const usableHeight = Math.max(1, pane.height - pad.top - pad.bottom);
   const whole: Box = { x: 0, y: 0, width: layout.width, height: layout.height };

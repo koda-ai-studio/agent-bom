@@ -13,6 +13,7 @@ import threading
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping
+from urllib.parse import unquote
 
 from agent_bom.core.reachability import (
     CONFIRMING_BASIS,
@@ -247,6 +248,8 @@ class _PathKeys:
     finding_ids: frozenset[str]
     vulnerability_ids: frozenset[str]
     nodes: frozenset[str]
+    # The package names and agent names on the path, for rows that carry no graph node id.
+    occurrence: frozenset[tuple[str, str]] = frozenset()
 
 
 @dataclass(frozen=True, slots=True)
@@ -331,7 +334,10 @@ def _build_index(paths: Iterable[AttackPath], *, scan_id: str = "", truncated: b
         if not _path_has_reachability_evidence(path):
             continue
         path_keys = _PathKeys(
-            frozenset(path.finding_ids), frozenset(_path_vulnerability_ids(path)), frozenset((path.source, path.target, *path.hops))
+            frozenset(path.finding_ids),
+            frozenset(_path_vulnerability_ids(path)),
+            frozenset((path.source, path.target, *path.hops)),
+            _path_occurrences(path),
         )
         keys[id(path)] = path_keys
         for finding_id in path_keys.finding_ids:
@@ -397,7 +403,13 @@ def project_attack_path_reachability(
     return _stamp_rows(rows, _build_index(paths), scan_id=scan_id)
 
 
-def _keys_match_row(keys: _PathKeys, finding_ids: set[str], vulnerability_ids: set[str], nodes: set[str]) -> bool:
+def _keys_match_row(
+    keys: _PathKeys,
+    finding_ids: set[str],
+    vulnerability_ids: set[str],
+    nodes: set[str],
+    occurrences: frozenset[tuple[str, str]] = frozenset(),
+) -> bool:
     """:func:`_path_matches_row` over keys derived once per path and once per row."""
     if not finding_ids.isdisjoint(keys.finding_ids):
         return True
@@ -405,7 +417,42 @@ def _keys_match_row(keys: _PathKeys, finding_ids: set[str], vulnerability_ids: s
         return False
     if vulnerability_ids.isdisjoint(keys.vulnerability_ids):
         return False
-    return bool(nodes) and not nodes.isdisjoint(keys.nodes)
+    if nodes:
+        return not nodes.isdisjoint(keys.nodes)
+    # No graph node id: the same advisory on the same package, reached from an agent the row names.
+    return not occurrences.isdisjoint(keys.occurrence)
+
+
+_ANY_PACKAGE = "\0"
+
+
+def _agent_name(node_id: str) -> str:
+    return unquote(node_id.rsplit(":", 1)[-1]) if node_id.startswith("agent:") else ""
+
+
+def _package_name(node_id: str) -> str:
+    if not node_id.startswith("pkg:"):
+        return ""
+    _ecosystem, _, rest = node_id.removeprefix("pkg:").partition(":")
+    name, at, _version = rest.rpartition("@")
+    return (name if at and name else rest).lower()
+
+
+def _path_occurrences(path: AttackPath) -> frozenset[tuple[str, str]]:
+    hops = (path.source, *path.hops)
+    # A path that collapses the package into its server names no package: the advisory and the agent are the occurrence.
+    packages = {name for hop in hops if (name := _package_name(hop))} or {_ANY_PACKAGE}
+    agents = {name for hop in hops if (name := _agent_name(hop))}
+    return frozenset((package, agent) for package in packages for agent in agents)
+
+
+def _row_occurrences(row: Mapping[str, Any]) -> frozenset[tuple[str, str]]:
+    package = _text(row.get("package")).lower()
+    agents = row.get("affected_agents")
+    if not package or not isinstance(agents, list):
+        return frozenset()
+    names = [name for agent in agents if (name := _text(agent))]
+    return frozenset((key, name) for key in (package, _ANY_PACKAGE) for name in names)
 
 
 def _row_evidence(row: dict[str, Any], path_index: _PathIndex) -> _ReachabilityEvidence | None:
@@ -418,9 +465,10 @@ def _row_evidence(row: dict[str, Any], path_index: _PathIndex) -> _ReachabilityE
         candidates.update((id(path), path) for path in path_index.by_vulnerability.get(vulnerability_id, ()))
     evidence: _ReachabilityEvidence | None = None
     holders = _row_node_ids(row)
+    occurrences = frozenset() if holders else _row_occurrences(row)
     for path_id, path in candidates.items():
         # A path that starts at the finding's own holder is the occurrence, not inbound reach.
-        if path.source in holders or not _keys_match_row(path_index.keys[path_id], finding_ids, vulnerability_ids, holders):
+        if path.source in holders or not _keys_match_row(path_index.keys[path_id], finding_ids, vulnerability_ids, holders, occurrences):
             continue
         distance = _path_hop_distance(path, row)
         if evidence is None:
