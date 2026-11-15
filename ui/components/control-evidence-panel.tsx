@@ -14,6 +14,7 @@ import { assetIcon, assetKindLabel } from "@/lib/asset-icon-registry";
 import { attackPathKey } from "@/lib/attack-paths";
 import { assetTypeLabel, controlGraphHref, controlTagFor, pathSupportReason } from "@/lib/control-evidence";
 import { buildFindingInvestigationHref } from "@/lib/finding-investigation-href";
+import { readableNodeId } from "@/lib/node-id-tail";
 
 const FINDINGS_PAGE = 10;
 const PATHS_PAGE = 5;
@@ -108,8 +109,8 @@ function FindingRow({ finding, frameworkId, control, scanId }: { finding: Unifie
 }
 
 function PathRow({ path, labels, reason, href }: { path: GraphAttackPath; labels: Map<string, string>; reason: string; href: string }) {
-  const source = labels.get(path.source) ?? path.source;
-  const target = labels.get(path.target) ?? path.target;
+  const source = labels.get(path.source) ?? readableNodeId(path.source);
+  const target = labels.get(path.target) ?? readableNodeId(path.target);
   return (
     <li className="flex flex-wrap items-start gap-x-3 gap-y-1.5 py-2.5">
       <span className="mt-0.5 w-12 shrink-0 text-right font-mono text-sm font-semibold text-[color:var(--foreground)]" title="Composite risk">

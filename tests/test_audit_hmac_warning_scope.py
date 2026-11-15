@@ -38,13 +38,15 @@ def test_importing_and_describing_posture_does_not_warn(fresh_audit_log, caplog)
     assert WARNING_TEXT not in caplog.text
 
 
-def test_first_signature_with_an_ephemeral_key_warns_once(fresh_audit_log, caplog) -> None:
-    caplog.set_level(logging.WARNING, logger="agent_bom.api.audit_log")
+def test_signing_with_an_ephemeral_key_does_not_log(fresh_audit_log, caplog, monkeypatch, tmp_path) -> None:
+    # The operator warning belongs to server startup; a CLI command that signs
+    # one entry must not print a server configuration line into its report.
+    monkeypatch.setenv("AGENT_BOM_DB", str(tmp_path / "cli.db"))
+    caplog.set_level(logging.DEBUG, logger="agent_bom.api.audit_log")
     first = fresh_audit_log.AuditEntry(action="scan", actor="system", resource="job/1")
     first.sign()
-    second = fresh_audit_log.AuditEntry(action="scan", actor="system", resource="job/2")
-    second.sign()
-    assert caplog.text.count(WARNING_TEXT) == 1
+    fresh_audit_log.sign_export_payload(b"{}")
+    assert WARNING_TEXT not in caplog.text
     assert first.verify()
 
 
@@ -85,7 +87,8 @@ def test_cli_scan_output_has_no_audit_hmac_log_line(tmp_path: Path, compliance: 
     project.mkdir()
     (project / "requirements.txt").write_text("requests==2.33.0\n", encoding="utf-8")
     env = {key: value for key, value in os.environ.items() if not key.startswith("AGENT_BOM_AUDIT_HMAC")}
-    env.update({"HOME": str(home), "NO_COLOR": "1"})
+    # A durable control-plane database is configured, as on an operator's workstation.
+    env.update({"HOME": str(home), "NO_COLOR": "1", "AGENT_BOM_DB": str(tmp_path / "cp.db")})
     # A partial plain scan does not evaluate compliance. The completed offline
     # demo exercises the narrative path that used to trigger the import warning.
     driver = (
@@ -112,25 +115,23 @@ def test_cli_scan_output_has_no_audit_hmac_log_line(tmp_path: Path, compliance: 
     assert WARNING_TEXT not in combined
 
 
-def test_in_memory_chain_does_not_warn_but_a_persisted_chain_does(fresh_audit_log, caplog, tmp_path) -> None:
-    # The in-memory chain ends with the process, so a key that does not survive a
-    # restart loses nothing; a SQLite chain outlives it and must warn.
+def test_appending_to_a_chain_does_not_warn(fresh_audit_log, caplog, tmp_path) -> None:
+    # Startup of the serving process owns the warning (test_api_startup_warns_about_an_ephemeral_key).
     caplog.set_level(logging.WARNING, logger="agent_bom.api.audit_log")
     memory = fresh_audit_log.InMemoryAuditLog()
     memory.append(fresh_audit_log.AuditEntry(action="skills.scan_completed", actor="skills_service"))
-    assert WARNING_TEXT not in caplog.text
     assert memory.list_entries()[0].verify(fresh_audit_log._HMAC_KEY)
     fresh_audit_log.SQLiteAuditLog(str(tmp_path / "audit.db")).append(fresh_audit_log.AuditEntry(action="scan"))
-    assert WARNING_TEXT in caplog.text
+    assert WARNING_TEXT not in caplog.text
 
 
 def test_cli_skills_scan_output_has_no_audit_hmac_log_line(tmp_path: Path) -> None:
     skill = tmp_path / "demo" / "SKILL.md"
     skill.parent.mkdir()
     skill.write_text("---\nname: demo\ndescription: Demo skill.\n---\n\nSay hello.\n", encoding="utf-8")
-    persistent = {"AGENT_BOM_DB", "AGENT_BOM_POSTGRES_URL"}
-    env = {k: v for k, v in os.environ.items() if not k.startswith("AGENT_BOM_AUDIT") and k not in persistent}
-    env.update({"HOME": str(tmp_path), "NO_COLOR": "1"})
+    env = {k: v for k, v in os.environ.items() if not k.startswith("AGENT_BOM_AUDIT") and k != "AGENT_BOM_POSTGRES_URL"}
+    # The skills scan appends to the durable audit chain under AGENT_BOM_DB; that is where the line leaked.
+    env.update({"HOME": str(tmp_path), "NO_COLOR": "1", "AGENT_BOM_DB": str(tmp_path / "cp.db")})
     result = subprocess.run(
         [sys.executable, "-m", "agent_bom", "skills", "scan", str(tmp_path)],
         cwd=tmp_path,

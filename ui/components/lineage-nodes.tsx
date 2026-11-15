@@ -267,7 +267,7 @@ function NodeCard({
         <span data-graph-caption data-entity-role style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className="text-xs text-ink-secondary">
           {(data.nodeType === "misconfiguration" && data.attributes?.finding_kind === "iac" ? "IaC finding" : caption?.meta) ?? data.readingLabel ?? (repository ? "Repository" : data.nodeType === "agent" ? (data.agentType ? topologyAgentTypeLabel(data.agentType) : "Agent") : assetKindLabel({ entityType: data.entityType, nodeType: data.nodeType, attributes: data.attributes, provider: data.dimensions?.cloud_provider }))}
         </span>
-        {data.occurrenceRole && <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} data-testid="graph-occurrence-role" className="rounded border border-outline-strong px-1 text-xs font-medium uppercase tracking-wide text-ink-secondary">{data.occurrenceRole}</span>}
+        {data.occurrenceRole && <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} data-testid="graph-occurrence-role" className="whitespace-nowrap rounded border border-outline-strong px-1 text-xs font-medium uppercase tracking-wide text-ink-secondary">{data.occurrenceRole}</span>}
       </NodeBadgeRow>
       {repository && !repository.source && <span className="text-xs text-ink-secondary" style={{ fontSize: "var(--graph-node-meta-size, 12px)" }}>{repository.host}</span>}
       {!data.evidenceFlow && data.identityContext && <p data-testid="graph-identity-context" className="mt-1 max-w-full break-words text-xs text-ink-secondary" style={{ fontSize: "var(--graph-node-meta-size, 12px)" }}>{data.identityContext}</p>}

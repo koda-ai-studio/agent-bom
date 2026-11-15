@@ -17,6 +17,7 @@ from agent_bom.api import job_status_count_cache
 from agent_bom.api.ai_assessment_read import attach_ai_assessments
 from agent_bom.api.bulk_findings_ingest import BulkFindingsRequest, PackageCheckRequest, _normalized_bulk_finding, reconcile_plan
 from agent_bom.api.current_graph import refuse_unpinned_read_while_seeding
+from agent_bom.api.estate_agents import graph_agent_payloads
 from agent_bom.api.finding_blast_row import _finding_from_blast_radius as _finding_from_blast_radius
 from agent_bom.api.finding_facets import _FACET_DEADLINE_SECONDS as _FACET_DEADLINE_SECONDS
 from agent_bom.api.finding_facets import _FACET_SCAN_BUDGET as _FACET_SCAN_BUDGET
@@ -301,7 +302,7 @@ def _release_scan_idempotency_claim(
             owner_token=owner_token,
         )
     except Exception as exc:  # noqa: BLE001
-        _logger.error("Scan idempotency rollback failed: %s", sanitize_text(sanitize_error(exc, generic=True)))
+        _logger.error("Scan idempotency rollback failed: %s: %s", type(exc).__name__, sanitize_text(sanitize_error(exc)))
 
 
 async def _wait_for_idempotent_job(
@@ -834,10 +835,10 @@ def list_inventory(
     # One canonical agent is one row however many scans observed it; batch parents are skipped because their children already carry the
     # agents. The projection is shared with the agent routes and reused until the job revision moves.
     evidence = agent_evidence(_get_store(), tenant_id)
-    agents = evidence.estate_agents
     jobs = evidence.inventory_jobs
-
-    packages = _inventory_packages_from_agents(agents)
+    # Packages come from every scanned record; the agent rows use the Agents page and graph rule.
+    packages = _inventory_packages_from_agents(evidence.estate_agents)
+    agents = graph_agent_payloads(evidence.estate_agents)
     total = len(agents)
     package_total = len(packages)
     job_total = len(jobs)

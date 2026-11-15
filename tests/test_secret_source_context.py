@@ -148,7 +148,9 @@ def test_non_personal_match_does_not_hide_later_personal_value(source, kind):
 
 
 def test_numeric_settings_outside_next_manifest_still_report():
-    source = '{"expire":4294967294}'
+    # A bare number under a non-personal key is never PII (plain numbers are
+    # not phones); a formatted value outside the Next manifest still reports.
+    source = '{"expire":"' + "-".join(("429", "496", "7294")) + '"}'
     assert any(f.category == "pii" for f in scan_content(source, Path("data.json"), "data.json"))
 
 

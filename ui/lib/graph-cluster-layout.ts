@@ -169,8 +169,8 @@ export function routeCards(layout: ClusterLayout, activeMember: string | null): 
 }
 
 /**
- * The overview draws what reads at a glance: bundles between adjacent columns
- * and every bundle that carries an attack-path hop. The rest stay hidden until
+ * The overview draws what reads at a glance: bundles within one column or
+ * between adjacent columns, and every bundle that carries an attack-path hop. The rest stay hidden until
  * a group they touch is pointed at or "Show all links" is on, and are counted.
  */
 export function overviewBundles(bundles: DisplayBundle[], cards: RouteCard[], { showAll, focusIds }: { showAll: boolean; focusIds: readonly string[] }) {
@@ -180,7 +180,7 @@ export function overviewBundles(bundles: DisplayBundle[], cards: RouteCard[], { 
   const shown: DisplayBundle[] = [], hidden: DisplayBundle[] = [];
   for (const bundle of bundles) {
     const a = column.get(bundle.source), b = column.get(bundle.target);
-    const adjacent = a !== undefined && b !== undefined && Math.abs(a - b) === 1;
+    const adjacent = a !== undefined && b !== undefined && Math.abs(a - b) <= 1;
     (adjacent || bundle.path || focus.has(bundle.source) || focus.has(bundle.target) ? shown : hidden).push(bundle);
   }
   return { shown, hidden };

@@ -21,7 +21,7 @@ from collections import Counter, defaultdict
 from collections.abc import Iterable, Mapping
 from typing import Any, Optional
 
-from agent_bom.graph.cluster_classes import SEVERITY_WORDS, TIERS
+from agent_bom.graph.cluster_classes import PINNED_GROUP_KEYS, SEVERITY_WORDS, TIERS
 from agent_bom.graph.cluster_index import ClusterIndex, LeafCluster
 
 #: The first frame (nothing expanded) never draws more nodes plus edges than this.
@@ -49,6 +49,14 @@ def more_id(key: str) -> str:
     return f"{MORE_PREFIX}{key}"
 
 
+def _split_top(candidates: list[int], clusters: list[LeafCluster]) -> tuple[list[int], list[int]]:
+    """The drawn groups in rank order: pinned AI-layer groups, then the highest-ranked rest."""
+    pinned = {c for c in candidates if clusters[c].key in PINNED_GROUP_KEYS}
+    rest = [c for c in candidates if c not in pinned]
+    top = pinned | set(rest[: max(MAX_TOP_CLUSTERS - len(pinned), 0)])
+    return [c for c in candidates if c in top], [c for c in candidates if c not in top]
+
+
 class _Frame:
     """Which groups are drawn, folded, hidden or open, and what each node is drawn as."""
 
@@ -61,8 +69,7 @@ class _Frame:
         candidates = [c for c in index.ranked if not risky_only or clusters[c].risky or c == focus_cluster]
         self.hidden = set(range(len(clusters))) - set(candidates)
         fold = len(candidates) > MAX_TOP_CLUSTERS + 1
-        self.top = candidates[:MAX_TOP_CLUSTERS] if fold else candidates
-        self.folded = candidates[MAX_TOP_CLUSTERS:] if fold else []
+        self.top, self.folded = _split_top(candidates, clusters) if fold else (candidates, [])
         self.listed = candidates
         self.other_open = bool(self.folded) and (group_id(OTHER_KEY) in expanded or focus_cluster in self.folded)
         self.visible = self.top + (self.folded if self.other_open else [])

@@ -493,7 +493,7 @@ async def list_agents(
     except BackpressureRejectedError as exc:
         raise HTTPException(status_code=429, detail=exc.to_dict(), headers={"Retry-After": str(exc.retry_after_seconds)}) from exc
     except Exception as exc:  # noqa: BLE001
-        _logger.warning("Agent discovery failed: %s", sanitize_text(sanitize_error(exc, generic=True)))
+        _logger.warning("Agent discovery failed: %s: %s", type(exc).__name__, sanitize_text(sanitize_error(exc)))
         raise HTTPException(status_code=500, detail=sanitize_error(exc, generic=True)) from exc
 
 

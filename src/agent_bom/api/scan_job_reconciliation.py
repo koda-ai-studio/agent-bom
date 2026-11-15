@@ -90,7 +90,7 @@ def _fail_job(store: Any, row: dict[str, Any], error: str, *, claim_owner: str |
         if job.parent_job_id:
             run_tenant_bound(tenant, refresh_batch_parent, job.parent_job_id, tenant_id=tenant)
     except Exception as exc:  # broad-except: one bad row stays queued for the next sweep; the rest of the queue keeps moving
-        _logger.error("Could not fail unrecoverable job=%s: %s", row["job_id"], sanitize_text(sanitize_error(exc, generic=True)))
+        _logger.error("Could not fail unrecoverable job=%s: %s: %s", row["job_id"], type(exc).__name__, sanitize_text(sanitize_error(exc)))
         return 0
     _logger.warning("Failed unrecoverable job=%s tenant=%s: %s", job.job_id, job.tenant_id, error)
     metrics.record_scan_completion(str(JobStatus.FAILED))

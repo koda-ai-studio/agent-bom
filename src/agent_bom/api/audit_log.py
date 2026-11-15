@@ -39,7 +39,7 @@ from agent_bom.api.audit_details import _sanitize_detail_value as _sanitize_deta
 from agent_bom.api.audit_details import sanitize_audit_details as sanitize_audit_details
 from agent_bom.api.audit_key_state import record_key_identity, require_verification_budget
 from agent_bom.api.secret_source import resolve_secret
-from agent_bom.api.storage.sqlite_connection import api_sqlite_busy_timeout_ms
+from agent_bom.api.storage.sqlite_connection import api_sqlite_busy_timeout_ms, set_busy_timeout
 from agent_bom.api.storage_schema import ensure_sqlite_schema_version, postgres_deployment_configured
 from agent_bom.core.settings import env_bool, env_first, env_int
 
@@ -195,8 +195,8 @@ else:
         )
     _HMAC_KEY = _secrets.token_bytes(32)
 
-# The operator warning is raised where audit evidence is produced (API startup, first signature), not at import: CLI reports import this
-# module only to describe signing posture, and a log line there lands mid-report.
+# The operator warning is raised when the API server starts, never at import or on signing: CLI commands import this module
+# to describe signing posture or append one entry, and a server configuration line there lands mid-report.
 _EPHEMERAL_KEY_WARNED = False
 AUTH_FAILURE_AUDIT_TENANT = "__auth_security__"
 
@@ -214,7 +214,6 @@ def warn_if_ephemeral_hmac_key(*, durable: bool | None = None) -> None:
 
 
 def _default_signing_key() -> bytes:
-    warn_if_ephemeral_hmac_key(durable=True)
     return _HMAC_KEY
 
 
@@ -517,7 +516,7 @@ class SQLiteAuditLog:
             busy_timeout_ms = api_sqlite_busy_timeout_ms()
             conn = sqlite3.connect(self._db_path, timeout=busy_timeout_ms / 1000, check_same_thread=False)
             conn.execute("PRAGMA journal_mode=WAL")
-            conn.execute(f"PRAGMA busy_timeout={busy_timeout_ms}")  # bounded wait for a concurrent writer's lock
+            set_busy_timeout(conn, busy_timeout_ms)  # bounded wait for a concurrent writer's lock
             self._local.conn = conn
         return conn
 

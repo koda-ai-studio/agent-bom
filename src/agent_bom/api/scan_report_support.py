@@ -116,7 +116,7 @@ def _apply_tenant_workflow_metadata(report: Any, *, tenant_id: str) -> None:
     try:
         owner_index = build_tenant_triage_owner_index(tenant_id)
     except Exception as exc:  # noqa: BLE001 - workflow metadata must not fail the scan artifact
-        _logger.warning("Finding owner enrichment unavailable: %s", sanitize_text(sanitize_error(exc, generic=True)))
+        _logger.warning("Finding owner enrichment unavailable: %s: %s", type(exc).__name__, sanitize_text(sanitize_error(exc)))
         owner_index = {}
     observed_at = getattr(report, "generated_at", None)
     observed_text = observed_at.isoformat() if isinstance(observed_at, datetime) else str(observed_at or "")
@@ -159,5 +159,5 @@ def _rendered_result_document(job: ScanJob, report: Any, blast_radii: list | Non
 
         return render_scan_document(report, requested, blast_radii=blast_radii), None
     except Exception as exc:  # noqa: BLE001 — a formatting failure never fails the scan
-        _logger.warning("Rendering scan result as %s failed: %s", requested, sanitize_text(sanitize_error(exc, generic=True)))
+        _logger.warning("Rendering scan result as %s failed: %s: %s", requested, type(exc).__name__, sanitize_text(sanitize_error(exc)))
         return None, f"Requested {requested} output could not be rendered; result carries AI-BOM JSON only"

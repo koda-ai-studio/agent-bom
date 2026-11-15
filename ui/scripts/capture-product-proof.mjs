@@ -11,6 +11,7 @@ import process from "node:process";
 import { pathToFileURL } from "node:url";
 import { assertCaptureSnapshotScope, graphResponseWithPagination } from "./product-proof-scope.mjs";
 import { waitForOwnedServer } from "./product-proof-server.mjs";
+import { fitViewportToContent } from "./product-proof-fit.mjs";
 import { CREATED_AT, intelSourcesFixture, loadOverviewProof } from "./product-proof-fixtures.mjs";
 import { runGraphQualityCapture } from "./graph-quality-capture.mjs";
 import { AGENT_ARCHITECTURE_SCREENSHOTS, captureAgentArchitecture, installAgentArchitectureRoutes } from "./product-proof-agent-architecture.mjs";
@@ -58,6 +59,8 @@ const RELEASE_VERSION = UI_PACKAGE.version;
 const SCAN_ID = "scan-proof-ai-platform";
 const PREVIOUS_SCAN_ID = "scan-proof-ai-platform-prev";
 const SCENARIO_ID = "scenario-private-service-endpoint";
+// The README context map: what developer-copilot reaches through its MCP servers.
+const CONTEXT_MAP_PAGE = `/graph?lens=context&scan=${SCAN_ID}&root=agent%3Adeveloper-copilot&capture=1`;
 const CAPTURE_THEME = process.env.CAPTURE_THEME === "light" ? "light" : "dark";
 const referenceLabProofBytes = await fs.readFile(REFERENCE_LAB_PROOF_PATH);
 const referenceLabExpectedDigest = (await fs.readFile(REFERENCE_LAB_DIGEST_PATH, "utf8")).trim();
@@ -2155,12 +2158,14 @@ export async function installRoutes(page, fixtureGraph = graph) {
   await page.route("**/v1/graph/query", (route) => {
     const request = route.request().postDataJSON();
     const roots = request.roots ?? [];
+    const allowed = request.relationship_types?.length ? new Set(request.relationship_types) : null;
+    const traversable = graph.edges.filter(edge => !allowed || allowed.has(edge.relationship));
     const depth = new Map(roots.filter(id => graph.nodes.some(node => node.id === id)).map(id => [id, 0]));
     const queue = [...depth.keys()];
     for (let index = 0; index < queue.length; index++) {
       const id = queue[index];
       if (depth.get(id) >= (request.max_depth ?? 1)) continue;
-      for (const edge of graph.edges) {
+      for (const edge of traversable) {
         const next = edge.source === id && request.direction !== "reverse" ? edge.target
           : edge.target === id && request.direction !== "forward" ? edge.source : null;
         if (next && !depth.has(next)) { depth.set(next, depth.get(id) + 1); queue.push(next); }
@@ -2168,7 +2173,7 @@ export async function installRoutes(page, fixtureGraph = graph) {
     }
     const ids = new Set(queue.slice(0, request.max_nodes ?? 4));
     const nodes = graph.nodes.filter(node => ids.has(node.id));
-    const edges = graph.edges.filter(edge => ids.has(edge.source) && ids.has(edge.target)).slice(0, request.max_edges ?? 96);
+    const edges = traversable.filter(edge => ids.has(edge.source) && ids.has(edge.target)).slice(0, request.max_edges ?? 96);
     return fulfill(route, { ...graph, nodes, edges, attack_paths: [], roots,
       stats: { ...graph.stats, total_nodes: nodes.length, total_edges: edges.length },
       direction: request.direction, max_depth: request.max_depth,
@@ -2915,7 +2920,10 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
       // remount graph surfaces after their first ready signal.
       await page.locator(options.readySelector).first().waitFor({ state: "visible", timeout: 30_000 });
     }
+    const viewport = page.viewportSize();
+    if (options.fitContentHeight) await fitViewportToContent(page, options.fitContentHeight);
     await page.screenshot({ path: path.join(captureOutputDir, filename), fullPage: false, animations: "disabled" });
+    if (options.fitContentHeight) await page.setViewportSize(viewport);
     console.log(`captured ${filename}`);
   } catch (error) {
     const failureDir = await fs.mkdtemp(path.join(os.tmpdir(), "agent-bom-capture-failure-"));
@@ -3130,19 +3138,19 @@ async function writeScreenshotManifest(outputDir = IMAGE_DIR) {
     },
     {
       path: "context-map-live.png",
-      page: `/graph?lens=context&scan=${SCAN_ID}&root=pkg%3Anext&capture=1`,
-      scope: "Exact package neighborhood with recorded MCP dependency and vulnerability relationships",
+      page: CONTEXT_MAP_PAGE,
+      scope: "developer-copilot neighborhood: its MCP servers and the tools, credentials and packages they expose",
     },
     {
       path: "context-map-light-live.png",
-      page: `/graph?lens=context&scan=${SCAN_ID}&root=pkg%3Anext&capture=1`,
-      scope: "Exact package neighborhood and selected evidence in the light theme",
+      page: CONTEXT_MAP_PAGE,
+      scope: "developer-copilot neighborhood in the light theme",
       presentation: "light desktop",
     },
     ...["dark", "light"].map(theme => ({
       path: `context-map-horizontal-${theme}-live.png`,
-      page: `/graph?lens=context&scan=${SCAN_ID}&root=pkg%3Anext&capture=1`,
-      scope: "Same three recorded entities and two relationships in the shared graph workspace",
+      page: CONTEXT_MAP_PAGE,
+      scope: "Same developer-copilot neighborhood in the shared graph workspace",
       presentation: `${theme} responsive 1000x900`,
     })),
     {
@@ -3382,6 +3390,8 @@ async function main() {
       maxGraphNodes: referenceGraph.nodes.length,
       minGraphEdges: referenceGraph.edges.length,
       maxGraphEdges: referenceGraph.edges.length,
+      // The README shows this capture at full width; entity names stay at the legibility floor.
+      minGraphNodeFontPx: 12,
       minGraphEdgeLabelFontPx: 12,
       assertEdgeLabelsClearOfNodes: true,
       assertNodeLabelsWithinBounds: true,
@@ -3593,7 +3603,7 @@ async function main() {
       expectedText: [
         "Investigation",
         "Developer Copilot",
-        "Sre Runbook Agent",
+        "SRE Runbook Agent",
         "filesystem MCP",
         "modeled",
       ],
@@ -3884,22 +3894,43 @@ async function main() {
         assertNoHorizontalOverflow: true,
       },
     );
+    // Inventory relationships two hops out, after one expansion: both MCP servers, github's tool,
+    // credential and package, filesystem's tool, and the agent sharing filesystem MCP.
+    const CONTEXT_MAP_NODES = ["agent:developer-copilot", "server:github", "server:filesystem", "agent:sre-runbook",
+      "tool:repo-write", "cred:github", "pkg:next", "tool:exec"];
+    const CONTEXT_MAP_EDGES = 7;
     const prepareContextNeighborhood = async (contextPage) => {
       await contextPage.getByRole("heading", { name: "Investigation", exact: true }).waitFor({ state: "visible", timeout: 30_000 });
-      await contextPage.locator('[data-id="cve:next"]').waitFor({ state: "visible" });
-      await expect(contextPage.locator(".react-flow__node")).toHaveCount(3);
+      await contextPage.locator('[data-id="server:github"]').waitFor({ state: "visible" });
+      // A rooted investigation opens one hop out over every relationship; widen it with the reader's own controls.
+      const viewControls = contextPage.getByRole("button", { name: "View & layers", exact: true });
+      await viewControls.click();
+      await contextPage.getByRole("button", { name: /^Edges/ }).click();
+      await contextPage.getByLabel("Relationship scope", { exact: true }).selectOption("inventory");
+      await contextPage.getByRole("button", { name: /^Traversal/ }).click();
+      await contextPage.getByLabel("Graph traversal depth", { exact: true }).selectOption("2");
+      await viewControls.click();
+      await contextPage.locator('[data-id="tool:repo-write"]').waitFor({ state: "visible" });
+      const count = await contextPage.locator(".react-flow__node").count();
+      await contextPage.getByRole("button", { name: "Show more connections", exact: true }).click();
+      await expect.poll(() => contextPage.locator(".react-flow__node").count()).toBeGreaterThan(count);
+      const inspector = contextPage.getByTestId("graph-entity-drawer");
+      if (await inspector.isVisible()) await inspector.getByRole("button", { name: "Close", exact: true }).click();
+      await expect(contextPage.locator(".react-flow__node")).toHaveCount(CONTEXT_MAP_NODES.length);
+      for (const id of CONTEXT_MAP_NODES) await expect(contextPage.locator(`.react-flow__node[data-id="${id}"]`)).toHaveCount(1);
       await fitReactFlow(contextPage);
       await scrollTo(contextPage, 0);
     };
     const prepareHorizontalNeighborhood = prepareContextNeighborhood;
     const contextNeighborhoodAssertions = {
-      expectedText: ["Investigation", "next@", "CVE-2025-29927", "github-enterprise MCP"],
+      expectedText: ["Investigation", "Developer Copilot", "github-enterprise MCP", "filesystem MCP", "create_pull_request", "execute_command", "DEMO_CRED_REF", "next@15.2.2"],
       expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/query"],
-      minGraphNodes: 3, maxGraphNodes: 3, minGraphEdges: 2, maxGraphEdges: 2,
+      minGraphNodes: CONTEXT_MAP_NODES.length, maxGraphNodes: CONTEXT_MAP_NODES.length,
+      minGraphEdges: CONTEXT_MAP_EDGES, maxGraphEdges: CONTEXT_MAP_EDGES,
       minGraphNodeFontPx: 12, assertEdgeLabelsClearOfNodes: true,
       assertNoHorizontalOverflow: true,
     };
-    await capture(page, `/graph?lens=context&scan=${SCAN_ID}&root=pkg%3Anext&capture=1`, "context-map-live.png", prepareContextNeighborhood, contextNeighborhoodAssertions);
+    await capture(page, CONTEXT_MAP_PAGE, "context-map-live.png", prepareContextNeighborhood, contextNeighborhoodAssertions);
     await page.setViewportSize({ width: 1440, height: 980 });
     await capture(page, "/inventory?capture=1", "inventory-live.png", async (inventoryPage) => {
       await inventoryPage.getByRole("heading", { name: "Asset inventory" }).waitFor({
@@ -3976,6 +4007,7 @@ async function main() {
       expectedText: ["Package remediation plan", "next", "15.2.3", "CVE-2025-29927", "Campaign workflow and verification"],
       rejectedText: ["42.5% modeled window risk"],
       expectedApiPaths: ["/v1/findings/remediation"],
+      fitContentHeight: { selector: "main details", min: 480, pad: 32 },
     });
 
     const lightPage = await newCapturePage("light", { width: 1440, height: 980 });
@@ -4009,10 +4041,10 @@ async function main() {
       expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/views/fix-first"],
       readySelector: '[data-testid="selected-exposure-path"]',
     });
-    await capture(lightPage, `/graph?lens=context&scan=${SCAN_ID}&root=pkg%3Anext&capture=1`, "context-map-light-live.png", prepareContextNeighborhood, contextNeighborhoodAssertions);
+    await capture(lightPage, CONTEXT_MAP_PAGE, "context-map-light-live.png", prepareContextNeighborhood, contextNeighborhoodAssertions);
     for (const theme of ["dark", "light"]) {
       const horizontalPage = await newCapturePage(theme, { width: 1760, height: 860 });
-      await capture(horizontalPage, `/graph?lens=context&scan=${SCAN_ID}&root=pkg%3Anext&capture=1`, `context-map-horizontal-${theme}-live.png`, prepareHorizontalNeighborhood, contextNeighborhoodAssertions);
+      await capture(horizontalPage, CONTEXT_MAP_PAGE, `context-map-horizontal-${theme}-live.png`, prepareHorizontalNeighborhood, contextNeighborhoodAssertions);
       await horizontalPage.close();
     }
     await capture(lightPage, "/remediation?capture=1", "remediation-light-live.png", undefined, {
