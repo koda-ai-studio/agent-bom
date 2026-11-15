@@ -60,7 +60,7 @@ const SCAN_ID = "scan-proof-ai-platform";
 const PREVIOUS_SCAN_ID = "scan-proof-ai-platform-prev";
 const SCENARIO_ID = "scenario-private-service-endpoint";
 // The README context map: what developer-copilot reaches through its MCP servers.
-const CONTEXT_MAP_PAGE = `/graph?lens=context&scan=${SCAN_ID}&root=agent%3Adeveloper-copilot&relationships=inventory&capture=1`;
+const CONTEXT_MAP_PAGE = `/graph?lens=context&scan=${SCAN_ID}&root=agent%3Adeveloper-copilot&capture=1`;
 const CAPTURE_THEME = process.env.CAPTURE_THEME === "light" ? "light" : "dark";
 const referenceLabProofBytes = await fs.readFile(REFERENCE_LAB_PROOF_PATH);
 const referenceLabExpectedDigest = (await fs.readFile(REFERENCE_LAB_DIGEST_PATH, "utf8")).trim();
@@ -3894,20 +3894,26 @@ async function main() {
         assertNoHorizontalOverflow: true,
       },
     );
-    // Two servers, each with the tool, credential and package it exposes, plus the agent sharing filesystem MCP.
+    // Inventory relationships two hops out, after one expansion: both MCP servers, github's tool,
+    // credential and package, filesystem's tool, and the agent sharing filesystem MCP.
     const CONTEXT_MAP_NODES = ["agent:developer-copilot", "server:github", "server:filesystem", "agent:sre-runbook",
-      "tool:repo-write", "cred:github", "pkg:next", "tool:exec", "cred:aws", "pkg:urllib3"];
-    const CONTEXT_MAP_EDGES = 9;
+      "tool:repo-write", "cred:github", "pkg:next", "tool:exec"];
+    const CONTEXT_MAP_EDGES = 7;
     const prepareContextNeighborhood = async (contextPage) => {
       await contextPage.getByRole("heading", { name: "Investigation", exact: true }).waitFor({ state: "visible", timeout: 30_000 });
       await contextPage.locator('[data-id="server:github"]').waitFor({ state: "visible" });
-      // The first query returns the root and its nearest three; expand to the whole recorded neighborhood.
-      const more = contextPage.getByRole("button", { name: "Show more connections", exact: true });
-      while (await more.isVisible()) {
-        const count = await contextPage.locator(".react-flow__node").count();
-        await more.click();
-        await expect.poll(() => contextPage.locator(".react-flow__node").count()).toBeGreaterThan(count);
-      }
+      // A rooted investigation opens one hop out over every relationship; widen it with the reader's own controls.
+      const viewControls = contextPage.getByRole("button", { name: "View & layers", exact: true });
+      await viewControls.click();
+      await contextPage.getByRole("button", { name: /^Edges/ }).click();
+      await contextPage.getByLabel("Relationship scope", { exact: true }).selectOption("inventory");
+      await contextPage.getByRole("button", { name: /^Traversal/ }).click();
+      await contextPage.getByLabel("Graph traversal depth", { exact: true }).selectOption("2");
+      await viewControls.click();
+      await contextPage.locator('[data-id="tool:repo-write"]').waitFor({ state: "visible" });
+      const count = await contextPage.locator(".react-flow__node").count();
+      await contextPage.getByRole("button", { name: "Show more connections", exact: true }).click();
+      await expect.poll(() => contextPage.locator(".react-flow__node").count()).toBeGreaterThan(count);
       const inspector = contextPage.getByTestId("graph-entity-drawer");
       if (await inspector.isVisible()) await inspector.getByRole("button", { name: "Close", exact: true }).click();
       await expect(contextPage.locator(".react-flow__node")).toHaveCount(CONTEXT_MAP_NODES.length);
@@ -3917,7 +3923,7 @@ async function main() {
     };
     const prepareHorizontalNeighborhood = prepareContextNeighborhood;
     const contextNeighborhoodAssertions = {
-      expectedText: ["Investigation", "Developer Copilot", "github-enterprise MCP", "filesystem MCP", "create_pull_request", "execute_command", "next@15.2.2"],
+      expectedText: ["Investigation", "Developer Copilot", "github-enterprise MCP", "filesystem MCP", "create_pull_request", "execute_command", "DEMO_CRED_REF", "next@15.2.2"],
       expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/query"],
       minGraphNodes: CONTEXT_MAP_NODES.length, maxGraphNodes: CONTEXT_MAP_NODES.length,
       minGraphEdges: CONTEXT_MAP_EDGES, maxGraphEdges: CONTEXT_MAP_EDGES,
