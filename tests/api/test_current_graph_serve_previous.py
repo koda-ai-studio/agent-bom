@@ -51,7 +51,8 @@ def _served_while_held(store: CurrentGraphStore, tenant: str = TENANT):
         finally:
             release.set()
         result = reader.result(timeout=10)
-    assert entered.is_set(), "the read never started the rebuild"
+    # The read returns without waiting, so the queued build may reach materialize only after it.
+    assert entered.wait(10), "the read never started the rebuild"
     return returned, result
 
 
