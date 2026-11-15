@@ -103,16 +103,32 @@ const CHANNEL_GAP = 16;
  */
 function laneRoute(edge: Endpoints, lane: RelationshipLane | undefined): [string, number, number] | null {
   if (!lane || (!lane.source && !lane.target && !lane.channel)) return null;
+  // A backward edge runs from its source's left port to its target's right port:
+  // route it as the forward line between those ports, then point it source to target.
+  if (edge.sourcePosition === Position.Left && edge.targetPosition === Position.Right) {
+    const forward = forwardLaneRoute({ ...edge, sourceX: edge.targetX, sourceY: edge.targetY, targetX: edge.sourceX, targetY: edge.sourceY,
+      sourcePosition: Position.Right, targetPosition: Position.Left }, { source: lane.target, target: lane.source });
+    return forward && [roundedRoute(forward[0].reverse()), forward[1], forward[2]];
+  }
+  const forward = forwardLaneRoute(edge, lane);
+  return forward && [roundedRoute(forward[0]), forward[1], forward[2]];
+}
+
+function forwardLaneRoute(edge: Endpoints, lane: RelationshipLane): [Point[], number, number] | null {
   if (edge.sourcePosition !== Position.Right || edge.targetPosition !== Position.Left || edge.targetX - edge.sourceX < 48) return null;
   // Channels share at most half the gap, so the outermost still turns well clear of both columns.
   const channelGap = Math.min(CHANNEL_GAP, (edge.targetX - edge.sourceX) / 2 / Math.max(1, (lane.channels ?? 1) - 1));
-  const sourceY = edge.sourceY + lane.source;
+  let sourceY = edge.sourceY + lane.source;
   let targetY = edge.targetY + lane.target;
-  // A line between ports on one row stays straight rather than jogging by a lane's width.
-  if (Math.abs(edge.targetY - edge.sourceY) < 1 && Math.abs(targetY - sourceY) <= LANE_GAP) targetY = sourceY;
+  // A line between ports on one row stays straight rather than jogging by a lane's width,
+  // along the lane an end was given so it keeps a full lane from the other types at that port.
+  if (Math.abs(edge.targetY - edge.sourceY) < 1 && Math.abs(targetY - sourceY) <= LANE_GAP) {
+    if (lane.source) targetY = sourceY;
+    else sourceY = targetY;
+  }
   const shift = (targetY > sourceY ? -1 : 1) * (lane.source + lane.target) * LANE_TURN_SHIFT;
   const turnX = (edge.sourceX + edge.targetX) / 2 + (lane.channel ?? 0) * channelGap + shift;
-  return [roundedRoute([[edge.sourceX, sourceY], [turnX, sourceY], [turnX, targetY], [edge.targetX, targetY]]), turnX, (sourceY + targetY) / 2];
+  return [[[edge.sourceX, sourceY], [turnX, sourceY], [turnX, targetY], [edge.targetX, targetY]], turnX, (sourceY + targetY) / 2];
 }
 
 /** Route bounded relationships around captions and intervening entities. */

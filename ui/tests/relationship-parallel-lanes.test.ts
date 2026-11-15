@@ -75,6 +75,47 @@ describe("parallel relationship lanes", () => {
     expect(sharedLength(usesFs, usesGh)).toBeGreaterThan(100);
   });
 
+  it("keeps an incoming relationship off the lane of outgoing ones on the same side of a card", () => {
+    // The mesh capture as recorded: the role can access the agent, a backward edge drawn
+    // from the role's left port into the agent's right port, beside the agent's own Uses lines.
+    const mesh = [
+      { id: "uses-fs", source: "copilot", target: "filesystem", data: { relationship: "uses" } },
+      { id: "uses-gh", source: "copilot", target: "github", data: { relationship: "uses" } },
+      { id: "access", source: "role", target: "copilot", sourceHandle: "context", targetHandle: "context", data: { relationship: "can_access" } },
+    ];
+    const uses = relationshipLaneFor("uses-gh", mesh, yOf);
+    const access = relationshipLaneFor("access", mesh, yOf);
+    expect(access.target).not.toBe(uses.source);
+    const forward = { source: "copilot", sourceX: 578, sourceY: 522, sourcePosition: Position.Right, targetPosition: Position.Left };
+    const usesFs = relationshipPath({ ...forward, target: "filesystem", targetX: 915, targetY: 367 }, [], relationshipLaneFor("uses-fs", mesh, yOf))[0];
+    const usesGh = relationshipPath({ ...forward, target: "github", targetX: 915, targetY: 522 }, [], uses)[0];
+    const accessPath = relationshipPath({ source: "role", target: "copilot", sourceX: 915, sourceY: 680, targetX: 578, targetY: 522,
+      sourcePosition: Position.Left, targetPosition: Position.Right }, [], access)[0];
+    expect(sharedLength(accessPath, usesFs)).toBe(0);
+    expect(sharedLength(accessPath, usesGh)).toBe(0);
+    // The backward line still starts at the role and ends at the agent.
+    const route = points(accessPath);
+    expect(route[0]!.x).toBe(915);
+    expect(route.at(-1)!.x).toBe(578);
+  });
+
+  it("keeps a full lane between two types entering one port, even when one runs along the row", () => {
+    // The reference correlation: the server exposes the agent from a row above; the container on the agent's row contains it.
+    const at: Record<string, { x: number; y: number }> = { server: { x: 0, y: 307 }, instance1: { x: 0, y: 465 }, agent: { x: 370, y: 465 } };
+    const links = [
+      { id: "exposed", source: "server", target: "agent", data: { relationship: "exposed_to" } },
+      { id: "contains", source: "instance1", target: "agent", data: { relationship: "contains" } },
+    ];
+    const end = (id: string) => {
+      const link = links.find(item => item.id === id)!;
+      const route = relationshipPath({ source: link.source, target: link.target, sourceX: 100, sourceY: at[link.source]!.y,
+        targetX: 680, targetY: at.agent!.y, sourcePosition: Position.Right, targetPosition: Position.Left },
+      [], relationshipLaneFor(id, links, node => at[node]?.y, node => at[node]?.x))[0];
+      return points(route).at(-1)!.y;
+    };
+    expect(Math.abs(end("exposed") - end("contains"))).toBeGreaterThanOrEqual(LANE_GAP);
+  });
+
   it("keeps two same-direction lanes from crossing each other", () => {
     const lanes = [
       { id: "near", source: "a", target: "b", sourceHandle: "r", targetHandle: "l", data: { relationship: "uses" } },

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { auditRenderedGraph } from "./graph-visual-audit.mjs";
+import { auditRenderedGraph, renderedRelationshipCurves, sharedRelationshipRuns } from "./graph-visual-audit.mjs";
 import { chromium, expect } from "@playwright/test";
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -60,6 +60,8 @@ const SCAN_ID = "scan-proof-ai-platform";
 const PREVIOUS_SCAN_ID = "scan-proof-ai-platform-prev";
 const SCENARIO_ID = "scenario-private-service-endpoint";
 // The README context map: what developer-copilot reaches through its MCP servers.
+// Both remediation desktop captures end just below the campaign panel instead of an empty lower half.
+const REMEDIATION_FIT = { selector: "main details", min: 480, pad: 32 };
 const CONTEXT_MAP_PAGE = `/graph?lens=context&scan=${SCAN_ID}&root=agent%3Adeveloper-copilot&capture=1`;
 const CAPTURE_THEME = process.env.CAPTURE_THEME === "light" ? "light" : "dark";
 const referenceLabProofBytes = await fs.readFile(REFERENCE_LAB_PROOF_PATH);
@@ -2874,6 +2876,10 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
         }));
         if (collisions.length) throw new Error(`Graph nodes overlap on ${urlPath}: ${collisions.join(" | ")}`);
       }
+      if (options.assertNoSharedRelationshipRuns) {
+        const shared = sharedRelationshipRuns(await page.evaluate(renderedRelationshipCurves));
+        if (shared.length) throw new Error(`Different relationship types share a line on ${urlPath}: ${JSON.stringify(shared)}`);
+      }
       if (options.assertEdgeLabelsClearOfNodes) {
         const collisions = await page.evaluate(() => {
           const nodes = [...document.querySelectorAll(".react-flow__node")]
@@ -3372,6 +3378,12 @@ async function main() {
       await expect(proofPage.locator(".graph-relationship-label")).toHaveCount(0);
       await scrollTo(proofPage, 0);
     };
+    // At the 1440x900 README size, Fit all stops at the 11px product floor; one zoom step keeps names at the 12px README floor.
+    const prepareCorrelationGraphReadme = async (proofPage) => {
+      await prepareCorrelationPath(proofPage);
+      await proofPage.locator(".react-flow__controls-zoomin").first().click();
+      await proofPage.waitForTimeout(500);
+    };
     // A phone opens on the ranked hop list, its readable sequential path view.
     const prepareCorrelationPathList = async (proofPage) => {
       const views = proofPage.getByRole("group", { name: "Investigation view" });
@@ -3394,7 +3406,7 @@ async function main() {
       minGraphNodeFontPx: 12,
       minGraphEdgeLabelFontPx: 12,
       assertEdgeLabelsClearOfNodes: true,
-      assertNodeLabelsWithinBounds: true,
+      assertNodeLabelsWithinBounds: true, assertNoSharedRelationshipRuns: true,
       assertNoHorizontalOverflow: true,
     };
     const page = await newCapturePage(CAPTURE_THEME, { width: 1440, height: 980 });
@@ -3614,7 +3626,7 @@ async function main() {
       minGraphNodeFontPx: 12,
       // This is an explicit agent investigation; retain its evidence captions.
       minGraphEdgeLabelFontPx: 12,
-      assertNodeLabelsWithinBounds: true,
+      assertNodeLabelsWithinBounds: true, assertNoSharedRelationshipRuns: true,
       assertEdgeLabelsClearOfNodes: true,
       assertNoHorizontalOverflow: true,
       maxGraphBottomGapPx: 64,
@@ -3700,7 +3712,7 @@ async function main() {
       referenceGraphPage,
       `/graph?capture=1&scan=${REFERENCE_CORRELATION_ID}&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`,
       "correlation-graph-live.png",
-      prepareCorrelationPath,
+      prepareCorrelationGraphReadme,
       correlationPathAssertions,
     );
     await referenceGraphPage.close();
@@ -3927,7 +3939,7 @@ async function main() {
       expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/query"],
       minGraphNodes: CONTEXT_MAP_NODES.length, maxGraphNodes: CONTEXT_MAP_NODES.length,
       minGraphEdges: CONTEXT_MAP_EDGES, maxGraphEdges: CONTEXT_MAP_EDGES,
-      minGraphNodeFontPx: 12, assertEdgeLabelsClearOfNodes: true,
+      minGraphNodeFontPx: 12, assertEdgeLabelsClearOfNodes: true, assertNoSharedRelationshipRuns: true,
       assertNoHorizontalOverflow: true,
     };
     await capture(page, CONTEXT_MAP_PAGE, "context-map-live.png", prepareContextNeighborhood, contextNeighborhoodAssertions);
@@ -4007,7 +4019,7 @@ async function main() {
       expectedText: ["Package remediation plan", "next", "15.2.3", "CVE-2025-29927", "Campaign workflow and verification"],
       rejectedText: ["42.5% modeled window risk"],
       expectedApiPaths: ["/v1/findings/remediation"],
-      fitContentHeight: { selector: "main details", min: 480, pad: 32 },
+      fitContentHeight: REMEDIATION_FIT,
     });
 
     const lightPage = await newCapturePage("light", { width: 1440, height: 980 });
@@ -4051,6 +4063,7 @@ async function main() {
       expectedText: ["Package remediation plan", "next", "15.2.3", "CVE-2025-29927", "Campaign workflow and verification"],
       rejectedText: [/Loading prioritized campaigns/i, "42.5% modeled window risk"],
       expectedApiPaths: ["/v1/findings/remediation"],
+      fitContentHeight: REMEDIATION_FIT,
     });
 
     const mobilePage = await newCapturePage("dark", { width: 390, height: 844 });

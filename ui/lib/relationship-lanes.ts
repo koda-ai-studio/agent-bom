@@ -21,20 +21,36 @@ export type RelationshipLane = { source: number; target: number; channel?: numbe
 const relationshipOf = (edge: LaneEdge) => typeof edge.data?.relationship === "string" ? edge.data.relationship : "";
 
 /**
- * Offset of this edge's relationship type among the types sharing one port.
- * Edges of one type share a lane, so a bundle still reads as one trunk; each
- * other type runs on its own parallel lane, ordered by where its far ends sit.
+ * The card side an edge end attaches to. A backward edge leaves its source's
+ * left `context` handle and enters its target's right `context` handle, so it
+ * shares a side with the forward edges at the other end of that card.
+ */
+function cardSide(edge: LaneEdge, side: "source" | "target"): string {
+  const handle = (side === "source" ? edge.sourceHandle : edge.targetHandle) ?? null;
+  if (handle === "context") return side === "source" ? "left" : "right";
+  if (handle === null) return side === "source" ? "right" : "left";
+  return `${side}:${handle}`;
+}
+
+/**
+ * Offset of this edge's relationship type among the types meeting one side of a
+ * card, whether they leave or enter it. Edges of one type share a lane, so a
+ * bundle still reads as one trunk; each other type runs on its own parallel
+ * lane, ordered by where its far ends sit.
  */
 function portOffset(edge: LaneEdge, edges: LaneEdge[], side: "source" | "target", yOf: (id: string) => number | undefined): number {
-  const handle = side === "source" ? "sourceHandle" : "targetHandle";
-  const far = side === "source" ? "target" : "source";
+  const node = edge[side];
+  const at = cardSide(edge, side);
   const groups = new Map<string, number[]>();
   for (const item of edges) {
-    if (item.hidden || item[side] !== edge[side] || (item[handle] ?? null) !== (edge[handle] ?? null)) continue;
-    const y = yOf(item[far]);
-    const ys = groups.get(relationshipOf(item)) ?? [];
-    if (y !== undefined) ys.push(y);
-    groups.set(relationshipOf(item), ys);
+    if (item.hidden) continue;
+    for (const end of ["source", "target"] as const) {
+      if (item[end] !== node || cardSide(item, end) !== at) continue;
+      const y = yOf(item[end === "source" ? "target" : "source"]);
+      const ys = groups.get(relationshipOf(item)) ?? [];
+      if (y !== undefined) ys.push(y);
+      groups.set(relationshipOf(item), ys);
+    }
   }
   if (groups.size < 2) return 0;
   const mean = (ys: number[]) => ys.length ? ys.reduce((sum, y) => sum + y, 0) / ys.length : 0;

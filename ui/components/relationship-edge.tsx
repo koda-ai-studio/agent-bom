@@ -153,7 +153,7 @@ export function RelationshipEdge(props: EdgeProps) {
       scheduleRelationshipLabelLayoutAfterMove(labelRef.current);
     });
   }, [store]);
-  return <g ref={edgeRef} data-label-disclosure={packageFinding ? "on-demand" : undefined} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+  return <g ref={edgeRef} data-relationship={relationship || undefined} data-label-disclosure={packageFinding ? "on-demand" : undefined} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
     {typeof props.data?.hoverDescription === "string" && <title>{props.data.hoverDescription}</title>}
     {mcpSource && mcpTarget && <defs><linearGradient id={gradientId} gradientUnits="userSpaceOnUse"
       x1={props.sourceX} y1={props.sourceY} x2={props.targetX} y2={props.targetY}>
