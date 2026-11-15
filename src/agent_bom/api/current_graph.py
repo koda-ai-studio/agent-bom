@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import threading
 import time
 import weakref
@@ -33,6 +32,7 @@ from agent_bom.api.current_graph_builds import build_wait_seconds as _build_wait
 from agent_bom.api.current_graph_builds import generation_rotating as _generation_rotating
 from agent_bom.api.current_graph_counts import count_current_nodes
 from agent_bom.api.current_graph_lock import ProjectionLock as _ProjectionLock
+from agent_bom.api.current_graph_promotion import promoted_id, read_stamp, write_stamp
 from agent_bom.api.current_graph_reads import GRAPH_READS as _READS
 from agent_bom.api.file_lock import exclusive_file_lock
 from agent_bom.api.finding_read_context import cached_read, forget_read, on_scope_exit, read_once
@@ -53,6 +53,11 @@ _PROJECTION_FORMAT = 6
 # Restarts of an unpinned read whose generation another worker retired between
 # resolve and read. In-process readers are pinned and never need one.
 _UNPINNED_READ_ATTEMPTS = 3
+
+
+def _format_tag() -> str:
+    """A generation built by another projection format or release is never served as previous."""
+    return f"{_PROJECTION_FORMAT}/{__version__}"
 
 
 def seeding_refusal() -> HTTPException:
@@ -383,18 +388,15 @@ class CurrentGraphStore:
 
     def _promotion_epoch(self, tenant: str) -> str:
         """The tenant's promotion stamp, shared by every worker using this projection cache."""
-        try:
-            return Path(self._promotion_paths(tenant)[1]).read_text(encoding="utf-8")
-        except FileNotFoundError:
-            return ""
+        return read_stamp(self._promotion_paths(tenant)[1])
 
-    def _stamp_promotion(self, tenant: str) -> None:
-        # Written under the promotion file lock; os.replace keeps lock-free reads whole.
-        target = self._promotion_paths(tenant)[1]
-        staging = f"{target}.{os.getpid()}.{threading.get_ident()}"
-        with open(staging, "w", encoding="utf-8") as handle:
-            handle.write(f"{os.getpid()}:{time.time_ns()}:{os.urandom(8).hex()}")
-        os.replace(staging, target)
+    def _stamp_promotion(self, tenant: str, identity: str) -> None:
+        write_stamp(self._promotion_paths(tenant)[1], _format_tag(), identity)
+
+    def _generation_created_at(self, tenant: str, identity: str) -> str:
+        """When the evidence behind a projection generation was recorded."""
+        rows = self._projection_store.snapshots_by_ids(tenant_id=tenant, scan_ids={identity})
+        return str(rows[0].get("created_at") or "") if rows else ""
 
     def prepare_current(self, tenant: str, *, seconds: float) -> bool:
         """Build the tenant's current generation on the shared queue; True once one is live.
@@ -426,7 +428,10 @@ class CurrentGraphStore:
             cached = self._cache.get(tenant)
             # Keep the fallback alive across the unlocked background-build wait.
             # A worker may promote a different evidence revision during that wait.
-            previous = self._pin(cached[2]) if cached and self._live(tenant, cached[2]) else ""
+            # This worker's last promotion first; a caller-facing read also takes
+            # the last one any worker recorded (a restarted or sibling worker).
+            candidates = (cached[2] if cached else "", promoted_id(epoch, _format_tag()) if inside_estate_read_boundary() else "")
+            previous = next((self._pin(identity) for identity in candidates if identity and self._live(tenant, identity)), "")
         if inside_estate_read_boundary():
             # A request may wait briefly for read-your-writes, but never owns
             # an unbounded build. Worker reads retain the synchronous path.
@@ -499,7 +504,7 @@ class CurrentGraphStore:
                 else "Recorded inventory does not establish source collection or assessment coverage.",
             }
             self._cache[tenant] = fingerprint, revisions, identity
-            self._stamp_promotion(tenant)
+            self._stamp_promotion(tenant, identity)
             return self._pin(identity)
 
     def _reusable(self, tenant: str, identity: str) -> bool:

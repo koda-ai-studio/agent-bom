@@ -11,7 +11,8 @@ same variables and password file the API reads, so no credential appears in
 argv. It is bounded: a timeout kills it, any exit other than "copied" makes the
 caller rebuild in process, and API shutdown or the parent's death ends it. Its
 single SQLite transaction means a child that dies mid-write leaves nothing to
-promote. Only the exception's type name crosses back, logged sanitized; an
+promote. Between batches it yields PostgreSQL to the API's in-flight graph and
+findings reads, within caps (``read_gauge``). Only the exception's type name crosses back, logged sanitized; an
 unreachable database has its own exit status so it is not read as a role
 privilege failure. A child that cannot even start also falls back.
 """
@@ -25,7 +26,9 @@ import os
 import subprocess  # nosec B404 - fixed interpreter and module, no shell
 import sys
 import threading
+import time
 
+from agent_bom.api import read_gauge
 from agent_bom.security import sanitize_text
 
 logger = logging.getLogger(__name__)
@@ -65,17 +68,29 @@ def _reason(stderr: bytes) -> str:
     return sanitize_text(lines[-1], max_len=120) if lines else "no detail"
 
 
+def _paused_seconds(stdout: bytes) -> float:
+    """The child's one-line receipt; 0 when absent or malformed (it is only reported, never trusted)."""
+    try:
+        return float(json.loads(stdout.decode("utf-8", "replace").strip().splitlines()[-1])["paused_seconds"])
+    except (ValueError, KeyError, IndexError, TypeError):
+        return 0.0
+
+
 def copy_in_child(cache_path: str, *, module: str | None = None, timeout: float | None = None, **fields: str) -> bool:
     """Run the row copy in a child; True only when the child copied and committed."""
     request = {name: fields[name] for name in REQUEST_FIELDS}
-    payload = json.dumps({**request, "cache_path": cache_path, "parent_pid": os.getpid()}).encode()
+    try:
+        gauge = read_gauge.gauge_path() if read_gauge.throttle_enabled() else ""
+    except OSError:
+        gauge = ""  # The copy then never yields; it still runs.
+    payload = json.dumps({**request, "cache_path": cache_path, "parent_pid": os.getpid(), "read_gauge": gauge}).encode()
     # One connection is all the child needs; the pool sizing variables are the API's own.
     env = {**os.environ, "AGENT_BOM_POSTGRES_POOL_MIN_SIZE": "1", "AGENT_BOM_POSTGRES_POOL_MAX_SIZE": "1"}
     try:
         process = subprocess.Popen(  # noqa: S603 # nosec B603 - fixed interpreter and module; credentials stay in env
             [sys.executable, "-m", module or CHILD_MODULE],
             stdin=subprocess.PIPE,
-            stdout=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env=env,
         )
@@ -86,8 +101,9 @@ def copy_in_child(cache_path: str, *, module: str | None = None, timeout: float 
     with _children_lock:
         _children.add(process)
     limit = TIMEOUT_SECONDS if timeout is None else timeout
+    started = time.monotonic()
     try:
-        _out, err = process.communicate(payload, timeout=limit)
+        out, err = process.communicate(payload, timeout=limit)
     except subprocess.TimeoutExpired:
         process.kill()
         process.communicate()
@@ -97,6 +113,11 @@ def copy_in_child(cache_path: str, *, module: str | None = None, timeout: float 
         with _children_lock:
             _children.discard(process)
     if process.returncode == EXIT_COPIED:
+        logger.info(
+            "Current graph row copy took %.1f s, %.1f s of it yielding to graph and findings reads",
+            time.monotonic() - started,
+            _paused_seconds(out or b""),
+        )
         return True
     if process.returncode == EXIT_UNREACHABLE:
         logger.warning("Current graph row copy child could not reach the database (exit %s); rebuilding instead", process.returncode)

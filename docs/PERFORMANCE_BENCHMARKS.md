@@ -310,6 +310,145 @@ rounds, including push ingest (152 s against 267 s at 5,000 agents), which no
 part of the change runs. That points to runner variance between the paired jobs
 rather than the change, but it was not verified.
 
+#### Serving the previous graph during a rebuild, 2026-11-14
+
+Current-estate reads now answer from the last promoted graph at once while a
+rebuild runs, labelled `previous_generation` with `as_of` (behaviour:
+`docs/RUNTIME_FAIL_MODES.md`, Current graph refresh). Three rounds of the
+Qualification workflow (`lanes=performance`) paired the change against
+`release/0.115.0` at a044986d1, dispatch order alternating (runs: release
+43631920825, 43635414350, 43638248055; change 43632639449, 43635403915,
+43638258215, the last with `stack_samples=true`). Median (range); times in ms:
+
+| Backend | Agents | Tree | Graph p50 | Graph p95 | Findings p95 |
+| --- | --- | --- | ---: | ---: | ---: |
+| PostgreSQL | 1,000 | release | 1,077 (625–1,283) | 1,290 (889–1,591) | 291 (77–295) |
+| PostgreSQL | 1,000 | change | 790 (619–798) | 866 (739–1,223) | 48 (47–292) |
+| PostgreSQL | 5,000 | release (2 runs) | 1,272, 2,278 | 2,698, 6,123 | 95, 141 |
+| PostgreSQL | 5,000 | change | 1,805 (674–2,081) | 2,279 (2,168–6,400) | 64 (48–2,245) |
+| SQLite | 1,000 | release | 492 (370–533) | 1,293 (1,238–1,470) | 55 (53–61) |
+| SQLite | 1,000 | change | 434 (392–471) | 1,287 (1,283–1,424) | 58 (30–70) |
+| SQLite | 5,000 | release | 521 (491–538) | 617 (574–713) | 2,073 (2,066–2,175) |
+| SQLite | 5,000 | change | 484 (480–494) | 571 (571–688) | 2,090 (2,085–2,167) |
+
+The third release run's 5,000-agent PostgreSQL push did not finish inside the
+lane's 600 s bound, so that row has two runs.
+
+These numbers do not measure the change. Each estate starts a fresh database,
+so there is never a previous graph to serve, and the lane reads
+`/v1/graph?scan_id=<the pushed scan>`, an exact read of one recorded scan that
+goes to the backing store and never to the projection. The differences above
+are within the run-to-run ranges. The stack samples of the 5,000-agent
+PostgreSQL run show the slow first reads waiting inside PostgreSQL on that
+explicit read (`postgres_graph_query.edges_for_node_ids`,
+`postgres_graph_traversal.nodes_by_ids`, `postgres_graph_query.page_nodes`)
+while the copy child streams the new projection
+(`current_graph_pg_copy._copy_table`); the warm-ups were idle, waiting their
+turn. The 5,000-agent PostgreSQL p95 therefore stays above the 2 s target, and
+the SQLite 5,000-agent findings p95 is still the 2 s cold-start
+read-your-writes wait, which this change keeps on purpose.
+
+On a laptop (SQLite, 1,000 agents, three alternating rounds), 20 unpinned
+`/v1/graph?view=summary` reads right after a second push were served from the
+previous graph on both trees (the release already waited only 50 ms when one
+existed), all with status 200; the change adds `as_of` to every one. Medians
+were 370–487 ms on the change and 423–543 ms on the release, and the first read
+after the push took 2.8–5.1 s against 3.0–3.8 s: those first reads are held by
+CPU contention with the rebuild, not by a wait. What the change removes is the
+2 s wait and 503 on a restarted or sibling worker that has not built the graph
+itself.
+
+#### PostgreSQL copy yielding to reads, 2026-11-14
+
+The PostgreSQL row-copy child now yields between batches while the API serves
+graph or findings reads (behaviour: `docs/RUNTIME_FAIL_MODES.md`, Current graph
+refresh). Three Qualification rounds (`lanes=performance`), dispatch order
+alternating. Round 1 paired against `release/0.115.0` at 01fb7bb9d (runs
+43644055106, change 43644065879, before the fix for reads waiting on the
+build). Rounds 2 and 3 paired against `main` at cc851f55c, which is that release
+merged (runs 43648494560 and 43651972368; change 43648485004 and 43651982343,
+the last with `stack_samples=true`). Median (range); times in ms:
+
+| Backend | Agents | Tree | Graph p50 | Graph p95 | Findings p95 | Push stored (s) |
+| --- | --- | --- | ---: | ---: | ---: | ---: |
+| PostgreSQL | 1,000 | base | 763 (744–1,099) | 1,118 (846–1,609) | 252 (58–354) | 88 (79–111) |
+| PostgreSQL | 1,000 | change | 560 (557–892) | 598 (597–1,063) | 834 (56–2,072) | 65 (65–113) |
+| PostgreSQL | 5,000 | base | 1,787 (1,483–2,280) | 2,519 (2,486–3,711) | 106 (73–226) | 471 (405–577) |
+| PostgreSQL | 5,000 | change | 1,460 (1,388–2,038) | 2,482 (1,579–5,799) | 2,149 (2,110–2,405) | 341 (329–578) |
+| SQLite | 1,000 | base | 478 (273–488) | 1,349 (1,095–1,944) | 47 (47–80) | 46 (25–46) |
+| SQLite | 1,000 | change | 419 (398–432) | 1,187 (1,157–1,284) | 52 (34–56) | 38 (36–46) |
+| SQLite | 5,000 | base | 483 (429–532) | 536 (504–609) | 2,084 (2,079–2,529) | 251 (151–251) |
+| SQLite | 5,000 | change | 497 (488–518) | 584 (581–623) | 2,133 (2,092–2,233) | 211 (195–258) |
+
+On PostgreSQL at 1,000 agents the graph median fell from 763 to 560 ms. At
+5,000 agents the change met the 2 s graph p95 in one round of three (1,579 ms);
+in round 2 four reads took about 5.8 s after ten at 1.2 to 1.4 s, so the
+5,000-agent p95 target is still not met reliably. The stack samples of round 3
+show the reads still waiting inside PostgreSQL (`edges_for_node_ids`,
+`nodes_by_ids`, `page_nodes`) while the child spent about 24 s of its life
+paused for them; the copy child ran 41.7 s against 22.8 s unthrottled
+(run 43638258215). Because the copy now outlasts the graph reads, the first
+findings read after a 5,000-agent PostgreSQL push takes the full 2 s cold-start
+read-your-writes wait, which is why findings p95 there rose from about 0.1 s to
+2.1 s. The 1,000-agent findings regression of round 1 (2.07 s) came from a cold
+read counted as in flight, which made the copy yield to the read that was
+waiting for it; a request now stops counting while it waits on a build.
+
+A local measurement points at the larger remaining cost. Right after a
+5,000-agent save, `graph_nodes` (170,330 rows) and `graph_edges` (229,197 rows)
+had never been analyzed, and the explicit-scan read pattern (`page_nodes`,
+`edges_for_node_ids`, `nodes_by_ids`) took 586 ms median; after `ANALYZE` it
+took 166 ms. On the runners the reads drop sharply in both trees about 30 s
+after the push whether or not the copy is still running, which fits autovacuum
+analyzing the new rows. The application role is DML-only and does not run
+`ANALYZE`; giving a privileged step that job is a maintainer decision.
+
+A local profile of the 5,000-agent PostgreSQL push (346 s on a laptop, 50 ms
+samples of the ingest worker) puts 47% of the time in the row-at-a-time
+snapshot upserts (`postgres_graph_support._execute_many_batched`, about 82 s
+for 229,197 edges and 47 s for nodes) and about 39% in the SQLite build
+workspace (`build_workspace.get_node_payload`, `fetch_edge_page`, `_upsert`).
+API `/health` p95 during ingest stayed under 100 ms on both trees except SQLite
+at 5,000 agents in rounds 2 and 3 (139 to 209 ms on both trees).
+
+#### Bulk snapshot writes and graph statistics, 2026-11-15
+
+PostgreSQL snapshots are now written with `COPY` plus one upsert per table and
+batch, the graph tables are analyzed after a save of 20,000 rows or more, and
+the copy throttle is off by default (behaviour: `docs/RUNTIME_FAIL_MODES.md`,
+Current graph refresh). Three Qualification rounds (`lanes=performance`)
+against `main` at cc851f55c, dispatch order alternating: main 43666517524,
+43669347471, 43671673552; change 43666526481, 43669339602, 43671683679. The
+Perf Scale Evidence workflow budget run on the change, 43666535331, passed.
+Median (range); times in ms:
+
+| Backend | Agents | Tree | Graph p50 | Graph p95 | Findings p95 | Push stored (s) |
+| --- | --- | --- | ---: | ---: | ---: | ---: |
+| PostgreSQL | 1,000 | main | 923 (830–1,088) | 1,206 (1,013–1,434) | 329 (83–394) | 94 (77–115) |
+| PostgreSQL | 1,000 | change | 747 (499–775) | 976 (648–1,054) | 77 (53–113) | 58 (39–64) |
+| PostgreSQL | 5,000 | main | 1,063 (773–1,405) | 2,092 (1,814–2,656) | 472 (416–2,521) | 484 (417–592) |
+| PostgreSQL | 5,000 | change | 901 (606–903) | 1,126 (757–1,325) | 2,291 (2,277–2,417) | 313 (192–344) |
+| SQLite | 1,000 | main | 441 (391–494) | 1,225 (985–1,563) | 36 (33–62) | 37 (35–48) |
+| SQLite | 1,000 | change | 468 (280–475) | 1,468 (743–1,656) | 44 (24–80) | 42 (24–45) |
+| SQLite | 5,000 | main | 480 (403–514) | 602 (486–603) | 2,066 (2,065–2,086) | 202 (190–263) |
+| SQLite | 5,000 | change | 558 (399–581) | 680 (473–830) | 2,431 (2,075–2,435) | 235 (143–246) |
+
+On PostgreSQL the 5,000-agent graph p95 is under 2 s in all three rounds
+(757 to 1,325 ms against 1,814 to 2,656 ms), the 1,000-agent median is under
+1 s, and the 5,000-agent push stores in 313 s median against 484 s, a 35%
+saving (192 s at best). A local profile of the push showed the edge writes
+falling from about 82 s to about 11 s; the node upsert is about the same as
+before (about 58 s), consistent with index maintenance on `graph_nodes` and
+`graph_node_search` rather than the number of statements.
+
+The PostgreSQL 5,000-agent findings p95 regressed from 472 ms to 2,291 ms. The
+graph reads now finish about seven seconds sooner, so the first findings reads
+arrive while the post-push projection build is still running; each such cold
+read spends the 2 s read-your-writes budget and returns with reachability
+unassessed. `main` shows the same 2.5 s value in one round of three. The
+SQLite rows are not touched by these changes; their differences sit within the
+run-to-run ranges except the 5,000-agent findings p95, which is not explained.
+
 ### How to measure the operator targets
 
 Run against the deployment you actually intend to operate:
@@ -636,6 +775,62 @@ What changed:
   scan report (120 MiB) for the run to compare `blast_radius`; as the
   in-process client that was charged to the API. This is a measurement
   correction, not a product change.
+
+### glibc arenas and the nightly runner (2026-11-14)
+
+The cgroup measurements above ran in the API image (musl). The nightly job
+runs on Ubuntu 24.04 (glibc 2.39, Python 3.11) and stayed over budget after
+them: 1,692-1,780 MiB cold and 1,732-1,924 MiB warm on SQLite,
+1,737-1,772 MiB on Postgres and 1,917-1,938 MiB per replica. Reproduced in an
+Ubuntu 24.04 container (4 CPUs, Python 3.11.17) at 1,850 / 1,927 MiB.
+
+The peak was not live data. Sampling glibc's `mallinfo2` through the cold run
+showed, at the update/delete peak of 1,750 MiB, 511 MiB of malloc heap in use
+and 464 MiB freed but still held. glibc gives each thread that allocates
+concurrently its own arena (up to eight per CPU); ingest, current-graph
+builds, warm-ups and request threads (13 at the peak) each kept their own
+high-water mark. The held-free heap grew stage by stage: 116 MiB after
+ingest, 385 MiB during graph reads, 464 MiB at update/delete.
+
+The API server now sets `M_ARENA_MAX=2` through `mallopt` when its module
+loads on glibc (`src/agent_bom/api/malloc_arenas.py`). An operator's
+`MALLOC_ARENA_MAX` is honoured instead; musl is untouched. Same container,
+same workload:
+
+| SQLite, 200 agents | Peak RSS before | Peak RSS after | CPU-seconds before | CPU-seconds after |
+|---|---:|---:|---:|---:|
+| cold | 1,850 MiB | 1,435 MiB | 472 | 285 |
+| warm | 1,927 MiB | 1,477 MiB | 470 | 306 |
+| cancel recovery | exit -6 (SIGABRT) | exit 0, 897 MiB | | |
+
+Findings stayed exact (207) and every equivalence check passed. On Postgres
+the single-API profile fell from 1,772 / 1,737 MiB (nightly) to 1,268 /
+1,300 MiB (container).
+
+The two-replica profile stayed over budget at 1,798-2,104 MiB per replica
+until it got a database of its own. The nightly job ran it after the
+single-API profile in the same database and tenant, so each replica's current
+graph carried three 200-agent estates instead of the two the profile
+describes. On a fresh database the same code peaks at 1,149 / 1,304 MiB. The
+job now migrates a second database (`agent_bom_replicas`) for it. The
+three-estate result is still a real capacity figure: one tenant holding
+about 600 agents of current estate needs more than 80% of a 2 GiB limit per
+API replica.
+
+Two related corrections landed with it:
+
+- **Exit drain.** The cancel-recovery child aborted with `FATAL: exception not
+  rethrown` after its push was stored. The push commit had started an exec-read
+  warm-up on a daemon thread; at interpreter exit Python 3.11-3.13 ends such a
+  thread with `pthread_exit`, which aborts inside pydantic-core's native frames
+  (SIGSEGV on 2026-11-13). At exit the API now refuses new warm-ups, lets a
+  running one finish its current step and waits at most 10 s
+  (`src/agent_bom/api/background_exit.py`).
+- **The scan child builds the push body.** The harness parsed the report and
+  built the CLI push body in the measured process: about 480 MiB of Python
+  heap during update/delete. The scan child now writes the body and the rows,
+  as a collector host would. glibc reused that freed heap, so on its own it
+  moved the peak by under 30 MiB; it is a measurement correction.
 
 ### How pushes are modelled
 

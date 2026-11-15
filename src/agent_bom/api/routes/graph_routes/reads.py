@@ -32,6 +32,7 @@ from agent_bom.api.routes.graph_routes._admission import _GraphAdmissionRoute
 from agent_bom.api.routes.graph_routes.cluster_map import router as cluster_map_router
 from agent_bom.api.routes.graph_routes.exploit_story import router as exploit_story_router
 from agent_bom.api.routes.graph_routes.params import _parse_entity_type_filter
+from agent_bom.api.routes.graph_routes.rollup_inputs import current_coverage
 from agent_bom.api.time_window import MAX_WINDOW_DAYS
 from agent_bom.graph import SEVERITY_RANK
 from agent_bom.graph.adjacency_page import SnapshotGenerationMismatchError
@@ -88,6 +89,13 @@ async def get_graph_impact(
     return {**impact, "scan_id": identity[0] if identity else scan_id or ""}
 
 
+async def _search_coverage(graph_store: Any, tenant_id: str, scan_id: str) -> dict[str, Any]:
+    """Current-estate coverage for a search; the request already resolved one generation and this reuses it."""
+    read_scan = scan_id or await _runtime._graph_store_call(graph_store.latest_snapshot_id, tenant_id=tenant_id)
+    coverage = await current_coverage(graph_store, tenant_id, str(read_scan or ""))
+    return {"collection_coverage": coverage} if coverage is not None else {}
+
+
 @search_router.get("/graph/search", **documented(GraphSearchResponse), tags=["graph"])
 async def search_graph(
     request: Request,
@@ -141,7 +149,9 @@ async def search_graph(
     if identity is not None:
         await _runtime._graph_store_call(verify_generation, graph_store, tenant=tenant_id, identity=identity, has_rows=bool(results))
         next_cursor = wrap_node_cursor(next_cursor, identity[1])
+    truncated = page_truncated(cursor=cursor, next_cursor=next_cursor, offset=offset, returned=len(results), total=total)
     return {
+        **await _search_coverage(graph_store, tenant_id, scan_id or ""),
         "snapshot_generation": identity[1] if identity else None,
         "query": q,
         "filters": {
@@ -163,10 +173,8 @@ async def search_graph(
         "completeness": graph_completeness(
             returned=len(results),
             total=total,
-            truncated=page_truncated(cursor=cursor, next_cursor=next_cursor, offset=offset, returned=len(results), total=total),
-            reason="search_page_limit"
-            if page_truncated(cursor=cursor, next_cursor=next_cursor, offset=offset, returned=len(results), total=total)
-            else "",
+            truncated=truncated,
+            reason="search_page_limit" if truncated else "",
         ),
     }
 
@@ -425,6 +433,7 @@ async def get_graph_incident_edges(
         "edges": [edge.to_dict() for edge in page["edges"]],
         "next_cursor": page["next_cursor"],
         "completeness": page["completeness"],
+        **({"collection_coverage": page["collection_coverage"]} if page.get("collection_coverage") else {}),
     }
 
 

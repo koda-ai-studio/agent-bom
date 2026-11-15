@@ -2089,6 +2089,9 @@ jobs:
             tests/test_postgres_job_payload_cache.py \
             tests/test_postgres_migrated_graph_parity.py \
             tests/test_current_graph_postgres_copy.py \
+            tests/test_current_graph_postgres_serve_previous.py \
+            tests/test_postgres_graph_analyze.py \
+            tests/test_postgres_graph_bulk_write.py \
             tests/test_postgres_observation_utc.py \
             tests/test_postgres_registry_stores.py \
             tests/test_registry_import.py \

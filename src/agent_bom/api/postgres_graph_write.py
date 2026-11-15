@@ -19,10 +19,11 @@ from agent_bom.graph.node_aliases import NodeAliasCollector
 from agent_bom.graph.severity_floor import counts_as_finding
 from agent_bom.graph.snapshot_paths import SNAPSHOT_PATH_COLUMNS, SnapshotPath, occurrence_path_keys, snapshot_path_rows
 
+from . import postgres_graph_bulk as bulk_write
 from .postgres_graph_aliases import write_node_aliases
-from .postgres_graph_support import _CORRELATION_RUN_COLUMNS, _correlation_run_from_row, _execute_many_batched
+from .postgres_graph_support import _CORRELATION_RUN_COLUMNS, _batched_rows, _correlation_run_from_row, _execute_many_batched
 
-__all__ = ["_ATTACK_PATH_UPSERT_SQL", "_INTERACTION_RISK_UPSERT_SQL", "_SNAPSHOT_UPSERT_SQL", "write_nodes_and_aliases"]
+__all__ = ["_ATTACK_PATH_UPSERT_SQL", "_INTERACTION_RISK_UPSERT_SQL", "_SNAPSHOT_UPSERT_SQL", "write_edges", "write_nodes_and_aliases"]
 
 _NODE_UPSERT_SQL = """
             INSERT INTO graph_nodes (
@@ -157,7 +158,18 @@ def _write_snapshot_paths(
     )
 
 
-def _edge_upsert_sql(scope_predicate: str) -> str:
+_ROW_INCOMING = """(
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ) AS incoming (
+                    source_id, target_id, relationship, direction, weight,
+                    traversable, first_seen, last_seen, valid_from, valid_to,
+                    confidence, provenance, source_scan_id, source_run_id,
+                    evidence, activity_id, scan_id, tenant_id
+                )"""
+
+
+def _edge_upsert_sql(scope_predicate: str, incoming: str = _ROW_INCOMING) -> str:
+    """The edge upsert; ``incoming`` is one row of parameters, or the bulk path's deduplicated staging select."""
     return f"""
                 INSERT INTO graph_edges (
                     source_id, target_id, relationship, direction, weight,
@@ -188,14 +200,7 @@ def _edge_upsert_sql(scope_predicate: str) -> str:
                     incoming.activity_id,
                     incoming.scan_id,
                     incoming.tenant_id
-                FROM (
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ) AS incoming (
-                    source_id, target_id, relationship, direction, weight,
-                    traversable, first_seen, last_seen, valid_from, valid_to,
-                    confidence, provenance, source_scan_id, source_run_id,
-                    evidence, activity_id, scan_id, tenant_id
-                )
+                FROM {incoming}
                 LEFT JOIN graph_edges AS previous
                   ON previous.tenant_id = incoming.tenant_id
                  AND previous.scan_id = %s
@@ -353,7 +358,20 @@ def _write_nodes(conn: Any, nodes: Iterable[Any], *, scan: str, tenant: str, bat
     node_batch: list[tuple[Any, ...]] = []
     search_batch: list[tuple[Any, ...]] = []
 
+    bulk = bulk_write.begin(conn)
+    ordinal = [0]
+
     def _flush_nodes() -> None:
+        if bulk:
+            # One upsert per batch keeps each statement inside the statement timeout; batches apply in
+            # order, so a duplicate in a later batch still wins through ON CONFLICT, as on the row path.
+            if node_batch:
+                bulk_write.copy_stage(conn, "abom_stage_nodes", node_batch, start=ordinal[0])
+                ordinal[0] = bulk_write.copy_stage(conn, "abom_stage_node_search", search_batch, start=ordinal[0])
+                bulk_write.flush_nodes(conn)
+                node_batch.clear()
+                search_batch.clear()
+            return
         if node_batch:
             _execute_many_batched(conn, _NODE_UPSERT_SQL, node_batch, batch_size=batch_size)
             node_batch.clear()
@@ -373,6 +391,18 @@ def _write_nodes(conn: Any, nodes: Iterable[Any], *, scan: str, tenant: str, bat
             _flush_nodes()
     _flush_nodes()
     return node_count, severity_counts, type_counts
+
+
+def write_edges(conn: Any, rows: Iterable[Sequence[Any]], *, scope_predicate: str, previous_scan: str | None, batch_size: int) -> None:
+    """Write edge rows: staged and upserted once when the node write opened the bulk stages, else one row at a time."""
+    if bulk_write.staged(conn):
+        ordinal = 0
+        upsert = _edge_upsert_sql(scope_predicate, f"({bulk_write.latest_edges_sql()}) AS incoming")
+        for batch in _batched_rows(rows, batch_size):
+            ordinal = bulk_write.copy_stage(conn, "abom_stage_edges", batch, start=ordinal)
+            bulk_write.flush_edges(conn, select_sql=upsert, previous_scan=previous_scan)
+        return
+    _execute_many_batched(conn, _edge_upsert_sql(scope_predicate), rows, batch_size=batch_size)
 
 
 def _edge_rows(

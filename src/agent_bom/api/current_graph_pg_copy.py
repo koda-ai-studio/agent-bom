@@ -32,6 +32,7 @@ from typing import Any
 
 from agent_bom.api import current_graph_pg_copy_child
 from agent_bom.api.graph_store_support import _CREATE_PRESET_TABLE_SQLITE
+from agent_bom.api.read_gauge import CopyThrottle
 from agent_bom.db import graph_store as sqlite_graph_store
 from agent_bom.db.graph_node_search import ensure_search_index
 from agent_bom.db.graph_revision import revision_tokens
@@ -114,7 +115,16 @@ def _projection_columns(conn: sqlite3.Connection, table: str) -> list[str]:
     return [str(row[1]) for row in conn.execute(f"PRAGMA main.table_info({table})")]  # nosec B608 - fixed internal table names
 
 
-def _copy_table(pg: Any, conn: sqlite3.Connection, table: str, *, overrides: dict[str, Any], tenant: str, source_scan: str) -> None:
+def _copy_table(
+    pg: Any,
+    conn: sqlite3.Connection,
+    table: str,
+    *,
+    overrides: dict[str, Any],
+    tenant: str,
+    source_scan: str,
+    throttle: CopyThrottle | None = None,
+) -> None:
     if table not in _COPIED_TABLES:
         raise ValueError(f"Unsupported projection table: {table}")
     types = _column_types(pg, table)
@@ -130,6 +140,9 @@ def _copy_table(pg: Any, conn: sqlite3.Connection, table: str, *, overrides: dic
         cursor.execute(select, params)
         while rows := cursor.fetchmany(BATCH_ROWS):
             conn.executemany(insert, rows)
+            if throttle is not None:
+                # Between batches, give PostgreSQL to the API's in-flight reads (bounded).
+                throttle.pause()
 
 
 def _copy(
@@ -143,6 +156,7 @@ def _copy(
     created_at: str,
     write_generation: str,
     evidence_manifest_sha256: str,
+    throttle: CopyThrottle | None = None,
 ) -> bool:
     from agent_bom.api.current_graph_copy import projection_status
 
@@ -153,10 +167,9 @@ def _copy(
     _clear_snapshot_rows(conn, tenant=tenant, scan=identity)
     conn.execute("DELETE FROM main.graph_node_search WHERE tenant_id = ? AND scan_id = ?", (tenant, identity))
     for table in _VERBATIM_TABLES:
-        _copy_table(pg, conn, table, overrides={"scan_id": identity}, tenant=tenant, source_scan=source_scan)
-    _copy_table(
-        pg, conn, "attack_paths", overrides={"scan_id": identity, "computed_at": created_at}, tenant=tenant, source_scan=source_scan
-    )
+        _copy_table(pg, conn, table, overrides={"scan_id": identity}, tenant=tenant, source_scan=source_scan, throttle=throttle)
+    attack_overrides = {"scan_id": identity, "computed_at": created_at}
+    _copy_table(pg, conn, "attack_paths", overrides=attack_overrides, tenant=tenant, source_scan=source_scan, throttle=throttle)
     generation, read_revision = revision_tokens(write_generation)
     conn.execute(
         """
@@ -182,7 +195,7 @@ def _copy(
         ),
     )
     path_overrides = {"scan_id": identity, "snapshot_generation": generation, "computed_at": created_at}
-    _copy_table(pg, conn, "graph_attack_paths", overrides=path_overrides, tenant=tenant, source_scan=source_scan)
+    _copy_table(pg, conn, "graph_attack_paths", overrides=path_overrides, tenant=tenant, source_scan=source_scan, throttle=throttle)
     return True
 
 
@@ -226,8 +239,13 @@ def copy_postgres_rows(
     created_at: str,
     write_generation: str,
     evidence_manifest_sha256: str,
+    throttle: CopyThrottle | None = None,
 ) -> bool:
-    """Copy one PostgreSQL source snapshot into the projection file; False (nothing written) when it would not equal a rewrite."""
+    """Copy one PostgreSQL source snapshot into the projection file; False (nothing written) when it would not equal a rewrite.
+
+    ``throttle`` pauses between batches while the API serves graph or findings
+    reads; it changes when rows are read, never which rows are written.
+    """
     import psycopg
 
     from agent_bom.api.postgres_common import _tenant_connection
@@ -252,6 +270,7 @@ def copy_postgres_rows(
                             created_at=created_at,
                             write_generation=write_generation,
                             evidence_manifest_sha256=evidence_manifest_sha256,
+                            throttle=throttle,
                         )
                     finally:
                         # Nothing is written unless the whole copy succeeded and applied.

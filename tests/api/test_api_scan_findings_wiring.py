@@ -161,6 +161,11 @@ def wired_client(tmp_path, monkeypatch):
         graph = graph_store.load_graph(tenant_id="default")
         graph.attack_paths = _derived_attack_paths(graph)
         graph_store.save_graph(graph)
+        # As the post-push warm-up does: findings never wait on a first build, so the
+        # reach these tests assert needs the current graph promoted first.
+        from agent_bom.api.stores import _get_graph_store
+
+        assert _get_graph_store().prepare_current("default", seconds=30)
 
     monkeypatch.setattr("agent_bom.api.scan_job_dispatch.submit_scan_job", _complete_synchronously)
 

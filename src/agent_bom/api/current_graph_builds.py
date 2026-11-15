@@ -10,17 +10,40 @@ from __future__ import annotations
 import logging
 import threading
 import time
+from collections.abc import Iterator
 from concurrent.futures import Future, ThreadPoolExecutor, wait
+from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import Any, cast
 
 from starlette.exceptions import HTTPException
 
+from agent_bom.api import read_gauge
 from agent_bom.api.finding_read_context import cached_read, finding_read_scope, read_once
 from agent_bom.api.tenant_worker import submit_tenant_bound
 from agent_bom.core.settings import env_raw
 
 logger = logging.getLogger(__name__)
 BUILDING_CODE = "current_estate_building"
+# Set by reads that never wait on a first build (findings reachability); graph reads keep their wait.
+_NO_COLD_WAIT: ContextVar[bool] = ContextVar("current_graph_no_cold_wait", default=False)
+
+
+@contextmanager
+def without_cold_build_wait() -> Iterator[None]:
+    """Within this scope a cold current-estate read queues the first build and refuses at once (``current_estate_building``)."""
+    token = _NO_COLD_WAIT.set(True)
+    try:
+        yield
+    finally:
+        _NO_COLD_WAIT.reset(token)
+
+
+def is_building_refusal(error: BaseException) -> bool:
+    detail = getattr(error, "detail", None)
+    return isinstance(error, HTTPException) and isinstance(detail, dict) and detail.get("code") == BUILDING_CODE
+
+
 ROTATING_CODE = "current_estate_generation_rotating"
 
 
@@ -63,6 +86,7 @@ def current_view_coverage(store: Any, *, tenant_id: str, scan_id: str) -> dict[s
             **coverage,
             "refresh_status": "building",
             "freshness": "previous_generation",
+            "as_of": store._generation_created_at(tenant_id, scan_id),
             "reason": "Showing the previous complete graph while the current view is prepared.",
         }
     return cast(dict[str, Any], coverage)
@@ -96,7 +120,10 @@ class CurrentBuildQueue:
                 del self.pending[key]
             if len(self.pending) >= self.capacity:
                 return None
-            return self._start(key, prepared)
+            try:
+                return self._start(key, prepared)
+            except RuntimeError:  # executor shut down at exit: the next process's read or prewarm rebuilds
+                return None
 
     def _start(self, key: tuple[Any, str], prepared: tuple[Any, ...] | None) -> Future[str]:
         """Start one build; callers hold ``lock``."""
@@ -162,9 +189,10 @@ def schedule_current_rebuild(store: Any, tenant_id: str) -> bool:
 
 def await_current_build(store: Any, tenant: str, *, seconds: float, prepared: tuple[Any, ...] | None = None) -> str | None:
     """Wait only the request budget; a timeout leaves admitted work running."""
-    future = _QUEUE.submit(store, tenant, prepared)
-    if future is None or not wait([future], timeout=seconds).done:
-        return None
+    with read_gauge.waiting_on_build():
+        future = _QUEUE.submit(store, tenant, prepared)
+        if future is None or not wait([future], timeout=seconds).done:
+            return None
     try:
         return future.result()
     except HTTPException:
@@ -176,10 +204,11 @@ def await_current_build(store: Any, tenant: str, *, seconds: float, prepared: tu
 def resolve_request_current(store: Any, tenant: str, epoch: str, evidence: tuple[Any, ...], previous: str) -> str:
     """Reuse the request's evidence read, keeping build work outside its scope."""
     prepared = (epoch, *evidence)
-    # An existing complete graph makes this a refresh, not a cold start. Leave
-    # room for the bounded page read/serialization and report stale coverage
-    # while the same coalesced worker finishes. Explicit snapshots stay exact.
-    seconds = min(build_wait_seconds(), 0.05) if previous else build_wait_seconds()
+    # An existing complete graph makes this a refresh, not a cold start: serve
+    # it at once, labelled, while the coalesced worker builds. Only a cold start
+    # waits for read-your-writes, and only for callers that need the graph itself.
+    # Explicit snapshots stay exact.
+    seconds = 0.0 if previous or _NO_COLD_WAIT.get() else build_wait_seconds()
     completed = await_current_build(store, tenant, seconds=seconds, prepared=prepared)
     with store._lock.shared():
         if live := store._cached_live_id(tenant, evidence[3]):

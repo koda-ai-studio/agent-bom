@@ -125,6 +125,23 @@ describe("FindingsPage", () => {
     await waitFor(() => expect(apiMock.listFindings.mock.lastCall?.[0].pathContext).toBeUndefined());
   });
 
+  it("says when graph reachability waits on a graph update, with the previous graph's time", async () => {
+    const asOf = "2026-11-14T09:30:00+00:00";
+    apiMock.listFindings.mockResolvedValue({ findings: [canonicalFinding], total: 1, has_more: false,
+      graph_freshness: { freshness: "previous_generation", refresh_status: "building", as_of: asOf } });
+    render(<FindingsPage />);
+    await screen.findAllByText("CVE-2026-1234");
+    const note = screen.getAllByRole("status").find((node) => node.textContent?.includes("Updating graph"));
+    expect(note?.textContent).toContain(new Date(asOf).toLocaleString());
+  });
+
+  it("shows no graph update note when the graph is current", async () => {
+    apiMock.listFindings.mockResolvedValue({ findings: [canonicalFinding], total: 1, has_more: false });
+    render(<FindingsPage />);
+    await screen.findAllByText("CVE-2026-1234");
+    expect(screen.queryAllByRole("status").some((node) => node.textContent?.includes("Updating graph"))).toBe(false);
+  });
+
   it("preserves verified repository-relative IaC evidence into the drawer", async () => {
     apiMock.listFindings.mockResolvedValue({ findings: [{ ...canonicalFinding, finding_class: "misconfiguration", evidence: { repository_relative_path: "infra/main.tf", file_path: "/private/host/main.tf" } }], total: 1, has_more: false });
     render(<FindingsPage />);

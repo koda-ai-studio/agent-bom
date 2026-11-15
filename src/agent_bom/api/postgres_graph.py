@@ -22,6 +22,7 @@ from agent_bom.api.graph_store import (
     _assert_offset_within_cap,
     _escape_like_query,
 )
+from agent_bom.api.postgres_graph_analyze import refresh_graph_statistics
 from agent_bom.api.storage_schema import ensure_postgres_schema_version
 from agent_bom.config import POSTGRES_GRAPH_SEARCH_TIMEOUT_MS, POSTGRES_STATEMENT_TIMEOUT_MS
 from agent_bom.db.graph_revision import ensure_postgres_read_revision, revision_tokens
@@ -81,10 +82,10 @@ from .postgres_graph_write import (
     _attack_path_rows,
     _complete_correlation_in_write,
     _edge_rows,
-    _edge_upsert_sql,
     _interaction_risk_rows,
     _reserve_snapshot,
     _write_snapshot_paths,
+    write_edges,
     write_nodes_and_aliases,
 )
 from .postgres_scan_cache import PostgresScanCache
@@ -279,7 +280,7 @@ class PostgresGraphStore(
             edge_counter = [0]
             scope_predicate = comparable_observation_sql(dialect="postgres", previous="previous", current="incoming")
             edge_rows = _edge_rows(edges, scan=scan, tenant=tenant, now=now, previous_scan=previous_scan, counter=edge_counter)
-            _execute_many_batched(conn, _edge_upsert_sql(scope_predicate), edge_rows, batch_size=batch_size)
+            write_edges(conn, edge_rows, scope_predicate=scope_predicate, previous_scan=previous_scan, batch_size=batch_size)
             # Collection absence does not prove native revocation. Keep prior
             # observations intact; only source-supplied interval ends are stored.
             path_rows = _attack_path_rows(attack_paths, scan=scan, tenant=tenant, now=now)
@@ -325,9 +326,8 @@ class PostgresGraphStore(
             # failure must never fail the durable save that already committed.
             self._purge_expired_snapshots(conn, tenant)
 
-            # Planner statistics are maintained by PostgreSQL autovacuum and a
-            # separately privileged maintenance job; the application role is
-            # DML-only, so ANALYZE is never issued from here.
+            # DML-only role: one narrow SECURITY DEFINER call (migration 20261114_01) analyzes the two graph tables.
+            refresh_graph_statistics(conn, rows=node_count + edge_count)
 
         return {"nodes": node_count, "edges": edge_count}
 
