@@ -130,6 +130,10 @@ def test_snapshot_reads_preserve_http_findings_and_export_contracts(snapshots, m
     monkeypatch.setattr(snapshots, "get_rows", spy)
     enable_trusted_proxy_env()
     try:
+        # Findings never wait on a first graph build: promote it first so both reads see the same reach.
+        from agent_bom.api.stores import _get_graph_store
+
+        assert _get_graph_store().prepare_current(row.tenant_id, seconds=30)
         monkeypatch.setenv("AGENT_BOM_SCAN_SNAPSHOT_READS", "0")
         expected_http = get_rows()
         expected_export = scan.iter_tenant_scan_spine_findings(row.tenant_id)
