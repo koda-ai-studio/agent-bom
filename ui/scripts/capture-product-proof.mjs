@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { auditRenderedGraph } from "./graph-visual-audit.mjs";
+import { auditRenderedGraph, renderedRelationshipCurves, sharedRelationshipRuns } from "./graph-visual-audit.mjs";
 import { chromium, expect } from "@playwright/test";
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -60,6 +60,8 @@ const SCAN_ID = "scan-proof-ai-platform";
 const PREVIOUS_SCAN_ID = "scan-proof-ai-platform-prev";
 const SCENARIO_ID = "scenario-private-service-endpoint";
 // The README context map: what developer-copilot reaches through its MCP servers.
+// Both remediation desktop captures end just below the campaign panel instead of an empty lower half.
+const REMEDIATION_FIT = { selector: "main details", min: 480, pad: 32 };
 const CONTEXT_MAP_PAGE = `/graph?lens=context&scan=${SCAN_ID}&root=agent%3Adeveloper-copilot&capture=1`;
 const CAPTURE_THEME = process.env.CAPTURE_THEME === "light" ? "light" : "dark";
 const referenceLabProofBytes = await fs.readFile(REFERENCE_LAB_PROOF_PATH);
@@ -1577,7 +1579,7 @@ function inventoryAssetsFixture(requestUrl) {
 }
 
 /** One `/v1/agents` page over the fixture agents; without `limit` the full list, as the API answers older clients. */
-export function agentsPage(params, agents) {
+export function agentsPage(params, agents, summary) {
   const limit = params.has("limit") ? Math.max(1, Number(params.get("limit")) || 1) : null;
   const offset = Math.max(0, Number(params.get("offset")) || 0);
   const rows = limit == null ? agents : agents.slice(offset, offset + limit);
@@ -1594,7 +1596,69 @@ export function agentsPage(params, agents) {
     sort: null,
     facets: {},
     warnings: [],
+    ...(summary ? { summary } : {}),
   };
+}
+
+let agentsSummaryFixture;
+/** The KPI strip reads the server's population summary; build it with the API's own function, not a parallel count. */
+function agentsSummary(agents) {
+  if (agentsSummaryFixture) return agentsSummaryFixture;
+  const result = spawnSync(process.env.PYTHON ?? "python", ["-c", [
+    "import json, sys",
+    "from agent_bom.api.agents_listing import population_summary",
+    "print(json.dumps(population_summary(json.load(sys.stdin))))",
+  ].join("\n")], {
+    cwd: REPO_ROOT,
+    env: { ...process.env, PYTHONPATH: path.join(REPO_ROOT, "src") },
+    input: JSON.stringify(agents),
+    encoding: "utf8",
+    maxBuffer: 8 * 1024 * 1024,
+  });
+  if (result.error || result.status !== 0) throw new Error("Agents capture requires the repository Python environment (set PYTHON)");
+  agentsSummaryFixture = JSON.parse(result.stdout);
+  return agentsSummaryFixture;
+}
+
+/** Inventory's headline AI-agent and MCP-server counts, read from each asset card's accessible name. */
+async function readInventoryHeadline(page) {
+  const labels = await page.locator('nav[aria-label="Asset types"] a').evaluateAll(links => links.map(link => link.getAttribute("aria-label") ?? ""));
+  return inventoryHeadlineFrom(labels);
+}
+
+/** `AI agents: 3 AI agents, plus …` and `MCP servers: 4 MCP servers, plus …` card names to counts. */
+export function inventoryHeadlineFrom(labels) {
+  const count = (unit) => {
+    for (const label of labels) {
+      const match = label.match(new RegExp(`: ([\\d,]+) ${unit}s?(?:,|$)`));
+      if (match) return Number(match[1].replace(/,/g, ""));
+    }
+    return null;
+  };
+  return { agents: count("AI agent"), mcpServers: count("MCP server") };
+}
+
+/** The Agents page KPI strip's agent and MCP-server cells. */
+async function readAgentsHeadline(page) {
+  return page.getByTestId("agents-kpis").evaluate(strip => {
+    const cells = [...strip.children].map(cell => ({
+      label: (cell.children[0]?.textContent ?? "").trim(),
+      value: Number((cell.children[1]?.textContent ?? "").replace(/[^\d]/g, "")),
+    }));
+    const agents = cells.find(cell => /^(scanned agents|agents on this host|agents)$/i.test(cell.label));
+    const servers = cells.find(cell => /mcp servers$/i.test(cell.label));
+    return { agents: agents?.value ?? null, mcpServers: servers?.value ?? null, serversLabel: servers?.label ?? null };
+  });
+}
+
+/** Why the Agents page and Inventory headlines disagree, or null when they match. */
+export function agentsInventoryMismatch(agents, inventory) {
+  if (!inventory || inventory.agents == null || inventory.mcpServers == null) return `Inventory headline unreadable: ${JSON.stringify(inventory)}`;
+  if (agents.serversLabel !== "Unique MCP servers") return `Agents page shows "${agents.serversLabel}", not the unique MCP-server count`;
+  const problems = [];
+  if (agents.agents !== inventory.agents) problems.push(`${agents.agents} agents vs ${inventory.agents} AI agents`);
+  if (agents.mcpServers !== inventory.mcpServers) problems.push(`${agents.mcpServers} vs ${inventory.mcpServers} MCP servers`);
+  return problems.length ? problems.join("; ") : null;
 }
 
 async function fulfill(route, body, status = 200) {
@@ -1925,7 +1989,7 @@ export async function installRoutes(page, fixtureGraph = graph) {
     } catch {
       return false;
     }
-  }, (route) => fulfill(route, agentsPage(new URL(route.request().url()).searchParams, scanJob().result.agents)));
+  }, (route) => fulfill(route, agentsPage(new URL(route.request().url()).searchParams, scanJob().result.agents, agentsSummary(scanJob().result.agents))));
   await page.route("**/v1/agents/developer-copilot/lifecycle", (route) => fulfill(route, agentLifecycleFixture()));
   await page.route((url) => {
     try {
@@ -2482,6 +2546,7 @@ const README_CAPTURE_FILES = new Set([
   "graph-relationship-dark-live.png", "graph-relationship-light-live.png",
   ...["cloud", "repository", "environment"].flatMap(scope => ["dark", "light"].map(theme => `graph-${scope}-${theme}-live.png`)),
   "dashboard-live.png", "dashboard-paths-live.png", "dashboard-risks-live.png", "inventory-live.png", "remediation-live.png",
+  "agents-live.png", "agents-light-live.png",
 ]);
 
 async function capture(page, urlPath, filename, beforeShot, options = {}) {
@@ -2874,6 +2939,10 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
         }));
         if (collisions.length) throw new Error(`Graph nodes overlap on ${urlPath}: ${collisions.join(" | ")}`);
       }
+      if (options.assertNoSharedRelationshipRuns) {
+        const shared = sharedRelationshipRuns(await page.evaluate(renderedRelationshipCurves));
+        if (shared.length) throw new Error(`Different relationship types share a line on ${urlPath}: ${JSON.stringify(shared)}`);
+      }
       if (options.assertEdgeLabelsClearOfNodes) {
         const collisions = await page.evaluate(() => {
           const nodes = [...document.querySelectorAll(".react-flow__node")]
@@ -3159,6 +3228,17 @@ async function writeScreenshotManifest(outputDir = IMAGE_DIR) {
       scope: "Unified asset-kind roll-up across discovered packages, MCP servers, agents, cloud, identities, containers, and code",
     },
     {
+      path: "agents-live.png",
+      page: "/agents?capture=1",
+      scope: "Agents page headline for the demo estate Inventory shows: scanned agents and unique MCP servers, asserted equal to Inventory's counts",
+    },
+    {
+      path: "agents-light-live.png",
+      page: "/agents?capture=1",
+      scope: "Agents page headline in the light theme",
+      presentation: "light desktop",
+    },
+    {
       path: "fleet-state-live.png",
       page: "/fleet?capture=1",
       scope: "Expanded quarantined fleet row showing owner metadata, environment label, and enforcement state",
@@ -3400,7 +3480,7 @@ async function main() {
       minGraphNodeFontPx: 12,
       minGraphEdgeLabelFontPx: 12,
       assertEdgeLabelsClearOfNodes: true,
-      assertNodeLabelsWithinBounds: true,
+      assertNodeLabelsWithinBounds: true, assertNoSharedRelationshipRuns: true,
       assertNoHorizontalOverflow: true,
     };
     const page = await newCapturePage(CAPTURE_THEME, { width: 1440, height: 980 });
@@ -3620,7 +3700,7 @@ async function main() {
       minGraphNodeFontPx: 12,
       // This is an explicit agent investigation; retain its evidence captions.
       minGraphEdgeLabelFontPx: 12,
-      assertNodeLabelsWithinBounds: true,
+      assertNodeLabelsWithinBounds: true, assertNoSharedRelationshipRuns: true,
       assertEdgeLabelsClearOfNodes: true,
       assertNoHorizontalOverflow: true,
       maxGraphBottomGapPx: 64,
@@ -3933,21 +4013,39 @@ async function main() {
       expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/query"],
       minGraphNodes: CONTEXT_MAP_NODES.length, maxGraphNodes: CONTEXT_MAP_NODES.length,
       minGraphEdges: CONTEXT_MAP_EDGES, maxGraphEdges: CONTEXT_MAP_EDGES,
-      minGraphNodeFontPx: 12, assertEdgeLabelsClearOfNodes: true,
+      minGraphNodeFontPx: 12, assertEdgeLabelsClearOfNodes: true, assertNoSharedRelationshipRuns: true,
       assertNoHorizontalOverflow: true,
     };
     await capture(page, CONTEXT_MAP_PAGE, "context-map-live.png", prepareContextNeighborhood, contextNeighborhoodAssertions);
     await page.setViewportSize({ width: 1440, height: 980 });
+    let inventoryHeadline = null;
     await capture(page, "/inventory?capture=1", "inventory-live.png", async (inventoryPage) => {
       await inventoryPage.getByRole("heading", { name: "Asset inventory" }).waitFor({
         state: "visible",
         timeout: 10_000,
       });
+      inventoryHeadline = await readInventoryHeadline(inventoryPage);
       await scrollTo(inventoryPage, 0);
     }, {
       expectedText: ["Asset inventory", "Unique packages", "MCP servers", "AI agents", "Cloud resources", "Recorded assets are separate from collection and assessment coverage"],
       expectedApiPaths: ["/v1/inventory/summary", "/v1/inventory/assets"],
     });
+    // The Agents page headlines the same demo estate as Inventory: one AI-agent count and one unique MCP-server count.
+    for (const theme of ["dark", "light"]) {
+      const agentsListPage = await newCapturePage(theme, { width: 1440, height: 900 });
+      await capture(agentsListPage, "/agents?capture=1", theme === "dark" ? "agents-live.png" : "agents-light-live.png", async (listPage) => {
+        await listPage.getByTestId("agents-kpis").waitFor({ state: "visible", timeout: 20_000 });
+        const mismatch = agentsInventoryMismatch(await readAgentsHeadline(listPage), inventoryHeadline);
+        if (mismatch) throw new Error(`Agents page and Asset inventory disagree for the demo estate: ${mismatch}`);
+        await scrollTo(listPage, 0);
+      }, {
+        expectedText: ["Unique MCP servers", "server configurations"],
+        expectedApiPaths: ["/v1/agents"],
+        rejectedText: [/Loading agents/i],
+        assertNoHorizontalOverflow: true,
+      });
+      await agentsListPage.close();
+    }
     await capture(page, "/fleet?capture=1", "fleet-state-live.png", async (fleetPage) => {
       await fleetPage.getByText("developer-copilot").first().click({ force: true });
       const enforcementAction = fleetPage.getByText("Re-enforce gateway deny").first();
@@ -4013,7 +4111,7 @@ async function main() {
       expectedText: ["Package remediation plan", "next", "15.2.3", "CVE-2025-29927", "Campaign workflow and verification"],
       rejectedText: ["42.5% modeled window risk"],
       expectedApiPaths: ["/v1/findings/remediation"],
-      fitContentHeight: { selector: "main details", min: 480, pad: 32 },
+      fitContentHeight: REMEDIATION_FIT,
     });
 
     const lightPage = await newCapturePage("light", { width: 1440, height: 980 });
@@ -4057,6 +4155,7 @@ async function main() {
       expectedText: ["Package remediation plan", "next", "15.2.3", "CVE-2025-29927", "Campaign workflow and verification"],
       rejectedText: [/Loading prioritized campaigns/i, "42.5% modeled window risk"],
       expectedApiPaths: ["/v1/findings/remediation"],
+      fitContentHeight: REMEDIATION_FIT,
     });
 
     const mobilePage = await newCapturePage("dark", { width: 390, height: 844 });

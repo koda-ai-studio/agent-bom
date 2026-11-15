@@ -17,10 +17,13 @@ describe("fitting a short page's capture to its content", () => {
     expect(fittedViewportHeight(Number.NaN, 900)).toBe(900);
   });
 
-  it("fits the remediation capture, whose plan is shorter than the viewport", () => {
+  it("fits both desktop remediation captures, whose plan is shorter than the viewport", () => {
     const source = fs.readFileSync(path.join(process.cwd(), "scripts", "capture-product-proof.mjs"), "utf8");
-    const call = source.slice(source.indexOf('"/remediation?capture=1", "remediation-live.png"'));
-    expect(call.slice(0, call.indexOf("});"))).toMatch(/fitContentHeight: \{ selector: "main details/);
+    expect(source).toMatch(/const REMEDIATION_FIT = \{ selector: "main details"/);
+    for (const file of ["remediation-live.png", "remediation-light-live.png"]) {
+      const call = source.slice(source.indexOf(`"/remediation?capture=1", "${file}"`));
+      expect(call.slice(0, call.indexOf("});"))).toMatch(/fitContentHeight: REMEDIATION_FIT/);
+    }
     expect(source).toMatch(/if \(options\.fitContentHeight\) await fitViewportToContent\(page, options\.fitContentHeight\);/);
     // The next capture on the same page starts from the viewport it had.
     expect(source).toMatch(/if \(options\.fitContentHeight\) await page\.setViewportSize\(viewport\);/);

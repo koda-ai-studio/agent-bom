@@ -31,6 +31,9 @@ const assertions = {
   expectedApiPaths: [ROUTE],
 };
 
+// A desktop capture ends below the harness card when the canvas is shorter than the viewport.
+const HARNESS_FIT = { selector: 'main section[aria-label^="Harness "]', min: 480, pad: 32 };
+
 /** Layered (dark), flow (light) and phone (dark) captures through the shared capture helper. */
 export async function captureAgentArchitecture({ capture, newCapturePage }) {
   const ready = async (target) => target.getByRole("heading", { name: "Agent architecture", level: 1 }).waitFor({ state: "visible", timeout: 20_000 });
@@ -39,7 +42,7 @@ export async function captureAgentArchitecture({ capture, newCapturePage }) {
     await ready(target);
     await target.getByTestId("architecture-canvas").locator(".react-flow__node").first().waitFor({ state: "visible", timeout: 20_000 });
     await target.waitForTimeout(400);
-  }, { ...assertions, minGraphNodes: 9, maxGraphNodes: 9, minGraphEdges: 8, maxGraphEdges: 8 });
+  }, { ...assertions, minGraphNodes: 9, maxGraphNodes: 9, minGraphEdges: 8, maxGraphEdges: 8, fitContentHeight: HARNESS_FIT });
   await darkPage.close();
 
   const lightPage = await newCapturePage("light", { width: 1440, height: 980 });
@@ -48,7 +51,7 @@ export async function captureAgentArchitecture({ capture, newCapturePage }) {
     await target.getByRole("button", { name: "Flow", exact: true }).click();
     await target.locator('[data-testid="architecture-canvas"][data-layout="flow"] .react-flow__node').first().waitFor({ state: "visible", timeout: 20_000 });
     await target.waitForTimeout(400);
-  }, { ...assertions, expectedText: [...assertions.expectedText, "End of research_builder"], minGraphNodes: 11, maxGraphNodes: 11, minGraphEdges: 11, maxGraphEdges: 11 });
+  }, { ...assertions, expectedText: [...assertions.expectedText, "End of research_builder"], minGraphNodes: 11, maxGraphNodes: 11, minGraphEdges: 11, maxGraphEdges: 11, fitContentHeight: HARNESS_FIT });
   await lightPage.close();
 
   const mobilePage = await newCapturePage("dark", { width: 390, height: 844 });
