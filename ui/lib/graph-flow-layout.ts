@@ -102,12 +102,14 @@ class SlotGrid {
   bottom = 0;
   /** A context parent of column zero opens a column to its left instead of stacking under its child. */
   left = 0;
+  right = 0;
   constructor(readonly columns: number, private readonly rowLimit: number) {}
   free(column: number, row: number) { return !this.taken.has(`${column}:${row}`); }
   place(column: number, row: number, cells: Map<string, Cell>, id: string) {
     this.taken.add(`${column}:${row}`);
     this.bottom = Math.max(this.bottom, row);
     this.left = Math.min(this.left, column);
+    this.right = Math.max(this.right, column);
     cells.set(id, { column, row });
   }
   belowBranches() { return Math.min(this.bottom + 1, Math.max(1, this.rowLimit)); }
@@ -117,12 +119,15 @@ class SlotGrid {
   }
   /** Near the wanted column without running far along a row, so a context edge stays short and clear of captions. */
   nearest(wanted: number, startRow = 1): Cell {
-    const first = Math.min(this.left, Math.max(wanted, this.left - 1));
-    const target = Math.min(Math.max(wanted, first), this.columns - 1);
+    // A column on the left comes out of the grid's width, not on top of it: a wider map falls below a legible fit.
+    const roomLeft = this.right - this.left + 1 < this.columns;
+    const first = roomLeft ? Math.min(this.left, Math.max(wanted, this.left - 1)) : this.left;
+    const last = Math.max(this.right, first + this.columns - 1);
+    const target = Math.min(Math.max(wanted, first), last);
     let best: Cell | null = null, bestCost = Infinity;
     // Rows beyond the limit are only for a grid already full; stacking early would push the map past a legible fit.
     const lastRow = Math.max(this.rowLimit, startRow);
-    for (let row = startRow; row <= lastRow; row++) for (let column = first; column < this.columns; column++) {
+    for (let row = startRow; row <= lastRow; row++) for (let column = first; column <= last; column++) {
       const cost = Math.abs(column - target) + (row - startRow) * ROW_COST;
       if (this.free(column, row) && (cost < bestCost || cost === bestCost && column > best!.column)) { best = { column, row }; bestCost = cost; }
     }
