@@ -116,7 +116,13 @@ def test_no_gauge_or_an_unreadable_gauge_never_pauses(tmp_path) -> None:
     assert clock.slept == 0.0
 
 
-def test_the_child_request_names_the_gauge(gauge, tmp_path, monkeypatch) -> None:
+@pytest.mark.parametrize(("setting", "enabled"), [(None, False), ("0", False), ("1", True), ("true", True)])
+def test_the_child_request_names_the_gauge_only_when_the_throttle_is_on(gauge, tmp_path, monkeypatch, setting, enabled) -> None:
+    """Off by default: the throttle lengthens the build and, at 5,000 agents, the first findings read with it."""
+    if setting is None:
+        monkeypatch.delenv("AGENT_BOM_PG_COPY_THROTTLE", raising=False)
+    else:
+        monkeypatch.setenv("AGENT_BOM_PG_COPY_THROTTLE", setting)
     seen: dict[str, bytes] = {}
 
     class FakeProcess:
@@ -133,7 +139,11 @@ def test_the_child_request_names_the_gauge(gauge, tmp_path, monkeypatch) -> None
     monkeypatch.setattr(child.subprocess, "Popen", FakeProcess)
     assert child.copy_in_child(str(tmp_path / "projection.db"), **FIELDS) is True
     request = json.loads(seen["payload"])
-    assert request["read_gauge"] == gauge.gauge_path()
+    if enabled:
+        assert request["read_gauge"] == gauge.gauge_path()
+    else:
+        assert request["read_gauge"] == ""
+        assert gauge._gauge is None, "no gauge file is created while the throttle is off"
 
 
 def test_the_middleware_counts_estate_reads_for_their_duration(gauge) -> None:

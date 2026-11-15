@@ -31,6 +31,7 @@ from contextvars import ContextVar
 from time import monotonic as _monotonic
 from time import sleep as _sleep
 
+from agent_bom.core.settings import SettingError, env_bool
 from agent_bom.storage.projection_cache import cache_directory
 
 ESTATE_READ_PREFIXES = ("/v1/graph", "/v1/findings")
@@ -45,6 +46,19 @@ _count = 0
 _gauge: tuple[str, mmap.mmap] | None = None
 # Whether the current request is counted; it follows the request into worker threads.
 _counted: ContextVar[bool] = ContextVar("estate_read_counted", default=False)
+
+
+def throttle_enabled() -> bool:
+    """``AGENT_BOM_PG_COPY_THROTTLE=1`` turns the yield on; it is off by default.
+
+    Measured on a 4-vCPU runner at 5,000 agents it lowered the graph median
+    after a push but nearly doubled the copy (22.8 s to 41.7 s), and the first
+    findings read then waited the full cold-start budget.
+    """
+    try:
+        return env_bool("AGENT_BOM_PG_COPY_THROTTLE", False)
+    except SettingError:
+        return False
 
 
 def counts(path: str) -> bool:

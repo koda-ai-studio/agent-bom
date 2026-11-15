@@ -616,8 +616,12 @@ answered from a projection. Explicit stale generation continuations still fail
 with 409, and neither generations nor promotion stamps cross tenant boundaries.
 
 On PostgreSQL a one-source projection is copied as rows by a child process.
-Between 2,000-row batches the child yields PostgreSQL to the graph and findings
-requests its API process has in flight: it waits while any is in flight, at
+With `AGENT_BOM_PG_COPY_THROTTLE=1` (off by default), between 2,000-row batches
+the child yields PostgreSQL to the graph and findings requests its API process
+has in flight. It is off by default because, measured on a 4-vCPU runner at
+5,000 agents, it lowered the graph median after a push but nearly doubled the
+copy (22.8 s to 41.7 s), and the first findings read then waited the full 2 s
+cold-start budget (`docs/PERFORMANCE_BENCHMARKS.md`). When on, it waits while any is in flight, at
 most 0.5 s per batch and 30 s per copy, so constant reads lengthen the build
 by at most 30 s and never stop it. With no reads in flight there is no pause.
 The API publishes its in-flight count in a private 8-byte file under the

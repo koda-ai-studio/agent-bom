@@ -80,7 +80,7 @@ def copy_in_child(cache_path: str, *, module: str | None = None, timeout: float 
     """Run the row copy in a child; True only when the child copied and committed."""
     request = {name: fields[name] for name in REQUEST_FIELDS}
     try:
-        gauge = read_gauge.gauge_path()
+        gauge = read_gauge.gauge_path() if read_gauge.throttle_enabled() else ""
     except OSError:
         gauge = ""  # The copy then never yields; it still runs.
     payload = json.dumps({**request, "cache_path": cache_path, "parent_pid": os.getpid(), "read_gauge": gauge}).encode()

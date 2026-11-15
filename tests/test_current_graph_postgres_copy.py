@@ -322,6 +322,7 @@ def test_a_throttled_copy_writes_exactly_the_unthrottled_projection(
     from agent_bom.api import read_gauge
 
     jobs = _seed(tmp_path, 60)
+    monkeypatch.setenv("AGENT_BOM_PG_COPY_THROTTLE", "1")
     monkeypatch.setenv("AGENT_BOM_STATE_DIR", str(tmp_path / "gauge-state"))
     read_gauge.reset_for_tests()
     calls = _spy(monkeypatch)
