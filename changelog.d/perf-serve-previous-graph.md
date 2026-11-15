@@ -1,7 +1,11 @@
 ### Performance
 - While a push rebuilds the current graph, current-estate graph reads (`/v1/graph` in every view, roll-up, search and incident-edge paging) answer at once from the last complete graph instead of waiting up to 50 ms for the rebuild, and a restarted or sibling API worker serves that graph too instead of waiting up to 2 s and answering 503. Each such response says `freshness: previous_generation` with `as_of`, the time its evidence was recorded, and never mixes the old and new graphs. Only a tenant with no complete graph yet waits for its first build. Reads that name a `scan_id` are unchanged: they read that recorded scan exactly.
 
-- On PostgreSQL the current-graph row copy yields to the graph and findings reads the API is serving: between batches it waits while any is in flight, at most 0.5 s per batch and 30 s per copy. On a 4-vCPU runner the 1,000-agent graph median after a push fell from 763 ms to 560 ms, and the 5,000-agent copy took 41.7 s instead of 22.8 s. The 5,000-agent graph p95 is still above 2 s in two of three runs, and the first findings read after a 5,000-agent push now waits the 2 s cold-start budget because the copy outlasts the graph reads.
+- After a PostgreSQL snapshot save of 20,000 rows or more, the graph tables' planner statistics are refreshed at once instead of when autovacuum reaches them. Right after a 5,000-agent save the explicit-scan graph reads took 586 ms median without statistics and 166 ms with them.
+- `AGENT_BOM_PG_COPY_THROTTLE=1` makes the PostgreSQL current-graph row copy yield to in-flight graph and findings reads (at most 0.5 s per batch and 30 s per copy). It is off by default: at 5,000 agents it nearly doubled the copy (22.8 s to 41.7 s) and made the first findings read after a push wait the 2 s cold-start budget.
+
+### Upgrade notes
+- Migration `20261114_01` adds `public.abom_analyze_graph_tables()`, a `SECURITY DEFINER` function the `agent_bom_app` role may execute to analyze `graph_nodes` and `graph_edges` only. Run `alembic upgrade head` as the migration role; until then the API logs that statistics were not refreshed and carries on.
 
 ### Changed
 - `/v1/findings` adds `graph_freshness` (with `as_of`) while the graph is rebuilding, when graph reachability on the page is unassessed. The graph page shows "Updating graph · showing data from <time>" and Findings shows a matching note.

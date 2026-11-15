@@ -349,6 +349,13 @@ These headers describe the scan surface. The API still writes its own
 tenant-scoped store, and admins can trigger the opt-in side-scan; see
 [SECURITY.md](../SECURITY.md#trust-model-and-permissions).
 
+On Postgres the API connects as `agent_bom_app`, a DML-only role under row-level
+security. Besides table DML it may execute two functions owned by the migration
+role: `abom_verify_tenant_binding_claim` (tenant binding) and
+`abom_analyze_graph_tables` (planner statistics for `graph_nodes` and
+`graph_edges` after a large save, at most once a minute; see
+[THREAT_MODEL.md](THREAT_MODEL.md)). It cannot `ANALYZE`, alter or own any table.
+
 The API server itself runs entirely in-process. It does not make third-party outbound
 connections unless a scan job explicitly requests enrichment (`"enrich": true` in the
 request body) or an operator configures a connector, export, ticketing, webhook, or

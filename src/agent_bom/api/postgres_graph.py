@@ -22,6 +22,7 @@ from agent_bom.api.graph_store import (
     _assert_offset_within_cap,
     _escape_like_query,
 )
+from agent_bom.api.postgres_graph_analyze import refresh_graph_statistics
 from agent_bom.api.storage_schema import ensure_postgres_schema_version
 from agent_bom.config import POSTGRES_GRAPH_SEARCH_TIMEOUT_MS, POSTGRES_STATEMENT_TIMEOUT_MS
 from agent_bom.db.graph_revision import ensure_postgres_read_revision, revision_tokens
@@ -325,9 +326,8 @@ class PostgresGraphStore(
             # failure must never fail the durable save that already committed.
             self._purge_expired_snapshots(conn, tenant)
 
-            # Planner statistics are maintained by PostgreSQL autovacuum and a
-            # separately privileged maintenance job; the application role is
-            # DML-only, so ANALYZE is never issued from here.
+            # DML-only role: one narrow SECURITY DEFINER call (migration 20261114_01) analyzes the two graph tables.
+            refresh_graph_statistics(conn, rows=node_count + edge_count)
 
         return {"nodes": node_count, "edges": edge_count}
 

@@ -615,6 +615,15 @@ Reads that name a `scan_id` are exact reads of that recorded scan and are never
 answered from a projection. Explicit stale generation continuations still fail
 with 409, and neither generations nor promotion stamps cross tenant boundaries.
 
+After a PostgreSQL snapshot save of 20,000 rows or more, the API refreshes the
+planner statistics of `graph_nodes` and `graph_edges` through
+`public.abom_analyze_graph_tables()` (migration `20261114_01`; privilege
+boundary in `docs/THREAT_MODEL.md`), so the reads right after a large push do
+not plan without statistics until autovacuum reaches the new rows. The call is
+skipped when another is running or both tables were analyzed in the last
+minute, and a failure (for example a database not yet migrated) is logged and
+leaves the committed save in place.
+
 On PostgreSQL a one-source projection is copied as rows by a child process.
 With `AGENT_BOM_PG_COPY_THROTTLE=1` (off by default), between 2,000-row batches
 the child yields PostgreSQL to the graph and findings requests its API process
