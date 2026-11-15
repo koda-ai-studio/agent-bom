@@ -3372,6 +3372,12 @@ async function main() {
       await expect(proofPage.locator(".graph-relationship-label")).toHaveCount(0);
       await scrollTo(proofPage, 0);
     };
+    // At the 1440x900 README size, Fit all stops at the 11px product floor; one zoom step keeps names at the 12px README floor.
+    const prepareCorrelationGraphReadme = async (proofPage) => {
+      await prepareCorrelationPath(proofPage);
+      await proofPage.locator(".react-flow__controls-zoomin").first().click();
+      await proofPage.waitForTimeout(500);
+    };
     // A phone opens on the ranked hop list, its readable sequential path view.
     const prepareCorrelationPathList = async (proofPage) => {
       const views = proofPage.getByRole("group", { name: "Investigation view" });
@@ -3700,7 +3706,7 @@ async function main() {
       referenceGraphPage,
       `/graph?capture=1&scan=${REFERENCE_CORRELATION_ID}&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`,
       "correlation-graph-live.png",
-      prepareCorrelationPath,
+      prepareCorrelationGraphReadme,
       correlationPathAssertions,
     );
     await referenceGraphPage.close();
