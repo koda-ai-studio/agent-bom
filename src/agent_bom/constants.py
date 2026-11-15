@@ -19,7 +19,7 @@ VECTOR_STORE_PACKAGES: frozenset[str] = frozenset(
     "chromadb pinecone-client weaviate-client qdrant-client faiss-cpu faiss-gpu pymilvus milvus pgvector lancedb".split()
 )
 __all__ = ["AI_PACKAGES", "CWE_COMPLIANCE_MAP", "SENSITIVE_PATTERNS", "COMPLIANCE_FRAMEWORK_COUNT",
-    "TRAINING_DATA_PACKAGES"]  # fmt: skip
+    "TRAINING_DATA_PACKAGES", "PROJECT_LOCAL_SOURCES"]  # fmt: skip
 
 AI_PACKAGES: frozenset[str] = VECTOR_STORE_PACKAGES | frozenset(
     {
