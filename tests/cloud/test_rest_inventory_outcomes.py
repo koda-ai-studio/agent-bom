@@ -61,3 +61,16 @@ def test_valid_inventory_survives_later_malformed_record(monkeypatch, module, pr
     assert "fixture-id" in agents[0].config_path
     assert warnings[0].startswith(f"{provider}:instances:unavailable:")
     assert "Assessment incomplete" in warnings[0]
+
+
+@pytest.mark.parametrize("module,provider,empty", PROVIDERS)
+def test_offline_inventory_stays_warning_bearing(monkeypatch, module, provider, empty):
+    from agent_bom.http_client import OfflineModeError
+
+    def request(*args, **kwargs):
+        raise OfflineModeError("fixture offline")
+
+    monkeypatch.setattr(module.http_client, "sync_get", request)
+    agents, warnings = module.discover(api_key="fixture")
+    assert agents == []
+    assert warnings[0].startswith(f"{provider}:instances:unavailable:")

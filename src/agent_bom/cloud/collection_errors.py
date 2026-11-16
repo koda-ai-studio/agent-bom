@@ -10,6 +10,8 @@ from enum import Enum
 
 import httpx
 
+from agent_bom.http_client import OfflineModeError
+
 from .base import CloudDiscoveryError
 
 
@@ -23,7 +25,7 @@ class CollectionStatus(str, Enum):
 
 # Transport, explicit provider failures, and malformed external record shapes.
 # Programming errors outside these data/transport boundaries are not swallowed.
-COLLECTION_ERRORS = (httpx.HTTPError, CloudDiscoveryError, OSError, ValueError, TypeError, AttributeError, KeyError)
+COLLECTION_ERRORS = (OfflineModeError, httpx.HTTPError, CloudDiscoveryError, OSError, ValueError, TypeError, AttributeError, KeyError)
 
 
 def collection_status(exc: Exception) -> CollectionStatus:
