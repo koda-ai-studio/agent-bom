@@ -742,3 +742,11 @@ def test_platform_eks_chart_version_is_a_managed_published_pin() -> None:
     assert cva.scan_text(rel, text, "0.106.0", published="0.104.0") == []
     drift = cva.scan_text(rel, text, "0.106.0", published="0.105.0")
     assert len(drift) == 1 and "Terraform chart pin" in drift[0], drift
+
+
+def test_post_publish_alignment_accepts_current_tag_with_release_history(monkeypatch) -> None:
+    cva = _load_script("check_version_alignment.py")
+    monkeypatch.setattr(cva, "SCAN_ROOTS", ())
+    monkeypatch.setattr(cva, "LATEST_REQUIRED", ())
+    monkeypatch.setattr(cva, "_release_tags", lambda: {"v0.114.0", "v0.115.3"})
+    assert cva.find_drift("0.115.3", published="0.115.3") == []

@@ -14,8 +14,6 @@ import logging
 import re
 from typing import Any
 
-from starlette.responses import PlainTextResponse, Response
-
 from agent_bom.core.settings import env_str
 
 OPENAI_APPS_CHALLENGE_ENV = "AGENT_BOM_OPENAI_APPS_CHALLENGE"
@@ -32,6 +30,9 @@ def challenge_token() -> str | None:
 
 
 def attach_challenge_route(mcp: Any) -> None:
+    # Release metadata is also imported by dependency-free deployment preflights.
+    from starlette.responses import PlainTextResponse, Response
+
     if env_str(OPENAI_APPS_CHALLENGE_ENV) and challenge_token() is None:
         logger.warning("%s is set but is not 1-512 printable ASCII characters without spaces; serving 404", OPENAI_APPS_CHALLENGE_ENV)
 
