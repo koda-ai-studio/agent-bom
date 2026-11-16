@@ -12,7 +12,7 @@ JSON scan report (`schema_version: "2.0"`) carries the same evidence as v1, with
 each shared record written once and referenced by ID, and expands exactly back
 to the v1 report.
 
-Deprecation: in 0.115.0 `scan -f json` still writes the v1 report by default and
+Deprecation: in 0.115.x `scan -f json` still writes the v1 report by default and
 `--report-format v2` opts in; scan pushes already use v2 when the control plane
 accepts it. 0.116.0 makes v2 the default for `-f json`; `--report-format v1`
 (alias `legacy`) will keep writing v1. An interactive `scan -f json -o <file>`
