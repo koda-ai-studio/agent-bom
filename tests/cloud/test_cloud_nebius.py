@@ -171,7 +171,9 @@ def test_gpu_instances_non_gpu_filtered():
 def test_k8s_gpu_pods_no_kubectl():
     with patch("shutil.which", return_value=None):
         agents, warnings = _discover_k8s_gpu_pods("key", "proj")
-        assert len(agents) == 0
+        assert agents == []
+        assert len(warnings) == 1
+        assert "kubectl" in warnings[0] and "not tested" in warnings[0]
 
 
 def test_k8s_gpu_pods_found():
@@ -270,7 +272,8 @@ def test_infiniband_jobs_no_kubectl():
     with patch("shutil.which", return_value=None):
         agents, warnings = _discover_infiniband_jobs("key", "proj")
         assert agents == []
-        assert warnings == []
+        assert len(warnings) == 1
+        assert "kubectl" in warnings[0] and "not tested" in warnings[0]
 
 
 def test_infiniband_jobs_with_rdma_pod():
