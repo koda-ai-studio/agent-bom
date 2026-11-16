@@ -48,7 +48,7 @@ wheels = [
 
 [[package]]
 name = "agent-bom-sdk"
-version = "0.115.0"
+version = "0.115.1"
 source = { editable = "." }
 dependencies = [
     { name = "agent-bom" },

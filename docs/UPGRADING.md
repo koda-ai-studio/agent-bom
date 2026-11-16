@@ -1,6 +1,6 @@
-# Upgrade to 0.115.0
+# Upgrade to 0.115.1
 
-These instructions target 0.115.0 once its artifacts are published.
+These instructions target 0.115.1 once its artifacts are published.
 The source version alone does not establish package or image availability.
 
 ## Preserve configuration and evidence
@@ -26,7 +26,7 @@ agent-bom --version
 ```
 
 These commands select the latest published package. Confirm the reported
-version is 0.115.0 or a later release whose upgrade notes you have reviewed;
+version is 0.115.1 or a later release whose upgrade notes you have reviewed;
 if it remains 0.114.0 or older, this upgrade has not been applied.
 
 For a uv-managed CLI installation, use `uv tool upgrade agent-bom` after
