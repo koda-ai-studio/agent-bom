@@ -32,6 +32,7 @@ _SIGNING_KEY_LOCK = threading.Lock()
 # One configured-key fingerprint and derived key per process. Never retain
 # tokens or authentication decisions; revocation and expiry remain live reads.
 _SIGNING_KEY_CACHE: tuple[bytes, bytes] | None = None
+_EPHEMERAL_WARNING_EMITTED = False
 _SAML_REQUEST_ID = re.compile(r"[A-Za-z0-9_-]{1,128}")
 
 
@@ -79,7 +80,7 @@ def _b64decode(value: str) -> bytes:
 
 
 def _signing_key() -> bytes:
-    global _SIGNING_KEY_CACHE
+    global _SIGNING_KEY_CACHE, _EPHEMERAL_WARNING_EMITTED
 
     from agent_bom.api.secret_source import resolve_secret
 
@@ -89,6 +90,7 @@ def _signing_key() -> bytes:
     with _SIGNING_KEY_LOCK:
         configured = resolve_secret("AGENT_BOM_BROWSER_SESSION_SIGNING_KEY")
         if configured:
+            _EPHEMERAL_WARNING_EMITTED = False
             raw = configured.encode("utf-8")
             fingerprint = hashlib.sha256(raw).digest()
             if _SIGNING_KEY_CACHE is None or not hmac.compare_digest(_SIGNING_KEY_CACHE[0], fingerprint):
@@ -96,13 +98,15 @@ def _signing_key() -> bytes:
                 _SIGNING_KEY_CACHE = (fingerprint, derived)
             return _SIGNING_KEY_CACHE[1]
         _SIGNING_KEY_CACHE = None
-    if persistent_browser_session_signing_required():
-        raise BrowserSessionError("AGENT_BOM_BROWSER_SESSION_SIGNING_KEY is required for clustered browser-session auth")
-    _logger.warning(
-        "AGENT_BOM_BROWSER_SESSION_SIGNING_KEY is not set; browser sessions use an ephemeral signing key "
-        "and will be invalid after process restart"
-    )
-    return _EPHEMERAL_SIGNING_KEY
+        if persistent_browser_session_signing_required():
+            raise BrowserSessionError("AGENT_BOM_BROWSER_SESSION_SIGNING_KEY is required for clustered browser-session auth")
+        if not _EPHEMERAL_WARNING_EMITTED:
+            _logger.warning(
+                "AGENT_BOM_BROWSER_SESSION_SIGNING_KEY is not set; browser sessions use an ephemeral signing key "
+                "and will be invalid after process restart"
+            )
+            _EPHEMERAL_WARNING_EMITTED = True
+        return _EPHEMERAL_SIGNING_KEY
 
 
 def create_browser_session_token(
