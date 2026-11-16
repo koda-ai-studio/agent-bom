@@ -37,3 +37,9 @@ binding must explicitly authorize organization scope and match the connection
 identity and anchor scope. Creating a connection grants no cloud permissions.
 Verify the connection, request a scan, then inspect per-scope inventory, CIS
 results and warnings. Local tests do not establish live organization coverage.
+
+Nebius Kubernetes discovery requires `kubectl` and configured cluster credentials.
+If `kubectl` is missing, GPU pods and InfiniBand jobs are marked "not tested"
+in discovery warnings; scan coverage is partial even when REST discovery
+succeeds. Install and configure `kubectl`, rerun the scan, and inspect its
+coverage before treating an empty Kubernetes inventory as evidence.

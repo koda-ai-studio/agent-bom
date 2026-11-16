@@ -8,7 +8,6 @@ Nebius does not have an official Python SDK, so all API calls use REST via the s
 from __future__ import annotations
 
 import json
-import logging
 import os
 import shutil
 import subprocess
@@ -21,8 +20,6 @@ from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, Tran
 from .base import CloudDiscoveryError
 from .k8s_gpu_common import build_training_agent, container_image_packages, iter_gpu_containers, iter_infiniband_pods
 from .normalization import build_cloud_origin, build_package_purl
-
-logger = logging.getLogger(__name__)
 
 # AI workload image patterns (lowercase) — used to identify GPU/AI instances
 _AI_IMAGE_PATTERNS = ("nvidia", "cuda", "pytorch", "tensorflow", "triton", "vllm", "tgi", "deepspeed", "nemo")
@@ -433,7 +430,7 @@ def _discover_k8s_gpu_pods(
     warnings: list[str] = []
 
     if not shutil.which("kubectl"):
-        logger.debug("kubectl not found — skipping Nebius K8s GPU pod discovery")
+        warnings.append("Nebius K8s GPU pods not tested: kubectl not found. Install kubectl and configure Nebius cluster credentials.")
         return agents, warnings
 
     try:
@@ -545,7 +542,7 @@ def _discover_infiniband_jobs(
     warnings: list[str] = []
 
     if not shutil.which("kubectl"):
-        logger.debug("kubectl not found — skipping Nebius InfiniBand job discovery")
+        warnings.append("Nebius InfiniBand jobs not tested: kubectl not found. Install kubectl and configure Nebius cluster credentials.")
         return agents, warnings
 
     try:
