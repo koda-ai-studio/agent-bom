@@ -270,6 +270,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - The Alpine/musl CI job measured the workflow memory budget inside a test worker that had already run thousands of tests, so it failed at 1,093 MiB against a 1,024 MiB budget. Run alone, the workflow peaks at 448-462 MiB on musl and 548-552 MiB on glibc. The musl job now runs the measured budgets in their own process, as the glibc jobs do.
 - The nightly workflow resource benchmark no longer charges the CLI's own work to the API process it measures: the scan child now parses the report and builds the push body, as the collector host does.
 - The two-replica Postgres profile runs on a freshly migrated database of its own. After the single-API profile in the shared database its tenant carried three estates instead of two, which put each replica at 1.8-2.1 GiB rather than 1.1-1.3 GiB.
+- The version-alignment check no longer fails a tag build: the tag-triggered checkout holds only the tag being built, so the published release's tag was missing from it and the check reported it as never released. A tag list that holds only the version being built is no longer treated as the full release history.
 
 ## [0.114.0] - 2026-11-08
 
