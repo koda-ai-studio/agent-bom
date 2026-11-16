@@ -15,6 +15,8 @@ def kubectl_failure_code(stderr: str) -> str:
         return "invalid_credentials"
     if "doesn't have a resource type" in text or "could not find the requested resource" in text:
         return "resource_unavailable"
+    if "toomanyrequests" in text or "too many requests" in text:
+        return "throttled"
     if "timeout" in text or "deadline exceeded" in text:
         return "timeout"
     return "collection_failed"

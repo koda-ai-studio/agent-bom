@@ -17,6 +17,7 @@ from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, Tran
 from agent_bom.security import sanitize_text
 
 from .base import CloudDiscoveryError
+from .collection_errors import COLLECTION_ERRORS, CollectionError, CollectionStatus, collection_warning, inventory_list
 from .normalization import build_cloud_origin, build_package_purl
 
 logger = logging.getLogger(__name__)
@@ -72,13 +73,32 @@ def _graphql(query: str, api_key: str) -> dict:
         )
     if resp is None:
         raise CloudDiscoveryError("RunPod: request failed after retries")
-    if resp.status_code == 401:
-        raise CloudDiscoveryError("RunPod: invalid API key (HTTP 401)")
     resp.raise_for_status()
     data = resp.json()
-    if "errors" in data:
-        raise CloudDiscoveryError(f"RunPod GraphQL error: {data['errors']}")
-    return data.get("data", {})
+    if not isinstance(data, dict):
+        raise CollectionError(CollectionStatus.UNAVAILABLE)
+    if data.get("errors"):
+        raise CollectionError(_graphql_failure_status(data["errors"]))
+    if not isinstance(data.get("data"), dict):
+        raise CollectionError(CollectionStatus.UNAVAILABLE)
+    return data["data"]
+
+
+def _graphql_failure_status(errors: object) -> CollectionStatus:
+    """Classify structured GraphQL codes, never provider message text."""
+    if not isinstance(errors, list):
+        return CollectionStatus.UNAVAILABLE
+    statuses = set()
+    for error in errors:
+        extensions = error.get("extensions") if isinstance(error, dict) else None
+        code = extensions.get("code") if isinstance(extensions, dict) else None
+        if code in ("FORBIDDEN", "UNAUTHENTICATED"):
+            statuses.add(CollectionStatus.DENIED)
+        elif code in ("TOO_MANY_REQUESTS", "RATE_LIMITED"):
+            statuses.add(CollectionStatus.THROTTLED)
+        else:
+            statuses.add(CollectionStatus.UNAVAILABLE)
+    return next(iter(statuses)) if len(statuses) == 1 else CollectionStatus.UNAVAILABLE
 
 
 def _pod_image_inventory(image: str) -> tuple[list[Package], dict | None]:
@@ -211,26 +231,24 @@ def discover(
     # ── GPU Pods ──────────────────────────────────────────────────────────────
     try:
         data = _graphql(_PODS_QUERY, resolved_key)
-        pods = data.get("myself", {}).get("pods", []) or []
+        pods = inventory_list(data.get("myself"), "pods")
 
         for pod in pods:
             agents.append(_pod_agent(pod))
 
-    except CloudDiscoveryError as exc:
-        warnings.append(str(exc))
-    except Exception as exc:
-        warnings.append(f"RunPod pods discovery error: {exc}")
+    except COLLECTION_ERRORS as exc:
+        warnings.append(collection_warning("runpod", "pods", exc))
 
     # ── Serverless Endpoints ──────────────────────────────────────────────────
     try:
         data = _graphql(_ENDPOINTS_QUERY, resolved_key)
-        endpoints = data.get("myself", {}).get("endpoints", []) or []
+        endpoints = inventory_list(data.get("myself"), "endpoints")
 
         for ep in endpoints:
             agents.append(_endpoint_agent(ep))
 
-    except Exception as exc:
-        warnings.append(f"RunPod serverless discovery error: {exc}")
+    except COLLECTION_ERRORS as exc:
+        warnings.append(collection_warning("runpod", "endpoints", exc))
 
     attach_envelope_to_agents(
         agents,

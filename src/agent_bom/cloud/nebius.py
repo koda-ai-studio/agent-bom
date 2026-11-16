@@ -18,6 +18,8 @@ from agent_bom.discovery_envelope import RedactionStatus, ScanMode, attach_envel
 from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, TransportType
 
 from .base import CloudDiscoveryError
+from .collection_errors import COLLECTION_ERRORS, CollectionError, CollectionStatus, collection_warning, inventory_list
+from .k8s_errors import kubectl_failure_code
 from .k8s_gpu_common import build_training_agent, container_image_packages, iter_gpu_containers, iter_infiniband_pods
 from .normalization import build_cloud_origin, build_package_purl
 
@@ -131,19 +133,19 @@ def discover(
 
     # Each pass is isolated: a failure becomes a warning and the next pass runs.
     stages = (
-        (_discover_ai_studio, "Nebius AI Studio discovery error"),
-        (_discover_gpu_instances, "Nebius GPU instance discovery error"),
-        (_discover_k8s_gpu_pods, "Nebius K8s GPU pod discovery error"),
-        (_discover_container_services, "Nebius container service discovery error"),
-        (_discover_infiniband_jobs, "Nebius InfiniBand discovery error"),
+        (_discover_ai_studio, "Nebius AI Studio discovery error", "ai-studio"),
+        (_discover_gpu_instances, "Nebius GPU instance discovery error", "instances"),
+        (_discover_k8s_gpu_pods, "Nebius K8s GPU pod discovery error", "k8s-gpu-pods"),
+        (_discover_container_services, "Nebius container service discovery error", "containers"),
+        (_discover_infiniband_jobs, "Nebius InfiniBand discovery error", "infiniband-jobs"),
     )
-    for stage, error_label in stages:
+    for stage, error_label, resource in stages:
         try:
             stage_agents, stage_warns = stage(resolved_key, resolved_project)
             agents.extend(stage_agents)
             warnings.extend(stage_warns)
         except Exception as exc:
-            warnings.append(f"{error_label}: {exc}")
+            warnings.append(f"{collection_warning('nebius', resource, exc)} {error_label}.")
 
     # Per-run discovery envelope (#2083 PR B).
     scope: list[str] = []
@@ -241,8 +243,8 @@ def _discover_ai_studio(
             )
             agents.append(agent)
 
-    except Exception as exc:
-        warnings.append(f"Could not list Nebius AI Studio models: {exc}")
+    except (*COLLECTION_ERRORS, RuntimeError) as exc:
+        warnings.append(collection_warning("nebius", "ai-studio", exc))
 
     return agents, warnings
 
@@ -276,8 +278,8 @@ def _discover_gpu_instances(
             if agent is not None:
                 agents.append(agent)
 
-    except Exception as exc:
-        warnings.append(f"Could not list Nebius GPU instances: {exc}")
+    except (*COLLECTION_ERRORS, RuntimeError) as exc:
+        warnings.append(collection_warning("nebius", "instances", exc))
 
     return agents, warnings
 
@@ -375,6 +377,23 @@ def _kubectl_get_all_pods() -> subprocess.CompletedProcess[str]:
     )
 
 
+def _kubectl_pod_items() -> list[dict]:
+    """Require an explicit pod list and classify only fixed stderr categories."""
+    result = _kubectl_get_all_pods()
+    if result.returncode != 0:
+        code = kubectl_failure_code(result.stderr)
+        status = {
+            "permission_denied": CollectionStatus.DENIED,
+            "invalid_credentials": CollectionStatus.DENIED,
+            "throttled": CollectionStatus.THROTTLED,
+        }.get(code, CollectionStatus.UNAVAILABLE)
+        raise CollectionError(status)
+    items = inventory_list(json.loads(result.stdout), "items")
+    if any(not isinstance(item, dict) for item in items):
+        raise CollectionError(CollectionStatus.UNAVAILABLE)
+    return items
+
+
 def _k8s_gpu_pod_agent(project_id: str, pod_ns: str, pod_name: str, containers: list[tuple[str, str, Any]]) -> Agent:
     """One agent per GPU pod, one server per GPU container."""
     servers = [
@@ -434,29 +453,19 @@ def _discover_k8s_gpu_pods(
         return agents, warnings
 
     try:
-        result = _kubectl_get_all_pods()
-
-        if result.returncode != 0:
-            warnings.append(f"kubectl failed for Nebius K8s GPU pods: {result.stderr.strip()[:200]}")
-            return agents, warnings
-
-        data = json.loads(result.stdout)
+        items = _kubectl_pod_items()
         # Check all container types (including init containers) for GPU resource requests.
         # One pod is one workload: each GPU container is a server under the pod's agent.
         pods: dict[tuple[str, str], list[tuple[str, str, Any]]] = {}
-        for pod_ns, pod_name, container, image_ref, gpu_limit, gpu_request in iter_gpu_containers(
-            data.get("items", []), include_init_containers=True
-        ):
+        for pod_ns, pod_name, container, image_ref, gpu_limit, gpu_request in iter_gpu_containers(items, include_init_containers=True):
             pods.setdefault((pod_ns, pod_name), []).append((container.get("name", "unknown"), image_ref, gpu_request or gpu_limit))
         for (pod_ns, pod_name), containers in pods.items():
             agents.append(_k8s_gpu_pod_agent(project_id, pod_ns, pod_name, containers))
 
-    except json.JSONDecodeError as exc:
-        warnings.append(f"kubectl produced invalid JSON for GPU pods: {exc}")
     except subprocess.TimeoutExpired:
-        warnings.append("kubectl timed out during Nebius K8s GPU pod discovery")
-    except Exception as exc:
-        warnings.append(f"Nebius K8s GPU pod discovery failed: {exc}")
+        warnings.append("nebius:k8s-gpu-pods:unavailable: kubectl timed out. Assessment incomplete.")
+    except COLLECTION_ERRORS as exc:
+        warnings.append(collection_warning("nebius", "k8s-gpu-pods", exc))
 
     return agents, warnings
 
@@ -518,8 +527,8 @@ def _discover_container_services(
             )
             agents.append(agent)
 
-    except Exception as exc:
-        warnings.append(f"Could not list Nebius container services: {exc}")
+    except (*COLLECTION_ERRORS, RuntimeError) as exc:
+        warnings.append(collection_warning("nebius", "containers", exc))
 
     return agents, warnings
 
@@ -546,14 +555,8 @@ def _discover_infiniband_jobs(
         return agents, warnings
 
     try:
-        result = _kubectl_get_all_pods()
-
-        if result.returncode != 0:
-            warnings.append(f"kubectl failed for Nebius InfiniBand jobs: {result.stderr.strip()[:200]}")
-            return agents, warnings
-
-        data = json.loads(result.stdout)
-        for pod_ns, pod_name, image_ref, gpu_limits in iter_infiniband_pods(data.get("items", [])):
+        items = _kubectl_pod_items()
+        for pod_ns, pod_name, image_ref, gpu_limits in iter_infiniband_pods(items):
             agents.append(
                 build_training_agent(
                     provider="nebius",
@@ -566,11 +569,9 @@ def _discover_infiniband_jobs(
                 )
             )
 
-    except json.JSONDecodeError as exc:
-        warnings.append(f"kubectl produced invalid JSON for InfiniBand jobs: {exc}")
     except subprocess.TimeoutExpired:
-        warnings.append("kubectl timed out during Nebius InfiniBand job discovery")
-    except Exception as exc:
-        warnings.append(f"Nebius InfiniBand job discovery failed: {exc}")
+        warnings.append("nebius:infiniband-jobs:unavailable: kubectl timed out. Assessment incomplete.")
+    except COLLECTION_ERRORS as exc:
+        warnings.append(collection_warning("nebius", "infiniband-jobs", exc))
 
     return agents, warnings
