@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./live-demo";
 
 /**
  * GRC evidence journey and readability floors against a running demo-estate API.
@@ -8,20 +9,9 @@ import { expect, test, type Page } from "@playwright/test";
  * When the API requires a key, AGENT_BOM_E2E_API_KEY signs the browser in.
  */
 const LIVE_API = process.env.AGENT_BOM_E2E_LIVE_API ?? "";
-const API_KEY = process.env.AGENT_BOM_E2E_API_KEY ?? "";
 
 test.skip(!LIVE_API, "Set AGENT_BOM_E2E_LIVE_API to a demo-estate API the UI dev server reads");
 test.describe.configure({ timeout: 180_000 });
-
-async function signIn(page: Page) {
-  await expect.poll(async () => {
-    const health = await page.request.get(`${LIVE_API}/health`);
-    return health.ok() ? (await health.json()).demo_seed : "unavailable";
-  }, { message: "demo estate seed completes before journey assertions", timeout: 120_000, intervals: [1_000] }).toBe("complete");
-  if (!API_KEY) return;
-  const response = await page.request.post("/v1/auth/session", { data: { api_key: API_KEY } });
-  expect(response.ok()).toBe(true);
-}
 
 async function open(page: Page, path: string) {
   await page.goto(path, { timeout: 120_000 });
@@ -47,7 +37,6 @@ async function smallChromeText(page: Page) {
 
 test("a GRC reader reaches a mapped asset in the graph within three clicks of a framework", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await signIn(page);
   await open(page, "/compliance");
   await page.getByTestId("compliance-frameworks-table").getByText("AI RMF", { exact: true }).click();
   await page.getByText("GOVERN-6.1", { exact: true }).first().click();
@@ -69,7 +58,6 @@ test("a GRC reader reaches a mapped asset in the graph within three clicks of a 
 });
 
 test("the Cloud filter replaces an AI framework pane", async ({ page }) => {
-  await signIn(page);
   await open(page, "/compliance");
   await page.getByTestId("compliance-frameworks-table").getByText("AI RMF", { exact: true }).click();
   await expect(page.getByRole("heading", { name: "NIST AI RMF 1.0" })).toBeVisible();
@@ -79,7 +67,6 @@ test("the Cloud filter replaces an AI framework pane", async ({ page }) => {
 
 test("security-graph chrome text is at least 12px", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await signIn(page);
   await open(page, "/security-graph");
   await expect(page.locator(".react-flow").first()).toBeVisible({ timeout: 60_000 });
   expect(await smallChromeText(page)).toEqual([]);
@@ -91,11 +78,10 @@ for (const path of ["/findings", "/graph"]) {
       await page.emulateMedia({ colorScheme: theme });
       await page.addInitScript((value) => localStorage.setItem("agent-bom-theme", value), theme);
       await page.setViewportSize({ width: 390, height: 844 });
-      await signIn(page);
       await open(page, path);
       await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
       await expect(page.getByRole("main")).toBeVisible();
-      if (path === "/findings") await expect(page.getByRole("button", { name: "Details", exact: true }).first()).toBeVisible();
+      if (path === "/findings") await expect(page.getByRole("button", { name: /^Open details for / }).first()).toBeVisible();
       else await expect(page.getByRole("button", { name: /^Browse all \d+ nodes and scopes$/ })).toBeVisible();
       await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
       await page.waitForTimeout(1_500);
@@ -117,7 +103,6 @@ for (const path of ["/findings", "/graph"]) {
 
 test("/graph header controls never overlap the title at 200% text on a phone", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await signIn(page);
   await open(page, "/graph");
   await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
   await page.waitForTimeout(500);

@@ -1,4 +1,5 @@
-import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { expect, type APIRequestContext, type Page } from "@playwright/test";
+import { test } from "./live-demo";
 
 /**
  * CISO, AppSec and AI-owner journeys against a running demo-estate API: each
@@ -11,16 +12,6 @@ import { expect, test, type APIRequestContext, type Page } from "@playwright/tes
 const LIVE_API = process.env.AGENT_BOM_E2E_LIVE_API ?? "";
 const API_KEY = process.env.AGENT_BOM_E2E_API_KEY ?? "";
 
-test.beforeEach(async ({ page, request }) => {
-  if (!LIVE_API) return;
-  await expect.poll(async () => {
-    const health = await request.get(`${LIVE_API}/health`);
-    return health.ok() ? (await health.json()).demo_seed : "unavailable";
-  }, { message: "demo estate seed completes before count assertions", timeout: 120_000, intervals: [1_000] }).toBe("complete");
-  if (!API_KEY) return;
-  const response = await page.request.post("/v1/auth/session", { data: { api_key: API_KEY } });
-  expect(response.ok(), "demo browser sign-in").toBe(true);
-});
 
 test.skip(!LIVE_API, "Set AGENT_BOM_E2E_LIVE_API to a demo-estate API the UI dev server reads");
 test.describe.configure({ timeout: 240_000 });
