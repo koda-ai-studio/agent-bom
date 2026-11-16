@@ -16,6 +16,7 @@ from agent_bom.discovery_envelope import RedactionStatus, ScanMode, attach_envel
 from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, TransportType
 
 from .base import CloudDiscoveryError
+from .collection_errors import COLLECTION_ERRORS, collection_warning, inventory_list
 from .normalization import build_cloud_origin, build_package_purl
 
 logger = logging.getLogger(__name__)
@@ -35,8 +36,6 @@ def _crusoe_get(path: str, api_key: str) -> dict | list:
     )
     if resp is None:
         raise CloudDiscoveryError("Crusoe: request failed after retries")
-    if resp.status_code == 401:
-        raise CloudDiscoveryError("Crusoe: invalid API key (HTTP 401)")
     resp.raise_for_status()
     return resp.json()
 
@@ -70,7 +69,7 @@ def discover(
 
     try:
         data = _crusoe_get(path, resolved_key)
-        vms = data if isinstance(data, list) else data.get("items", data.get("vms", []))
+        vms = inventory_list(data, "items", "vms")
 
         for vm in vms:
             vm_id = str(vm.get("id", "unknown"))
@@ -129,10 +128,8 @@ def discover(
             )
             agents.append(agent)
 
-    except CloudDiscoveryError as exc:
-        warnings.append(str(exc))
-    except Exception as exc:
-        warnings.append(f"Crusoe discovery error: {exc}")
+    except COLLECTION_ERRORS as exc:
+        warnings.append(collection_warning("crusoe", "instances", exc))
 
     scope = (f"crusoe:project/{resolved_project}",) if resolved_project else ("crusoe:all",)
     attach_envelope_to_agents(
