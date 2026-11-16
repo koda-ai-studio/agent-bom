@@ -41,7 +41,7 @@
     "@xyflow/react": "^12.12.0",
     "graphology": "^0.26.0",
     "lucide-react": "^1.52.0",
-    "next": "^16.4.1",
+    "next": "^16.4.5",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "recharts": "^3.10.1",
