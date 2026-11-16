@@ -338,6 +338,18 @@ def test_published_version_must_name_a_real_tag_when_tags_are_known(monkeypatch)
     assert any("v0.106.0" in line and "tag" in line for line in drift), drift
 
 
+def test_a_checkout_holding_only_the_built_tag_does_not_vouch_for_older_releases(monkeypatch) -> None:
+    """A tag-triggered checkout fetches only that tag; the published release's tag is simply not fetched."""
+    cva = _load_script("check_version_alignment.py")
+    monkeypatch.setattr(cva, "SCAN_ROOTS", ())
+    monkeypatch.setattr(cva, "LATEST_REQUIRED", ())
+    monkeypatch.setattr(cva, "_release_tags", lambda: {"v0.106.0"})
+    assert cva.find_drift("0.106.0", published="0.105.0") == []
+    monkeypatch.setattr(cva, "_release_tags", lambda: {"v0.104.0", "v0.106.0"})
+    drift = cva.find_drift("0.106.0", published="0.105.0")
+    assert any("v0.105.0" in line and "tag" in line for line in drift), drift
+
+
 def test_every_workflow_running_the_gate_checks_out_all_release_tags() -> None:
     """A checkout holding only the pushed tag makes PUBLISHED_VERSION look unreleased."""
     import yaml
