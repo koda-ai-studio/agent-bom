@@ -109,3 +109,43 @@ def test_nebius_incomplete_discovery_has_structured_scan_scope():
     assert state.cloud_scopes[0].name == "cloud:nebius"
     assert state.cloud_scopes[0].status.value == "partial"
     assert state.cloud_scopes[0].item_count == 2
+
+
+@pytest.mark.parametrize("kubectl_available", [False, True])
+def test_kubernetes_coverage_preserves_rest_inventory_and_scope(kubectl_available):
+    from types import SimpleNamespace
+
+    from agent_bom.cli.agents.scan_pipeline.report import _collect_cloud_scopes
+    from agent_bom.cloud.nebius import discover
+    from agent_bom.models import Agent, AgentType
+
+    rest_agent = Agent(name="fixture-model", agent_type=AgentType.CUSTOM, config_path="nebius://fixture/model", source="nebius-ai-studio")
+    with (
+        patch("agent_bom.cloud.nebius.shutil.which", return_value="/fixture/kubectl" if kubectl_available else None),
+        patch("agent_bom.cloud.nebius._discover_ai_studio", return_value=([rest_agent], [])),
+        patch("agent_bom.cloud.nebius._discover_gpu_instances", return_value=([], [])),
+        patch("agent_bom.cloud.nebius._discover_container_services", return_value=([], [])),
+        patch(
+            "agent_bom.cloud.nebius._kubectl_get_all_pods", return_value=SimpleNamespace(returncode=0, stdout='{"items": []}')
+        ) as kubectl,
+    ):
+        agents, warnings = discover(api_key="fixture-key", project_id="fixture-project")
+    assert agents == [rest_agent]
+    assert kubectl.call_count == (2 if kubectl_available else 0)
+    if kubectl_available:
+        assert warnings == []
+    else:
+        assert len(warnings) == 2
+        assert any("GPU pod" in warning for warning in warnings)
+        assert any("InfiniBand" in warning for warning in warnings)
+        assert all("not tested" in warning for warning in warnings)
+    state = SimpleNamespace(
+        ctx=SimpleNamespace(
+            cloud_provider_successes=[{"provider": "nebius", "item_count": len(agents)}],
+            cloud_provider_warnings=[{"provider": "nebius", "warning": warning} for warning in warnings],
+            cloud_provider_failures=[],
+        )
+    )
+    _collect_cloud_scopes(SimpleNamespace(), state)
+    assert state.cloud_scopes[0].status.value == ("complete" if kubectl_available else "partial")
+    assert state.cloud_scopes[0].item_count == 1
