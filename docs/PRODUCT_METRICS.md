@@ -7,7 +7,7 @@ Keep counts out of public positioning copy and update this file from the repo in
 The counts are regenerated at release time and describe the version below, not later commits on `main`.
 
 - Generated on: `2026-11-15`
-- Version: `0.115.1`
+- Version: `0.115.3`
 
 | Metric | Value | Source | Notes |
 | --- | ---: | --- | --- |
