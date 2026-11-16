@@ -7,7 +7,20 @@ import { expect, test, type APIRequestContext, type Page } from "@playwright/tes
  * Opt-in like count-consistency-live: start `agent-bom api --demo-estate`, point
  * the UI dev server at it, and run with AGENT_BOM_E2E_LIVE_API=http://127.0.0.1:<port>.
  */
+// AGENT_BOM_E2E_API_KEY authenticates both browser sessions and direct API reads.
 const LIVE_API = process.env.AGENT_BOM_E2E_LIVE_API ?? "";
+const API_KEY = process.env.AGENT_BOM_E2E_API_KEY ?? "";
+
+test.beforeEach(async ({ page, request }) => {
+  if (!LIVE_API) return;
+  await expect.poll(async () => {
+    const health = await request.get(`${LIVE_API}/health`);
+    return health.ok() ? (await health.json()).demo_seed : "unavailable";
+  }, { message: "demo estate seed completes before count assertions", timeout: 120_000, intervals: [1_000] }).toBe("complete");
+  if (!API_KEY) return;
+  const response = await page.request.post("/v1/auth/session", { data: { api_key: API_KEY } });
+  expect(response.ok(), "demo browser sign-in").toBe(true);
+});
 
 test.skip(!LIVE_API, "Set AGENT_BOM_E2E_LIVE_API to a demo-estate API the UI dev server reads");
 test.describe.configure({ timeout: 240_000 });
@@ -16,7 +29,7 @@ type AttackPaths = { attack_paths: { source: string; vuln_ids: string[]; hops: s
 type Counts = { issues: { critical: number; high: number; total: number } };
 
 async function liveJson<T>(request: APIRequestContext, path: string): Promise<T> {
-  const response = await request.get(`${LIVE_API}${path}`, { timeout: 120_000 });
+  const response = await request.get(`${LIVE_API}${path}`, { timeout: 120_000, headers: API_KEY ? { Authorization: `Bearer ${API_KEY}` } : {} });
   expect(response.ok(), path).toBe(true);
   return (await response.json()) as T;
 }
@@ -90,6 +103,7 @@ test("CISO: the org card reads its high against the estate-wide headline", async
   const rollup = await liveJson<{ top_level: { entity_type: string; aggregate: { issue_count: number } }[] }>(request, "/v1/graph/rollup");
   const org = rollup.top_level.find((item) => item.entity_type === "org")!;
   await open(page, "/graph");
+  await page.getByRole("button", { name: /^Browse all \d+ nodes and scopes$/ }).click();
   const outside = issues.total - org.aggregate.issue_count;
   const comparison = page.getByTestId("graph-scope-estate-comparison").first();
   if (outside > 0) {

@@ -14,6 +14,10 @@ test.skip(!LIVE_API, "Set AGENT_BOM_E2E_LIVE_API to a demo-estate API the UI dev
 test.describe.configure({ timeout: 180_000 });
 
 async function signIn(page: Page) {
+  await expect.poll(async () => {
+    const health = await page.request.get(`${LIVE_API}/health`);
+    return health.ok() ? (await health.json()).demo_seed : "unavailable";
+  }, { message: "demo estate seed completes before journey assertions", timeout: 120_000, intervals: [1_000] }).toBe("complete");
   if (!API_KEY) return;
   const response = await page.request.post("/v1/auth/session", { data: { api_key: API_KEY } });
   expect(response.ok()).toBe(true);
@@ -82,26 +86,33 @@ test("security-graph chrome text is at least 12px", async ({ page }) => {
 });
 
 for (const path of ["/findings", "/graph"]) {
-  test(`${path} fits a 390px phone at 200% text`, async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
-    await signIn(page);
-    await open(page, path);
-    await expect(page.getByRole("main")).toBeVisible();
-    await page.waitForTimeout(3_000);
-    await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
-    await page.waitForTimeout(1_500);
-    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-    expect(overflow).toBeLessThanOrEqual(0);
-    const chip = page.locator("#demo-estate-watermark");
-    if (await chip.count()) {
-      expect(await chip.evaluate((element) => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1);
-      const chipBox = await chip.boundingBox();
-      const search = await page.getByRole("button", { name: "Search pages", exact: true }).boundingBox();
-      expect(chipBox!.x + chipBox!.width).toBeLessThanOrEqual(search!.x);
-      const text = (await chip.locator("span:visible").allTextContents()).join("");
-      expect(text === "" ? await chip.locator("svg").isVisible() : /^Demo/.test(text)).toBe(true);
-    }
-  });
+  for (const theme of ["light", "dark"] as const) {
+    test(`${path} fits a 390px phone at 200% text (${theme})`, async ({ page }, testInfo) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await page.addInitScript((value) => localStorage.setItem("agent-bom-theme", value), theme);
+      await page.setViewportSize({ width: 390, height: 844 });
+      await signIn(page);
+      await open(page, path);
+      await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+      await expect(page.getByRole("main")).toBeVisible();
+      if (path === "/findings") await expect(page.getByRole("button", { name: "Details", exact: true }).first()).toBeVisible();
+      else await expect(page.getByRole("button", { name: /^Browse all \d+ nodes and scopes$/ })).toBeVisible();
+      await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
+      await page.waitForTimeout(1_500);
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      expect(overflow).toBeLessThanOrEqual(0);
+      await page.screenshot({ path: testInfo.outputPath("phone-200-percent.png") });
+      const chip = page.locator("#demo-estate-watermark");
+      if (await chip.count()) {
+        expect(await chip.evaluate((element) => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1);
+        const chipBox = await chip.boundingBox();
+        const search = await page.getByRole("button", { name: "Search pages", exact: true }).boundingBox();
+        expect(chipBox!.x + chipBox!.width).toBeLessThanOrEqual(search!.x);
+        const text = (await chip.locator("span:visible").allTextContents()).join("");
+        expect(text === "" ? await chip.locator("svg").isVisible() : /^Demo/.test(text)).toBe(true);
+      }
+    });
+  }
 }
 
 test("/graph header controls never overlap the title at 200% text on a phone", async ({ page }) => {
