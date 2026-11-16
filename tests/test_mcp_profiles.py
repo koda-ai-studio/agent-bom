@@ -301,3 +301,20 @@ def test_write_hosted_tool_names_script_uses_the_registration_helper(tmp_path):
     )
     assert json.loads(full.read_text()) == sorted(registered_tool_names("scan", read_only=False) or ())
     assert json.loads(read_only.read_text()) == sorted(registered_tool_names("scan", read_only=True) or ())
+
+
+def test_hosted_tool_preflight_runs_without_site_packages(tmp_path):
+    """The trusted-tag deployment preflight runs before dependency installation."""
+    root = Path(__file__).resolve().parents[1]
+    full, read_only = tmp_path / "full.json", tmp_path / "read-only.json"
+    result = subprocess.run(
+        [sys.executable, "-S", "scripts/deploy/write_hosted_tool_names.py", "--full", str(full), "--read-only", str(read_only)],
+        cwd=root,
+        env={"PATH": os.environ["PATH"], "PYTHONPATH": str(root / "src")},
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+    assert json.loads(full.read_text()) == sorted(SCAN_TOOLS)
+    assert json.loads(read_only.read_text()) == sorted(SCAN_TOOLS - {"scan"})

@@ -362,8 +362,8 @@ def find_drift(version: str, *, published: str | None = None) -> list[str]:
     if parse_semver(published) > parse_semver(version):
         drift.append(f"{PUBLISHED_VERSION_FILE.name}: published version {published} is ahead of the source version {version}")
     # A tag build's checkout holds only the tag being built, which says nothing about older releases.
-    tags = _release_tags() - {f"v{version}"}
-    if tags and f"v{published}" not in tags:
+    tags = _release_tags()
+    if tags - {f"v{version}"} and f"v{published}" not in tags:
         drift.append(
             f"{PUBLISHED_VERSION_FILE.name}: published version {published} has no v{published} release tag — "
             "advance it only after the release is published"
