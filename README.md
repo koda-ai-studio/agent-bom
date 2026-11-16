@@ -198,7 +198,7 @@ published container and its vulnerable packages:
 on labelled sample data, with no install. To open the same graph locally:
 
 ```bash
-pip install 'agent-bom[ui]==0.114.0'
+pip install 'agent-bom[ui]==0.115.3'
 agent-bom quickstart --run --offline
 ```
 
@@ -212,8 +212,8 @@ Your infrastructure, identity, database and audit boundary. Start a local pilot
 from a [published release checkout](https://github.com/koda-ai-studio/agent-bom/releases):
 
 ```bash
-git clone --depth 1 --branch v0.114.0 https://github.com/koda-ai-studio/agent-bom.git && cd agent-bom
-AGENT_BOM_IMAGE_TAG=0.114.0 docker compose up -d
+git clone --depth 1 --branch v0.115.3 https://github.com/koda-ai-studio/agent-bom.git && cd agent-bom
+AGENT_BOM_IMAGE_TAG=0.115.3 docker compose up -d
 ```
 
 Open **http://localhost:3000**, then **Connections** or **New Scan**. The pilot
@@ -375,4 +375,4 @@ or follow the [maintainer path](GOVERNANCE.md) ([review owners](MAINTAINERS.md))
 
 [Contributing](CONTRIBUTING.md) · [Capabilities and roadmap](docs/ROADMAP.md) · [Support](SUPPORT.md) · [Report an inaccurate finding](https://github.com/koda-ai-studio/agent-bom/issues/new?template=inaccurate_finding.yml) · [Apache-2.0](LICENSE)
 
-Source version: **v0.115.3** · Latest release: **v0.114.0** · [Changelog](CHANGELOG.md)
+Source version: **v0.115.3** · Latest release: **v0.115.3** · [Changelog](CHANGELOG.md)
