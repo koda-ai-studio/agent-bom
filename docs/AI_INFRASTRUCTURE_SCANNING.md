@@ -306,6 +306,11 @@ classified separately from successful empty collections. A failed stage does
 not suppress the other stage; GraphQL data accompanied by errors is not treated
 as complete inventory. Unknown or mixed GraphQL codes are unavailable.
 
+Nebius uses the same statuses for `ai-studio`, `instances`, `containers`,
+`k8s-gpu-pods` and `infiniband-jobs`. Kubernetes output must contain an explicit
+pod list. Denied or throttled kubectl reads report incomplete coverage;
+missing kubectl remains explicitly not tested. Other discovery stages continue.
+
 ## Credential boundaries
 
 Prefer read-only credentials. A scan sees only the cloud account, project,
