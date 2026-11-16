@@ -16,4 +16,5 @@ def test_upgrade_guide_names_the_current_migration_head():
     heads = revisions - parents
     assert len(heads) == 1
     guide = (POSTGRES_DIR.parents[2] / "docs" / "UPGRADING.md").read_text()
-    assert f"Apply Postgres migrations through `{heads.pop()}`" in guide
+    head_revision = next(iter(heads))
+    assert f"Apply Postgres migrations through `{head_revision}`" in guide
