@@ -290,6 +290,16 @@ agent-bom agents --image <lambda-workload-image> --enrich -f json
 agent-bom agents --nebius -f json -o nebius-ai-scan.json
 ```
 
+### Inventory collection outcomes
+
+Lambda, Vast.ai and Crusoe inventory warnings use
+`<provider>:instances:denied|throttled|unavailable` codes. Denied reads require
+checking credentials and read permissions; throttled reads should be retried
+later. Unavailable includes failed transport and invalid inventory responses.
+These warnings mean assessment is incomplete, even if other records were
+collected. An authorized response containing an explicit empty collection has
+no warning; an unrelated or malformed response is never treated as empty.
+
 ## Credential boundaries
 
 Prefer read-only credentials. A scan sees only the cloud account, project,

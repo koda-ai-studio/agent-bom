@@ -16,6 +16,7 @@ from agent_bom.discovery_envelope import RedactionStatus, ScanMode, attach_envel
 from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, TransportType
 
 from .base import CloudDiscoveryError
+from .collection_errors import COLLECTION_ERRORS, collection_warning, inventory_list
 from .normalization import build_cloud_origin, build_package_purl
 
 logger = logging.getLogger(__name__)
@@ -45,10 +46,8 @@ def _lambda_get(path: str, api_key: str) -> dict | list:
     )
     if resp is None:
         raise CloudDiscoveryError("Lambda Labs: request failed after retries")
-    if resp.status_code == 401:
-        raise CloudDiscoveryError("Lambda Labs: invalid API key (HTTP 401)")
     resp.raise_for_status()
-    return resp.json().get("data", resp.json())
+    return resp.json()
 
 
 def _instance_agent(inst: dict) -> Agent:
@@ -124,16 +123,13 @@ def discover(
 
     try:
         instances = _lambda_get("/instances", resolved_key)
-        if not isinstance(instances, list):
-            instances = []
+        instances = inventory_list(instances, "data")
 
         for inst in instances:
             agents.append(_instance_agent(inst))
 
-    except CloudDiscoveryError as exc:
-        warnings.append(str(exc))
-    except Exception as exc:
-        warnings.append(f"Lambda Labs discovery error: {exc}")
+    except COLLECTION_ERRORS as exc:
+        warnings.append(collection_warning("lambda", "instances", exc))
 
     scope = tuple(f"lambda:region/{r}" for r in {a.metadata.get("region", "") for a in agents} if r)
     attach_envelope_to_agents(
