@@ -17,6 +17,7 @@ from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, Tran
 from agent_bom.security import sanitize_text
 
 from .base import CloudDiscoveryError
+from .collection_errors import COLLECTION_ERRORS, collection_warning, inventory_list
 from .normalization import build_cloud_origin, build_package_purl
 
 logger = logging.getLogger(__name__)
@@ -36,8 +37,6 @@ def _vast_get(path: str, api_key: str) -> dict | list:
     )
     if resp is None:
         raise CloudDiscoveryError("Vast.ai: request failed after retries")
-    if resp.status_code == 401:
-        raise CloudDiscoveryError("Vast.ai: invalid API key (HTTP 401)")
     resp.raise_for_status()
     return resp.json()
 
@@ -63,7 +62,7 @@ def discover(
 
     try:
         data = _vast_get("/instances/?owner=me", resolved_key)
-        instances = data if isinstance(data, list) else data.get("instances", [])
+        instances = inventory_list(data, "instances")
 
         for inst in instances:
             inst_id = str(inst.get("id", "unknown"))
@@ -131,10 +130,8 @@ def discover(
             )
             agents.append(agent)
 
-    except CloudDiscoveryError as exc:
-        warnings.append(str(exc))
-    except Exception as exc:
-        warnings.append(f"Vast.ai discovery error: {exc}")
+    except COLLECTION_ERRORS as exc:
+        warnings.append(collection_warning("vastai", "instances", exc))
 
     attach_envelope_to_agents(
         agents,
