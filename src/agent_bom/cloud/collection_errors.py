@@ -23,6 +23,14 @@ class CollectionStatus(str, Enum):
     UNAVAILABLE = "unavailable"
 
 
+class CollectionError(CloudDiscoveryError):
+    """Provider-specific protocols can supply an already classified outcome."""
+
+    def __init__(self, status: CollectionStatus):
+        self.status = status
+        super().__init__(status.value)
+
+
 # Transport, explicit provider failures, and malformed external record shapes.
 # Programming errors outside these data/transport boundaries are not swallowed.
 COLLECTION_ERRORS = (OfflineModeError, httpx.HTTPError, CloudDiscoveryError, OSError, ValueError, TypeError, AttributeError, KeyError)
@@ -30,6 +38,8 @@ COLLECTION_ERRORS = (OfflineModeError, httpx.HTTPError, CloudDiscoveryError, OSE
 
 def collection_status(exc: Exception) -> CollectionStatus:
     """Classify structured status only; exception messages are untrusted."""
+    if isinstance(exc, CollectionError):
+        return exc.status
     code = getattr(getattr(exc, "response", None), "status_code", None)
     return {401: CollectionStatus.DENIED, 403: CollectionStatus.DENIED, 429: CollectionStatus.THROTTLED}.get(
         code if isinstance(code, int) else 0, CollectionStatus.UNAVAILABLE

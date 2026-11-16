@@ -300,6 +300,12 @@ These warnings mean assessment is incomplete, even if other records were
 collected. An authorized response containing an explicit empty collection has
 no warning; an unrelated or malformed response is never treated as empty.
 
+RunPod uses `runpod:pods:<status>` and `runpod:endpoints:<status>` warnings
+with the same statuses. HTTP errors and structured GraphQL error codes are
+classified separately from successful empty collections. A failed stage does
+not suppress the other stage; GraphQL data accompanied by errors is not treated
+as complete inventory. Unknown or mixed GraphQL codes are unavailable.
+
 ## Credential boundaries
 
 Prefer read-only credentials. A scan sees only the cloud account, project,
