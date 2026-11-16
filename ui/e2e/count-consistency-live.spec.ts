@@ -1,4 +1,5 @@
-import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { expect, type APIRequestContext, type Page } from "@playwright/test";
+import { test } from "./live-demo";
 
 /**
  * Reads the same metric off every page against a running demo-estate API and
@@ -7,7 +8,10 @@ import { expect, test, type APIRequestContext, type Page } from "@playwright/tes
  * Opt-in: start `agent-bom api --demo-estate` and point the UI at it, then run
  * with AGENT_BOM_E2E_LIVE_API=http://127.0.0.1:<port>.
  */
+// AGENT_BOM_E2E_API_KEY authenticates both browser sessions and direct API reads.
 const LIVE_API = process.env.AGENT_BOM_E2E_LIVE_API ?? "";
+const API_KEY = process.env.AGENT_BOM_E2E_API_KEY ?? "";
+
 
 test.skip(!LIVE_API, "Set AGENT_BOM_E2E_LIVE_API to a demo-estate API the UI dev server reads");
 test.describe.configure({ timeout: 180_000 });
@@ -15,7 +19,7 @@ test.describe.configure({ timeout: 180_000 });
 type IssueCounts = { critical: number; high: number; medium: number; total: number; kev: number };
 
 async function liveJson<T>(request: APIRequestContext, path: string): Promise<T> {
-  const response = await request.get(`${LIVE_API}${path}`, { timeout: 120_000 });
+  const response = await request.get(`${LIVE_API}${path}`, { timeout: 120_000, headers: API_KEY ? { Authorization: `Bearer ${API_KEY}` } : {} });
   expect(response.ok(), path).toBe(true);
   return (await response.json()) as T;
 }
@@ -53,7 +57,7 @@ test("occurrence and scope totals carry their unit", async ({ page, request }) =
 
   await open(page, "/");
   await page.getByRole("tab", { name: "Assets & coverage" }).click().catch(() => undefined);
-  await expect(page.getByText(/Counts are finding occurrences, not issues/).first()).toBeVisible();
+  await expect(page.getByText(/Counts describe typed records in this snapshot; categories above are a subset of the inventory./).first()).toBeVisible();
 
   await open(page, "/agents");
   const kpis = page.getByTestId("agents-kpis");
@@ -91,5 +95,5 @@ test("frameworks covered and NIST 800-53 pass/fail read the same on overview and
 
 test("remediation names its read window", async ({ page }) => {
   await open(page, "/remediation");
-  await expect(page.getByText(/packages prioritized by reach, severity, and available fixes · Last \d+ days/)).toBeVisible();
+  await expect(page.getByText(/package upgrades prioritized by reach, severity, and available fixes · Last \d+ days/)).toBeVisible();
 });

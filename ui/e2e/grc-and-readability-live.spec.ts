@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./live-demo";
 
 /**
  * GRC evidence journey and readability floors against a running demo-estate API.
@@ -8,16 +9,9 @@ import { expect, test, type Page } from "@playwright/test";
  * When the API requires a key, AGENT_BOM_E2E_API_KEY signs the browser in.
  */
 const LIVE_API = process.env.AGENT_BOM_E2E_LIVE_API ?? "";
-const API_KEY = process.env.AGENT_BOM_E2E_API_KEY ?? "";
 
 test.skip(!LIVE_API, "Set AGENT_BOM_E2E_LIVE_API to a demo-estate API the UI dev server reads");
 test.describe.configure({ timeout: 180_000 });
-
-async function signIn(page: Page) {
-  if (!API_KEY) return;
-  const response = await page.request.post("/v1/auth/session", { data: { api_key: API_KEY } });
-  expect(response.ok()).toBe(true);
-}
 
 async function open(page: Page, path: string) {
   await page.goto(path, { timeout: 120_000 });
@@ -43,7 +37,6 @@ async function smallChromeText(page: Page) {
 
 test("a GRC reader reaches a mapped asset in the graph within three clicks of a framework", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await signIn(page);
   await open(page, "/compliance");
   await page.getByTestId("compliance-frameworks-table").getByText("AI RMF", { exact: true }).click();
   await page.getByText("GOVERN-6.1", { exact: true }).first().click();
@@ -65,7 +58,6 @@ test("a GRC reader reaches a mapped asset in the graph within three clicks of a 
 });
 
 test("the Cloud filter replaces an AI framework pane", async ({ page }) => {
-  await signIn(page);
   await open(page, "/compliance");
   await page.getByTestId("compliance-frameworks-table").getByText("AI RMF", { exact: true }).click();
   await expect(page.getByRole("heading", { name: "NIST AI RMF 1.0" })).toBeVisible();
@@ -75,38 +67,42 @@ test("the Cloud filter replaces an AI framework pane", async ({ page }) => {
 
 test("security-graph chrome text is at least 12px", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await signIn(page);
   await open(page, "/security-graph");
   await expect(page.locator(".react-flow").first()).toBeVisible({ timeout: 60_000 });
   expect(await smallChromeText(page)).toEqual([]);
 });
 
 for (const path of ["/findings", "/graph"]) {
-  test(`${path} fits a 390px phone at 200% text`, async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
-    await signIn(page);
-    await open(page, path);
-    await expect(page.getByRole("main")).toBeVisible();
-    await page.waitForTimeout(3_000);
-    await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
-    await page.waitForTimeout(1_500);
-    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-    expect(overflow).toBeLessThanOrEqual(0);
-    const chip = page.locator("#demo-estate-watermark");
-    if (await chip.count()) {
-      expect(await chip.evaluate((element) => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1);
-      const chipBox = await chip.boundingBox();
-      const search = await page.getByRole("button", { name: "Search pages", exact: true }).boundingBox();
-      expect(chipBox!.x + chipBox!.width).toBeLessThanOrEqual(search!.x);
-      const text = (await chip.locator("span:visible").allTextContents()).join("");
-      expect(text === "" ? await chip.locator("svg").isVisible() : /^Demo/.test(text)).toBe(true);
-    }
-  });
+  for (const theme of ["light", "dark"] as const) {
+    test(`${path} fits a 390px phone at 200% text (${theme})`, async ({ page }, testInfo) => {
+      await page.emulateMedia({ colorScheme: theme });
+      await page.addInitScript((value) => localStorage.setItem("agent-bom-theme", value), theme);
+      await page.setViewportSize({ width: 390, height: 844 });
+      await open(page, path);
+      await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+      await expect(page.getByRole("main")).toBeVisible();
+      if (path === "/findings") await expect(page.getByRole("button", { name: /^Open details for / }).first()).toBeVisible();
+      else await expect(page.getByRole("button", { name: /^Browse all \d+ nodes and scopes$/ })).toBeVisible();
+      await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
+      await page.waitForTimeout(1_500);
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      expect(overflow).toBeLessThanOrEqual(0);
+      await page.screenshot({ path: testInfo.outputPath("phone-200-percent.png") });
+      const chip = page.locator("#demo-estate-watermark");
+      if (await chip.count()) {
+        expect(await chip.evaluate((element) => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1);
+        const chipBox = await chip.boundingBox();
+        const search = await page.getByRole("button", { name: "Search pages", exact: true }).boundingBox();
+        expect(chipBox!.x + chipBox!.width).toBeLessThanOrEqual(search!.x);
+        const text = (await chip.locator("span:visible").allTextContents()).join("");
+        expect(text === "" ? await chip.locator("svg").isVisible() : /^Demo/.test(text)).toBe(true);
+      }
+    });
+  }
 }
 
 test("/graph header controls never overlap the title at 200% text on a phone", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await signIn(page);
   await open(page, "/graph");
   await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
   await page.waitForTimeout(500);

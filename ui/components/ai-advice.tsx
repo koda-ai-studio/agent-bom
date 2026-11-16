@@ -121,7 +121,7 @@ export function AIStatusNotice({ status }: { status: AIStatus | null | undefined
   return (
     <p role="status" className="flex items-start gap-1.5 text-xs text-ink-secondary">
       <Sparkles aria-hidden="true" className="mt-0.5 h-3 w-3 shrink-0" />
-      <span className="break-words">{statusSentence(status)}</span>
+      <span className="min-w-0 [overflow-wrap:anywhere]">{statusSentence(status)}</span>
     </p>
   );
 }
