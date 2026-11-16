@@ -272,11 +272,15 @@ describe("server and agent roles", () => {
   it("cards and chips never call a non-MCP server an MCP server", async () => {
     vi.mocked(api.getInventorySummary).mockResolvedValue(withRoles());
     const view = render(<InventoryProvider><InventoryIndex /></InventoryProvider>);
-    const card = await screen.findByRole("link", { name: /Servers & tools:/ });
-    await waitFor(() => expect(card).toHaveAccessibleName("Servers & tools: 4 MCP servers, plus 3 tools and 1 other server (not MCP), in snapshot"));
-    expect(screen.getByRole("link", { name: /AI entities:/ })).toHaveAccessibleName(
-      "AI entities: 3 AI agents, plus 1 framework agent and 1 model, in snapshot",
-    );
+    // Summary and page requests settle separately; assert both cards in the live DOM.
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: /Servers & tools:/ })).toHaveAccessibleName(
+        "Servers & tools: 4 MCP servers, plus 3 tools and 1 other server (not MCP), in snapshot",
+      );
+      expect(screen.getByRole("link", { name: /AI entities:/ })).toHaveAccessibleName(
+        "AI entities: 3 AI agents, plus 1 framework agent and 1 model, in snapshot",
+      );
+    });
     view.unmount();
 
     vi.mocked(api.getInventoryAssets).mockResolvedValue(
