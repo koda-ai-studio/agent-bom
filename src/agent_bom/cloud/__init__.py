@@ -103,7 +103,7 @@ _PROVIDER_PERMISSIONS_USED: dict[str, tuple[str, ...]] = {
         "vllm:GET /v1/models",
         "vllm:GET /version",
     ),
-    "openai": ("openai:assistants:read", "openai:models:read", "openai:responses:read"),
+    "openai": ("openai:fine_tuning.jobs:list",),
     "snowflake": ("snowflake:show:read", "snowflake:account_usage:read"),
     "wandb": ("wandb:artifacts:read", "wandb:runs:read"),
     "lambda": ("lambda-cloud:instances:read",),

@@ -175,7 +175,7 @@ def emit_dry_run_plan(
     if mlflow_flag:
         reads.append("  [green]Would query:[/green]  MLflow Tracking Server (models, experiments)")
     if openai_flag:
-        reads.append("  [green]Would query:[/green]  OpenAI Assistants/Fine-tuning APIs")
+        reads.append("  [green]Would query:[/green]  OpenAI fine-tuning jobs API")
     reads.extend(_model_serving_reads(ollama_flag, ollama_host, serving_targets))
     if mcp_registry_flag:
         reads.append("  [green]Would query:[/green]  https://registry.modelcontextprotocol.io/v0/servers  (Official MCP Registry, no auth)")

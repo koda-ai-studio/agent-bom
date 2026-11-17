@@ -52,7 +52,9 @@ def test_openai_resilience_surface_matches_exercised_inventory_calls() -> None:
 
     profile = next(profile for profile in provider_resilience_profiles() if profile.provider == "openai")
 
-    assert profile.surface == "OpenAI assistants and completed fine-tuning jobs with referenced training-file IDs"
+    assert profile.surface == (
+        "OpenAI completed fine-tuning jobs with referenced training-file IDs; retired Assistants and Responses inventory are not collected"
+    )
     assert profile.status == "partial"
 
 

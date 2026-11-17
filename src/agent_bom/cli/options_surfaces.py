@@ -317,7 +317,7 @@ def ml_platform_options(fn):
             click.option(
                 "--mlflow-tracking-uri", default=None, envvar="MLFLOW_TRACKING_URI", metavar="URI", help="MLflow tracking server URI"
             ),
-            click.option("--openai", "openai_flag", is_flag=True, help="Discover assistants and fine-tuned models from OpenAI"),
+            click.option("--openai", "openai_flag", is_flag=True, help="Discover completed fine-tuning jobs from OpenAI"),
             click.option("--openai-api-key", default=None, envvar="OPENAI_API_KEY", metavar="KEY", help="OpenAI API key"),
             click.option("--openai-org-id", default=None, envvar="OPENAI_ORG_ID", metavar="ORG", help="OpenAI organization ID"),
             click.option("--ollama", "ollama_flag", is_flag=True, help="Discover locally downloaded Ollama models"),

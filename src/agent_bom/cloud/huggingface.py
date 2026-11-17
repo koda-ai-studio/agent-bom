@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import logging
 import os
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from enum import Enum
 
 import httpx
@@ -20,6 +20,7 @@ from agent_bom.discovery_envelope import RedactionStatus, ScanMode, attach_envel
 from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, TransportType
 
 from .base import CloudDiscoveryError
+from .collection_errors import COLLECTION_ERRORS
 from .normalization import build_cloud_origin
 
 logger = logging.getLogger(__name__)
@@ -35,7 +36,11 @@ class HubCollectionStatus(str, Enum):
     UNAVAILABLE = "unavailable"
 
 
-def _collect(resource: str, collect: Callable[[], tuple[list[Agent], list[str]]]) -> tuple[list[Agent], list[str], HubCollectionStatus]:
+def _collect(
+    resource: str,
+    collect: Callable[[], tuple[list[Agent], list[str]]],
+    partial: tuple[list[Agent], list[str]] | None = None,
+) -> tuple[list[Agent], list[str], HubCollectionStatus]:
     """Keep provider failures separate from empty reads without exposing diagnostics."""
     try:
         agents, warnings = collect()
@@ -47,6 +52,15 @@ def _collect(resource: str, collect: Callable[[], tuple[list[Agent], list[str]]]
         status_code = getattr(getattr(exc, "response", None), "status_code", None)
     else:
         status = HubCollectionStatus.COMPLETE if agents else HubCollectionStatus.EMPTY
+        if warnings:
+            status = next(
+                (
+                    candidate
+                    for candidate in (HubCollectionStatus.DENIED, HubCollectionStatus.THROTTLED, HubCollectionStatus.UNAVAILABLE)
+                    if any(message.startswith(f"huggingface:{resource}:{candidate.value}:") for message in warnings)
+                ),
+                HubCollectionStatus.UNAVAILABLE,
+            )
         return agents, warnings, status
     status = {401: HubCollectionStatus.DENIED, 403: HubCollectionStatus.DENIED, 429: HubCollectionStatus.THROTTLED}.get(
         status_code if isinstance(status_code, int) else 0, HubCollectionStatus.UNAVAILABLE
@@ -56,7 +70,26 @@ def _collect(resource: str, collect: Callable[[], tuple[list[Agent], list[str]]]
         HubCollectionStatus.THROTTLED: "The provider rate limit was reached; retry later.",
         HubCollectionStatus.UNAVAILABLE: "The provider read failed; retry or check provider availability.",
     }
-    return [], [f"huggingface:{resource}:{status.value}: Could not collect inventory. {guidance[status]} Assessment incomplete."], status
+    agents, warnings = partial if partial is not None else ([], [])
+    warnings.append(f"huggingface:{resource}:{status.value}: Could not collect inventory. {guidance[status]} Assessment incomplete.")
+    return agents, warnings, status
+
+
+def _read_inventory(resource: str, records: Callable[[], Iterable], convert: Callable[..., Agent]) -> tuple[list[Agent], list[str]]:
+    """Retain completed records across pagination and malformed-record failures."""
+    agents: list[Agent] = []
+    warnings: list[str] = []
+
+    def collect() -> tuple[list[Agent], list[str]]:
+        for record in records():
+            try:
+                agents.append(convert(record))
+            except COLLECTION_ERRORS:
+                warnings.append(f"huggingface:{resource}:unavailable: Invalid inventory record. Assessment incomplete.")
+        return agents, warnings
+
+    collected, messages, _status = _collect(resource, collect, (agents, warnings))
+    return collected, messages
 
 
 def discover(
@@ -130,60 +163,54 @@ def _discover_models(
     """Discover models from Hugging Face Hub."""
     from huggingface_hub import HfApi
 
-    agents: list[Agent] = []
-    warnings: list[str] = []
-
     api = HfApi(token=token or None)
+    return _read_inventory("models", lambda: api.list_models(author=author), _model_to_agent)
 
-    models = list(api.list_models(author=author))
 
-    for model in models:
-        model_id = getattr(model, "id", "unknown") or getattr(model, "modelId", "unknown")
-        library = getattr(model, "library_name", None) or ""
-        pipeline_tag = getattr(model, "pipeline_tag", None) or ""
-        tags = getattr(model, "tags", []) or []
+def _model_to_agent(model) -> Agent:
+    model_id = getattr(model, "id", "unknown") or getattr(model, "modelId", "unknown")
+    library = getattr(model, "library_name", None) or ""
+    pipeline_tag = getattr(model, "pipeline_tag", None) or ""
+    tags = getattr(model, "tags", []) or []
 
-        # Extract framework packages from library metadata
-        packages = _extract_framework_packages(library, tags)
+    # Extract framework packages from library metadata
+    packages = _extract_framework_packages(library, tags)
 
-        server = MCPServer(
-            name=f"hf-model:{model_id}",
-            transport=TransportType.UNKNOWN,
-            packages=packages,
-        )
+    server = MCPServer(
+        name=f"hf-model:{model_id}",
+        transport=TransportType.UNKNOWN,
+        packages=packages,
+    )
 
-        # Add tools based on pipeline tag
-        if pipeline_tag:
-            server.tools.append(
-                MCPTool(
-                    name=pipeline_tag,
-                    description=f"HF pipeline: {pipeline_tag}",
-                )
+    # Add tools based on pipeline tag
+    if pipeline_tag:
+        server.tools.append(
+            MCPTool(
+                name=pipeline_tag,
+                description=f"HF pipeline: {pipeline_tag}",
             )
-
-        # Parse model card metadata (YAML frontmatter)
-        card_meta = _parse_model_card(model)
-        card_meta["cloud_origin"] = build_cloud_origin(
-            provider="huggingface",
-            service="hub",
-            resource_type="model",
-            resource_id=model_id,
-            resource_name=model_id,
-            raw_identity={"id": model_id, "library_name": library, "pipeline_tag": pipeline_tag},
         )
 
-        agent = Agent(
-            name=f"hf-model:{model_id}",
-            agent_type=AgentType.CUSTOM,
-            config_path=f"huggingface://models/{model_id}",
-            source="huggingface-model",
-            version=library or pipeline_tag or None,
-            mcp_servers=[server],
-            metadata=card_meta,
-        )
-        agents.append(agent)
+    # Parse model card metadata (YAML frontmatter)
+    card_meta = _parse_model_card(model)
+    card_meta["cloud_origin"] = build_cloud_origin(
+        provider="huggingface",
+        service="hub",
+        resource_type="model",
+        resource_id=model_id,
+        resource_name=model_id,
+        raw_identity={"id": model_id, "library_name": library, "pipeline_tag": pipeline_tag},
+    )
 
-    return agents, warnings
+    return Agent(
+        name=f"hf-model:{model_id}",
+        agent_type=AgentType.CUSTOM,
+        config_path=f"huggingface://models/{model_id}",
+        source="huggingface-model",
+        version=library or pipeline_tag or None,
+        mcp_servers=[server],
+        metadata=card_meta,
+    )
 
 
 def _discover_spaces(
@@ -193,52 +220,46 @@ def _discover_spaces(
     """Discover Spaces (Gradio/Streamlit apps) from Hugging Face Hub."""
     from huggingface_hub import HfApi
 
-    agents: list[Agent] = []
-    warnings: list[str] = []
-
     api = HfApi(token=token or None)
+    return _read_inventory("spaces", lambda: api.list_spaces(author=author), _space_to_agent)
 
-    spaces = list(api.list_spaces(author=author))
 
-    for space in spaces:
-        space_id = getattr(space, "id", "unknown")
-        sdk = getattr(space, "sdk", None) or ""
+def _space_to_agent(space) -> Agent:
+    space_id = getattr(space, "id", "unknown")
+    sdk = getattr(space, "sdk", None) or ""
 
-        packages: list[Package] = []
-        if sdk.lower() == "gradio":
-            packages.append(Package(name="gradio", version="unknown", ecosystem="pypi"))
-        elif sdk.lower() == "streamlit":
-            packages.append(Package(name="streamlit", version="unknown", ecosystem="pypi"))
-        elif sdk.lower() == "docker":
-            pass  # Docker spaces — image scanning needed
+    packages: list[Package] = []
+    if sdk.lower() == "gradio":
+        packages.append(Package(name="gradio", version="unknown", ecosystem="pypi"))
+    elif sdk.lower() == "streamlit":
+        packages.append(Package(name="streamlit", version="unknown", ecosystem="pypi"))
+    elif sdk.lower() == "docker":
+        pass  # Docker spaces — image scanning needed
 
-        server = MCPServer(
-            name=f"hf-space:{space_id}",
-            transport=TransportType.UNKNOWN,
-            packages=packages,
-        )
+    server = MCPServer(
+        name=f"hf-space:{space_id}",
+        transport=TransportType.UNKNOWN,
+        packages=packages,
+    )
 
-        agent = Agent(
-            name=f"hf-space:{space_id}",
-            agent_type=AgentType.CUSTOM,
-            config_path=f"huggingface://spaces/{space_id}",
-            source="huggingface-space",
-            version=sdk or None,
-            mcp_servers=[server],
-            metadata={
-                "cloud_origin": build_cloud_origin(
-                    provider="huggingface",
-                    service="spaces",
-                    resource_type="space",
-                    resource_id=space_id,
-                    resource_name=space_id,
-                    raw_identity={"id": space_id, "sdk": sdk},
-                )
-            },
-        )
-        agents.append(agent)
-
-    return agents, warnings
+    return Agent(
+        name=f"hf-space:{space_id}",
+        agent_type=AgentType.CUSTOM,
+        config_path=f"huggingface://spaces/{space_id}",
+        source="huggingface-space",
+        version=sdk or None,
+        mcp_servers=[server],
+        metadata={
+            "cloud_origin": build_cloud_origin(
+                provider="huggingface",
+                service="spaces",
+                resource_type="space",
+                resource_id=space_id,
+                resource_name=space_id,
+                raw_identity={"id": space_id, "sdk": sdk},
+            )
+        },
+    )
 
 
 def _discover_inference_endpoints(
@@ -247,47 +268,41 @@ def _discover_inference_endpoints(
     """Discover deployed inference endpoints."""
     from huggingface_hub import HfApi
 
-    agents: list[Agent] = []
-    warnings: list[str] = []
-
     api = HfApi(token=token)
+    return _read_inventory("inference-endpoints", lambda: api.list_inference_endpoints(), _endpoint_to_agent)
 
-    endpoints = list(api.list_inference_endpoints())
 
-    for ep in endpoints:
-        ep_name = getattr(ep, "name", "unknown")
-        status = getattr(ep, "status", "unknown")
-        framework = getattr(ep, "framework", None) or ""
+def _endpoint_to_agent(ep) -> Agent:
+    ep_name = getattr(ep, "name", "unknown")
+    status = getattr(ep, "status", "unknown")
+    framework = getattr(ep, "framework", None) or ""
 
-        packages = _extract_framework_packages(framework, [])
+    packages = _extract_framework_packages(framework, [])
 
-        server = MCPServer(
-            name=f"hf-endpoint:{ep_name}",
-            transport=TransportType.UNKNOWN,
-            packages=packages,
-        )
+    server = MCPServer(
+        name=f"hf-endpoint:{ep_name}",
+        transport=TransportType.UNKNOWN,
+        packages=packages,
+    )
 
-        agent = Agent(
-            name=f"hf-endpoint:{ep_name}",
-            agent_type=AgentType.CUSTOM,
-            config_path=f"huggingface://endpoints/{ep_name}",
-            source="huggingface-endpoint",
-            version=str(status),
-            mcp_servers=[server],
-            metadata={
-                "cloud_origin": build_cloud_origin(
-                    provider="huggingface",
-                    service="inference-endpoints",
-                    resource_type="endpoint",
-                    resource_id=ep_name,
-                    resource_name=ep_name,
-                    raw_identity={"name": ep_name, "status": status, "framework": framework},
-                )
-            },
-        )
-        agents.append(agent)
-
-    return agents, warnings
+    return Agent(
+        name=f"hf-endpoint:{ep_name}",
+        agent_type=AgentType.CUSTOM,
+        config_path=f"huggingface://endpoints/{ep_name}",
+        source="huggingface-endpoint",
+        version=str(status),
+        mcp_servers=[server],
+        metadata={
+            "cloud_origin": build_cloud_origin(
+                provider="huggingface",
+                service="inference-endpoints",
+                resource_type="endpoint",
+                resource_id=ep_name,
+                resource_name=ep_name,
+                raw_identity={"name": ep_name, "status": status, "framework": framework},
+            )
+        },
+    )
 
 
 def _parse_model_card(model_info: object) -> dict:
