@@ -9,6 +9,27 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.115.4] - 2026-11-16
+
+### Highlights
+- Cloud inventory retains evidence across partial reads and reports incomplete coverage instead of treating failed requests as empty accounts.
+- Authenticated dashboard journeys and small-screen findings and graph controls have improved verification and readability.
+
+### Upgrade notes
+- OpenAI discovery no longer calls the retired Assistants API. Completed fine-tuning jobs remain supported; Responses application inventory is explicitly not collected.
+- This patch includes the post-release validation and hosted HTTP preflight fixes made after 0.115.3. A successful package installation does not by itself establish registry or hosted deployment freshness.
+
+### Fixed
+- Release pin validation accepts the current published tag, and hosted HTTP preflight imports no longer depend on optional server dependencies being installed.
+- Browser session configuration emits one warning per ephemeral signing-key state instead of repeating it on every request.
+- Findings text wraps on small screens; graph filter text is more readable, and live journey checks authenticate and assert current scope and time-window semantics.
+- REST, RunPod and Nebius discovery distinguish denied, throttled and unavailable reads from successful empty results. Unsupported Nebius Kubernetes discovery is reported explicitly.
+- MLflow reads artifact contents and preserves partial inventory across failed reads, malformed records and pagination limits.
+- W&B preserves partial run and artifact inventory and enumerates artifact collections. Hugging Face preserves resources already collected before later SDK-page or record failures.
+- Databricks discovery retains clusters and serving endpoints collected before a later SDK page fails, while preserving the warning that the read was incomplete.
+- OpenAI discovery no longer calls the retired Assistants API. It inventories completed fine-tuning jobs and explicitly reports the unsupported application-inventory coverage. Partial pagination retains collected jobs, detects malformed pages and repeated cursors, and reports denied, throttled, or unavailable reads without provider diagnostics.
+- Multi-replica qualification recognizes current API request-completion logs when verifying load balancing and selecting the replica for interruption tests.
+
 ## [0.115.3] - 2026-11-16
 
 0.115.0, 0.115.1 and 0.115.2 were tagged but never published. The 0.115.0 release run stopped at the version-alignment check fixed under CI below; the 0.115.1 and 0.115.2 tags were pushed before their version change reached main, so the release's version guard stopped them. None built a package, image or chart. 0.115.3 is the first published release with these changes.
@@ -5046,7 +5067,8 @@ Two new product surfaces (inter-agent firewall + per-run discovery envelope) plu
 
 ---
 
-[Unreleased]: https://github.com/koda-ai-studio/agent-bom/compare/v0.115.3...HEAD
+[Unreleased]: https://github.com/koda-ai-studio/agent-bom/compare/v0.115.4...HEAD
+[0.115.4]: https://github.com/koda-ai-studio/agent-bom/compare/v0.115.3...v0.115.4
 [0.115.3]: https://github.com/koda-ai-studio/agent-bom/compare/v0.114.0...v0.115.3
 [0.114.0]: https://github.com/koda-ai-studio/agent-bom/compare/v0.113.2...v0.114.0
 [0.113.2]: https://github.com/koda-ai-studio/agent-bom/compare/v0.113.1...v0.113.2
