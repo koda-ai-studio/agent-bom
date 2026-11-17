@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import logging
 import os
+from collections.abc import Callable
+from typing import Any
 
 from agent_bom.discovery_envelope import RedactionStatus, ScanMode, attach_envelope_to_agents
 from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, ServerSurface, TransportType
@@ -78,6 +80,36 @@ def discover(
     return agents, warnings
 
 
+def _collect_pages(search: Callable[..., Any], warnings: list[str], resource: str) -> list[Any]:
+    """Retain completed pages and make bounded or failed collection explicit."""
+    records: list[Any] = []
+    page_token: str | None = None
+    seen_tokens: set[str] = set()
+
+    def read_page() -> tuple[list[Any], str | None]:
+        kwargs: dict[str, Any] = {"max_results": 100}
+        if page_token:
+            kwargs["page_token"] = page_token
+        page = search(**kwargs)
+        token = getattr(page, "token", None)
+        return list(page), token if isinstance(token, str) and token else None
+
+    for _ in range(100):
+        result = attempt(read_page, warnings, resource)
+        if result is None:
+            return records
+        page_records, page_token = result
+        records.extend(page_records)
+        if not page_token:
+            return records
+        if page_token in seen_tokens:
+            warnings.append(f"mlflow:{resource}:unavailable: Provider returned a repeated page token. Assessment incomplete.")
+            return records
+        seen_tokens.add(page_token)
+    warnings.append(f"mlflow:{resource}:unavailable: Collection reached the page limit. Assessment incomplete.")
+    return records
+
+
 def _discover_registered_models(
     tracking_uri: str,
 ) -> tuple[list[Agent], list[str]]:
@@ -89,21 +121,7 @@ def _discover_registered_models(
 
     try:
         client = MlflowClient(tracking_uri=tracking_uri)
-        # Paginate through all registered models
-        page_token: str | None = None
-        all_models = []
-        for _page in range(100):  # safety guard: 10,000 models max
-            kwargs_m: dict = {"max_results": 100}
-            if page_token:
-                kwargs_m["page_token"] = page_token
-            result_page = client.search_registered_models(**kwargs_m)
-            all_models.extend(result_page)
-            # MLflow PagedList has .token (str) — must verify it's a real str, not a mock
-            raw_token = getattr(result_page, "token", None)
-            page_token = raw_token if isinstance(raw_token, str) and raw_token else None
-            if not page_token:
-                break
-        models = all_models
+        models = _collect_pages(client.search_registered_models, warnings, "models")
 
         for model in models:
             model_name = getattr(model, "name", "unknown")
@@ -187,20 +205,7 @@ def _discover_experiments(
 
     try:
         client = MlflowClient(tracking_uri=tracking_uri)
-        # Paginate through all experiments
-        exp_page_token: str | None = None
-        all_experiments = []
-        for _exp_pg in range(100):  # safety guard: 10,000 experiments max
-            kwargs_e: dict = {"max_results": 100}
-            if exp_page_token:
-                kwargs_e["page_token"] = exp_page_token
-            exp_page = client.search_experiments(**kwargs_e)
-            all_experiments.extend(exp_page)
-            raw_exp_token = getattr(exp_page, "token", None)
-            exp_page_token = raw_exp_token if isinstance(raw_exp_token, str) and raw_exp_token else None
-            if not exp_page_token:
-                break
-        experiments = all_experiments
+        experiments = _collect_pages(client.search_experiments, warnings, "experiments")
 
         for exp in experiments:
             exp_id = getattr(exp, "experiment_id", "0")
