@@ -386,3 +386,17 @@ without affected symbols, unsupported languages or control flow, and unknown
 external values. Inspect the affected symbols and call evidence before deciding
 whether the vulnerable parameter can receive attacker-controlled input. This
 field does not prove exploitability or change severity or reachability verdicts.
+
+### MLflow dependency collection
+
+Run `agent-bom scan --mlflow --mlflow-tracking-uri https://tracking.example.com -f json -o mlflow.json`
+with read-only tracking credentials configured for the MLflow SDK. Inspect the model
+and experiment inventory and collection warnings before using the report as evidence.
+Dependency collection reads listed `requirements.txt` and `conda.yaml` manifests
+under `model` or `models` artifacts into temporary directories that are removed
+after parsing. Manifest parsing is limited to 1 MiB; declared oversized files are
+skipped before download. SDK transfer size still depends on provider metadata and
+the configured artifact plugin. Missing optional manifests are valid empty results;
+failed reads produce denied, throttled, or unavailable warnings and retain discovered
+models and experiments. Resolve those warnings and rescan before treating dependency
+coverage as complete.
