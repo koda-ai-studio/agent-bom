@@ -94,7 +94,12 @@ class TestWandbDiscover:
 
         mock_api = MagicMock()
         mock_api.runs.return_value = []
-        mock_api.artifact_versions.return_value = [mock_artifact]
+        mock_collection = MagicMock()
+        mock_collection.artifacts.return_value = [mock_artifact]
+        mock_type = MagicMock()
+        mock_type.name = "model"
+        mock_type.collections.return_value = [mock_collection]
+        mock_api.artifact_types.return_value = [mock_type]
         mock_wandb.Api.return_value = mock_api
 
         with patch.dict(sys.modules, {"wandb": mock_wandb}):

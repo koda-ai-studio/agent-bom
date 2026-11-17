@@ -9,18 +9,14 @@ Authentication uses WANDB_API_KEY env var or --wandb-api-key flag.
 
 from __future__ import annotations
 
-import logging
 import os
 
 from agent_bom.discovery_envelope import RedactionStatus, ScanMode, attach_envelope_to_agents
 from agent_bom.models import Agent, AgentType, MCPServer, Package, ServerSurface, TransportType
-from agent_bom.security import sanitize_text
 
 from .base import CloudDiscoveryError
 from .collection_errors import COLLECTION_ERRORS, collection_warning
 from .normalization import build_cloud_origin, build_package_purl
-
-logger = logging.getLogger(__name__)
 
 
 def discover(
@@ -64,7 +60,7 @@ def discover(
         agents.extend(run_agents)
         warnings.extend(run_warns)
     except Exception as exc:
-        warnings.append(_run_warning("runs", exc))
+        warnings.append(_collection_warning("runs", exc))
 
     # ── Artifacts ─────────────────────────────────────────────────────────
     try:
@@ -72,7 +68,7 @@ def discover(
         agents.extend(art_agents)
         warnings.extend(art_warns)
     except Exception as exc:
-        warnings.append(f"W&B artifact discovery error: {exc}")
+        warnings.append(_collection_warning("artifacts", exc))
 
     # Per-run discovery envelope (#2083 PR B).
     scope: list[str] = []
@@ -115,9 +111,9 @@ def _discover_runs(
                     if agent:
                         agents.append(agent)
                 except COLLECTION_ERRORS as exc:
-                    warnings.append(_run_warning("runs", exc))
+                    warnings.append(_collection_warning("runs", exc))
         except Exception as exc:  # broad-except: SDK lazy pagination errors vary; preserve runs and emit fixed diagnostics.
-            warnings.append(_run_warning("runs", exc))
+            warnings.append(_collection_warning("runs", exc))
 
     try:
         api = wandb.Api(api_key=api_key)
@@ -129,14 +125,14 @@ def _discover_runs(
                 if isinstance(proj_name, str) and proj_name:
                     collect_project(api, proj_name)
                 else:
-                    warnings.append(_run_warning("projects", ValueError("Invalid project record")))
+                    warnings.append(_collection_warning("projects", ValueError("Invalid project record")))
     except Exception as exc:
-        warnings.append(_run_warning("runs" if project else "projects", exc))
+        warnings.append(_collection_warning("runs" if project else "projects", exc))
 
     return agents, warnings
 
 
-def _run_warning(resource: str, exc: Exception) -> str:
+def _collection_warning(resource: str, exc: Exception) -> str:
     """Classify structured HTTP errors without copying SDK messages."""
     return collection_warning("wandb", resource, exc).replace(": ", ": Collection error. ", 1)
 
@@ -193,59 +189,76 @@ def _discover_artifacts(
     if not project:
         return agents, warnings
 
+    def collect_versions(collection, art_type: str) -> None:
+        try:
+            list_versions = getattr(collection, "artifacts", None)
+            if not callable(list_versions):
+                # W&B 0.16 exposes versions(); newer SDKs use artifacts().
+                list_versions = collection.versions
+            for artifact in list_versions():
+                try:
+                    agents.append(_artifact_to_agent(artifact, art_type, entity, project))
+                except COLLECTION_ERRORS as exc:
+                    warnings.append(_collection_warning("artifacts", exc))
+        except Exception as exc:  # broad-except: lazy SDK artifact reads use varying errors; retain inventory with fixed diagnostics.
+            warnings.append(_collection_warning("artifacts", exc))
+
+    def collect_type(artifact_type, art_type: str) -> None:
+        try:
+            for collection in artifact_type.collections():
+                collect_versions(collection, art_type)
+        except Exception as exc:  # broad-except: lazy SDK collection reads use varying errors; continue independent types.
+            warnings.append(_collection_warning("artifact-collections", exc))
+
     try:
         api = wandb.Api(api_key=api_key)
-        artifact_types = ["model", "dataset"]
-
-        for art_type in artifact_types:
-            try:
-                artifacts = api.artifact_versions(
-                    type_name=art_type,
-                    name=f"{entity}/{project}",
-                )
-                for artifact in list(artifacts):
-                    art_name = getattr(artifact, "name", "unknown")
-                    art_version = getattr(artifact, "version", "latest")
-                    art_metadata = getattr(artifact, "metadata", {}) or {}
-
-                    packages = _extract_packages_from_metadata(art_metadata, {})
-
-                    server = MCPServer(
-                        name=f"wandb-{art_type}:{art_name}",
-                        transport=TransportType.UNKNOWN,
-                        packages=packages,
-                        surface=ServerSurface.AI_INVENTORY,
-                    )
-
-                    agent = Agent(
-                        name=f"wandb-{art_type}:{art_name}",
-                        agent_type=AgentType.CUSTOM,
-                        config_path=f"wandb://{entity}/{project}/artifacts/{art_type}/{art_name}",
-                        source=f"wandb-{art_type}",
-                        version=str(art_version),
-                        mcp_servers=[server],
-                        metadata={
-                            "cloud_origin": build_cloud_origin(
-                                provider="wandb",
-                                service="artifacts",
-                                resource_type=art_type,
-                                resource_id=art_name,
-                                resource_name=art_name,
-                                account_id=entity,
-                                project_id=project,
-                                raw_identity={"name": art_name, "version": art_version, "entity": entity, "project": project},
-                            )
-                        },
-                    )
-                    agents.append(agent)
-            except (ValueError, KeyError, AttributeError) as exc:
-                # Artifact type may not exist in this project
-                logger.debug("Could not list W&B artifacts of type %s: %s", art_type, sanitize_text(exc))
-
+        for artifact_type in api.artifact_types(f"{entity}/{project}"):
+            art_type = getattr(artifact_type, "name", None)
+            if not isinstance(art_type, str) or not art_type:
+                warnings.append(_collection_warning("artifact-types", ValueError("Invalid artifact type")))
+            elif art_type in ("model", "dataset"):
+                collect_type(artifact_type, art_type)
     except Exception as exc:
-        warnings.append(f"Could not list W&B artifacts: {exc}")
+        warnings.append(_collection_warning("artifact-types", exc))
 
     return agents, warnings
+
+
+def _artifact_to_agent(artifact, art_type: str, entity: str, project: str) -> Agent:
+    """Convert one artifact version without losing its provider identity."""
+    art_name = getattr(artifact, "name", "unknown")
+    art_version = getattr(artifact, "version", "latest")
+    art_metadata = getattr(artifact, "metadata", {}) or {}
+
+    packages = _extract_packages_from_metadata(art_metadata, {})
+
+    server = MCPServer(
+        name=f"wandb-{art_type}:{art_name}",
+        transport=TransportType.UNKNOWN,
+        packages=packages,
+        surface=ServerSurface.AI_INVENTORY,
+    )
+
+    return Agent(
+        name=f"wandb-{art_type}:{art_name}",
+        agent_type=AgentType.CUSTOM,
+        config_path=f"wandb://{entity}/{project}/artifacts/{art_type}/{art_name}",
+        source=f"wandb-{art_type}",
+        version=str(art_version),
+        mcp_servers=[server],
+        metadata={
+            "cloud_origin": build_cloud_origin(
+                provider="wandb",
+                service="artifacts",
+                resource_type=art_type,
+                resource_id=art_name,
+                resource_name=art_name,
+                account_id=entity,
+                project_id=project,
+                raw_identity={"name": art_name, "version": art_version, "entity": entity, "project": project},
+            )
+        },
+    )
 
 
 def _extract_packages_from_metadata(

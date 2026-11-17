@@ -416,3 +416,10 @@ page failure retains collected runs. A failed project or malformed run does not
 prevent collecting subsequent independent results. Failed reads produce fixed
 incomplete-coverage warnings; resolve access or availability issues and rescan
 before treating run coverage as complete.
+
+With `--wandb-project`, model and dataset discovery enumerates the project's
+artifact types, their collections, and each collection's versions. A failed
+collection or version page retains earlier artifacts and continues independent
+collections and types. Empty collections are valid empty results; read failures
+and malformed artifact records produce incomplete-coverage warnings. This reads
+artifact metadata only and does not download artifact files.

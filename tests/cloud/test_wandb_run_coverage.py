@@ -27,7 +27,7 @@ def interrupted(values, status=403):
 @pytest.fixture
 def api(monkeypatch):
     api = MagicMock()
-    api.artifact_versions.return_value = []
+    api.artifact_types.return_value = []
     monkeypatch.setitem(sys.modules, "wandb", SimpleNamespace(Api=lambda **kwargs: api))
     return api
 
