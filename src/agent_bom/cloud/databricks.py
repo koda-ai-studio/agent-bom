@@ -110,14 +110,14 @@ def _discover_cluster_agents(
     """Build one agent per in-scope cluster that has installed libraries."""
     agents: list[Agent] = []
     # ── Clusters + Libraries ──────────────────────────────────────────────
+    clusters = []
     try:
-        clusters = list(ws.clusters.list())
+        for cluster in ws.clusters.list():
+            clusters.append(cluster)
     except permission_denied:
         warnings.append("Access denied for Databricks clusters API. Check workspace permissions.")
-        clusters = []
     except Exception as exc:
         warnings.append(f"Could not list Databricks clusters: {discovery_error_hint(exc)}")
-        clusters = []
 
     node_gpus = databricks_node_gpu_counts(ws) if clusters else {}
     for cluster in clusters:
@@ -204,8 +204,7 @@ def _discover_serving_agents(
     agents: list[Agent] = []
     # ── Model Serving Endpoints ───────────────────────────────────────────
     try:
-        endpoints = list(ws.serving_endpoints.list())
-        for ep in endpoints:
+        for ep in ws.serving_endpoints.list():
             agent = _serving_endpoint_agent(ep, resolved_host)
             if agent is not None:
                 agents.append(agent)
