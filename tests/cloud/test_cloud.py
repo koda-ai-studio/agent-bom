@@ -1637,53 +1637,19 @@ def test_openai_missing_sdk():
             oa_mod.discover()
 
 
-def test_openai_assistants_discovered():
-    """OpenAI Assistants are discovered with tools mapped."""
+def test_openai_retired_assistants_not_requested():
+    """Retired inventory is explicitly unsupported rather than silently empty."""
     _install_mock_openai()
     importlib.reload(importlib.import_module("agent_bom.cloud.openai_provider"))
     from agent_bom.cloud.openai_provider import discover
 
     mock_client = MagicMock()
-
-    # Mock assistant
-    mock_asst = MagicMock()
-    mock_asst.id = "asst_abc123"
-    mock_asst.name = "My Research Assistant"
-    mock_asst.model = "gpt-4o"
-    mock_asst.instructions = "You are a helpful research assistant."
-
-    mock_tool_ci = MagicMock()
-    mock_tool_ci.type = "code_interpreter"
-    mock_tool_fs = MagicMock()
-    mock_tool_fs.type = "file_search"
-    mock_asst.tools = [mock_tool_ci, mock_tool_fs]
-
-    mock_response = MagicMock()
-    mock_response.data = [mock_asst]
-    mock_client.beta.assistants.list.return_value = mock_response
-
-    # Mock fine-tuning (empty)
-    mock_ft_response = MagicMock()
-    mock_ft_response.data = []
-    mock_client.fine_tuning.jobs.list.return_value = mock_ft_response
-
+    mock_client.fine_tuning.jobs.list.return_value = MagicMock(data=[], has_more=False)
     with patch("openai.OpenAI", return_value=mock_client):
-        agents, warnings = discover(api_key="sk-fake-key")
-
-    asst_agents = [a for a in agents if a.source == "openai-assistant"]
-    assert len(asst_agents) == 1
-    assert "Research Assistant" in asst_agents[0].name
-    assert asst_agents[0].version == "gpt-4o"
-    origin = asst_agents[0].metadata["cloud_origin"]
-    assert origin["provider"] == "openai"
-    assert origin["resource_type"] == "assistant"
-
-    # Tools mapped
-    tools = asst_agents[0].mcp_servers[0].tools
-    tool_names = [t.name for t in tools]
-    assert "code_interpreter" in tool_names
-    assert "file_search" in tool_names
-    assert "HIGH-RISK" in tools[0].description  # code_interpreter is flagged
+        agents, warnings = discover(api_key="fixture-credential")
+    assert agents == []
+    assert any("retired" in warning for warning in warnings)
+    mock_client.beta.assistants.list.assert_not_called()
 
 
 def test_openai_fine_tunes_discovered():
@@ -1709,6 +1675,7 @@ def test_openai_fine_tunes_discovered():
 
     mock_ft_response = MagicMock()
     mock_ft_response.data = [mock_ft]
+    mock_ft_response.has_more = False
     mock_client.fine_tuning.jobs.list.return_value = mock_ft_response
 
     with patch("openai.OpenAI", return_value=mock_client):
