@@ -405,3 +405,14 @@ Model and experiment listing follows at most 100 pages per collection. A failed
 later page, repeated continuation token, or page limit retains inventory from
 completed pages and emits an incomplete-coverage warning. A final page without
 a continuation token is complete, including when it is page 100.
+
+### W&B partial run discovery
+
+Run `agent-bom scan --wandb --wandb-entity TEAM --wandb-project PROJECT -f json -o wandb.json`
+with read-only credentials configured through `WANDB_API_KEY`. Inspect the run
+inventory and warnings in the report; remove `--wandb-project` to enumerate
+visible projects. Run and project results are consumed incrementally so a later
+page failure retains collected runs. A failed project or malformed run does not
+prevent collecting subsequent independent results. Failed reads produce fixed
+incomplete-coverage warnings; resolve access or availability issues and rescan
+before treating run coverage as complete.
