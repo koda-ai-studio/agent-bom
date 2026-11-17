@@ -17,6 +17,7 @@ from agent_bom.models import Agent, AgentType, MCPServer, Package, ServerSurface
 from agent_bom.security import sanitize_text
 
 from .base import CloudDiscoveryError
+from .collection_errors import COLLECTION_ERRORS, collection_warning
 from .normalization import build_cloud_origin, build_package_purl
 
 logger = logging.getLogger(__name__)
@@ -63,7 +64,7 @@ def discover(
         agents.extend(run_agents)
         warnings.extend(run_warns)
     except Exception as exc:
-        warnings.append(f"W&B run discovery error: {exc}")
+        warnings.append(_run_warning("runs", exc))
 
     # ── Artifacts ─────────────────────────────────────────────────────────
     try:
@@ -106,36 +107,38 @@ def _discover_runs(
     agents: list[Agent] = []
     warnings: list[str] = []
 
+    def collect_project(api, project_name: str) -> None:
+        try:
+            for run in api.runs(f"{entity}/{project_name}", per_page=50):
+                try:
+                    agent = _run_to_agent(run, entity, project_name)
+                    if agent:
+                        agents.append(agent)
+                except COLLECTION_ERRORS as exc:
+                    warnings.append(_run_warning("runs", exc))
+        except Exception as exc:  # broad-except: SDK lazy pagination errors vary; preserve runs and emit fixed diagnostics.
+            warnings.append(_run_warning("runs", exc))
+
     try:
         api = wandb.Api(api_key=api_key)
-        project_path = f"{entity}/{project}" if project else entity
-
-        runs = api.runs(project_path, per_page=50) if project else []
-        if not project:
-            # Without a specific project, try listing projects first
-            try:
-                projects = api.projects(entity)
-                for proj in list(projects):
-                    proj_name = getattr(proj, "name", None)
-                    if proj_name:
-                        proj_runs = api.runs(f"{entity}/{proj_name}", per_page=50)
-                        for run in list(proj_runs):
-                            agent = _run_to_agent(run, entity, proj_name)
-                            if agent:
-                                agents.append(agent)
-            except Exception as exc:
-                warnings.append(f"Could not list W&B projects: {exc}")
-            return agents, warnings
-
-        for run in list(runs):
-            agent = _run_to_agent(run, entity, project)
-            if agent:
-                agents.append(agent)
-
+        if project:
+            collect_project(api, project)
+        else:
+            for proj in api.projects(entity):
+                proj_name = getattr(proj, "name", None)
+                if isinstance(proj_name, str) and proj_name:
+                    collect_project(api, proj_name)
+                else:
+                    warnings.append(_run_warning("projects", ValueError("Invalid project record")))
     except Exception as exc:
-        warnings.append(f"Could not list W&B runs: {exc}")
+        warnings.append(_run_warning("runs" if project else "projects", exc))
 
     return agents, warnings
+
+
+def _run_warning(resource: str, exc: Exception) -> str:
+    """Classify structured HTTP errors without copying SDK messages."""
+    return collection_warning("wandb", resource, exc).replace(": ", ": Collection error. ", 1)
 
 
 def _run_to_agent(run, entity: str, project: str | None) -> Agent | None:
