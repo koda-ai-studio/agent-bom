@@ -17,6 +17,7 @@ from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, Serv
 from agent_bom.security import sanitize_text
 
 from .base import CloudDiscoveryError
+from .mlflow_artifacts import attempt, collect_run_packages, mlflow_warning
 from .normalization import build_cloud_origin, build_package_purl
 
 logger = logging.getLogger(__name__)
@@ -50,21 +51,12 @@ def discover(
         warnings.append("MLFLOW_TRACKING_URI not set. Provide --mlflow-tracking-uri or set the MLFLOW_TRACKING_URI env var.")
         return agents, warnings
 
-    # ── Registered Models ─────────────────────────────────────────────────
-    try:
-        model_agents, model_warns = _discover_registered_models(resolved_uri)
-        agents.extend(model_agents)
-        warnings.extend(model_warns)
-    except Exception as exc:
-        warnings.append(f"MLflow model discovery error: {exc}")
-
-    # ── Experiments ───────────────────────────────────────────────────────
-    try:
-        exp_agents, exp_warns = _discover_experiments(resolved_uri)
-        agents.extend(exp_agents)
-        warnings.extend(exp_warns)
-    except Exception as exc:
-        warnings.append(f"MLflow experiment discovery error: {exc}")
+    for resource, discover_stage in (("models", _discover_registered_models), ("experiments", _discover_experiments)):
+        result = attempt(lambda: discover_stage(resolved_uri), warnings, resource)
+        if result is not None:
+            stage_agents, stage_warnings = result
+            agents.extend(stage_agents)
+            warnings.extend(stage_warnings)
 
     # Per-run discovery envelope (#2083 PR B).
     scope: list[str] = []
@@ -136,11 +128,7 @@ def _discover_registered_models(
 
                 # Extract pip requirements from model artifacts
                 if run_id:
-                    try:
-                        run_packages = _extract_run_packages(client, run_id)
-                        packages.extend(run_packages)
-                    except (OSError, ValueError, KeyError) as exc:
-                        logger.debug("Failed to extract packages from MLflow run %s: %s", run_id, sanitize_text(exc))
+                    packages.extend(_extract_run_packages(client, run_id, warnings))
 
                 # Extract flavor from source path
                 flavor_packages = _extract_flavor_packages(source)
@@ -183,7 +171,7 @@ def _discover_registered_models(
             agents.append(agent)
 
     except Exception as exc:
-        warnings.append(f"Could not list MLflow models: {exc}")
+        warnings.append(mlflow_warning("models", exc))
 
     return agents, warnings
 
@@ -224,19 +212,15 @@ def _discover_experiments(
 
             # Get most recent run for package metadata
             packages: list[Package] = []
-            try:
-                runs = client.search_runs(
-                    experiment_ids=[exp_id],
-                    max_results=1,
-                    order_by=["start_time DESC"],
-                )
-                if runs:
-                    run = runs[0]
-                    run_id = getattr(run.info, "run_id", None)
-                    if run_id:
-                        packages = _extract_run_packages(client, run_id)
-            except (OSError, ValueError, KeyError) as exc:
-                logger.debug("Failed to extract packages from MLflow experiment %s: %s", exp_id, sanitize_text(exc))
+            runs = attempt(
+                lambda: client.search_runs(experiment_ids=[exp_id], max_results=1, order_by=["start_time DESC"]),
+                warnings,
+                "runs",
+            )
+            if runs:
+                run_id = attempt(lambda: runs[0].info.run_id, warnings, "runs")
+                if run_id:
+                    packages = _extract_run_packages(client, run_id, warnings)
 
             server = MCPServer(
                 name=f"mlflow-exp:{exp_name}",
@@ -266,43 +250,14 @@ def _discover_experiments(
             agents.append(agent)
 
     except Exception as exc:
-        warnings.append(f"Could not list MLflow experiments: {exc}")
+        warnings.append(mlflow_warning("experiments", exc))
 
     return agents, warnings
 
 
-def _extract_run_packages(client, run_id: str) -> list[Package]:
-    """Extract pip requirements from an MLflow run's artifacts."""
-    packages: list[Package] = []
-
-    try:
-        artifacts = client.list_artifacts(run_id)
-        # Look for model artifact directories
-        for artifact in artifacts:
-            path = getattr(artifact, "path", "")
-            if path in ("model", "models"):
-                # Try to read requirements.txt or conda.yaml
-                try:
-                    req_path = f"{path}/requirements.txt"
-                    req_data = client.download_artifacts(run_id, req_path)
-                    if req_data:
-                        packages.extend(_parse_requirements_txt(str(req_data)))
-                except (OSError, ValueError) as exc:
-                    # requirements.txt may not exist for this artifact
-                    logger.debug("Could not read requirements.txt for run %s: %s", run_id, sanitize_text(exc))
-
-                try:
-                    conda_path = f"{path}/conda.yaml"
-                    conda_data = client.download_artifacts(run_id, conda_path)
-                    if conda_data:
-                        packages.extend(_parse_conda_yaml(str(conda_data)))
-                except (OSError, ValueError) as exc:
-                    # conda.yaml may not exist for this artifact
-                    logger.debug("Could not read conda.yaml for run %s: %s", run_id, sanitize_text(exc))
-    except (OSError, ValueError, KeyError) as exc:
-        logger.debug("Could not list artifacts for run %s: %s", run_id, sanitize_text(exc))
-
-    return packages
+def _extract_run_packages(client, run_id: str, warnings: list[str]) -> list[Package]:
+    """Extract manifest contents from scanner-owned temporary downloads."""
+    return collect_run_packages(client, run_id, warnings, {"requirements.txt": _parse_requirements_txt, "conda.yaml": _parse_conda_yaml})
 
 
 def _extract_flavor_packages(source: str) -> list[Package]:
