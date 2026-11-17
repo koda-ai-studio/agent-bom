@@ -81,5 +81,8 @@ def collect_run_packages(
                 if result is not None:
                     packages.extend(result)
 
-    attempt(collect, warnings)
+    try:
+        collect()
+    except Exception as exc:  # broad-except: MLflow plugins expose arbitrary exceptions; emit fixed diagnostics only.
+        warnings.append(mlflow_warning("artifacts", exc))
     return packages
