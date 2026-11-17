@@ -31,6 +31,10 @@ graph stores. These checks are vendor guidance, **not an official CIS benchmark*
 Discovery warnings and denied or skipped checks mark the scan partial. Review
 coverage before using results as governance evidence.
 
+If a later SDK page fails, discovery retains the clusters and serving endpoints
+already read and emits a warning. That partial inventory is not evidence that
+the workspace contains no other resources; restore access and rerun the scan.
+
 One workspace per connection is supported. Organization fan-out, region
 selectors, workload identity and continuous change-event ingestion are not
 implemented for this provider. No Terraform grant generator is advertised.
