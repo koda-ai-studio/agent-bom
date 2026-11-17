@@ -52,7 +52,7 @@ def test_failed_pagination_is_not_empty(hub):
 
     hub.list_models.return_value = pages()
     agents, warnings = discover(token="test-token", username="fixture")
-    assert agents == []
+    assert [a.name for a in agents] == ["hf-model:fixture/model"]
     assert len(warnings) == 1
     assert "huggingface:models:unavailable" in warnings[0]
     assert "private diagnostic" not in warnings[0]
