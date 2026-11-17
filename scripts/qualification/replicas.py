@@ -225,7 +225,7 @@ def replica_view(base: str, key: str) -> dict[str, Any]:
 def check_spread(result: LaneResult, cluster: Cluster, base: str, key: str) -> None:
     with client(base, key) as http:
         statuses = Counter(http.get("/v1/jobs?limit=1").status_code for _ in range(30))
-    counts = cluster.log_counts("path=/v1/jobs ", "60s")
+    counts = cluster.log_counts("api request complete GET /v1/jobs ", "60s")
     result.measurements["lb_requests_per_replica"] = counts
     result.check("lb_spreads_requests", statuses == Counter({200: 30}) and spread(counts) >= 2, f"{dict(statuses)} {counts}")
 
@@ -250,7 +250,7 @@ def check_idempotency(result: LaneResult, cluster: Cluster, base: str, key: str,
     with ThreadPoolExecutor(6) as pool:
         receipts = list(pool.map(lambda _i: push(base, key, estate.body, f"{RUN}-idempotent"), range(6)))
     ids = {receipt["job_id"] for receipt in receipts}
-    counts = cluster.log_counts("path=/v1/results/push ", "120s")
+    counts = cluster.log_counts("api request complete POST /v1/results/push ", "120s")
     result.measurements["idempotent_push_statuses"] = sorted(receipt["status"] for receipt in receipts)
     result.measurements["idempotent_push_replicas"] = counts
     job = next(iter(ids)) if len(ids) == 1 else None
@@ -310,7 +310,11 @@ def check_kill_mid_ingest(result: LaneResult, cluster: Cluster, base: str, key: 
     since = time.time()
     receipt = push(base, key, estate.body, f"{RUN}-kill")
     time.sleep(1)
-    owners = {pod: n for pod, n in cluster.log_counts("path=/v1/results/push ", f"{int(time.time() - since) + 5}s").items() if n}
+    owners = {
+        pod: n
+        for pod, n in cluster.log_counts("api request complete POST /v1/results/push ", f"{int(time.time() - since) + 5}s").items()
+        if n
+    }
     victim = next(iter(owners), None)
     result.measurements["kill_admission"] = {"status": receipt["status"], "owner": owners}
     if victim is None or receipt["status"] not in (201, 202):

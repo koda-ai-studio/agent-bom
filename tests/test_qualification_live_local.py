@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -264,3 +265,21 @@ def test_triton_key_reaches_the_server_only_through_the_environment() -> None:
     assert "restricted" not in open_command
     assert "${TRITON_QUALIFICATION_KEY}" in keyed_command
     assert "model-repository,metadata:Authorization=Bearer" in keyed_command
+
+
+def test_replica_request_counts_match_current_completion_logs(monkeypatch) -> None:
+    cluster = replicas.Cluster("fixture", "fixture", "fixture")
+    monkeypatch.setattr(cluster, "pods", lambda: ["pod-a", "pod-b"])
+    lines = {
+        "pod-a": "INFO api request complete GET /v1/jobs 200 1ms\nINFO api request complete GET /v1/jobs/other 200 1ms\n",
+        "pod-b": json.dumps({"message": "api request complete GET /v1/jobs 200 2ms"}) + "\n"
+        "INFO api request complete POST /v1/jobs 200 1ms\n",
+    }
+    monkeypatch.setattr(cluster, "kubectl", lambda *args: subprocess.CompletedProcess(args, 0, lines[args[1]], ""))
+    http = MagicMock()
+    http.__enter__.return_value.get.return_value.status_code = 200
+    monkeypatch.setattr(replicas, "client", lambda *args: http)
+    result = common.LaneResult("replicas", "fixture")
+    replicas.check_spread(result, cluster, "http://fixture", "fixture-key")
+    assert result.measurements["lb_requests_per_replica"] == {"pod-a": 1, "pod-b": 1}
+    assert result.passed
