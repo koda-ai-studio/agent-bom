@@ -107,3 +107,43 @@ def test_unrelated_artifact_types_are_not_scanned(api):
     assert agents == []
     assert warnings == []
     unrelated.collections.assert_not_called()
+
+
+def test_type_request_denial_is_not_empty_success(api):
+    api.artifact_types.side_effect = ProviderError(403)
+    agents, warnings = discover()
+    assert agents == []
+    assert warnings[0].startswith("wandb:artifact-types:denied:")
+    assert "private-provider-marker" not in str(warnings)
+
+
+def test_invalid_type_does_not_hide_next_type(api):
+    api.artifact_types.return_value = [SimpleNamespace(name=None), kind("dataset", [collection([artifact("data:v1")])])]
+    agents, warnings = discover()
+    assert [a.name for a in agents] == ["wandb-dataset:data:v1"]
+    assert warnings[0].startswith("wandb:artifact-types:unavailable:")
+
+
+def test_empty_collections_and_versions_are_successful_empty(api):
+    api.artifact_types.return_value = [kind("model", []), kind("dataset", [collection([])])]
+    agents, warnings = discover()
+    assert agents == []
+    assert warnings == []
+
+
+def test_sdk_initialization_failure_does_not_leak_exception(monkeypatch):
+    monkeypatch.setitem(sys.modules, "wandb", SimpleNamespace(Api=MagicMock(side_effect=ProviderError(403))))
+    agents, warnings = discover()
+    assert agents == []
+    assert len(warnings) == 2
+    assert all(":denied:" in warning for warning in warnings)
+    assert "private-provider-marker" not in str(warnings)
+
+
+def test_minimum_sdk_collection_versions_method_is_supported(api):
+    legacy = SimpleNamespace(versions=MagicMock(return_value=[artifact()]))
+    api.artifact_types.return_value = [kind("model", [legacy])]
+    agents, warnings = discover()
+    assert [a.name for a in agents] == ["wandb-model:model:v1"]
+    assert warnings == []
+    legacy.versions.assert_called_once_with()
