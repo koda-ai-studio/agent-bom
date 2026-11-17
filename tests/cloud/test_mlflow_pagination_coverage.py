@@ -14,6 +14,17 @@ class Page(list):
         super().__init__(values)
         self.token = token
 
+    def __eq__(self, other):
+        if not isinstance(other, Page):
+            return NotImplemented
+        return list(self) == list(other) and self.token == other.token
+
+    def __ne__(self, other):
+        result = self.__eq__(other)
+        if result is NotImplemented:
+            return NotImplemented
+        return not result
+
 
 class DeniedError(Exception):
     error_code = "PERMISSION_DENIED"
