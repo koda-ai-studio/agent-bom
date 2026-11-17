@@ -423,3 +423,8 @@ collection or version page retains earlier artifacts and continues independent
 collections and types. Empty collections are valid empty results; read failures
 and malformed artifact records produce incomplete-coverage warnings. This reads
 artifact metadata only and does not download artifact files.
+
+Hugging Face model, Space, and inference-endpoint reads retain inventory from
+completed pages when a later page fails. Malformed records produce an incomplete
+warning while independent records continue. Resolve the reported token, rate-limit,
+or availability issue and rescan before treating that resource's coverage as complete.
