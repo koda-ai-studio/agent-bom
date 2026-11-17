@@ -100,7 +100,10 @@ _PROFILES: tuple[ProviderResilienceProfile, ...] = (
     ),
     ProviderResilienceProfile(
         provider="openai",
-        surface="OpenAI assistants and completed fine-tuning jobs with referenced training-file IDs",
+        surface=(
+            "OpenAI completed fine-tuning jobs with referenced training-file IDs; "
+            "retired Assistants and Responses inventory are not collected"
+        ),
         pagination="cursor-based pagination via has_more/after loops",
         retry_backoff="OpenAI SDK/client retry behavior plus scanner warnings",
         partial_failure="per-surface failures are warning-bearing partial coverage",

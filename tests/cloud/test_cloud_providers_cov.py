@@ -380,55 +380,18 @@ class TestOpenAIDiscover:
             agents, warnings = openai_provider.discover(api_key="")
             assert any("OPENAI_API_KEY" in w for w in warnings)
 
-    def test_discover_assistants(self):
+    def test_retired_assistants_are_not_inventoried(self):
         mock_openai = MagicMock()
-
-        mock_tool_ci = MagicMock()
-        mock_tool_ci.type = "code_interpreter"
-        mock_tool_fs = MagicMock()
-        mock_tool_fs.type = "file_search"
-        mock_tool_fn = MagicMock()
-        mock_tool_fn.type = "function"
-        mock_tool_fn.function.name = "my_func"
-        mock_tool_fn.function.description = "Does something"
-
-        mock_asst = MagicMock()
-        mock_asst.id = "asst_123"
-        mock_asst.name = "Test Assistant"
-        mock_asst.model = "gpt-4"
-        mock_asst.tools = [mock_tool_ci, mock_tool_fs, mock_tool_fn]
-
-        mock_list = MagicMock()
-        mock_list.data = [mock_asst]
-        mock_list.has_more = False
-
-        mock_client = MagicMock()
-        mock_client.beta.assistants.list.return_value = mock_list
-        mock_client.fine_tuning.jobs.list.return_value = MagicMock(data=[], has_more=False)
-        mock_openai.OpenAI.return_value = mock_client
-
+        client = mock_openai.OpenAI.return_value
+        client.fine_tuning.jobs.list.return_value = MagicMock(data=[], has_more=False)
         with patch.dict(sys.modules, {"openai": mock_openai}):
             from agent_bom.cloud import openai_provider
 
-            agents, warnings = openai_provider.discover(api_key="sk-test")
-            asst_agents = [a for a in agents if "openai-asst:" in a.name]
-            assert len(asst_agents) >= 1
-            assert asst_agents[0].name == "openai-asst:Test Assistant"
-            assert asst_agents[0].mcp_servers[0].is_mcp_surface is False
-            assert asst_agents[0].discovery_envelope is not None
-            assert asst_agents[0].discovery_envelope["permissions_used"] == [
-                "openai:assistants:list",
-                "openai:fine_tuning.jobs:list",
-            ]
-            mock_client.models.list.assert_not_called()
-            from agent_bom.models import AIBOMReport
-
-            report = AIBOMReport(agents=agents)
-            assert report.total_servers == 0
-            assert report.total_packages >= 1
-            origin = asst_agents[0].metadata["cloud_origin"]
-            assert origin["provider"] == "openai"
-            assert origin["resource_type"] == "assistant"
+            agents, warnings = openai_provider.discover(api_key="fixture-credential")
+        assert agents == []
+        assert any("retired" in warning for warning in warnings)
+        client.beta.assistants.list.assert_not_called()
+        client.models.list.assert_not_called()
 
     def test_discover_fine_tunes(self):
         mock_openai = MagicMock()
@@ -464,10 +427,10 @@ class TestOpenAIDiscover:
             assert origin["provider"] == "openai"
             assert origin["resource_type"] == "job"
 
-    def test_assistant_discovery_exception(self):
+    def test_fine_tune_discovery_exception(self):
         mock_openai = MagicMock()
         mock_client = MagicMock()
-        mock_client.beta.assistants.list.side_effect = RuntimeError("API down")
+        mock_client.fine_tuning.jobs.list.side_effect = RuntimeError("API down")
         mock_client.fine_tuning.jobs.list.return_value = MagicMock(data=[], has_more=False)
         mock_openai.OpenAI.return_value = mock_client
 
