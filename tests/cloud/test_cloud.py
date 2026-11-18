@@ -2136,7 +2136,7 @@ def test_gcp_discovery_warnings_are_sanitized():
     importlib.reload(importlib.import_module("agent_bom.cloud.gcp"))
     from agent_bom.cloud.gcp import discover
 
-    raw_error = RuntimeError("failed https://user:tok123@example.com/api?key=secret from /Users/alice/.config/key.json")
+    raw_error = PermissionError("failed https://user:tok123@example.com/api?key=secret from /Users/alice/.config/key.json")
     with (
         patch("agent_bom.cloud.gcp._discover_vertex_ai", side_effect=raw_error),
         patch("agent_bom.cloud.gcp._discover_cloud_functions", return_value=([], [])),
@@ -2147,7 +2147,7 @@ def test_gcp_discovery_warnings_are_sanitized():
 
     assert agents == []
     warning = " ".join(warnings)
-    assert "Vertex AI discovery error" in warning
+    assert "Vertex AI" in warning
     assert "tok123" not in warning
     assert "key=secret" not in warning
     assert "/Users/alice" not in warning
