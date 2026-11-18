@@ -1208,3 +1208,15 @@ which runs separate server and client processes against SQLite and a private Pos
 cluster and skips where Postgres server binaries are not on `PATH`. The secret-group
 behaviour was exercised against real Linux permissions with `postgres:16-alpine`, not
 through a complete `docker compose up` on a Linux host.
+
+## Gateway composition
+
+`create_gateway_app` delegates policy reloads and background-task cleanup to
+`runtime/gateway_application_lifecycle.py`, audit admission error responses and
+tenant binding to `api/gateway_app_audit.py`, and health/firewall routes to the
+corresponding `api/gateway_app_*` modules. The relay retains its existing
+`RelayRuntime` and pipeline. This split preserves the posture matrix above:
+authentication and durable audit admission still fail closed, policy reloads
+retain their existing last-good/invalidation rules, and `/healthz` reports
+the same resolved `fail_mode_runtime`. Lifecycle tests cover cleanup after
+normal shutdown and failed initial policy loading.
