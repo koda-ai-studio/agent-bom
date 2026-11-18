@@ -350,6 +350,9 @@
     "api/gateway_activity_store.py::SQLiteGatewayActivityStore.append_batch": {
       "function_lines": 114
     },
+    "api/gateway_app_health.py": {
+      "deferred_imports": 2
+    },
     "api/gateway_auth.py": {
       "broad_except": 3,
       "raw_env_reads": 1
@@ -3368,16 +3371,8 @@
     "gateway_server.py": {
       "api_imports": 52,
       "broad_except": 3,
-      "deferred_imports": 5,
-      "file_lines": 699,
+      "deferred_imports": 2,
       "raw_env_reads": 1
-    },
-    "gateway_server.py::create_gateway_app": {
-      "complexity": 57,
-      "function_lines": 462
-    },
-    "gateway_server.py::create_gateway_app.firewall_check": {
-      "function_lines": 116
     },
     "gateway_upstreams.py": {
       "deferred_imports": 3,
@@ -4972,6 +4967,9 @@
     },
     "runtime/egress_transport.py": {
       "broad_except": 2
+    },
+    "runtime/gateway_application_lifecycle.py": {
+      "deferred_imports": 1
     },
     "runtime/gateway_audit.py": {
       "broad_except": 8,
