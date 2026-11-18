@@ -404,7 +404,11 @@ coverage as complete.
 Model and experiment listing follows at most 100 pages per collection. A failed
 later page, repeated continuation token, or page limit retains inventory from
 completed pages and emits an incomplete-coverage warning. A final page without
-a continuation token is complete, including when it is page 100.
+a continuation token is complete, including when it is page 100. A malformed
+model or experiment, or a failed metadata read, produces a coverage warning
+without dropping other records from that page. Invalid experiment identifiers
+are rejected before querying runs; resolve warnings and rescan before treating
+the inventory as complete.
 
 ### W&B partial run discovery
 

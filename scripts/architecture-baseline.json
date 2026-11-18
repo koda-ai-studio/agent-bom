@@ -2557,15 +2557,8 @@
       "raw_env_reads": 1
     },
     "cloud/mlflow_provider.py": {
-      "broad_except": 4,
       "deferred_imports": 1,
       "raw_env_reads": 1
-    },
-    "cloud/mlflow_provider.py::_discover_experiments": {
-      "function_lines": 81
-    },
-    "cloud/mlflow_provider.py::_discover_registered_models": {
-      "function_lines": 100
     },
     "cloud/model_provenance.py": {
       "broad_except": 2,
