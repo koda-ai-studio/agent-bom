@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import json
 import re
-import socket
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
-from click.testing import CliRunner
 
 from agent_bom.core.egress_hosts import CONDITIONAL_HOSTS, DECLARED_HOSTS, LOOKUP_HOSTS, USER_NAMED_TARGETS
 from agent_bom.output.report_packing import load_report_document
@@ -64,7 +64,10 @@ def test_scan_path_module_calls_only_declared_hosts(module: str) -> None:
     assert hosts <= DECLARED_HOSTS, f"{module} reaches undeclared hosts {sorted(hosts - DECLARED_HOSTS)}"
 
 
-def test_mcp_inventory_makes_no_network_call(tmp_path, monkeypatch) -> None:
+@pytest.mark.parametrize("parent_discovery_stub", [False, True])
+def test_mcp_inventory_makes_no_network_call(tmp_path, monkeypatch, parent_discovery_stub) -> None:
+    if parent_discovery_stub:
+        monkeypatch.setattr("agent_bom.cli._inventory.discover_all", lambda **_: [])
     home = tmp_path / "home"
     home.mkdir()
     (home / ".claude.json").write_text(
@@ -80,20 +83,25 @@ def test_mcp_inventory_makes_no_network_call(tmp_path, monkeypatch) -> None:
     )
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setenv("UV_CACHE_DIR", str(tmp_path / "uv-cache"))
-    lookups: list[str] = []
-
-    def _no_network(host, *args, **kwargs):
-        lookups.append(str(host))
-        raise socket.gaierror("network disabled in test")
-
-    monkeypatch.setattr(socket, "getaddrinfo", _no_network)
-
-    from agent_bom.cli import main
-
-    result = CliRunner().invoke(main, ["mcp", "inventory", "-q", "-f", "json"])
-
-    assert result.exit_code == 0, result.output
-    data = load_report_document(json.loads(result.output))
+    # A subprocess keeps CLI discovery independent of earlier tests' lazy imports
+    # and patched module bindings, while still exercising the real home lookup.
+    script = """
+import json
+import socket
+from click.testing import CliRunner
+lookups = []
+def no_network(host, *args, **kwargs):
+    lookups.append(str(host))
+    raise socket.gaierror("network disabled in test")
+socket.getaddrinfo = no_network
+from agent_bom.cli import main
+result = CliRunner().invoke(main, ["mcp", "inventory", "-q", "-f", "json"])
+print(json.dumps({"exit_code": result.exit_code, "output": result.output, "lookups": lookups}))
+"""
+    completed = subprocess.run([sys.executable, "-c", script], cwd=ROOT, capture_output=True, text=True, timeout=30, check=True)
+    result = json.loads(completed.stdout)
+    assert result["exit_code"] == 0, result["output"]
+    data = load_report_document(json.loads(result["output"]))
     names = {pkg["name"] for agent in data["agents"] for server in agent["mcp_servers"] for pkg in server["packages"]}
     assert {"mcp-server-fetch", "@modelcontextprotocol/server-github"} <= names
-    assert lookups == []
+    assert result["lookups"] == []
