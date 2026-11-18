@@ -86,7 +86,7 @@ def test_discover_subsystem_exception():
     mods = _mock_gcp_modules()
     with (
         patch.dict(sys.modules, mods),
-        patch("agent_bom.cloud.gcp._discover_vertex_ai", side_effect=RuntimeError("vertex error")),
+        patch("agent_bom.cloud.gcp._discover_vertex_ai", side_effect=PermissionError("vertex error")),
         patch("agent_bom.cloud.gcp._discover_cloud_functions", return_value=([], [])),
         patch("agent_bom.cloud.gcp._discover_gke_clusters", return_value=([], [])),
         patch("agent_bom.cloud.gcp._discover_cloud_run", return_value=([], [])),
