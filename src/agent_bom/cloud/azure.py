@@ -16,8 +16,8 @@ from typing import Any
 
 from agent_bom.discovery_envelope import RedactionStatus, ScanMode, attach_envelope_to_agents
 from agent_bom.models import Agent, AgentType, MCPServer, Package, TransportType
-from agent_bom.security import sanitize_text
 
+from .azure_errors import azure_read_errors, azure_read_warning
 from .base import CloudDiscoveryError, missing_scope_hint
 from .normalization import build_cloud_origin, build_cloud_principal, build_cloud_scope, build_cloud_timestamps, build_package_purl
 
@@ -108,8 +108,8 @@ def discover(
 
     try:
         credential = DefaultAzureCredential()
-    except Exception as exc:
-        warnings.append(f"Azure authentication failed: {exc}")
+    except azure_read_errors() as exc:
+        warnings.append("Azure authentication failed. " + azure_read_warning("authentication", exc))
         return agents, warnings
 
     # ── Container Apps ────────────────────────────────────────────────────
@@ -117,48 +117,48 @@ def discover(
         container_agents, ca_warns = _discover_container_apps(credential, resolved_sub, resource_group)
         agents.extend(container_agents)
         warnings.extend(ca_warns)
-    except Exception as exc:
-        warnings.append(f"Azure Container Apps discovery error: {exc}")
+    except azure_read_errors() as exc:
+        warnings.append(azure_read_warning("container-apps", exc))
 
     # ── AI Foundry agents ─────────────────────────────────────────────────
     try:
         ai_agents, ai_warns = _discover_ai_foundry(credential, resolved_sub, resource_group)
         agents.extend(ai_agents)
         warnings.extend(ai_warns)
-    except Exception as exc:
-        warnings.append(f"Azure AI Foundry discovery error: {exc}")
+    except azure_read_errors() as exc:
+        warnings.append(azure_read_warning("ai-foundry", exc))
 
     # ── Azure OpenAI deployments ──────────────────────────────────────────
     try:
         oai_agents, oai_warns = _discover_openai_deployments(credential, resolved_sub)
         agents.extend(oai_agents)
         warnings.extend(oai_warns)
-    except Exception as exc:
-        warnings.append(f"Azure OpenAI discovery error: {exc}")
+    except azure_read_errors() as exc:
+        warnings.append(azure_read_warning("openai", exc))
 
     # ── Azure Functions ───────────────────────────────────────────────────
     try:
         fn_agents, fn_warns = _discover_azure_functions(credential, resolved_sub)
         agents.extend(fn_agents)
         warnings.extend(fn_warns)
-    except Exception as exc:
-        warnings.append(f"Azure Functions discovery error: {exc}")
+    except azure_read_errors() as exc:
+        warnings.append(azure_read_warning("functions", exc))
 
     # ── Container Instances (ACI) ─────────────────────────────────────────
     try:
         aci_agents, aci_warns = _discover_container_instances(credential, resolved_sub)
         agents.extend(aci_agents)
         warnings.extend(aci_warns)
-    except Exception as exc:
-        warnings.append(f"Azure Container Instances discovery error: {exc}")
+    except azure_read_errors() as exc:
+        warnings.append(azure_read_warning("container-instances", exc))
 
     # ── ML endpoints ──────────────────────────────────────────────────────
     try:
         ml_agents, ml_warns = _discover_ml_endpoints(credential, resolved_sub)
         agents.extend(ml_agents)
         warnings.extend(ml_warns)
-    except Exception as exc:
-        warnings.append(f"Azure ML endpoints discovery error: {exc}")
+    except azure_read_errors() as exc:
+        warnings.append(azure_read_warning("ml-endpoints", exc))
 
     # Per-run discovery envelope (#2083 PR B).
     scope: list[str] = []
@@ -207,9 +207,9 @@ def _discover_container_apps(
         client = ContainerAppsAPIClient(credential, subscription_id)
 
         if resource_group:
-            apps = list(client.container_apps.list_by_resource_group(resource_group))
+            apps = client.container_apps.list_by_resource_group(resource_group)
         else:
-            apps = list(client.container_apps.list_by_subscription())
+            apps = client.container_apps.list_by_subscription()
 
         for app in apps:
             app_name = app.name or "unknown"
@@ -281,8 +281,8 @@ def _discover_container_apps(
                         agent.metadata["cloud_principal"] = cloud_principal
                     agents.append(agent)
 
-    except Exception as exc:
-        warnings.append(f"Could not list Container Apps: {exc}")
+    except azure_read_errors() as exc:
+        warnings.append(azure_read_warning("container-apps", exc))
 
     return agents, warnings
 
@@ -315,9 +315,9 @@ def _discover_ai_foundry(
         # Find AI project resources
         filter_str = "resourceType eq 'Microsoft.MachineLearningServices/workspaces'"
         if resource_group:
-            resources = list(rm_client.resources.list_by_resource_group(resource_group, filter=filter_str))
+            resources = rm_client.resources.list_by_resource_group(resource_group, filter=filter_str)
         else:
-            resources = list(rm_client.resources.list(filter=filter_str))
+            resources = rm_client.resources.list(filter=filter_str)
 
         for resource in resources:
             ws_name = resource.name or "unknown"
@@ -368,8 +368,8 @@ def _discover_ai_foundry(
                 agent.metadata["cloud_timestamps"] = cloud_timestamps
             agents.append(agent)
 
-    except Exception as exc:
-        warnings.append(f"Could not discover AI Foundry workspaces: {exc}")
+    except azure_read_errors() as exc:
+        warnings.append(azure_read_warning("ai-foundry", exc))
 
     return agents, warnings
 
@@ -474,11 +474,11 @@ def _discover_openai_deployments(
                     if cloud_scope:
                         agent.metadata["cloud_scope"] = cloud_scope
                     agents.append(agent)
-            except Exception as exc:
-                warnings.append(f"Could not list deployments for OpenAI account {account_name}: {exc}")
+            except azure_read_errors() as exc:
+                warnings.append(azure_read_warning("openai-deployments", exc))
 
-    except Exception as exc:
-        warnings.append(f"Could not list Cognitive Services accounts: {exc}")
+    except azure_read_errors() as exc:
+        warnings.append(azure_read_warning("cognitive-services", exc))
 
     return agents, warnings
 
@@ -553,9 +553,9 @@ def _discover_azure_functions(
                                 purl=build_package_purl(ecosystem="azure-runtime", name=rt_name, version=rt_ver),
                             )
                         )
-                except Exception as exc:
+                except azure_read_errors() as exc:
                     # Site config read is best-effort
-                    logger.debug("Could not read site config for function app %s: %s", app_name, sanitize_text(exc))
+                    warnings.append(azure_read_warning("function-site-config", exc))
 
             from agent_bom.cloud.serverless_zip import extract_azure_function_packages
 
@@ -614,8 +614,8 @@ def _discover_azure_functions(
                 agent.metadata["cloud_principal"] = cloud_principal
             agents.append(agent)
 
-    except Exception as exc:
-        warnings.append(f"Could not list Azure Functions: {exc}")
+    except azure_read_errors() as exc:
+        warnings.append(azure_read_warning("functions", exc))
 
     return agents, warnings
 
@@ -694,8 +694,8 @@ def _discover_container_instances(
                     agent.metadata["cloud_scope"] = cloud_scope
                 agents.append(agent)
 
-    except Exception as exc:
-        warnings.append(f"Could not list Container Instances: {exc}")
+    except azure_read_errors() as exc:
+        warnings.append(azure_read_warning("container-instances", exc))
 
     return agents, warnings
 
@@ -772,9 +772,9 @@ def _discover_ml_endpoints(
                                     "instance_type": instance_type,
                                 }
                             )
-                    except Exception as exc:
+                    except azure_read_errors() as exc:
                         # Deployment listing is best-effort
-                        logger.debug("Could not list deployments for endpoint %s: %s", ep_name, sanitize_text(exc))
+                        warnings.append(azure_read_warning("ml-deployments", exc))
 
                     server = MCPServer(
                         name=f"ml-endpoint:{ep_name}",
@@ -820,10 +820,10 @@ def _discover_ml_endpoints(
                         agent.metadata["cloud_scope"] = cloud_scope
                     agents.append(agent)
 
-            except Exception as exc:
-                warnings.append(f"Could not list ML endpoints in workspace {ws_name}: {exc}")
+            except azure_read_errors() as exc:
+                warnings.append(azure_read_warning("ml-endpoints", exc))
 
-    except Exception as exc:
-        warnings.append(f"Could not list ML workspaces: {exc}")
+    except azure_read_errors() as exc:
+        warnings.append(azure_read_warning("ml-workspaces", exc))
 
     return agents, warnings
