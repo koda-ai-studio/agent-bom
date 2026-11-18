@@ -125,3 +125,28 @@ setting. With neither set, the server uses `http://localhost:8422`. Browser API
 requests and credentials remain same-origin. Use `npm run dev` and `npm run build`
 to generate the server Proxy entry; `NEXT_EXPORT=1 npm run build` excludes it
 for Python-served static assets.
+
+### Pinned glob-matcher maintenance
+
+`npm ci && npm run verify:toolchain` installs and checks the pinned
+`@ryotsu/picomatch@4.0.7-a` artifact through the `picomatch` npm alias. The exact
+alias override replaces transitive matcher copies used by the build, test and
+lint tools. The lockfile records the scoped package identity and integrity;
+the npm advisory gate continues scanning every package without exclusions.
+
+The fork's parser changes were compared with upstream 4.0.7. It simplifies
+supported repeated wildcard extglobs and treats unsupported complex forms
+literally; captured substrings can differ from upstream. Keep its default
+recursion safeguard enabled. The package has no runtime dependencies or
+install hooks. Registry signatures and provenance were verified with
+`npm audit signatures`; its source tag is `4.0.7-a` at
+`ryotsu-kankichi/secured-picomatch` commit
+`3ab5a7627d480259e3d9ca67fbc14c125d374f0e`.
+
+`verify:toolchain` runs bounded child-process regressions through each consuming
+tool, checks positive glob semantics, and verifies the locked artifact. Before
+changing this pin, review the replacement source and provenance, run those
+regressions, the full UI tests and production build, and run
+`python scripts/check_npm_advisories.py ui/package-lock.json` from the repository
+root. Prefer a verified upstream release once one includes an equivalent fix;
+do not remove the override solely because a scanner no longer reports it.

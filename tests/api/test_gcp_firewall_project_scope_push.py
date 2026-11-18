@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import threading
+
 import pytest
 from starlette.testclient import TestClient
 
-from agent_bom.api import stores
+from agent_bom.api import current_graph_builds, stores
 from agent_bom.api.compliance_hub_store import InMemoryComplianceHubStore, set_compliance_hub_store
 from agent_bom.api.graph_store import SQLiteGraphStore
 from agent_bom.api.server import app
@@ -19,7 +21,15 @@ TENANT = "gcp-fw-tenant"
 
 
 @pytest.fixture
-def client(tmp_path, monkeypatch):
+def build_queue(monkeypatch):
+    queue = current_graph_builds.CurrentBuildQueue(workers=1)
+    monkeypatch.setattr(current_graph_builds, "_QUEUE", queue)
+    yield queue
+    queue.executor.shutdown(wait=True)
+
+
+@pytest.fixture
+def client(tmp_path, monkeypatch, build_queue):
     monkeypatch.setattr("agent_bom.api.campaign_reconciliation.poll_campaign_reconciliation", lambda: None)
     original_jobs, original_graph = stores._store, stores._graph_store
     stores.set_job_store(InMemoryJobStore())
@@ -79,8 +89,8 @@ def test_one_push_with_two_projects_keeps_both_firewalls(client, reverse: bool) 
 
 
 @pytest.mark.parametrize("reverse", [False, True], ids=["a-then-b", "b-then-a"])
-@pytest.mark.parametrize("deferred_refresh", [False, True])
-def test_separate_project_pushes_keep_both_firewalls(client, monkeypatch, reverse: bool, deferred_refresh: bool) -> None:
+@pytest.mark.parametrize("refresh_mode", ["immediate", "deferred", "queued"])
+def test_separate_project_pushes_keep_both_firewalls(client, monkeypatch, build_queue, reverse: bool, refresh_mode: str) -> None:
     from tests.api.test_current_graph_unpinned_reads import _hold_materialize
 
     inventories = _inventories()
@@ -90,14 +100,25 @@ def test_separate_project_pushes_keep_both_firewalls(client, monkeypatch, revers
     _push(client, f"gcp-{first['project_id']}", [first])
     _current_graph(client)
     release, previous = None, []
-    if deferred_refresh:
-        entered, release = _hold_materialize(stores._get_graph_store())
+    start_build = threading.Event()
+    if refresh_mode != "immediate":
+        store = stores._get_graph_store()
+        entered, release = _hold_materialize(store)
+        if refresh_mode == "queued":
+            materialize = store._materialize
+
+            def delayed_materialize(*args, **kwargs):
+                assert start_build.wait(5), "reader never allowed the rebuild to start"
+                return materialize(*args, **kwargs)
+
+            monkeypatch.setattr(store, "_materialize", delayed_materialize)
         get = client.get
 
         def release_after_previous(*args, **kwargs):
             response = get(*args, **kwargs)
             if response.json().get("collection_coverage", {}).get("freshness") == "previous_generation":
-                assert entered.is_set()
+                start_build.set()
+                assert entered.wait(5), "the queued rebuild never started"
                 previous.append(response.json())
                 release.set()
             return response
@@ -107,9 +128,10 @@ def test_separate_project_pushes_keep_both_firewalls(client, monkeypatch, revers
         _push(client, f"gcp-{second['project_id']}", [second])
         _assert_both_projects_survive(_current_graph(client))
     finally:
+        start_build.set()
         if release:
             release.set()
-    if deferred_refresh:
+    if refresh_mode != "immediate":
         assert previous, "the test must exercise the explicit previous-generation response"
 
 

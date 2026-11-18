@@ -1,6 +1,6 @@
 {
   "name": "ui",
-  "version": "0.115.3",
+  "version": "0.115.4",
   "private": true,
   "packageManager": "npm@10.9.7",
   "engines": {
@@ -17,7 +17,7 @@
     "test:runtime-proxy": "node scripts/smoke-runtime-api-proxy.mjs",
     "test:e2e": "node scripts/assert-install-matches-lockfile.mjs && node scripts/assert-build-is-current.mjs && playwright test",
     "test:static-demo": "playwright test --config playwright.static-demo.config.ts",
-    "verify:toolchain": "node scripts/verify-toolchain.mjs && node --test scripts/next-root-dirs.test.mjs && node --import ./scripts/minimatch-compat.mjs --test scripts/tooling-glob-compat.test.mjs",
+    "verify:toolchain": "node scripts/verify-toolchain.mjs && node --test scripts/next-root-dirs.test.mjs && node --import ./scripts/minimatch-compat.mjs --test scripts/tooling-glob-compat.test.mjs && node --test scripts/picomatch-security.test.mjs",
     "headers:sync": "node scripts/sync-vercel-headers.mjs",
     "headers:check": "node scripts/sync-vercel-headers.mjs --check",
     "capture:product-proof": "node scripts/capture-product-proof.mjs",
@@ -60,7 +60,8 @@
       "typescript": "$typescript"
     },
     "minimatch": "11.0.1",
-    "glob": "14.0.2"
+    "glob": "14.0.2",
+    "picomatch": "$picomatch"
   },
   "devDependencies": {
     "@next/eslint-plugin-next": "^16.4.5",
@@ -87,6 +88,7 @@
     "typescript": "6.0.3",
     "typescript-eslint": "^8.71.1",
     "vite": "^8.3.3",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.3",
+    "picomatch": "npm:@ryotsu/picomatch@4.0.7-a"
   }
 }
