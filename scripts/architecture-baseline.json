@@ -2426,7 +2426,6 @@
       "function_lines": 139
     },
     "cloud/gcp.py": {
-      "broad_except": 8,
       "deferred_imports": 1,
       "file_lines": 613,
       "raw_env_reads": 1

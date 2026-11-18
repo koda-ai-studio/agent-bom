@@ -66,3 +66,15 @@ cannot produce PASS. The evidence states the inspected/total bucket count and
 separates project-state failures from missing `storage.buckets.getIamPolicy`.
 Restore the indicated API, billing or permission prerequisite, then rescan.
 Known public buckets remain FAIL even when other bucket reads are incomplete.
+
+### AI service discovery read failures
+
+Run `agent-bom scan --gcp --gcp-project PROJECT_ID -f json -o report.json`.
+Vertex AI, Cloud Functions, GKE and Cloud Run discovery warnings distinguish
+`denied` (credentials or permissions), `throttled` (rate limits) and
+`unavailable` (transport or invalid provider data). Successful empty lists
+produce no warning; a structured `SERVICE_DISABLED` response remains a not-in-use
+notice. A failed later page retains previously collected inventory
+and marks the assessment incomplete; inspect warnings before treating inventory
+as complete. Restore read access or retry after the provider recovers, then scan
+again. Provider exception messages are not included in these warnings.
