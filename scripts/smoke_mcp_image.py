@@ -58,6 +58,25 @@ def check_tools(server_info: dict[str, Any], tools: list[str], *, min_tools: int
     return problems
 
 
+def _check_state_home(image: str) -> None:
+    """Exercise the default user's cache without host mounts or network access."""
+    probe = """import os
+from pathlib import Path
+from agent_bom.scan_cache import ScanCache
+assert os.getuid() != 0, "MCP image must run without root"
+assert Path.home().is_dir(), "MCP image HOME must exist"
+cache = ScanCache()
+cache.put("PyPI", "image-smoke-fixture", "0.0.0", [{"id": "smoke-fixture"}])
+assert ScanCache().get("PyPI", "image-smoke-fixture", "0.0.0") == [{"id": "smoke-fixture"}]
+print("OK: non-root default cache write and reopen")
+"""
+    subprocess.run(
+        ["docker", "run", "--rm", "--network", "none", "--entrypoint", "python", image, "-c", probe],
+        check=True,
+        timeout=60,
+    )
+
+
 def _smoke_stdio(image: str, timeout: float) -> tuple[dict[str, Any], list[str]]:
     payload = "".join(json.dumps(message) + "\n" for message in (_initialize(), INITIALIZED, TOOLS_LIST))
     proc = subprocess.Popen(
@@ -181,6 +200,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--wait", type=float, default=300.0, help="seconds to wait for /health (default 300)")
     args = parser.parse_args(argv)
 
+    _check_state_home(args.image)
     if args.transport == "stdio":
         server_info, tools = _smoke_stdio(args.image, timeout=120.0)
     else:

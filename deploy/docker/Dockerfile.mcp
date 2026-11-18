@@ -58,8 +58,10 @@ RUN python -m pip uninstall --yes setuptools wheel pip \
 
 # Create non-root user for least-privilege execution
 RUN addgroup --system abom && adduser --system --ingroup abom abom
+RUN mkdir -p /home/abom/.agent-bom/db && chown -R abom:abom /home/abom
 USER abom
 
+ENV HOME=/home/abom
 ENV PYTHONUNBUFFERED=1
 ENV VIRTUAL_ENV=/app/.venv
 ENV PATH="/app/.venv/bin:${PATH}"

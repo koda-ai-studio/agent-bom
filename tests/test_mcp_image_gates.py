@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import importlib.util
 import re
+import subprocess
 import sys
 from pathlib import Path
 from types import ModuleType
 
+import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -142,3 +144,29 @@ def test_publish_gates_each_image_before_any_push() -> None:
     assert "--fail-on-severity medium" in runs
     for publisher in ("publish-stdio", "publish-sse"):
         assert set(jobs[publisher]["needs"]) == {"release", "gate"}, publisher
+
+
+def test_stdio_image_provides_non_root_writable_state_home() -> None:
+    dockerfile = (ROOT / MCP_DOCKERFILES["mcp"]).read_text()
+    assert "ENV HOME=/home/abom" in dockerfile
+    assert "mkdir -p /home/abom/.agent-bom/db" in dockerfile
+    assert "chown -R abom:abom /home/abom" in dockerfile
+    assert dockerfile.rsplit("USER ", 1)[1].splitlines()[0] == "abom"
+
+
+def test_state_probe_failure_blocks_transport_smoke(monkeypatch) -> None:
+    mod = _smoke()
+    calls = []
+
+    def fail(image):
+        calls.append(image)
+        raise subprocess.CalledProcessError(1, ["docker", "run"])
+
+    def transport(*args, **kwargs):
+        pytest.fail("transport smoke must not hide a broken state directory")
+
+    monkeypatch.setattr(mod, "_check_state_home", fail)
+    monkeypatch.setattr(mod, "_smoke_stdio", transport)
+    with pytest.raises(subprocess.CalledProcessError):
+        mod.main(["candidate", "--transport", "stdio"])
+    assert calls == ["candidate"]
