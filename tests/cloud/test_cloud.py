@@ -1698,34 +1698,34 @@ def _install_mock_azure():
     # azure.identity
     azure = types.ModuleType("azure")
     azure_identity = types.ModuleType("azure.identity")
-    azure_identity.DefaultAzureCredential = MagicMock
+    azure_identity.DefaultAzureCredential = MagicMock()
     azure.identity = azure_identity
 
     # azure.mgmt.appcontainers
     azure_mgmt = types.ModuleType("azure.mgmt")
     azure_mgmt_appcontainers = types.ModuleType("azure.mgmt.appcontainers")
-    azure_mgmt_appcontainers.ContainerAppsAPIClient = MagicMock
+    azure_mgmt_appcontainers.ContainerAppsAPIClient = MagicMock()
     azure_mgmt.appcontainers = azure_mgmt_appcontainers
 
     # azure.mgmt.resource — the SDK (>=26) dropped the top-level
     # ResourceManagementClient re-export; the code imports it from the
     # azure.mgmt.resource.resources submodule, so the mock must expose it there.
     azure_mgmt_resource = types.ModuleType("azure.mgmt.resource")
-    azure_mgmt_resource.ResourceManagementClient = MagicMock
+    azure_mgmt_resource.ResourceManagementClient = MagicMock()
     azure_mgmt_resource_resources = types.ModuleType("azure.mgmt.resource.resources")
-    azure_mgmt_resource_resources.ResourceManagementClient = MagicMock
+    azure_mgmt_resource_resources.ResourceManagementClient = MagicMock()
     azure_mgmt_resource.resources = azure_mgmt_resource_resources
     azure_mgmt.resource = azure_mgmt_resource
 
     # azure.mgmt.web
     azure_mgmt_web = types.ModuleType("azure.mgmt.web")
-    azure_mgmt_web.WebSiteManagementClient = MagicMock
+    azure_mgmt_web.WebSiteManagementClient = MagicMock()
     azure_mgmt.web = azure_mgmt_web
 
     # azure.ai.projects
     azure_ai = types.ModuleType("azure.ai")
     azure_ai_projects = types.ModuleType("azure.ai.projects")
-    azure_ai_projects.AIProjectClient = MagicMock
+    azure_ai_projects.AIProjectClient = MagicMock()
     azure_ai.projects = azure_ai_projects
 
     sys.modules.setdefault("azure", azure)

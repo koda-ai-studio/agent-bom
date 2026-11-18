@@ -2221,7 +2221,6 @@
       "function_lines": 93
     },
     "cloud/azure.py": {
-      "broad_except": 17,
       "deferred_imports": 1,
       "file_lines": 829,
       "raw_env_reads": 1

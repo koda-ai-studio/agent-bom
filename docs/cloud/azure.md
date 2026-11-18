@@ -56,3 +56,24 @@ Workload Identity Federation cannot be enabled without a scoped
 service account gets a unique, non-guessable name.
 
 ---
+
+## Discovery read outcomes
+
+For AI discovery, create a scan report:
+
+```bash
+agent-bom scan --azure --azure-subscription SUBSCRIPTION_ID -f json -o azure-scan.json
+```
+
+Inspect its warnings and
+`scan_run` coverage before using findings as a complete assessment. Container
+Apps, AI Foundry, OpenAI deployments, Functions, Container Instances and ML
+endpoints distinguish denied reads (`azure:<resource>:denied`) from throttling
+(`:throttled`) and other unavailable reads (`:unavailable`). A successful empty
+listing has no read-failure warning.
+
+Results observed before a later page fails remain in inventory. Failed
+Function configuration and ML deployment reads retain the parent resource but
+mark the related evidence incomplete. Check read permissions for denied reads;
+retry throttled reads later. These outcomes do not establish coverage for the
+separate Azure infrastructure inventory or CIS collectors.

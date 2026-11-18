@@ -67,7 +67,7 @@ def test_discover_auth_failure():
     import sys
 
     mock_az = MagicMock()
-    mock_az.DefaultAzureCredential.side_effect = RuntimeError("auth failed")
+    mock_az.DefaultAzureCredential.side_effect = PermissionError("credential file unavailable")
 
     mods = {"azure": mock_az, "azure.identity": mock_az}
     with patch.dict(sys.modules, mods), patch.dict("os.environ", {"AZURE_SUBSCRIPTION_ID": "sub-123"}):
