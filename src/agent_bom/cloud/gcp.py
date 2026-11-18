@@ -17,6 +17,7 @@ from agent_bom.discovery_envelope import RedactionStatus, ScanMode, attach_envel
 from agent_bom.models import Agent, AgentType, MCPServer, Package, TransportType
 
 from .base import CloudDiscoveryError, missing_scope_hint
+from .gcp_errors import gcp_read_errors, gcp_read_warning
 from .normalization import (
     build_cloud_origin,
     build_cloud_principal,
@@ -24,7 +25,6 @@ from .normalization import (
     build_cloud_timestamps,
     build_package_purl,
     parse_container_image_package,
-    service_discovery_gap,
 )
 
 logger = logging.getLogger(__name__)
@@ -83,32 +83,32 @@ def discover(
         vertex_agents, vertex_warns = _discover_vertex_ai(resolved_project, region)
         agents.extend(vertex_agents)
         warnings.extend(vertex_warns)
-    except Exception as exc:
-        warnings.append(service_discovery_gap("Vertex AI", exc))
+    except gcp_read_errors() as exc:
+        warnings.append(gcp_read_warning("Vertex AI", exc))
 
     # -- Cloud Functions -------------------------------------------------------
     try:
         cf_agents, cf_warns = _discover_cloud_functions(resolved_project, region)
         agents.extend(cf_agents)
         warnings.extend(cf_warns)
-    except Exception as exc:
-        warnings.append(service_discovery_gap("Cloud Functions", exc))
+    except gcp_read_errors() as exc:
+        warnings.append(gcp_read_warning("Cloud Functions", exc))
 
     # -- GKE Clusters ----------------------------------------------------------
     try:
         gke_agents, gke_warns = _discover_gke_clusters(resolved_project, region)
         agents.extend(gke_agents)
         warnings.extend(gke_warns)
-    except Exception as exc:
-        warnings.append(service_discovery_gap("GKE", exc))
+    except gcp_read_errors() as exc:
+        warnings.append(gcp_read_warning("GKE", exc))
 
     # -- Cloud Run services ----------------------------------------------------
     try:
         run_agents, run_warns = _discover_cloud_run(resolved_project, region)
         agents.extend(run_agents)
         warnings.extend(run_warns)
-    except Exception as exc:
-        warnings.append(service_discovery_gap("Cloud Run", exc))
+    except gcp_read_errors() as exc:
+        warnings.append(gcp_read_warning("Cloud Run", exc))
 
     # Per-run discovery envelope (#2083 PR B).
     scope: list[str] = []
@@ -257,8 +257,8 @@ def _discover_vertex_ai(
                 agent.metadata["cloud_scope"] = cloud_scope
             agents.append(agent)
 
-    except Exception as exc:
-        warnings.append(service_discovery_gap("Vertex AI", exc))
+    except gcp_read_errors() as exc:
+        warnings.append(gcp_read_warning("Vertex AI", exc))
 
     return agents, warnings
 
@@ -397,8 +397,8 @@ def _discover_cloud_functions(
                 source_uri,
             )
 
-    except Exception as exc:
-        warnings.append(service_discovery_gap("Cloud Functions", exc))
+    except gcp_read_errors() as exc:
+        warnings.append(gcp_read_warning("Cloud Functions", exc))
 
     return agents, warnings
 
@@ -503,8 +503,8 @@ def _discover_gke_clusters(
                 len(node_pool_info),
             )
 
-    except Exception as exc:
-        warnings.append(service_discovery_gap("GKE", exc))
+    except gcp_read_errors() as exc:
+        warnings.append(gcp_read_warning("GKE", exc))
 
     return agents, warnings
 
@@ -607,7 +607,7 @@ def _discover_cloud_run(
                         agent.metadata["cloud_principal"] = cloud_principal
                     agents.append(agent)
 
-    except Exception as exc:
-        warnings.append(service_discovery_gap("Cloud Run", exc))
+    except gcp_read_errors() as exc:
+        warnings.append(gcp_read_warning("Cloud Run", exc))
 
     return agents, warnings
