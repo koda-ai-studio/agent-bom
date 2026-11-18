@@ -129,6 +129,18 @@ def test_post_release_pins_refresh_product_proof_before_publication() -> None:
     assert "git add docs/images" in publish
 
 
+def test_post_release_pins_render_launcher_bundle_after_relocking() -> None:
+    """The directory bundle must copy the newly resolved launcher lock."""
+    workflow = yaml.safe_load(RELEASE_WORKFLOW.read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["docker-mcp-pin"]["steps"]
+    publish = next(step["run"] for step in steps if "gh pr create" in step.get("run", ""))
+    bump = publish.index("python scripts/bump-version.py --published")
+    render = publish.index("python scripts/render_plugin_skills.py\n")
+    verify = publish.index("python scripts/render_plugin_skills.py --check")
+    commit = publish.index("$COMMIT -m")
+    assert bump < render < verify < commit
+
+
 def test_post_release_capture_installs_and_selects_python_dependencies() -> None:
     """Lifecycle screenshots call the Python graph projector, not just Node."""
     workflow = yaml.safe_load(RELEASE_WORKFLOW.read_text(encoding="utf-8"))

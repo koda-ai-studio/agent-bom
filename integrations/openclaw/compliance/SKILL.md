@@ -23,7 +23,7 @@ metadata:
   install:
     pipx: agent-bom
     pip: agent-bom
-    docker: ghcr.io/koda-ai-studio/agent-bom:0.115.3
+    docker: ghcr.io/koda-ai-studio/agent-bom:0.115.4
   openclaw:
     requires:
       bins: []
