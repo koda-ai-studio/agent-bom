@@ -1475,6 +1475,9 @@ jobs:
         run: |
           python scripts/sync_docker_mcp_pin.py --set "${{ github.sha }}"
           python scripts/bump-version.py --published "${TAG#v}"
+          # Relocking the source launcher invalidates the generated directory bundle.
+          python scripts/render_plugin_skills.py
+          python scripts/render_plugin_skills.py --check
           python scripts/check_version_alignment.py
           if git diff --quiet; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -1549,6 +1552,9 @@ jobs:
           git switch -C "$BRANCH" origin/main
           python scripts/sync_docker_mcp_pin.py --set "$TAGGED_SHA"
           python scripts/bump-version.py --published "${TAG#v}"
+          # Relocking the source launcher invalidates the generated directory bundle.
+          python scripts/render_plugin_skills.py
+          python scripts/render_plugin_skills.py --check
           python scripts/check_version_alignment.py
           git add -u
           $COMMIT -m "chore(release): point published pins at ${TAG}"
