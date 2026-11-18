@@ -13,6 +13,7 @@ from rich.console import Console
 from agent_bom.cli.agents._context import ScanContext
 from agent_bom.cli.agents._post import compute_exit_code
 from agent_bom.cloud.aws_cis._base import CheckStatus, CISBenchmarkReport, CISCheckResult
+from agent_bom.cloud.base import CloudDiscoveryError
 from agent_bom.evidence.scan_run import ScanRun
 from agent_bom.models import AIBOMReport
 
@@ -210,7 +211,7 @@ def test_gcp_collector_failure_with_no_benchmark_stays_failed():
 # --- GCP discovery: a disabled API is recorded as not in use --------------------------------------
 
 
-class _DisabledApiError(Exception):
+class _DisabledApiError(CloudDiscoveryError):
     reason = "SERVICE_DISABLED"
 
 
