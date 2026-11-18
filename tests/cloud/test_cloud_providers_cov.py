@@ -115,7 +115,7 @@ class TestWandbDiscover:
     def test_run_discovery_exception(self):
         mock_wandb = MagicMock()
         mock_api = MagicMock()
-        mock_api.runs.side_effect = RuntimeError("API error")
+        mock_api.runs.side_effect = OSError("API error")
         mock_wandb.Api.return_value = mock_api
 
         with patch.dict(sys.modules, {"wandb": mock_wandb}):
