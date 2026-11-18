@@ -235,7 +235,10 @@ def _discover_inference_services(
         return agents, warnings
 
     for item in data.get("items", []):
-        agents.append(_inference_service_agent(item, context=context))
+        try:
+            agents.append(_inference_service_agent(item, context=context))
+        except (TypeError, ValueError, AttributeError, KeyError):
+            warnings.append("CoreWeave InferenceService record has invalid metadata. Assessment incomplete.")
 
     return agents, warnings
 
