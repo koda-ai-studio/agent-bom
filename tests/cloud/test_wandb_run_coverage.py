@@ -7,9 +7,10 @@ from unittest.mock import MagicMock
 import pytest
 
 from agent_bom.cloud import wandb_provider as provider
+from agent_bom.cloud.base import CloudDiscoveryError
 
 
-class ProviderError(Exception):
+class ProviderError(CloudDiscoveryError):
     def __init__(self, status):
         self.response = SimpleNamespace(status_code=status)
         super().__init__("private-provider-marker")
