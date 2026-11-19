@@ -557,17 +557,8 @@ def _discover_container_services(
 # ── InfiniBand Training Jobs ──────────────────────────────────────────────
 
 
-def _discover_infiniband_jobs(
-    api_key: str,
-    project_id: str,
-) -> tuple[list[Agent], list[str]]:
-    """Discover multi-node training pods using Nebius InfiniBand (rdma/ib resources).
-
-    Scans all namespaces via kubectl for pods requesting ``rdma/ib`` resources,
-    which indicates multi-node NCCL training over InfiniBand fabric.  Mirrors the
-    CoreWeave InfiniBand discovery pattern.  Requires kubectl configured with
-    Nebius cluster credentials.
-    """
+def _discover_infiniband_jobs(api_key: str, project_id: str) -> tuple[list[Agent], list[str]]:
+    """Discover rdma/ib training pods using configured Nebius kubectl credentials."""
     agents: list[Agent] = []
     warnings: list[str] = []
 
@@ -577,18 +568,25 @@ def _discover_infiniband_jobs(
 
     try:
         items = _kubectl_pod_items()
-        for pod_ns, pod_name, image_ref, gpu_limits in iter_infiniband_pods(items):
-            agents.append(
-                build_training_agent(
-                    provider="nebius",
-                    pod_ns=pod_ns,
-                    pod_name=pod_name,
-                    image_ref=image_ref,
-                    gpu_limits=gpu_limits,
-                    config_path=f"nebius://{project_id}/training/{pod_ns}/{pod_name}",
-                    project_id=project_id,
-                )
-            )
+        seen: set[tuple[str, str]] = set()
+        for pod in items:
+            try:
+                for pod_ns, pod_name, image_ref, gpu_limits in iter_infiniband_pods([pod]):
+                    if (pod_ns, pod_name) in seen:
+                        continue
+                    agent = build_training_agent(
+                        provider="nebius",
+                        pod_ns=pod_ns,
+                        pod_name=pod_name,
+                        image_ref=image_ref,
+                        gpu_limits=gpu_limits,
+                        config_path=f"nebius://{project_id}/training/{pod_ns}/{pod_name}",
+                        project_id=project_id,
+                    )
+                    agents.append(agent)
+                    seen.add((pod_ns, pod_name))
+            except COLLECTION_ERRORS as exc:
+                warnings.append(collection_warning("nebius", "infiniband-jobs", exc))
 
     except subprocess.TimeoutExpired:
         warnings.append("nebius:infiniband-jobs:unavailable: kubectl timed out. Assessment incomplete.")
