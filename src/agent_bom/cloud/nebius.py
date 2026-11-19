@@ -187,15 +187,8 @@ def discover(
 # ── AI Studio ─────────────────────────────────────────────────────────────
 
 
-def _discover_ai_studio(
-    api_key: str,
-    project_id: str,
-) -> tuple[list[Agent], list[str]]:
-    """Discover Nebius AI Studio inference endpoints via REST API.
-
-    Calls ``https://api.ai.nebius.cloud/v1/models`` to list deployed
-    model endpoints and creates an Agent for each one.
-    """
+def _discover_ai_studio(api_key: str, project_id: str) -> tuple[list[Agent], list[str]]:
+    """Discover deployed AI Studio models with per-record diagnostics."""
     agents: list[Agent] = []
     warnings: list[str] = []
 
@@ -210,56 +203,61 @@ def _discover_ai_studio(
         )
 
         for model in models:
-            model_id = model.get("id", "unknown")
-            model_name = model.get("name", model_id)
-            model_version = model.get("version", model.get("model_version", "latest"))
-            status = model.get("status", model.get("state", "UNKNOWN"))
+            try:
+                model_id = model.get("id", "unknown")
+                model_name = model.get("name", model_id)
+                if not isinstance(model_name, str):
+                    raise CloudDiscoveryError("Invalid AI Studio model name")
+                model_version = model.get("version", model.get("model_version", "latest"))
+                status = model.get("status", model.get("state", "UNKNOWN"))
 
-            tools = [
-                MCPTool(
-                    name=model_name,
-                    description=f"Nebius AI Studio model — status:{status}, version:{model_version}",
-                )
-            ]
-
-            packages = [
-                Package(
-                    name=model_name,
-                    version=str(model_version),
-                    ecosystem="nebius-ai-studio",
-                    purl=build_package_purl(ecosystem="nebius-ai-studio", name=model_name, version=str(model_version)),
-                )
-            ]
-
-            server = MCPServer(
-                name=f"nebius-ai-studio:{model_name}",
-                transport=TransportType.UNKNOWN,
-                url=f"https://api.ai.nebius.cloud/v1/models/{model_id}",
-                tools=tools,
-                packages=packages,
-                env={"NEBIUS_API_KEY": "***REDACTED***"},
-            )
-
-            agent = Agent(
-                name=f"nebius-ai-studio:{model_name}",
-                agent_type=AgentType.CUSTOM,
-                config_path=f"nebius://{project_id}/ai-studio/{model_id}",
-                source="nebius-ai-studio",
-                version=f"{status} (v{model_version})",
-                mcp_servers=[server],
-                metadata={
-                    "cloud_origin": build_cloud_origin(
-                        provider="nebius",
-                        service="ai-studio",
-                        resource_type="model",
-                        resource_id=model_id,
-                        resource_name=model_name,
-                        project_id=project_id,
-                        raw_identity={"id": model_id, "name": model_name, "status": status, "version": model_version},
+                tools = [
+                    MCPTool(
+                        name=model_name,
+                        description=f"Nebius AI Studio model — status:{status}, version:{model_version}",
                     )
-                },
-            )
-            agents.append(agent)
+                ]
+
+                packages = [
+                    Package(
+                        name=model_name,
+                        version=str(model_version),
+                        ecosystem="nebius-ai-studio",
+                        purl=build_package_purl(ecosystem="nebius-ai-studio", name=model_name, version=str(model_version)),
+                    )
+                ]
+
+                server = MCPServer(
+                    name=f"nebius-ai-studio:{model_name}",
+                    transport=TransportType.UNKNOWN,
+                    url=f"https://api.ai.nebius.cloud/v1/models/{model_id}",
+                    tools=tools,
+                    packages=packages,
+                    env={"NEBIUS_API_KEY": "***REDACTED***"},
+                )
+
+                agent = Agent(
+                    name=f"nebius-ai-studio:{model_name}",
+                    agent_type=AgentType.CUSTOM,
+                    config_path=f"nebius://{project_id}/ai-studio/{model_id}",
+                    source="nebius-ai-studio",
+                    version=f"{status} (v{model_version})",
+                    mcp_servers=[server],
+                    metadata={
+                        "cloud_origin": build_cloud_origin(
+                            provider="nebius",
+                            service="ai-studio",
+                            resource_type="model",
+                            resource_id=model_id,
+                            resource_name=model_name,
+                            project_id=project_id,
+                            raw_identity={"id": model_id, "name": model_name, "status": status, "version": model_version},
+                        )
+                    },
+                )
+                agents.append(agent)
+            except COLLECTION_ERRORS as exc:
+                warnings.append(collection_warning("nebius", "ai-studio", exc))
 
     except (*COLLECTION_ERRORS, RuntimeError) as exc:
         warnings.append(collection_warning("nebius", "ai-studio", exc))
