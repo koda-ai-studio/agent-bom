@@ -430,20 +430,29 @@ def _discover_infiniband_jobs(
     ns_args = ["-n", namespace] if namespace else ["-A"]
     data = _kubectl(["get", "pods", *ns_args], context=context)
 
-    for pod_ns, pod_name, image_ref, gpu_limits in iter_infiniband_pods(data.get("items", [])):
-        location, previous_paths = _context_location(f"training/{pod_ns}/{pod_name}", context)
-        agents.append(
-            build_training_agent(
-                provider="coreweave",
-                pod_ns=pod_ns,
-                pod_name=pod_name,
-                image_ref=image_ref,
-                gpu_limits=gpu_limits,
-                config_path=location,
-                cluster=context,
-                previous_config_paths=previous_paths,
-            )
-        )
+    seen_jobs: set[tuple[str, str]] = set()
+    for pod in data.get("items", []):
+        try:
+            for pod_ns, pod_name, image_ref, gpu_limits in iter_infiniband_pods([pod]):
+                job_key = (pod_ns, pod_name)
+                if job_key in seen_jobs:
+                    continue
+                location, previous_paths = _context_location(f"training/{pod_ns}/{pod_name}", context)
+                agents.append(
+                    build_training_agent(
+                        provider="coreweave",
+                        pod_ns=pod_ns,
+                        pod_name=pod_name,
+                        image_ref=image_ref,
+                        gpu_limits=gpu_limits,
+                        config_path=location,
+                        cluster=context,
+                        previous_config_paths=previous_paths,
+                    )
+                )
+                seen_jobs.add(job_key)
+        except (TypeError, ValueError, AttributeError, KeyError):
+            warnings.append("CoreWeave InfiniBand pod record has invalid metadata. Assessment incomplete.")
 
     return agents, warnings
 
