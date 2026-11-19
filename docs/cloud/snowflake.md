@@ -191,3 +191,12 @@ Additional env vars: `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_USER`, `SNOWFLAKE_DATABASE`
 | `policy_audit_log` | Policy enforcement audit trail |
 
 ---
+
+### MCP tool specification coverage
+
+Run `agent-bom agents --snowflake` with the documented read-only connection.
+MCP discovery retains valid tools when another tool definition or specification
+row is malformed. Missing specifications and parse failures produce warnings
+and `inventory_evaluation_failed` coverage evidence; an explicit `tools: []`
+is valid empty inventory. Inspect coverage warnings and correct the specification
+or restore read access before treating the tool inventory as complete.
