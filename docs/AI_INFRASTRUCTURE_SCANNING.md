@@ -280,8 +280,8 @@ agent-bom agents --k8s --namespace gpu-workloads -f json -o gpu-fleet-scan.json
 ### Multi-cloud GPU fleet
 
 ```bash
-# CoreWeave GPU instances
-agent-bom agents --image <your-gpu-workload-image> --enrich -f json
+# CoreWeave GPU inventory
+agent-bom scan --coreweave -f json -o coreweave.json
 
 # Lambda Labs GPU cloud
 agent-bom agents --image <lambda-workload-image> --enrich -f json
@@ -289,6 +289,10 @@ agent-bom agents --image <lambda-workload-image> --enrich -f json
 # Nebius AI cloud
 agent-bom agents --nebius -f json -o nebius-ai-scan.json
 ```
+
+CoreWeave InferenceService discovery keeps valid services when another record
+has malformed metadata. Inspect the incomplete-coverage warning in the report,
+correct the invalid record, and rescan before treating inventory as complete.
 
 ### Inventory collection outcomes
 
