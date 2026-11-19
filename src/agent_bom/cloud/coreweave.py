@@ -60,7 +60,13 @@ def _kubectl(
     if result.returncode != 0:
         raise CloudDiscoveryError(f"kubectl: {kubectl_failure_code(result.stderr)}")
 
-    return json.loads(result.stdout)
+    try:
+        data = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        raise CloudDiscoveryError("Invalid inventory response from kubectl. Assessment incomplete.") from None
+    if not isinstance(data, dict) or not isinstance(data.get("items"), list):
+        raise CloudDiscoveryError("Invalid inventory response from kubectl. Assessment incomplete.")
+    return data
 
 
 def discover(
@@ -242,7 +248,10 @@ def _discover_inference_services(
         return agents, warnings
 
     for item in data.get("items", []):
-        agents.append(_inference_service_agent(item, context=context))
+        try:
+            agents.append(_inference_service_agent(item, context=context))
+        except (TypeError, ValueError, AttributeError, KeyError):
+            warnings.append("CoreWeave InferenceService record has invalid metadata. Assessment incomplete.")
 
     return agents, warnings
 
