@@ -149,3 +149,66 @@ def test_kubernetes_coverage_preserves_rest_inventory_and_scope(kubectl_availabl
     _collect_cloud_scopes(SimpleNamespace(), state)
     assert state.cloud_scopes[0].status.value == ("complete" if kubectl_available else "partial")
     assert state.cloud_scopes[0].item_count == 1
+
+
+@pytest.mark.parametrize("status,category", [(403, "denied"), (429, "throttled"), (503, "unavailable")])
+@pytest.mark.parametrize("resource", ["models", "instances", "containers"])
+def test_discovery_retains_completed_pages_when_next_request_fails(resource, status, category):
+    import httpx
+
+    from agent_bom.cloud.nebius import _discover_ai_studio, _discover_container_services
+
+    collectors = {"models": _discover_ai_studio, "instances": _discover_gpu_instances, "containers": _discover_container_services}
+    item = {"id": "kept", "name": "kept", "resources": {"gpus": 1}}
+    failure = httpx.Response(status, request=httpx.Request("GET", "https://example.invalid/private-scope"), text="private-provider-body")
+    with patch(
+        "agent_bom.http_client.sync_request_with_retry",
+        side_effect=[_response({resource: [item], "nextPageToken": "private-cursor"}), failure],
+    ) as request:
+        agents, warnings = collectors[resource]("fixture-key", "fixture-project")
+    assert len(agents) == 1
+    assert "kept" in agents[0].name
+    assert request.call_count == 2
+    assert len(warnings) == 1
+    scope = "ai-studio" if resource == "models" else resource
+    assert f"nebius:{scope}:{category}:" in warnings[0]
+    assert "Assessment incomplete" in warnings[0]
+    assert "private-" not in warnings[0]
+
+
+@pytest.mark.parametrize("payload", [[], {"instances": "bad"}, {"instances": [], "nextPageToken": "private-cursor"}])
+def test_discovery_retains_completed_pages_when_pagination_is_invalid(payload):
+    with patch(
+        "agent_bom.http_client.sync_request_with_retry",
+        side_effect=[
+            _response({"instances": [{"id": "kept", "resources": {"gpus": 1}}], "nextPageToken": "private-cursor"}),
+            _response(payload),
+        ],
+    ) as request:
+        agents, warnings = _discover_gpu_instances("fixture-key", "fixture-project")
+    assert len(agents) == 1
+    assert request.call_count == 2
+    assert len(warnings) == 1
+    assert "nebius:instances:unavailable:" in warnings[0]
+    assert "private-cursor" not in warnings[0]
+
+
+def test_partial_discovery_still_stops_at_page_limit():
+    pages = [_response({"instances": [{"id": str(i), "resources": {"gpus": 1}}], "nextPageToken": str(i + 1)}) for i in range(50)]
+    with patch("agent_bom.http_client.sync_request_with_retry", side_effect=pages) as request:
+        agents, warnings = _discover_gpu_instances("fixture-key", "fixture-project")
+    assert len(agents) == 50
+    assert request.call_count == 50
+    assert len(warnings) == 1
+    assert "nebius:instances:unavailable:" in warnings[0]
+
+
+def test_retry_exhaustion_retains_completed_inventory():
+    with patch(
+        "agent_bom.http_client.sync_request_with_retry",
+        side_effect=[_response({"instances": [{"id": "kept", "resources": {"gpus": 1}}], "nextPageToken": "next"}), None],
+    ):
+        agents, warnings = _discover_gpu_instances("fixture-key", "fixture-project")
+    assert len(agents) == 1
+    assert len(warnings) == 1
+    assert "nebius:instances:unavailable:" in warnings[0]

@@ -43,63 +43,79 @@ def _nebius_get(url: str, api_key: str, params: dict | None = None) -> dict:
     return resp.json()
 
 
-def _nebius_get_all(url: str, api_key: str, items_key: str, params: dict | None = None) -> list:
+def _nebius_get_all(
+    url: str,
+    api_key: str,
+    items_key: str,
+    params: dict | None = None,
+    *,
+    warnings: list[str] | None = None,
+    resource: str | None = None,
+) -> list:
     """Paginate through a Nebius REST API list endpoint.
 
     Nebius uses ``nextPageToken`` / ``pageToken`` for cursor-based pagination.
-    Returns merged items only after a valid terminal page. Malformed pages,
-    repeated cursors, and the safety cap fail the affected discovery stage.
+    Strict callers raise on incomplete pagination. Discovery callers supplying
+    a warning sink retain validated items and receive an incomplete warning.
 
     Args:
         url: Full endpoint URL.
         api_key: Nebius API key.
         items_key: Top-level key containing the list (e.g. ``"models"``, ``"instances"``).
         params: Additional query parameters.
+        warnings: Optional sink for classified incomplete-collection warnings.
+        resource: Resource label for those warnings (defaults to items_key).
     """
     all_items: list = []
     page_params = dict(params or {})
     _max_pages = 50  # safety cap — prevents infinite loops on malformed responses
     seen_tokens = {page_params["pageToken"]} if isinstance(page_params.get("pageToken"), str) else set()
 
-    with http_client.create_sync_client(timeout=_API_TIMEOUT) as client:
-        headers = {"Authorization": f"Bearer {api_key}", "Accept": "application/json"}
-        for _ in range(_max_pages):
-            resp = http_client.sync_request_with_retry(
-                client,
-                "GET",
-                url,
-                headers=headers,
-                params=page_params,
-            )
-            if resp is None:
-                raise CloudDiscoveryError("Nebius: request failed after retries")
-            resp.raise_for_status()
-            try:
-                data = resp.json()
-            except ValueError:
-                raise CloudDiscoveryError("Nebius: invalid response page") from None
-            if not isinstance(data, dict):
-                raise CloudDiscoveryError("Nebius: invalid response page")
+    try:
+        with http_client.create_sync_client(timeout=_API_TIMEOUT) as client:
+            headers = {"Authorization": f"Bearer {api_key}", "Accept": "application/json"}
+            for _ in range(_max_pages):
+                resp = http_client.sync_request_with_retry(
+                    client,
+                    "GET",
+                    url,
+                    headers=headers,
+                    params=page_params,
+                )
+                if resp is None:
+                    raise CloudDiscoveryError("Nebius: request failed after retries")
+                resp.raise_for_status()
+                try:
+                    data = resp.json()
+                except ValueError:
+                    raise CloudDiscoveryError("Nebius: invalid response page") from None
+                if not isinstance(data, dict):
+                    raise CloudDiscoveryError("Nebius: invalid response page")
 
-            # ProtoJSON omits empty repeated fields. Accept a terminal empty
-            # object and the native "items" field, but not an unrelated payload.
-            empty: list[dict] | None = [] if set(data) <= {"nextPageToken", "next_page_token"} else None
-            items = data.get(items_key, data.get("items", data.get("data", empty)))
-            if not isinstance(items, list) or any(not isinstance(item, dict) for item in items):
-                raise CloudDiscoveryError("Nebius: invalid response page items")
-            all_items.extend(items)
+                # ProtoJSON omits empty repeated fields. Accept a terminal empty
+                # object and the native "items" field, but not an unrelated payload.
+                empty: list[dict] | None = [] if set(data) <= {"nextPageToken", "next_page_token"} else None
+                items = data.get(items_key, data.get("items", data.get("data", empty)))
+                if not isinstance(items, list) or any(not isinstance(item, dict) for item in items):
+                    raise CloudDiscoveryError("Nebius: invalid response page items")
+                all_items.extend(items)
 
-            next_token = data.get("nextPageToken", data.get("next_page_token"))
-            if next_token is not None and not isinstance(next_token, str):
-                raise CloudDiscoveryError("Nebius: invalid pagination cursor")
-            if not next_token:
-                return all_items
-            if next_token in seen_tokens:
-                raise CloudDiscoveryError("Nebius: repeated pagination cursor")
-            seen_tokens.add(next_token)
-            page_params["pageToken"] = next_token
+                next_token = data.get("nextPageToken", data.get("next_page_token"))
+                if next_token is not None and not isinstance(next_token, str):
+                    raise CloudDiscoveryError("Nebius: invalid pagination cursor")
+                if not next_token:
+                    return all_items
+                if next_token in seen_tokens:
+                    raise CloudDiscoveryError("Nebius: repeated pagination cursor")
+                seen_tokens.add(next_token)
+                page_params["pageToken"] = next_token
 
-    raise CloudDiscoveryError("Nebius: pagination page limit reached before completion")
+        raise CloudDiscoveryError("Nebius: pagination page limit reached before completion")
+    except COLLECTION_ERRORS as exc:
+        if warnings is None:
+            raise
+        warnings.append(collection_warning("nebius", resource or items_key, exc))
+        return all_items
 
 
 def discover(
@@ -189,6 +205,8 @@ def _discover_ai_studio(
             api_key,
             items_key="models",
             params={"project_id": project_id},
+            warnings=warnings,
+            resource="ai-studio",
         )
 
         for model in models:
@@ -271,6 +289,8 @@ def _discover_gpu_instances(
             api_key,
             items_key="instances",
             params={"project_id": project_id},
+            warnings=warnings,
+            resource="instances",
         )
 
         for inst in instances:
@@ -487,6 +507,8 @@ def _discover_container_services(
             api_key,
             items_key="containers",
             params={"project_id": project_id},
+            warnings=warnings,
+            resource="containers",
         )
 
         for svc in services:
