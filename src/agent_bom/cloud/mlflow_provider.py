@@ -19,7 +19,7 @@ from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, Serv
 from agent_bom.security import sanitize_text
 
 from .base import CloudDiscoveryError
-from .mlflow_artifacts import attempt, collect_run_packages, mlflow_warning
+from .mlflow_artifacts import attempt, collect_run_packages
 from .normalization import build_cloud_origin, build_package_purl
 
 logger = logging.getLogger(__name__)
@@ -110,154 +110,154 @@ def _collect_pages(search: Callable[..., Any], warnings: list[str], resource: st
     return records
 
 
-def _discover_registered_models(
-    tracking_uri: str,
-) -> tuple[list[Agent], list[str]]:
-    """Discover registered models from MLflow model registry."""
+def _discover_registered_models(tracking_uri: str) -> tuple[list[Agent], list[str]]:
+    """Discover models, retaining independent records after read failures."""
     from mlflow import MlflowClient
 
     agents: list[Agent] = []
     warnings: list[str] = []
-
-    try:
-        client = MlflowClient(tracking_uri=tracking_uri)
-        models = _collect_pages(client.search_registered_models, warnings, "models")
-
-        for model in models:
-            model_name = getattr(model, "name", "unknown")
-            latest_versions = getattr(model, "latest_versions", []) or []
-            description = getattr(model, "description", "") or ""
-
-            # Get packages from the latest version's run
-            packages: list[Package] = []
-            model_version = "latest"
-            model_stage = ""
-
-            for mv in latest_versions:
-                version = getattr(mv, "version", "")
-                stage = getattr(mv, "current_stage", "")
-                run_id = getattr(mv, "run_id", None)
-                source = getattr(mv, "source", "")
-
-                if version:
-                    model_version = str(version)
-                if stage:
-                    model_stage = stage
-
-                # Extract pip requirements from model artifacts
-                if run_id:
-                    packages.extend(_extract_run_packages(client, run_id, warnings))
-
-                # Extract flavor from source path
-                flavor_packages = _extract_flavor_packages(source)
-                existing = {p.name for p in packages}
-                packages.extend(p for p in flavor_packages if p.name not in existing)
-
-            server = MCPServer(
-                name=f"mlflow-model:{model_name}",
-                transport=TransportType.UNKNOWN,
-                packages=packages,
-                surface=ServerSurface.AI_INVENTORY,
-            )
-
-            if description:
-                server.tools.append(
-                    MCPTool(
-                        name="inference",
-                        description=description[:200],
-                    )
-                )
-
-            agent = Agent(
-                name=f"mlflow-model:{model_name}",
-                agent_type=AgentType.CUSTOM,
-                config_path=f"mlflow://{tracking_uri}/models/{model_name}",
-                source="mlflow-model",
-                version=f"v{model_version}" + (f" ({model_stage})" if model_stage else ""),
-                mcp_servers=[server],
-                metadata={
-                    "cloud_origin": build_cloud_origin(
-                        provider="mlflow",
-                        service="model-registry",
-                        resource_type="model",
-                        resource_id=model_name,
-                        resource_name=model_name,
-                        raw_identity={"tracking_uri": tracking_uri, "name": model_name},
-                    )
-                },
-            )
+    client = attempt(lambda: MlflowClient(tracking_uri=tracking_uri), warnings, "models")
+    if client is None:
+        return agents, warnings
+    for model in _collect_pages(client.search_registered_models, warnings, "models"):
+        agent = attempt(lambda: _model_to_agent(client, model, tracking_uri, warnings), warnings, "models")
+        if agent is not None:
             agents.append(agent)
-
-    except Exception as exc:
-        warnings.append(mlflow_warning("models", exc))
-
     return agents, warnings
 
 
-def _discover_experiments(
-    tracking_uri: str,
-) -> tuple[list[Agent], list[str]]:
-    """Discover MLflow experiments with recent runs."""
+def _model_to_agent(client: Any, model: Any, tracking_uri: str, warnings: list[str]) -> Agent | None:
+    """Convert one model without discarding other provider records."""
+    model_name = getattr(model, "name", "unknown")
+    latest_versions = getattr(model, "latest_versions", []) or []
+    description = getattr(model, "description", "") or ""
+
+    # Get packages from the latest version's run
+    packages: list[Package] = []
+    model_version = "latest"
+    model_stage = ""
+
+    for mv in latest_versions:
+        version = getattr(mv, "version", "")
+        stage = getattr(mv, "current_stage", "")
+        run_id = getattr(mv, "run_id", None)
+        source = getattr(mv, "source", "")
+
+        if version:
+            model_version = str(version)
+        if stage:
+            model_stage = stage
+
+        # Extract pip requirements from model artifacts
+        if run_id:
+            packages.extend(_extract_run_packages(client, run_id, warnings))
+
+        # Extract flavor from source path
+        flavor_packages = _extract_flavor_packages(source)
+        existing = {p.name for p in packages}
+        packages.extend(p for p in flavor_packages if p.name not in existing)
+
+    server = MCPServer(
+        name=f"mlflow-model:{model_name}",
+        transport=TransportType.UNKNOWN,
+        packages=packages,
+        surface=ServerSurface.AI_INVENTORY,
+    )
+
+    if description:
+        server.tools.append(
+            MCPTool(
+                name="inference",
+                description=description[:200],
+            )
+        )
+
+    agent = Agent(
+        name=f"mlflow-model:{model_name}",
+        agent_type=AgentType.CUSTOM,
+        config_path=f"mlflow://{tracking_uri}/models/{model_name}",
+        source="mlflow-model",
+        version=f"v{model_version}" + (f" ({model_stage})" if model_stage else ""),
+        mcp_servers=[server],
+        metadata={
+            "cloud_origin": build_cloud_origin(
+                provider="mlflow",
+                service="model-registry",
+                resource_type="model",
+                resource_id=model_name,
+                resource_name=model_name,
+                raw_identity={"tracking_uri": tracking_uri, "name": model_name},
+            )
+        },
+    )
+    return agent
+
+
+def _discover_experiments(tracking_uri: str) -> tuple[list[Agent], list[str]]:
+    """Discover experiments, retaining independent records after read failures."""
     from mlflow import MlflowClient
 
     agents: list[Agent] = []
     warnings: list[str] = []
-
-    try:
-        client = MlflowClient(tracking_uri=tracking_uri)
-        experiments = _collect_pages(client.search_experiments, warnings, "experiments")
-
-        for exp in experiments:
-            exp_id = getattr(exp, "experiment_id", "0")
-            exp_name = getattr(exp, "name", "Default")
-
-            # Skip the default experiment
-            if exp_name == "Default" and exp_id == "0":
-                continue
-
-            # Get most recent run for package metadata
-            packages: list[Package] = []
-            runs = attempt(
-                lambda: client.search_runs(experiment_ids=[exp_id], max_results=1, order_by=["start_time DESC"]),
-                warnings,
-                "runs",
-            )
-            if runs:
-                run_id = attempt(lambda: runs[0].info.run_id, warnings, "runs")
-                if run_id:
-                    packages = _extract_run_packages(client, run_id, warnings)
-
-            server = MCPServer(
-                name=f"mlflow-exp:{exp_name}",
-                transport=TransportType.UNKNOWN,
-                packages=packages,
-                surface=ServerSurface.AI_INVENTORY,
-            )
-
-            agent = Agent(
-                name=f"mlflow-exp:{exp_name}",
-                agent_type=AgentType.CUSTOM,
-                config_path=f"mlflow://{tracking_uri}/experiments/{exp_id}",
-                source="mlflow-experiment",
-                version=exp_id,
-                mcp_servers=[server],
-                metadata={
-                    "cloud_origin": build_cloud_origin(
-                        provider="mlflow",
-                        service="tracking",
-                        resource_type="experiment",
-                        resource_id=exp_id,
-                        resource_name=exp_name,
-                        raw_identity={"tracking_uri": tracking_uri, "experiment_id": exp_id, "name": exp_name},
-                    )
-                },
-            )
+    client = attempt(lambda: MlflowClient(tracking_uri=tracking_uri), warnings, "experiments")
+    if client is None:
+        return agents, warnings
+    for exp in _collect_pages(client.search_experiments, warnings, "experiments"):
+        agent = attempt(lambda: _experiment_to_agent(client, exp, tracking_uri, warnings), warnings, "experiments")
+        if agent is not None:
             agents.append(agent)
-
-    except Exception as exc:
-        warnings.append(mlflow_warning("experiments", exc))
-
     return agents, warnings
+
+
+def _experiment_to_agent(client: Any, exp: Any, tracking_uri: str, warnings: list[str]) -> Agent | None:
+    """Convert one experiment without discarding other provider records."""
+    exp_id = getattr(exp, "experiment_id", "0")
+    exp_name = getattr(exp, "name", "Default")
+    if not isinstance(exp_id, str) or not exp_id:
+        raise ValueError("Invalid experiment identifier")
+
+    # Skip the default experiment
+    if exp_name == "Default" and exp_id == "0":
+        return None
+
+    # Get most recent run for package metadata
+    packages: list[Package] = []
+    runs = attempt(
+        lambda: client.search_runs(experiment_ids=[exp_id], max_results=1, order_by=["start_time DESC"]),
+        warnings,
+        "runs",
+    )
+    if runs:
+        run_id = attempt(lambda: runs[0].info.run_id, warnings, "runs")
+        if run_id:
+            packages = _extract_run_packages(client, run_id, warnings)
+
+    server = MCPServer(
+        name=f"mlflow-exp:{exp_name}",
+        transport=TransportType.UNKNOWN,
+        packages=packages,
+        surface=ServerSurface.AI_INVENTORY,
+    )
+
+    agent = Agent(
+        name=f"mlflow-exp:{exp_name}",
+        agent_type=AgentType.CUSTOM,
+        config_path=f"mlflow://{tracking_uri}/experiments/{exp_id}",
+        source="mlflow-experiment",
+        version=exp_id,
+        mcp_servers=[server],
+        metadata={
+            "cloud_origin": build_cloud_origin(
+                provider="mlflow",
+                service="tracking",
+                resource_type="experiment",
+                resource_id=exp_id,
+                resource_name=exp_name,
+                raw_identity={"tracking_uri": tracking_uri, "experiment_id": exp_id, "name": exp_name},
+            )
+        },
+    )
+    return agent
 
 
 def _extract_run_packages(client, run_id: str, warnings: list[str]) -> list[Package]:
