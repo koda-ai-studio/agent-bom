@@ -454,16 +454,8 @@ def _k8s_gpu_pod_agent(project_id: str, pod_ns: str, pod_name: str, containers: 
     )
 
 
-def _discover_k8s_gpu_pods(
-    api_key: str,
-    project_id: str,
-) -> tuple[list[Agent], list[str]]:
-    """Discover GPU pods in Nebius Managed Kubernetes clusters.
-
-    Uses ``kubectl`` (same pattern as ``agent_bom.k8s``) to list pods
-    requesting ``nvidia.com/gpu`` resources, then extracts container images.
-    Requires kubectl configured with Nebius cluster credentials.
-    """
+def _discover_k8s_gpu_pods(api_key: str, project_id: str) -> tuple[list[Agent], list[str]]:
+    """Discover GPU pod images using configured Nebius kubectl credentials."""
     agents: list[Agent] = []
     warnings: list[str] = []
 
@@ -476,10 +468,19 @@ def _discover_k8s_gpu_pods(
         # Check all container types (including init containers) for GPU resource requests.
         # One pod is one workload: each GPU container is a server under the pod's agent.
         pods: dict[tuple[str, str], list[tuple[str, str, Any]]] = {}
-        for pod_ns, pod_name, container, image_ref, gpu_limit, gpu_request in iter_gpu_containers(items, include_init_containers=True):
-            pods.setdefault((pod_ns, pod_name), []).append((container.get("name", "unknown"), image_ref, gpu_request or gpu_limit))
+        for pod in items:
+            try:
+                for pod_ns, pod_name, container, image_ref, gpu_limit, gpu_request in iter_gpu_containers(
+                    [pod], include_init_containers=True
+                ):
+                    pods.setdefault((pod_ns, pod_name), []).append((container.get("name", "unknown"), image_ref, gpu_request or gpu_limit))
+            except COLLECTION_ERRORS as exc:
+                warnings.append(collection_warning("nebius", "k8s-gpu-pods", exc))
         for (pod_ns, pod_name), containers in pods.items():
-            agents.append(_k8s_gpu_pod_agent(project_id, pod_ns, pod_name, containers))
+            try:
+                agents.append(_k8s_gpu_pod_agent(project_id, pod_ns, pod_name, containers))
+            except COLLECTION_ERRORS as exc:
+                warnings.append(collection_warning("nebius", "k8s-gpu-pods", exc))
 
     except subprocess.TimeoutExpired:
         warnings.append("nebius:k8s-gpu-pods:unavailable: kubectl timed out. Assessment incomplete.")
