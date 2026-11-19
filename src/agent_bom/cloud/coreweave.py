@@ -169,54 +169,61 @@ def _discover_virtual_servers(
         return agents, warnings
 
     for item in data.get("items", []):
-        meta = item.get("metadata", {})
-        spec = item.get("spec", {})
-        name = meta.get("name", "unknown")
-        ns = meta.get("namespace", "default")
-        region = spec.get("region", meta.get("labels", {}).get("topology.kubernetes.io/region", ""))
-
-        # Extract GPU info from resources
-        gpu_spec = spec.get("resources", {}).get("gpu", {})
-        gpu_type = gpu_spec.get("type", "")
-        gpu_count = gpu_spec.get("count", 0)
-
-        server = MCPServer(
-            name=f"coreweave-gpu:{ns}/{name}",
-            transport=TransportType.UNKNOWN,
-        )
-
-        location, previous_paths = _context_location(f"virtualserver/{ns}/{name}", context)
-        raw_identity: dict = {"namespace": ns, "name": name, "kind": "VirtualServer"}
-        if context:
-            raw_identity["context"] = context
-        agent = Agent(
-            name=f"coreweave-gpu:{ns}/{name}",
-            agent_type=AgentType.CUSTOM,
-            config_path=location,
-            source="coreweave-gpu",
-            version=f"gpu:{gpu_type}x{gpu_count}" if gpu_type else "gpu-vm",
-            mcp_servers=[server],
-            metadata={
-                "gpu_type": gpu_type,
-                "gpu_count": gpu_count,
-                "region": region,
-                "kind": "VirtualServer",
-                "cloud_origin": build_cloud_origin(
-                    provider="coreweave",
-                    service="kubernetes",
-                    resource_type="virtual-server",
-                    resource_id=f"{ns}/{name}",
-                    resource_name=name,
-                    location=region or None,
-                    cluster=context,
-                    raw_identity=raw_identity,
-                ),
-                **({"previous_config_paths": previous_paths} if previous_paths else {}),
-            },
-        )
-        agents.append(agent)
-
+        try:
+            agents.append(_virtual_server_agent(item, context=context))
+        except (TypeError, ValueError, AttributeError, KeyError):
+            warnings.append("CoreWeave VirtualServer record has invalid metadata. Assessment incomplete.")
     return agents, warnings
+
+
+def _virtual_server_agent(item: dict, *, context: str | None = None) -> Agent:
+    """Convert one GPU VM without discarding independent provider records."""
+    meta = item.get("metadata", {})
+    spec = item.get("spec", {})
+    name = meta.get("name", "unknown")
+    ns = meta.get("namespace", "default")
+    region = spec.get("region", meta.get("labels", {}).get("topology.kubernetes.io/region", ""))
+
+    # Extract GPU info from resources
+    gpu_spec = spec.get("resources", {}).get("gpu", {})
+    gpu_type = gpu_spec.get("type", "")
+    gpu_count = gpu_spec.get("count", 0)
+
+    server = MCPServer(
+        name=f"coreweave-gpu:{ns}/{name}",
+        transport=TransportType.UNKNOWN,
+    )
+
+    location, previous_paths = _context_location(f"virtualserver/{ns}/{name}", context)
+    raw_identity: dict = {"namespace": ns, "name": name, "kind": "VirtualServer"}
+    if context:
+        raw_identity["context"] = context
+    agent = Agent(
+        name=f"coreweave-gpu:{ns}/{name}",
+        agent_type=AgentType.CUSTOM,
+        config_path=location,
+        source="coreweave-gpu",
+        version=f"gpu:{gpu_type}x{gpu_count}" if gpu_type else "gpu-vm",
+        mcp_servers=[server],
+        metadata={
+            "gpu_type": gpu_type,
+            "gpu_count": gpu_count,
+            "region": region,
+            "kind": "VirtualServer",
+            "cloud_origin": build_cloud_origin(
+                provider="coreweave",
+                service="kubernetes",
+                resource_type="virtual-server",
+                resource_id=f"{ns}/{name}",
+                resource_name=name,
+                location=region or None,
+                cluster=context,
+                raw_identity=raw_identity,
+            ),
+            **({"previous_config_paths": previous_paths} if previous_paths else {}),
+        },
+    )
+    return agent
 
 
 # ── InferenceService CRDs ─────────────────────────────────────────────────
