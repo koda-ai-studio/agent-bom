@@ -15,8 +15,9 @@ from agent_bom.discovery_envelope import RedactionStatus, ScanMode, attach_envel
 from agent_bom.models import Agent, AgentType, MCPServer, Package, ServerSurface, TransportType
 
 from .base import CloudDiscoveryError
-from .collection_errors import COLLECTION_ERRORS, collection_warning
+from .collection_errors import CollectionError, collection_warning
 from .normalization import build_cloud_origin, build_package_purl
+from .wandb_errors import wandb_read_errors, wandb_read_status
 
 
 def discover(
@@ -59,7 +60,7 @@ def discover(
         run_agents, run_warns = _discover_runs(resolved_key, resolved_entity, project)
         agents.extend(run_agents)
         warnings.extend(run_warns)
-    except Exception as exc:
+    except wandb_read_errors() as exc:
         warnings.append(_collection_warning("runs", exc))
 
     # ── Artifacts ─────────────────────────────────────────────────────────
@@ -67,7 +68,7 @@ def discover(
         art_agents, art_warns = _discover_artifacts(resolved_key, resolved_entity, project)
         agents.extend(art_agents)
         warnings.extend(art_warns)
-    except Exception as exc:
+    except wandb_read_errors() as exc:
         warnings.append(_collection_warning("artifacts", exc))
 
     # Per-run discovery envelope (#2083 PR B).
@@ -110,9 +111,9 @@ def _discover_runs(
                     agent = _run_to_agent(run, entity, project_name)
                     if agent:
                         agents.append(agent)
-                except COLLECTION_ERRORS as exc:
+                except wandb_read_errors() as exc:
                     warnings.append(_collection_warning("runs", exc))
-        except Exception as exc:  # broad-except: SDK lazy pagination errors vary; preserve runs and emit fixed diagnostics.
+        except wandb_read_errors() as exc:
             warnings.append(_collection_warning("runs", exc))
 
     try:
@@ -126,7 +127,7 @@ def _discover_runs(
                     collect_project(api, proj_name)
                 else:
                     warnings.append(_collection_warning("projects", ValueError("Invalid project record")))
-    except Exception as exc:
+    except wandb_read_errors() as exc:
         warnings.append(_collection_warning("runs" if project else "projects", exc))
 
     return agents, warnings
@@ -134,7 +135,7 @@ def _discover_runs(
 
 def _collection_warning(resource: str, exc: Exception) -> str:
     """Classify structured HTTP errors without copying SDK messages."""
-    return collection_warning("wandb", resource, exc).replace(": ", ": Collection error. ", 1)
+    return collection_warning("wandb", resource, CollectionError(wandb_read_status(exc))).replace(": ", ": Collection error. ", 1)
 
 
 def _run_to_agent(run, entity: str, project: str | None) -> Agent | None:
@@ -198,16 +199,16 @@ def _discover_artifacts(
             for artifact in list_versions():
                 try:
                     agents.append(_artifact_to_agent(artifact, art_type, entity, project))
-                except COLLECTION_ERRORS as exc:
+                except wandb_read_errors() as exc:
                     warnings.append(_collection_warning("artifacts", exc))
-        except Exception as exc:  # broad-except: lazy SDK artifact reads use varying errors; retain inventory with fixed diagnostics.
+        except wandb_read_errors() as exc:
             warnings.append(_collection_warning("artifacts", exc))
 
     def collect_type(artifact_type, art_type: str) -> None:
         try:
             for collection in artifact_type.collections():
                 collect_versions(collection, art_type)
-        except Exception as exc:  # broad-except: lazy SDK collection reads use varying errors; continue independent types.
+        except wandb_read_errors() as exc:
             warnings.append(_collection_warning("artifact-collections", exc))
 
     try:
@@ -218,7 +219,7 @@ def _discover_artifacts(
                 warnings.append(_collection_warning("artifact-types", ValueError("Invalid artifact type")))
             elif art_type in ("model", "dataset"):
                 collect_type(artifact_type, art_type)
-    except Exception as exc:
+    except wandb_read_errors() as exc:
         warnings.append(_collection_warning("artifact-types", exc))
 
     return agents, warnings

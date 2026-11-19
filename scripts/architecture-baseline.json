@@ -2760,7 +2760,6 @@
       "function_lines": 106
     },
     "cloud/wandb_provider.py": {
-      "broad_except": 5,
       "raw_env_reads": 2
     },
     "cloud_sdk_freshness.py": {
