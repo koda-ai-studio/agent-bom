@@ -274,12 +274,7 @@ def _discover_gpu_instances(
     api_key: str,
     project_id: str,
 ) -> tuple[list[Agent], list[str]]:
-    """Discover Nebius compute instances with GPU accelerators.
-
-    Calls ``https://compute.api.nebius.cloud/v1/instances`` and filters
-    for GPU-equipped instances.  Instances running AI workload images
-    (NVIDIA, CUDA, PyTorch, TensorFlow, etc.) are flagged.
-    """
+    """Discover GPU-equipped compute instances and flag AI workload images."""
     agents: list[Agent] = []
     warnings: list[str] = []
 
@@ -294,7 +289,11 @@ def _discover_gpu_instances(
         )
 
         for inst in instances:
-            agent = _gpu_instance_agent(inst, project_id)
+            try:
+                agent = _gpu_instance_agent(inst, project_id)
+            except COLLECTION_ERRORS as exc:
+                warnings.append(collection_warning("nebius", "instances", exc))
+                continue
             if agent is not None:
                 agents.append(agent)
 
@@ -308,6 +307,8 @@ def _gpu_instance_agent(inst: dict, project_id: str) -> Agent | None:
     """Build the agent for one compute instance, or ``None`` if it has no GPU."""
     inst_id = inst.get("id", "unknown")
     inst_name = inst.get("name", inst_id)
+    if not isinstance(inst_name, str):
+        raise CloudDiscoveryError("Invalid compute instance name")
     platform_id = inst.get("platform_id", "")
     status = inst.get("status", "UNKNOWN")
 
