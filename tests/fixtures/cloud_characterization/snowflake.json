@@ -1770,8 +1770,9 @@
     }
    ],
    [
-    "Could not describe MCP Server mcp_ok: while parsing a flow sequence in \"<unicode string>\", line 1, column 8: tools: [unclosed ^ expected ',' or ']', but got '<stream end>' in \"<unicode string>\", line 1, column 17: tools: [unclosed ^",
+    "Could not list Snowflake MCP tool specification: MCP tool specification missing or invalid. Assessment incomplete.",
     "Could not describe MCP Server bad name: Unsafe Snowflake identifier: 'bad name'",
+    "Could not list Snowflake MCP tool specification: MCP tool specification missing or invalid. Assessment incomplete.",
     "Skipping Snowflake notebook with unsafe identifier: Unsafe Snowflake identifier: 'NB\\x01BAD'",
     "Could not describe Snowflake notebook 'NB_FAIL': describe failed for NB_FAIL"
    ]
@@ -1815,7 +1816,16 @@
    ]
   ],
   "logs": [],
-  "coverage": [],
+  "coverage": [
+   {
+    "ecosystem": "snowflake",
+    "release": "snowflake:mcp_servers",
+    "reason": "inventory_evaluation_failed",
+    "detail": "MCP tool specification missing or invalid. Assessment incomplete.",
+    "package_count": 0,
+    "advisory_rows": 0
+   }
+  ],
   "py_warnings": []
  },
  "discover/empty": {
@@ -2985,7 +2995,9 @@
     }
    ],
    [
+    "Could not list Snowflake MCP tool specification: MCP tool specification missing or invalid. Assessment incomplete.",
     "Could not describe MCP Server bad name: Unsafe Snowflake identifier: 'bad name'",
+    "Could not list Snowflake MCP tool specification: MCP tool specification missing or invalid. Assessment incomplete.",
     "Skipping Snowflake notebook with unsafe identifier: Snowflake identifier must be a non-empty string",
     "Skipping Snowflake notebook with unsafe identifier: Snowflake identifier must be a non-empty string",
     "Skipping Snowflake notebook with unsafe identifier: Snowflake identifier must be a non-empty string"
@@ -3022,7 +3034,16 @@
    ]
   ],
   "logs": [],
-  "coverage": [],
+  "coverage": [
+   {
+    "ecosystem": "snowflake",
+    "release": "snowflake:mcp_servers",
+    "reason": "inventory_evaluation_failed",
+    "detail": "MCP tool specification missing or invalid. Assessment incomplete.",
+    "package_count": 0,
+    "advisory_rows": 0
+   }
+  ],
   "py_warnings": []
  },
  "discover/denied": {

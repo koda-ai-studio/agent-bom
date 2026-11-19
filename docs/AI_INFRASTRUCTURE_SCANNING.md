@@ -408,7 +408,11 @@ coverage as complete.
 Model and experiment listing follows at most 100 pages per collection. A failed
 later page, repeated continuation token, or page limit retains inventory from
 completed pages and emits an incomplete-coverage warning. A final page without
-a continuation token is complete, including when it is page 100.
+a continuation token is complete, including when it is page 100. A malformed
+model or experiment, or a failed metadata read, produces a coverage warning
+without dropping other records from that page. Invalid experiment identifiers
+are rejected before querying runs; resolve warnings and rescan before treating
+the inventory as complete.
 
 ### W&B partial run discovery
 
@@ -435,3 +439,12 @@ Hugging Face model, Space, and inference-endpoint reads retain inventory from
 completed pages when a later page fails. Malformed records produce an incomplete
 warning while independent records continue. Resolve the reported token, rate-limit,
 or availability issue and rescan before treating that resource's coverage as complete.
+
+### CoreWeave list-response coverage
+
+Run `agent-bom scan --coreweave -f json -o coreweave.json` with a configured
+read-only Kubernetes context. Each discovery pass requires a JSON object with
+an explicit `items` list. Missing or malformed lists produce an incomplete
+coverage warning; `items: []` is valid empty inventory. Other discovery passes
+continue after a failed read. Inspect warnings and restore a valid cluster
+response before treating the inventory as complete.
