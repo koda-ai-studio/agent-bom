@@ -89,3 +89,42 @@ def test_final_page_at_limit_is_complete(client, resource):
     agents, warnings = provider.discover("https://tracking.example.test")
     assert len(agents) == 100
     assert warnings == []
+
+
+@pytest.mark.parametrize("resource", ["models", "experiments"])
+def test_malformed_record_preserves_following_inventory(client, resource):
+    malformed = record(resource, "bad")
+    if resource == "models":
+        malformed.description = 42
+    else:
+        malformed.experiment_id = {"invalid": "shape"}
+    search(client, resource).return_value = Page([record(resource, 1), malformed, record(resource, 2)])
+    agents, warnings = provider.discover("https://tracking.example.test")
+    assert len(agents) == 2
+    assert [a.name for a in agents] == [
+        f"mlflow-{'model' if resource == 'models' else 'exp'}:{'model' if resource == 'models' else 'experiment'}-{i}" for i in (1, 2)
+    ]
+    assert len(warnings) == 1
+    assert warnings[0].startswith(f"mlflow:{resource}:unavailable:")
+    if resource == "experiments":
+        assert client.search_runs.call_count == 2
+        assert all(isinstance(call.kwargs["experiment_ids"][0], str) for call in client.search_runs.call_args_list)
+
+
+@pytest.mark.parametrize("resource", ["models", "experiments"])
+@pytest.mark.parametrize("code,status", [("PERMISSION_DENIED", "denied"), ("REQUEST_LIMIT_EXCEEDED", "throttled")])
+def test_lazy_record_failure_preserves_following_inventory(client, resource, code, status):
+    class ReadError(Exception):
+        error_code = code
+
+    class FailedRecord:
+        @property
+        def name(self):
+            raise ReadError("private provider text")
+
+    search(client, resource).return_value = Page([record(resource, 1), FailedRecord(), record(resource, 2)])
+    agents, warnings = provider.discover("https://tracking.example.test")
+    assert len(agents) == 2
+    assert len(warnings) == 1
+    assert warnings[0].startswith(f"mlflow:{resource}:{status}:")
+    assert "private" not in warnings[0]
