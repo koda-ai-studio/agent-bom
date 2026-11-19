@@ -7,7 +7,7 @@ import re
 from typing import Any
 
 from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, TransportType
-from agent_bom.security import sanitize_error, sanitize_text
+from agent_bom.security import sanitize_error
 
 from .normalization import (
     build_package_purl,
@@ -294,6 +294,36 @@ def _discover_mcp_servers(
     return agents, warnings
 
 
+def _parse_mcp_tool_spec(value: str) -> tuple[list[MCPTool], bool]:
+    """Retain valid tools and report malformed specs without copying their text."""
+    try:
+        import yaml
+    except ImportError:
+        return [], True
+    try:
+        spec = yaml.safe_load(value)
+    except yaml.YAMLError:
+        return [], True
+    if not isinstance(spec, dict) or not isinstance(spec.get("tools"), list):
+        return [], True
+    tools: list[MCPTool] = []
+    incomplete = False
+    for definition in spec["tools"]:
+        if not isinstance(definition, dict):
+            incomplete = True
+            continue
+        name = definition.get("name")
+        tool_type = definition.get("type", "")
+        description = definition.get("description", "")
+        if not isinstance(name, str) or not name.strip() or not isinstance(tool_type, str) or not isinstance(description, str):
+            incomplete = True
+            continue
+        if tool_type == "SYSTEM_EXECUTE_SQL" or "execute_sql" in name.lower():
+            description = f"[HIGH-RISK: SYSTEM_EXECUTE_SQL] {description}"
+        tools.append(MCPTool(name=name, description=description))
+    return tools, incomplete
+
+
 def _describe_mcp_server_tools(
     conn: Any,
     server_name: str,
@@ -319,28 +349,26 @@ def _describe_mcp_server_tools(
         rows = cursor.fetchall()
         columns = [desc[0].lower() for desc in cursor.description] if cursor.description else []
 
+        found_spec = False
+        incomplete = False
         for row in rows:
             row_dict = dict(zip(columns, row)) if columns else {}
             prop_name = row_dict.get("property", row_dict.get("name", ""))
             prop_value = row_dict.get("property_value", row_dict.get("value", ""))
 
             if "spec" in str(prop_name).lower() or "definition" in str(prop_name).lower():
-                try:
-                    import yaml
+                found_spec = True
+                parsed, failed = _parse_mcp_tool_spec(str(prop_value))
+                tools.extend(parsed)
+                incomplete = incomplete or failed
 
-                    spec = yaml.safe_load(str(prop_value))
-                    if isinstance(spec, dict):
-                        for tool_def in spec.get("tools", []):
-                            tool_name = tool_def.get("name", "unknown")
-                            tool_type = tool_def.get("type", "")
-                            description = tool_def.get("description", "")
-
-                            if tool_type == "SYSTEM_EXECUTE_SQL" or "execute_sql" in tool_name.lower():
-                                description = f"[HIGH-RISK: SYSTEM_EXECUTE_SQL] {description}"
-
-                            tools.append(MCPTool(name=tool_name, description=description))
-                except (ImportError, ValueError, KeyError, TypeError) as exc:
-                    logger.debug("Could not parse tool spec for MCP server: %s", sanitize_text(exc))
+        if incomplete or not found_spec:
+            _record_snowflake_inventory_failure(
+                exc=ValueError("MCP tool specification missing or invalid. Assessment incomplete."),
+                resource_type="Snowflake MCP tool specification",
+                inventory_key="mcp_servers",
+                warnings=warnings,
+            )
 
     except Exception as exc:
         warnings.append(f"Could not describe MCP Server {server_name}: {sanitize_error(exc)}")
