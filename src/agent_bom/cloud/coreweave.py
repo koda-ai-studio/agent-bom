@@ -345,10 +345,14 @@ def _discover_gpu_pods(
     data = _kubectl(["get", "pods", *ns_args], context=context)
 
     pods: dict[tuple[str, str], list[tuple[str, str, int]]] = {}
-    for pod_ns, pod_name, container, image_ref, gpu_limit, gpu_request in iter_gpu_containers(data.get("items", [])):
-        limit, request = str(gpu_limit), str(gpu_request)
-        gpus = int(limit) if limit != "0" else int(request)
-        pods.setdefault((pod_ns, pod_name), []).append((str(container.get("name") or "unknown"), image_ref, gpus))
+    for pod in data.get("items", []):
+        try:
+            for pod_ns, pod_name, container, image_ref, gpu_limit, gpu_request in iter_gpu_containers([pod]):
+                limit, request = str(gpu_limit), str(gpu_request)
+                gpus = int(limit) if limit != "0" else int(request)
+                pods.setdefault((pod_ns, pod_name), []).append((str(container.get("name") or "unknown"), image_ref, gpus))
+        except (TypeError, ValueError, AttributeError, KeyError):
+            warnings.append("CoreWeave GPU pod record has invalid metadata. Assessment incomplete.")
     for (pod_ns, pod_name), containers in pods.items():
         agents.append(_gpu_pod_agent(pod_ns, pod_name, containers, context=context))
 
