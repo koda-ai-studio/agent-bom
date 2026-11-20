@@ -214,6 +214,22 @@ def _count_collections(db_type: str, body: bytes) -> int | None:
 # ---------------------------------------------------------------------------
 
 
+def _apply_auth_probe(result: VectorDBResult, status: int, body: bytes) -> None:
+    """Record an unauthenticated collection listing; other statuses keep auth assumed."""
+    if status != 200:
+        return
+    result.requires_auth = False
+    result.risk_flags.append("no_auth")
+    count = _count_collections(result.db_type, body)
+    if count is None:
+        result.metadata["collection_count"] = "unknown"
+        result.risk_flags.append("collections_unverified")
+        return
+    result.collection_count = count
+    if count > 0:
+        result.risk_flags.append("collections_exposed")
+
+
 def check_vector_db(
     db_type: str,
     host: str = "127.0.0.1",
@@ -288,20 +304,7 @@ def check_vector_db(
     auth_path = _AUTH_PROBE_ENDPOINTS.get(db_type, "/")
     auth_status, auth_body = _http_get(host, resolved_port, auth_path, timeout=timeout)
 
-    if auth_status == 200:
-        result.requires_auth = False
-        result.risk_flags.append("no_auth")
-        count = _count_collections(db_type, auth_body)
-        if count is None:
-            result.metadata["collection_count"] = "unknown"
-            result.risk_flags.append("collections_unverified")
-        else:
-            result.collection_count = count
-            if count > 0:
-                result.risk_flags.append("collections_exposed")
-    elif auth_status in (401, 403):
-        result.requires_auth = True  # Auth is enforced
-    # Other status codes (404, 500, etc.) — leave requires_auth=True conservatively
+    _apply_auth_probe(result, auth_status, auth_body)
 
     # 4. Network exposure check — probe the machine's external IP
     if result.is_loopback and result.is_reachable:
