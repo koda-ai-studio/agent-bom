@@ -45,6 +45,10 @@ class AuthFailureStore(ABC):
         """Serialize one source and yield the backend SQL executor."""
         raise NotImplementedError
 
+    def receipt_budget(self) -> AbstractContextManager[Any]:
+        """Serialize the receipt budgets, which every source shares."""
+        return self.transaction("audit-budget")
+
     def reader(self, source: str) -> AbstractContextManager[Any]:
         """Yield an executor for one source's state; backends may avoid write locks."""
         return self.transaction(source)
@@ -87,7 +91,7 @@ class AuthFailureStore(ABC):
         # deployment ceiling. A source's first receipt in the window has a higher one,
         # limited per network, so a flood cannot erase other sources' only record, and
         # rotating sources still cannot grow the log without bound.
-        with self.transaction("audit-budget") as execute:
+        with self.receipt_budget() as execute:
 
             def bucket(name: str) -> tuple[int, float]:
                 row = execute("SELECT failures, window_start FROM api_auth_failure_limits WHERE source = ?", (name,)).fetchone()
@@ -127,7 +131,7 @@ def _receipt_network(source: str) -> str:
     return str(network.supernet(new_prefix=16 if network.version == 4 else 48))
 
 
-class SQLiteAuthFailureStore(AuthFailureStore):
+class _SQLiteFile:
     """One connection per worker thread, so one stalled transaction blocks no reader.
 
     WAL readers do not wait for the writer. A second writer waits at most the
@@ -142,7 +146,7 @@ class SQLiteAuthFailureStore(AuthFailureStore):
     _writers: dict[str, threading.Lock] = {}
     _writers_guard = threading.Lock()
 
-    def __init__(self, path: str = ":memory:") -> None:
+    def __init__(self, path: str) -> None:
         self._path = path
         self._writer: threading.Lock | None = None
         if path != ":memory:":
@@ -188,7 +192,7 @@ class SQLiteAuthFailureStore(AuthFailureStore):
             self._memory_lock.release()
 
     @contextmanager
-    def reader(self, source: str):
+    def reader(self):
         try:
             with self._memory_guard():
                 yield self._connection().execute
@@ -197,7 +201,7 @@ class SQLiteAuthFailureStore(AuthFailureStore):
             raise
 
     @contextmanager
-    def transaction(self, source: str):
+    def transaction(self):
         if self._writer is not None and not self._writer.acquire(timeout=_BUSY_TIMEOUT_SECONDS):
             raise TimeoutError("Authentication database capacity exhausted")
         try:
@@ -212,6 +216,28 @@ class SQLiteAuthFailureStore(AuthFailureStore):
         finally:
             if self._writer is not None:
                 self._writer.release()
+
+
+class SQLiteAuthFailureStore(AuthFailureStore):
+    """Failure counts in one file; receipt budgets in a sidecar beside it.
+
+    Receipts are written by background workers. Sharing a file and its writer
+    lock with failure counts would let a slow evidence commit hold up the
+    count an authentication answer waits on, refusing that answer.
+    """
+
+    def __init__(self, path: str = ":memory:") -> None:
+        self._limits = _SQLiteFile(path)
+        self._receipts = _SQLiteFile(path if path == ":memory:" else path + ".receipts.db")
+
+    def reader(self, source: str):
+        return self._limits.reader()
+
+    def transaction(self, source: str):
+        return self._limits.transaction()
+
+    def receipt_budget(self):
+        return self._receipts.transaction()
 
 
 def _raise_if_busy(exc: sqlite3.OperationalError) -> None:
