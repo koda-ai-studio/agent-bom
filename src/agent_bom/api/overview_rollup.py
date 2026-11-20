@@ -9,6 +9,7 @@ from fastapi import Request
 
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.core.severity import SEVERITY_DISPLAY_BUCKETS, SEVERITY_THRESHOLD_LABELS, UNRATED_SEVERITY_BUCKET, severity_display_bucket
+from agent_bom.graph.package_projection import _package_node_id
 
 __all__ = ["_COVERAGE_LABELS"]
 
@@ -314,15 +315,15 @@ def _fold_findings(
     return added, kev, credential_exposed
 
 
-def _job_package_count(result: dict[str, Any]) -> int:
-    """Count discovered packages across the scan's agents/servers."""
-    packages = 0
+def _job_package_ids(result: dict[str, Any]) -> set[str]:
+    """Graph package node ids for the scan's agents/servers, so the estate counts each package once."""
+    ids: set[str] = set()
     for agent in result.get("agents", []) or []:
         for server in agent.get("mcp_servers", []) or []:
             for pkg in server.get("packages", []) or []:
-                if pkg.get("name"):
-                    packages += 1
-    return packages
+                if isinstance(pkg, dict) and pkg.get("name"):
+                    ids.add(_package_node_id(pkg))
+    return ids
 
 
 def _row_domain(row: dict[str, Any]) -> str:
