@@ -15,6 +15,7 @@ projected into a new snapshot without rewriting historical evidence.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterable, Mapping
 from typing import Any
 
@@ -25,6 +26,8 @@ from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType, NodeStatus, RelationshipType
 from agent_bom.identity.okta_http import org_origin
 from agent_bom.identity.okta_nhi import DiscoveredNonHumanIdentity
+
+logger = logging.getLogger(__name__)
 
 _OVERLAY_SOURCE = "nhi-discovery"
 
@@ -128,7 +131,8 @@ def apply_nhi_overlay(
             added_nodes += org_nodes
             added_edges += org_edges
 
-        except Exception:  # noqa: BLE001 — never raise into the builder
+        except Exception as exc:  # noqa: BLE001 — never raise into the builder
+            logger.warning("NHI overlay skipped one identity record (%s)", type(exc).__name__)
             continue
 
     return {"nodes_added": added_nodes, "edges_added": added_edges}

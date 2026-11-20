@@ -102,8 +102,8 @@ def _maybe_postgres_advisory_lock(tenant_id: str) -> Iterator[None]:
         if conn is not None and pool is not None:
             try:
                 pool.putconn(conn)
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception as put_exc:  # noqa: BLE001
+                _logger.debug("tenant quota lock connection return failed (%s)", type(put_exc).__name__)
         # Under a clustered control plane the per-process lock only serialises
         # within one replica, so silently falling back would let N replicas each
         # pass the check and overshoot the quota by N. Fail closed instead: a
@@ -145,8 +145,8 @@ def _maybe_postgres_advisory_lock(tenant_id: str) -> Iterator[None]:
             _logger.warning("pg_advisory_unlock failed for tenant=%s: %s", tenant_id, sanitize_text(exc))
         try:
             pool.putconn(conn)
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as put_exc:  # noqa: BLE001
+            _logger.debug("tenant quota lock connection return failed (%s)", type(put_exc).__name__)
 
 
 @contextmanager

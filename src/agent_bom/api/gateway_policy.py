@@ -239,7 +239,8 @@ def _warn_on_quarantined_agents(settings: GatewaySettings) -> None:
             for a in _get_fleet_store().list_by_tenant("default")
             if getattr(a, "lifecycle_state", None) == FleetLifecycleState.QUARANTINED
         ]
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("quarantined-agent boot check skipped (%s)", type(exc).__name__)
         return
     if quarantined:
         logger.warning(

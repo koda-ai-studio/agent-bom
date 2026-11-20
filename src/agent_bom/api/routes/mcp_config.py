@@ -18,6 +18,7 @@ RBAC-gated and tenant-scoped; a cross-tenant fetch is a 404.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import replace
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Annotated, Any, Literal, cast
@@ -49,6 +50,8 @@ if TYPE_CHECKING:
     from agent_bom.api.agent_identity_store import AgentIdentity
 
 router = APIRouter(tags=["mcp-config"])
+
+_logger = logging.getLogger(__name__)
 
 
 def _normalize_string_list(values: list[str]) -> list[str]:
@@ -270,7 +273,8 @@ def _tenant_connections(tenant_id: str) -> list[dict[str, Any]]:
         from agent_bom.api.connection_store import get_connection_store
 
         return [r.to_public_dict() for r in get_connection_store().list_for_tenant(tenant_id)]
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        _logger.warning("Cloud connection listing failed; MCP config omits connections (%s)", type(exc).__name__)
         return []
 
 

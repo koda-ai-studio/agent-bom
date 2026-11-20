@@ -128,8 +128,8 @@ def _evaluate_store_conditional_access(ctx: RelayContext, decision: ToolDecision
             from agent_bom.device_posture import apply_device_posture, get_device_posture_store
 
             apply_device_posture(get_device_posture_store(), access, tenant_id=ctx.tenant_id)
-        except Exception:  # noqa: BLE001 — enrichment must not break the decision path
-            pass
+        except Exception as exc:  # noqa: BLE001 — enrichment must not break the decision path
+            logger.warning("device posture enrichment unavailable; device guardrails fail closed (%s)", type(exc).__name__)
         return evaluate_conditional_access_for_request(get_agent_identity_store(), tenant_id=ctx.tenant_id, ctx=access)
     except Exception:  # noqa: BLE001 — fail CLOSED: an eval error must not bypass a policy
         return _conditional_access_fail_closed(ctx.tenant_id)

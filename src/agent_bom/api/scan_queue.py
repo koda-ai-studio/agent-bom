@@ -113,7 +113,8 @@ def distributed_scans_enabled() -> bool:
         from agent_bom.api.storage.deployment import clustered_control_plane_required
 
         return clustered_control_plane_required()
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        _logger.warning("Clustered control-plane requirement check failed; assuming not required (%s)", type(exc).__name__)
         return False
 
 
