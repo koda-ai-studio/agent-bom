@@ -36,6 +36,15 @@ def _text_attr(value: object, name: str) -> str:
     return attr if isinstance(attr, str) else ""
 
 
+def _gcp_text(value: object, fallback: str) -> str:
+    """An SDK string field: unset falls back, any non-string is a malformed record."""
+    if value is None or value == "":
+        return fallback
+    if not isinstance(value, str):
+        raise TypeError("Invalid GCP record field")
+    return value
+
+
 def _is_mock_value(value: object) -> bool:
     return type(value).__module__.startswith("unittest.mock")
 
@@ -164,98 +173,101 @@ def _discover_vertex_ai(
         endpoints = client.list_endpoints(parent=parent)
 
         for endpoint in endpoints:
-            ep_name = _text_attr(endpoint, "display_name") or "unknown"
-            ep_resource = _text_attr(endpoint, "name") or _text_attr(endpoint, "resource_name")
+            try:
+                ep_name = _text_attr(endpoint, "display_name") or "unknown"
+                ep_resource = _text_attr(endpoint, "name") or _text_attr(endpoint, "resource_name")
 
-            # Enumerate deployed models on this endpoint
-            servers: list[MCPServer] = []
-            deployed_models = getattr(endpoint, "deployed_models", None)
-            if deployed_models is None or _is_mock_value(deployed_models):
-                deployed_models = getattr(getattr(endpoint, "gca_resource", None), "deployed_models", [])
-            deployed_models = deployed_models or []
-            for deployed in deployed_models:
-                model_id = getattr(deployed, "model", "") or ""
-                model_display = getattr(deployed, "display_name", "") or model_id
-                model_version = getattr(deployed, "model_version_id", None)
+                # Enumerate deployed models on this endpoint
+                servers: list[MCPServer] = []
+                deployed_models = getattr(endpoint, "deployed_models", None)
+                if deployed_models is None or _is_mock_value(deployed_models):
+                    deployed_models = getattr(getattr(endpoint, "gca_resource", None), "deployed_models", [])
+                deployed_models = deployed_models or []
+                for deployed in deployed_models:
+                    model_id = getattr(deployed, "model", "") or ""
+                    model_display = getattr(deployed, "display_name", "") or model_id
+                    model_version = getattr(deployed, "model_version_id", None)
 
-                # Extract machine type from dedicated/automatic resources
-                machine_type = "unknown"
-                dedicated = getattr(deployed, "dedicated_resources", None)
-                if dedicated:
-                    machine_spec = getattr(dedicated, "machine_spec", None)
-                    if machine_spec:
-                        machine_type = getattr(machine_spec, "machine_type", "unknown") or "unknown"
-                else:
-                    auto = getattr(deployed, "automatic_resources", None)
-                    if auto:
-                        machine_type = "automatic-scaling"
+                    # Extract machine type from dedicated/automatic resources
+                    machine_type = "unknown"
+                    dedicated = getattr(deployed, "dedicated_resources", None)
+                    if dedicated:
+                        machine_spec = getattr(dedicated, "machine_spec", None)
+                        if machine_spec:
+                            machine_type = getattr(machine_spec, "machine_type", "unknown") or "unknown"
+                    else:
+                        auto = getattr(deployed, "automatic_resources", None)
+                        if auto:
+                            machine_type = "automatic-scaling"
 
-                server_name = f"vertex-model:{model_display}"
-                if model_version:
-                    server_name += f"@{model_version}"
+                    server_name = f"vertex-model:{model_display}"
+                    if model_version:
+                        server_name += f"@{model_version}"
 
-                server = MCPServer(
-                    name=server_name,
-                    command="",
-                    transport=TransportType.STREAMABLE_HTTP,
-                    url=f"https://{region}-aiplatform.googleapis.com/v1/{ep_resource}",
+                    server = MCPServer(
+                        name=server_name,
+                        command="",
+                        transport=TransportType.STREAMABLE_HTTP,
+                        url=f"https://{region}-aiplatform.googleapis.com/v1/{ep_resource}",
+                    )
+                    servers.append(server)
+
+                    logger.debug(
+                        "Vertex AI model: %s (version=%s, machine=%s) on endpoint %s",
+                        model_display,
+                        model_version,
+                        machine_type,
+                        ep_name,
+                    )
+
+                agent = Agent(
+                    name=f"vertex-ai:{ep_name}",
+                    agent_type=AgentType.CUSTOM,
+                    config_path=ep_resource,
+                    source="gcp-vertex-ai",
+                    mcp_servers=servers,
+                    metadata={
+                        "gcp_project": project_id,
+                        "region": region,
+                        "resource_name": ep_resource,
+                        "cloud_origin": build_cloud_origin(
+                            provider="gcp",
+                            service="vertex-ai",
+                            resource_type="endpoint",
+                            resource_id=ep_resource,
+                            resource_name=ep_name,
+                            location=region,
+                            project_id=project_id,
+                            raw_identity={"resource_name": ep_resource, "display_name": ep_name},
+                        ),
+                    },
                 )
-                servers.append(server)
-
-                logger.debug(
-                    "Vertex AI model: %s (version=%s, machine=%s) on endpoint %s",
-                    model_display,
-                    model_version,
-                    machine_type,
-                    ep_name,
+                cloud_timestamps = build_cloud_timestamps(
+                    provider="gcp",
+                    service="vertex-ai",
+                    resource_type="endpoint",
+                    created_at=getattr(endpoint, "create_time", None),
+                    updated_at=getattr(endpoint, "update_time", None),
+                    created_source="create_time",
+                    updated_source="update_time",
                 )
-
-            agent = Agent(
-                name=f"vertex-ai:{ep_name}",
-                agent_type=AgentType.CUSTOM,
-                config_path=ep_resource,
-                source="gcp-vertex-ai",
-                mcp_servers=servers,
-                metadata={
-                    "gcp_project": project_id,
-                    "region": region,
-                    "resource_name": ep_resource,
-                    "cloud_origin": build_cloud_origin(
-                        provider="gcp",
-                        service="vertex-ai",
-                        resource_type="endpoint",
-                        resource_id=ep_resource,
-                        resource_name=ep_name,
-                        location=region,
-                        project_id=project_id,
-                        raw_identity={"resource_name": ep_resource, "display_name": ep_name},
-                    ),
-                },
-            )
-            cloud_timestamps = build_cloud_timestamps(
-                provider="gcp",
-                service="vertex-ai",
-                resource_type="endpoint",
-                created_at=getattr(endpoint, "create_time", None),
-                updated_at=getattr(endpoint, "update_time", None),
-                created_source="create_time",
-                updated_source="update_time",
-            )
-            if cloud_timestamps:
-                agent.metadata["cloud_timestamps"] = cloud_timestamps
-            cloud_scope = build_cloud_scope(
-                provider="gcp",
-                service="vertex-ai",
-                resource_type="endpoint",
-                scope_type="project",
-                scope_id=project_id,
-                scope_name=project_id,
-                location=region,
-                source_fields=["resource_name", "create_time", "update_time"],
-            )
-            if cloud_scope:
-                agent.metadata["cloud_scope"] = cloud_scope
-            agents.append(agent)
+                if cloud_timestamps:
+                    agent.metadata["cloud_timestamps"] = cloud_timestamps
+                cloud_scope = build_cloud_scope(
+                    provider="gcp",
+                    service="vertex-ai",
+                    resource_type="endpoint",
+                    scope_type="project",
+                    scope_id=project_id,
+                    scope_name=project_id,
+                    location=region,
+                    source_fields=["resource_name", "create_time", "update_time"],
+                )
+                if cloud_scope:
+                    agent.metadata["cloud_scope"] = cloud_scope
+                agents.append(agent)
+            except gcp_read_errors() as exc:
+                warnings.append(gcp_read_warning("Vertex AI", exc))
 
     except gcp_read_errors() as exc:
         warnings.append(gcp_read_warning("Vertex AI", exc))
@@ -292,110 +304,113 @@ def _discover_cloud_functions(
         functions = client.list_functions(parent=parent)
 
         for function in functions:
-            fn_name = function.name.split("/")[-1] if function.name else "unknown"
-            fn_resource = function.name or f"projects/{project_id}/locations/{region}/functions/{fn_name}"
+            try:
+                fn_name = function.name.split("/")[-1] if function.name else "unknown"
+                fn_resource = function.name or f"projects/{project_id}/locations/{region}/functions/{fn_name}"
 
-            # Extract runtime and entry point from build config
-            runtime = "unknown"
-            entry_point = ""
-            source_uri = ""
-            build_config = getattr(function, "build_config", None)
-            if build_config:
-                runtime = getattr(build_config, "runtime", "unknown") or "unknown"
-                entry_point = getattr(build_config, "entry_point", "") or ""
-                # Source info for dependency tracing
-                source = getattr(build_config, "source", None)
-                if source:
-                    storage_source = getattr(source, "storage_source", None)
-                    repo_source = getattr(source, "repo_source", None)
-                    if storage_source:
-                        bucket = getattr(storage_source, "bucket", "")
-                        obj = getattr(storage_source, "object_", "")
-                        source_uri = f"gs://{bucket}/{obj}" if bucket else ""
-                    elif repo_source:
-                        source_uri = getattr(repo_source, "url", "") or ""
+                # Extract runtime and entry point from build config
+                runtime = "unknown"
+                entry_point = ""
+                source_uri = ""
+                build_config = getattr(function, "build_config", None)
+                if build_config:
+                    runtime = getattr(build_config, "runtime", "unknown") or "unknown"
+                    entry_point = getattr(build_config, "entry_point", "") or ""
+                    # Source info for dependency tracing
+                    source = getattr(build_config, "source", None)
+                    if source:
+                        storage_source = getattr(source, "storage_source", None)
+                        repo_source = getattr(source, "repo_source", None)
+                        if storage_source:
+                            bucket = getattr(storage_source, "bucket", "")
+                            obj = getattr(storage_source, "object_", "")
+                            source_uri = f"gs://{bucket}/{obj}" if bucket else ""
+                        elif repo_source:
+                            source_uri = getattr(repo_source, "url", "") or ""
 
-            # Service config for URL and resource limits
-            service_url = ""
-            service_account = ""
-            service_config = getattr(function, "service_config", None)
-            if service_config:
-                service_url = getattr(service_config, "uri", "") or ""
-                service_account = getattr(service_config, "service_account_email", "") or ""
+                # Service config for URL and resource limits
+                service_url = ""
+                service_account = ""
+                service_config = getattr(function, "service_config", None)
+                if service_config:
+                    service_url = getattr(service_config, "uri", "") or ""
+                    service_account = getattr(service_config, "service_account_email", "") or ""
 
-            server = MCPServer(
-                name=f"cloud-function:{fn_name}",
-                command="",
-                transport=TransportType.STREAMABLE_HTTP,
-                url=service_url or f"https://{region}-{project_id}.cloudfunctions.net/{fn_name}",
-            )
-            dep_packages: list[Package] = []
-            if source_uri.startswith("gs://"):
-                from agent_bom.cloud.serverless_zip import extract_gcp_storage_source_packages
+                server = MCPServer(
+                    name=f"cloud-function:{fn_name}",
+                    command="",
+                    transport=TransportType.STREAMABLE_HTTP,
+                    url=service_url or f"https://{region}-{project_id}.cloudfunctions.net/{fn_name}",
+                )
+                dep_packages: list[Package] = []
+                if source_uri.startswith("gs://"):
+                    from agent_bom.cloud.serverless_zip import extract_gcp_storage_source_packages
 
-                without_scheme = source_uri[len("gs://") :]
-                bucket, _, obj = without_scheme.partition("/")
-                dep_packages = extract_gcp_storage_source_packages(bucket, obj, runtime, warnings)
-            if dep_packages:
-                server.packages = dep_packages
+                    without_scheme = source_uri[len("gs://") :]
+                    bucket, _, obj = without_scheme.partition("/")
+                    dep_packages = extract_gcp_storage_source_packages(bucket, obj, runtime, warnings)
+                if dep_packages:
+                    server.packages = dep_packages
 
-            agent = Agent(
-                name=f"cloud-function:{fn_name}",
-                agent_type=AgentType.CUSTOM,
-                config_path=fn_resource,
-                source="gcp-cloud-functions",
-                mcp_servers=[server],
-                metadata={
-                    "gcp_project": project_id,
-                    "region": region,
-                    "runtime": runtime,
-                    "entry_point": entry_point,
-                    "source_uri": source_uri,
-                    "cloud_origin": build_cloud_origin(
-                        provider="gcp",
-                        service="cloud-functions",
-                        resource_type="function",
-                        resource_id=fn_resource,
-                        resource_name=fn_name,
-                        location=region,
-                        project_id=project_id,
-                        raw_identity={"name": fn_resource, "display_name": fn_name, "runtime": runtime},
-                    ),
-                },
-            )
-            cloud_scope = build_cloud_scope(
-                provider="gcp",
-                service="cloud-functions",
-                resource_type="function",
-                scope_type="project",
-                scope_id=project_id,
-                scope_name=project_id,
-                location=region,
-                source_fields=["name", "service_config.uri"],
-            )
-            if cloud_scope:
-                agent.metadata["cloud_scope"] = cloud_scope
-            cloud_principal = build_cloud_principal(
-                provider="gcp",
-                service="cloud-functions",
-                resource_type="function",
-                principal_type="service-account",
-                principal_id=service_account or None,
-                principal_name=service_account or None,
-                source_field="service_config.service_account_email",
-                raw_identity={"service_account_email": service_account},
-            )
-            if cloud_principal:
-                agent.metadata["cloud_principal"] = cloud_principal
-            agents.append(agent)
+                agent = Agent(
+                    name=f"cloud-function:{fn_name}",
+                    agent_type=AgentType.CUSTOM,
+                    config_path=fn_resource,
+                    source="gcp-cloud-functions",
+                    mcp_servers=[server],
+                    metadata={
+                        "gcp_project": project_id,
+                        "region": region,
+                        "runtime": runtime,
+                        "entry_point": entry_point,
+                        "source_uri": source_uri,
+                        "cloud_origin": build_cloud_origin(
+                            provider="gcp",
+                            service="cloud-functions",
+                            resource_type="function",
+                            resource_id=fn_resource,
+                            resource_name=fn_name,
+                            location=region,
+                            project_id=project_id,
+                            raw_identity={"name": fn_resource, "display_name": fn_name, "runtime": runtime},
+                        ),
+                    },
+                )
+                cloud_scope = build_cloud_scope(
+                    provider="gcp",
+                    service="cloud-functions",
+                    resource_type="function",
+                    scope_type="project",
+                    scope_id=project_id,
+                    scope_name=project_id,
+                    location=region,
+                    source_fields=["name", "service_config.uri"],
+                )
+                if cloud_scope:
+                    agent.metadata["cloud_scope"] = cloud_scope
+                cloud_principal = build_cloud_principal(
+                    provider="gcp",
+                    service="cloud-functions",
+                    resource_type="function",
+                    principal_type="service-account",
+                    principal_id=service_account or None,
+                    principal_name=service_account or None,
+                    source_field="service_config.service_account_email",
+                    raw_identity={"service_account_email": service_account},
+                )
+                if cloud_principal:
+                    agent.metadata["cloud_principal"] = cloud_principal
+                agents.append(agent)
 
-            logger.debug(
-                "Cloud Function: %s (runtime=%s, entry_point=%s, source=%s)",
-                fn_name,
-                runtime,
-                entry_point,
-                source_uri,
-            )
+                logger.debug(
+                    "Cloud Function: %s (runtime=%s, entry_point=%s, source=%s)",
+                    fn_name,
+                    runtime,
+                    entry_point,
+                    source_uri,
+                )
+            except gcp_read_errors() as exc:
+                warnings.append(gcp_read_warning("Cloud Functions", exc))
 
     except gcp_read_errors() as exc:
         warnings.append(gcp_read_warning("Cloud Functions", exc))
@@ -435,73 +450,76 @@ def _discover_gke_clusters(
         clusters = getattr(response, "clusters", []) or []
 
         for cluster in clusters:
-            cluster_name = getattr(cluster, "name", "unknown") or "unknown"
-            cluster_location = getattr(cluster, "location", region) or region
-            cluster_self_link = getattr(cluster, "self_link", "") or ""
-            cluster_version = getattr(cluster, "current_master_version", "") or ""
+            try:
+                cluster_name = getattr(cluster, "name", "unknown") or "unknown"
+                cluster_location = getattr(cluster, "location", region) or region
+                cluster_self_link = getattr(cluster, "self_link", "") or ""
+                cluster_version = getattr(cluster, "current_master_version", "") or ""
 
-            # Collect node pool info (machine types, image types)
-            node_pool_info: list[dict[str, str]] = []
-            node_pools = getattr(cluster, "node_pools", []) or []
-            for pool in node_pools:
-                pool_name = getattr(pool, "name", "unknown") or "unknown"
-                config = getattr(pool, "config", None)
-                machine_type = "unknown"
-                image_type = "unknown"
-                if config:
-                    machine_type = getattr(config, "machine_type", "unknown") or "unknown"
-                    image_type = getattr(config, "image_type", "unknown") or "unknown"
-                node_pool_info.append(
-                    {
-                        "name": pool_name,
-                        "machine_type": machine_type,
-                        "image_type": image_type,
-                    }
+                # Collect node pool info (machine types, image types)
+                node_pool_info: list[dict[str, str]] = []
+                node_pools = getattr(cluster, "node_pools", []) or []
+                for pool in node_pools:
+                    pool_name = getattr(pool, "name", "unknown") or "unknown"
+                    config = getattr(pool, "config", None)
+                    machine_type = "unknown"
+                    image_type = "unknown"
+                    if config:
+                        machine_type = getattr(config, "machine_type", "unknown") or "unknown"
+                        image_type = getattr(config, "image_type", "unknown") or "unknown"
+                    node_pool_info.append(
+                        {
+                            "name": pool_name,
+                            "machine_type": machine_type,
+                            "image_type": image_type,
+                        }
+                    )
+
+                # Build MCP server entries for the cluster endpoint
+                endpoint = getattr(cluster, "endpoint", "") or ""
+                server_url = f"https://{endpoint}" if endpoint else cluster_self_link
+
+                server = MCPServer(
+                    name=f"gke-cluster:{cluster_name}",
+                    command="",
+                    transport=TransportType.STREAMABLE_HTTP,
+                    url=server_url,
                 )
 
-            # Build MCP server entries for the cluster endpoint
-            endpoint = getattr(cluster, "endpoint", "") or ""
-            server_url = f"https://{endpoint}" if endpoint else cluster_self_link
+                agent = Agent(
+                    name=f"gke:{cluster_name}",
+                    agent_type=AgentType.CUSTOM,
+                    config_path=cluster_self_link or f"projects/{project_id}/locations/{cluster_location}/clusters/{cluster_name}",
+                    source="gcp-gke",
+                    mcp_servers=[server],
+                    metadata={
+                        "gcp_project": project_id,
+                        "region": cluster_location,
+                        "cluster_version": cluster_version,
+                        "node_pools": node_pool_info,
+                        "cloud_origin": build_cloud_origin(
+                            provider="gcp",
+                            service="gke",
+                            resource_type="cluster",
+                            resource_id=cluster_self_link or f"projects/{project_id}/locations/{cluster_location}/clusters/{cluster_name}",
+                            resource_name=cluster_name,
+                            location=cluster_location,
+                            project_id=project_id,
+                            raw_identity={"name": cluster_name, "self_link": cluster_self_link, "version": cluster_version},
+                        ),
+                    },
+                )
+                agents.append(agent)
 
-            server = MCPServer(
-                name=f"gke-cluster:{cluster_name}",
-                command="",
-                transport=TransportType.STREAMABLE_HTTP,
-                url=server_url,
-            )
-
-            agent = Agent(
-                name=f"gke:{cluster_name}",
-                agent_type=AgentType.CUSTOM,
-                config_path=cluster_self_link or f"projects/{project_id}/locations/{cluster_location}/clusters/{cluster_name}",
-                source="gcp-gke",
-                mcp_servers=[server],
-                metadata={
-                    "gcp_project": project_id,
-                    "region": cluster_location,
-                    "cluster_version": cluster_version,
-                    "node_pools": node_pool_info,
-                    "cloud_origin": build_cloud_origin(
-                        provider="gcp",
-                        service="gke",
-                        resource_type="cluster",
-                        resource_id=cluster_self_link or f"projects/{project_id}/locations/{cluster_location}/clusters/{cluster_name}",
-                        resource_name=cluster_name,
-                        location=cluster_location,
-                        project_id=project_id,
-                        raw_identity={"name": cluster_name, "self_link": cluster_self_link, "version": cluster_version},
-                    ),
-                },
-            )
-            agents.append(agent)
-
-            logger.debug(
-                "GKE cluster: %s (version=%s, location=%s, node_pools=%d)",
-                cluster_name,
-                cluster_version,
-                cluster_location,
-                len(node_pool_info),
-            )
+                logger.debug(
+                    "GKE cluster: %s (version=%s, location=%s, node_pools=%d)",
+                    cluster_name,
+                    cluster_version,
+                    cluster_location,
+                    len(node_pool_info),
+                )
+            except gcp_read_errors() as exc:
+                warnings.append(gcp_read_warning("GKE", exc))
 
     except gcp_read_errors() as exc:
         warnings.append(gcp_read_warning("GKE", exc))
@@ -533,79 +551,92 @@ def _discover_cloud_run(
         services = client.list_services(parent=parent)
 
         for service in services:
-            svc_name = service.name.split("/")[-1] if service.name else "unknown"
-            template = service.template
-            if not template or not template.containers:
-                continue
+            try:
+                svc_resource = _gcp_text(service.name, "")
+                svc_name = svc_resource.split("/")[-1] if svc_resource else "unknown"
+                template = service.template
+                if not template or not template.containers:
+                    continue
 
-            for container in template.containers:
-                image = container.image or ""
-                if image:
-                    image_parts = parse_container_image_package(image)
-                    service_account = getattr(template, "service_account", "") or ""
-                    server = MCPServer(
-                        name=f"cloud-run:{svc_name}",
-                        command="docker",
-                        args=["run", image],
-                        transport=TransportType.STDIO,
-                        packages=[
-                            Package(
-                                name=image_parts[0],
-                                version=image_parts[1],
-                                ecosystem="container-image",
-                                purl=build_package_purl(ecosystem="container-image", name=image_parts[0], version=image_parts[1]),
-                            )
-                        ]
-                        if image_parts
-                        else [],
-                    )
-                    agent = Agent(
-                        name=f"cloud-run:{svc_name}",
-                        agent_type=AgentType.CUSTOM,
-                        config_path=service.name or f"gcp://{svc_name}",
-                        source="gcp-cloud-run",
-                        mcp_servers=[server],
-                        metadata={
-                            "gcp_project": project_id,
-                            "region": region,
-                            "image": image,
-                            "cloud_origin": build_cloud_origin(
-                                provider="gcp",
-                                service="cloud-run",
-                                resource_type="service",
-                                resource_id=service.name or f"gcp://{svc_name}",
-                                resource_name=svc_name,
-                                location=region,
-                                project_id=project_id,
-                                raw_identity={"name": service.name or "", "image": image},
-                            ),
-                        },
-                    )
-                    cloud_scope = build_cloud_scope(
-                        provider="gcp",
-                        service="cloud-run",
-                        resource_type="service",
-                        scope_type="project",
-                        scope_id=project_id,
-                        scope_name=project_id,
-                        location=region,
-                        source_fields=["name", "template.service_account"],
-                    )
-                    if cloud_scope:
-                        agent.metadata["cloud_scope"] = cloud_scope
-                    cloud_principal = build_cloud_principal(
-                        provider="gcp",
-                        service="cloud-run",
-                        resource_type="service",
-                        principal_type="service-account",
-                        principal_id=service_account or None,
-                        principal_name=service_account or None,
-                        source_field="template.service_account",
-                        raw_identity={"service_account": service_account},
-                    )
-                    if cloud_principal:
-                        agent.metadata["cloud_principal"] = cloud_principal
-                    agents.append(agent)
+                service_account = _text_attr(template, "service_account")
+                servers: list[MCPServer] = []
+                images: list[str] = []
+                for index, container in enumerate(template.containers):
+                    image = _gcp_text(getattr(container, "image", ""), "")
+                    if image:
+                        container_name = _text_attr(container, "name") or f"container-{index}"
+                        image_parts = parse_container_image_package(image)
+                        server = MCPServer(
+                            name=f"cloud-run:{svc_name}" if not servers else f"cloud-run:{svc_name}/{container_name}",
+                            command="docker",
+                            args=["run", image],
+                            transport=TransportType.STDIO,
+                            packages=[
+                                Package(
+                                    name=image_parts[0],
+                                    version=image_parts[1],
+                                    ecosystem="container-image",
+                                    purl=build_package_purl(ecosystem="container-image", name=image_parts[0], version=image_parts[1]),
+                                )
+                            ]
+                            if image_parts
+                            else [],
+                        )
+                        servers.append(server)
+                        images.append(image)
+                if not servers:
+                    continue
+                image = images[0]
+                agent = Agent(
+                    name=f"cloud-run:{svc_name}",
+                    agent_type=AgentType.CUSTOM,
+                    config_path=svc_resource or f"gcp://{svc_name}",
+                    source="gcp-cloud-run",
+                    mcp_servers=servers,
+                    metadata={
+                        "gcp_project": project_id,
+                        "region": region,
+                        "image": image,
+                        "images": images,
+                        "cloud_origin": build_cloud_origin(
+                            provider="gcp",
+                            service="cloud-run",
+                            resource_type="service",
+                            resource_id=svc_resource or f"gcp://{svc_name}",
+                            resource_name=svc_name,
+                            location=region,
+                            project_id=project_id,
+                            raw_identity={"name": svc_resource, "image": image},
+                        ),
+                    },
+                )
+                cloud_scope = build_cloud_scope(
+                    provider="gcp",
+                    service="cloud-run",
+                    resource_type="service",
+                    scope_type="project",
+                    scope_id=project_id,
+                    scope_name=project_id,
+                    location=region,
+                    source_fields=["name", "template.service_account"],
+                )
+                if cloud_scope:
+                    agent.metadata["cloud_scope"] = cloud_scope
+                cloud_principal = build_cloud_principal(
+                    provider="gcp",
+                    service="cloud-run",
+                    resource_type="service",
+                    principal_type="service-account",
+                    principal_id=service_account or None,
+                    principal_name=service_account or None,
+                    source_field="template.service_account",
+                    raw_identity={"service_account": service_account},
+                )
+                if cloud_principal:
+                    agent.metadata["cloud_principal"] = cloud_principal
+                agents.append(agent)
+            except gcp_read_errors() as exc:
+                warnings.append(gcp_read_warning("Cloud Run", exc))
 
     except gcp_read_errors() as exc:
         warnings.append(gcp_read_warning("Cloud Run", exc))
