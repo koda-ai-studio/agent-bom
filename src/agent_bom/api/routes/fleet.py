@@ -22,6 +22,7 @@ from typing import Annotated, Any, TypeVar, cast
 from fastapi import APIRouter, HTTPException, Query, Request
 
 from agent_bom.api.current_graph import refuse_unpinned_read_while_seeding
+from agent_bom.api.fleet_counts import distinct_counts as _distinct_counts
 from agent_bom.api.fleet_stats import fleet_stats_payload
 from agent_bom.api.idempotency_store import IdempotencyConflictError, idempotency_request_fingerprint
 from agent_bom.api.mcp_observation_store import MCPObservation, agent_observation_id, merge_observations
@@ -247,22 +248,13 @@ async def get_fleet_agent(request: Request, agent_id: str) -> dict[str, Any]:
 
 
 def _server_counts(agent: Any) -> tuple[int, int, int, int]:
-    server_count = agent.total_mcp_servers
-    pkg_count = sum(len(s.packages) for s in agent.mcp_servers)
-    cred_count = sum(len(s.credential_names) for s in agent.mcp_servers)
-    vuln_count = sum(s.total_vulnerabilities for s in agent.mcp_servers)
-    return server_count, pkg_count, cred_count, vuln_count
+    return (agent.total_mcp_servers, *_distinct_counts(list(agent.mcp_servers)))
 
 
 def _payload_counts(agent: dict) -> tuple[int, int, int, int]:
-    servers = agent.get("mcp_servers", []) or []
-    server_count = sum(1 for server in servers if isinstance(server, dict) and server_dict_counts_as_mcp_server(server))
-    pkg_count = cred_count = vuln_count = 0
-    for server in servers:
-        pkg_count += len(server.get("packages", []) or [])
-        cred_count += len(server.get("credential_names", []) or [])
-        vuln_count += int(server.get("total_vulnerabilities", 0) or 0)
-    return server_count, pkg_count, cred_count, vuln_count
+    servers = [server for server in agent.get("mcp_servers", []) or [] if isinstance(server, dict)]
+    server_count = sum(1 for server in servers if server_dict_counts_as_mcp_server(server))
+    return (server_count, *_distinct_counts(servers))
 
 
 def _payload_tags(agent: dict) -> list[str]:
