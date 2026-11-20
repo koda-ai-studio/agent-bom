@@ -56,6 +56,14 @@ def test_scan_text_flags_stale_action_ref() -> None:
     assert "GitHub Action ref" in drift[0]
 
 
+def test_scan_text_flags_a_bare_inline_action_ref() -> None:
+    """Prose such as "pin a release tag (for example `@v0.90.0`)" is copied as an Action ref."""
+    cva = _load_script("check_version_alignment.py")
+    drift = cva.scan_text("site-docs/integrations/github-action.md", "Pin a release tag (for example `@v0.90.0`).\n", "0.97.1")
+    assert len(drift) == 1 and "0.97.1" in drift[0]
+    assert cva.scan_text("site-docs/x.md", "Pin `@v0.97.1` or `actions/checkout@v4`.\n", "0.97.1") == []
+
+
 def test_scan_text_passes_when_aligned() -> None:
     cva = _load_script("check_version_alignment.py")
     text = "image: agentbom/agent-bom:0.97.1\nuses: msaad00/agent-bom@v0.97.1\n"
@@ -750,3 +758,80 @@ def test_post_publish_alignment_accepts_current_tag_with_release_history(monkeyp
     monkeypatch.setattr(cva, "LATEST_REQUIRED", ())
     monkeypatch.setattr(cva, "_release_tags", lambda: {"v0.114.0", "v0.115.3"})
     assert cva.find_drift("0.115.3", published="0.115.3") == []
+
+
+_TAG_COMMITS = {"v0.97.1": "b" * 40, "v0.90.0": "a" * 40}
+
+
+def test_published_ci_templates_are_inside_the_scanned_tree() -> None:
+    """The reusable workflow and CI examples sat at 0.110.0 for five releases unscanned."""
+    cva = _load_script("check_version_alignment.py")
+    scanned = {cva._rel(path) for path in cva._iter_files()}
+    for rel in (
+        ".github/workflows/agent-bom-reusable.yml",
+        "examples/ci/gitlab-ci.yml",
+        "examples/ci/azure-pipelines.yml",
+        "examples/ci/bitbucket-pipelines.yml",
+    ):
+        assert rel in scanned, rel
+
+
+def test_scan_text_flags_a_stale_sha_pinned_action_ref(monkeypatch) -> None:
+    cva = _load_script("check_version_alignment.py")
+    monkeypatch.setattr(cva, "_tag_commit", _TAG_COMMITS.get)
+    text = f"        uses: koda-ai-studio/agent-bom@{'a' * 40} # v0.90.0\n"
+    drift = cva.scan_text(".github/workflows/agent-bom-reusable.yml", text, "0.97.1")
+    assert any("SHA-pinned GitHub Action ref pinned to 0.90.0 (expected 0.97.1)" in line for line in drift), drift
+
+
+def test_sha_pinned_action_ref_must_be_the_commit_its_tag_names(monkeypatch) -> None:
+    cva = _load_script("check_version_alignment.py")
+    monkeypatch.setattr(cva, "_tag_commit", _TAG_COMMITS.get)
+    wrong = f"uses: koda-ai-studio/agent-bom@{'c' * 40} # v0.97.1\n"
+    right = f"uses: koda-ai-studio/agent-bom@{'b' * 40} # v0.97.1\n"
+    drift = cva.scan_text("examples/ci/x.yml", wrong, "0.97.1")
+    assert len(drift) == 1 and "is not the commit v0.97.1 names" in drift[0], drift
+    assert cva.scan_text("examples/ci/x.yml", right, "0.97.1") == []
+
+
+def test_sha_pin_is_unverifiable_not_drift_without_the_tag(monkeypatch) -> None:
+    """A shallow checkout lacks the tag; the version comment is still checked."""
+    cva = _load_script("check_version_alignment.py")
+    monkeypatch.setattr(cva, "_tag_commit", lambda _tag: None)
+    text = f"uses: koda-ai-studio/agent-bom@{'c' * 40} # v0.97.1\n"
+    assert cva.scan_text("examples/ci/x.yml", text, "0.97.1") == []
+
+
+def test_rewrite_moves_sha_pinned_action_ref_to_the_published_tag_commit(tmp_path, monkeypatch) -> None:
+    cva = _load_script("check_version_alignment.py")
+    workflow = tmp_path / "agent-bom-reusable.yml"
+    workflow.write_text(f"      - uses: koda-ai-studio/agent-bom@{'a' * 40} # v0.90.0\n        with:\n")
+    pipeline = tmp_path / "gitlab-ci.yml"
+    pipeline.write_text("    - pip install --quiet agent-bom==0.90.0\n")
+    monkeypatch.setattr(cva, "SCAN_ROOTS", (workflow, pipeline))
+    monkeypatch.setattr(cva, "LATEST_REQUIRED", ())
+    monkeypatch.setattr(cva, "ROOT", tmp_path)
+    monkeypatch.setattr(cva, "_tag_commit", _TAG_COMMITS.get)
+
+    count, changed = cva.rewrite("0.97.1")
+
+    assert changed == [workflow, pipeline]
+    assert workflow.read_text() == f"      - uses: koda-ai-studio/agent-bom@{'b' * 40} # v0.97.1\n        with:\n"
+    assert pipeline.read_text() == "    - pip install --quiet agent-bom==0.97.1\n"
+    assert cva.find_drift("0.97.1") == []
+
+
+def test_rewrite_refuses_a_sha_pin_it_cannot_resolve(tmp_path, monkeypatch) -> None:
+    cva = _load_script("check_version_alignment.py")
+    workflow = tmp_path / "agent-bom-reusable.yml"
+    workflow.write_text(f"uses: koda-ai-studio/agent-bom@{'a' * 40} # v0.90.0\n")
+    monkeypatch.setattr(cva, "SCAN_ROOTS", (workflow,))
+    monkeypatch.setattr(cva, "ROOT", tmp_path)
+    monkeypatch.setattr(cva, "_tag_commit", lambda _tag: None)
+    try:
+        cva.rewrite("0.97.1")
+    except SystemExit as exc:
+        assert "v0.97.1" in str(exc)
+    else:
+        raise AssertionError("rewrite must not write a version comment over a commit it could not resolve")
+    assert "# v0.90.0" in workflow.read_text()

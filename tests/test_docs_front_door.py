@@ -129,3 +129,36 @@ def test_docs_index_groups_every_top_level_doc() -> None:
         "Operations and enterprise",
     ]
     assert _unindexed_docs(index) == []
+
+
+ROLE_PAGE = ROOT / "site-docs" / "getting-started" / "start-by-role.md"
+ROLES = ("AppSec", "Platform and DevOps", "AI and ML engineer", "GRC", "Leadership")
+
+
+def test_start_by_role_page_gives_each_role_a_complete_path() -> None:
+    text = ROLE_PAGE.read_text(encoding="utf-8")
+    sections = dict(re.findall(r"^## (.+?)\n(.*?)(?=^## |\Z)", text, re.M | re.S))
+    assert tuple(sections) == ROLES
+    for role, body in sections.items():
+        for part in ("**You get**", "**Look at**", "**Next:**"):
+            assert part in body, f"{role} path is missing {part}"
+        commands = [line for block in re.findall(r"```(?:bash|yaml)\n(.*?)```", body, re.S) for line in block.splitlines() if line.strip()]
+        assert 1 <= len(commands) <= 4, f"{role} path should run in about five minutes, got {len(commands)} commands"
+    assert "agent-bom report brief" in sections["Leadership"]
+
+
+def test_start_by_role_is_the_first_getting_started_page_and_linked_from_readme() -> None:
+    nav = (ROOT / "mkdocs.yml").read_text(encoding="utf-8").split("\nnav:\n", 1)[1]
+    getting_started = nav.split("  - Getting Started:\n", 1)[1].split("\n  - ", 1)[0]
+    assert getting_started.splitlines()[0].strip() == "- Start Here by Role: getting-started/start-by-role.md"
+    assert "site-docs/getting-started/start-by-role.md" in README.read_text(encoding="utf-8")
+
+
+def test_deployment_nav_keeps_reference_pages_out_of_the_paved_paths() -> None:
+    nav = (ROOT / "mkdocs.yml").read_text(encoding="utf-8").split("\nnav:\n", 1)[1]
+    deployment = nav.split("  - Deployment:\n", 1)[1].split("\n  - ", 1)[0]
+    operations = nav.split("  - Operations:\n", 1)[1].split("\n  - ", 1)[0]
+    for page in ("deployment/backend-parity.md", "deployment/snowflake-backend.md", "deployment/grafana.md"):
+        assert page not in deployment and page in operations
+    assert "Hosted Authenticated Instance" not in nav
+    assert "Authenticated Self-Hosted Instance" in deployment

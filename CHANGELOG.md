@@ -9,7 +9,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-## [0.115.4] - 2026-11-16
+## [0.115.4] - 2026-11-18
 
 ### Highlights
 - Cloud inventory retains evidence across partial reads and reports incomplete coverage instead of treating failed requests as empty accounts.

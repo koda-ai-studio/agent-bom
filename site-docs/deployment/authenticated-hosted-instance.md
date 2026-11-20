@@ -1,4 +1,4 @@
-# Hosted Authenticated Instance + Connect Your Cloud
+# Authenticated Self-Hosted Instance + Connect Your Cloud
 
 This runbook stands up the **private customer / CISO experience**: a single-host,
 **login-gated** `agent-bom` instance with **no synthetic data**, real

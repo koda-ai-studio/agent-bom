@@ -21,3 +21,23 @@ def test_privacy_discloses_storage_and_external_services():
     text = (ROOT / "site-docs/privacy.md").read_text(encoding="utf-8")
     for boundary in ("OSV", "authorization server", "30 minutes", "not a guaranteed deletion deadline", "hosting", "chat history"):
         assert boundary in text
+
+
+LOOKUP_HOST = "https://agent-bom-lookup.up.railway.app"
+LOOKUP_STATUS = "not yet deployed"
+
+
+def test_lookup_service_is_not_described_as_live_before_it_is_deployed():
+    """The lookup URL answered 404 while these pages described it as running.
+
+    The owner checklist in docs/PLUGIN_SUBMISSION.md removes this status only
+    after the deployment check passes, together with this test.
+    """
+    for relative in ("site-docs/privacy.md", "site-docs/terms.md", "integrations/openai-mcp/README.md"):
+        text = (ROOT / relative).read_text(encoding="utf-8")
+        assert LOOKUP_STATUS in text, relative
+    for relative in ("site-docs/privacy.md", "site-docs/terms.md"):
+        text = (ROOT / relative).read_text(encoding="utf-8")
+        assert LOOKUP_HOST in text, relative
+    checklist = (ROOT / "docs/PLUGIN_SUBMISSION.md").read_text(encoding="utf-8")
+    assert f'"{LOOKUP_STATUS}"' in checklist

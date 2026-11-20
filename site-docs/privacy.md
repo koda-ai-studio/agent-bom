@@ -1,6 +1,6 @@
 # Privacy notice
 
-Last updated: 2026-11-12.
+Last updated: 2026-11-19.
 
 This notice covers the agent-bom software, its directory plugins, and the public
 lookup service at `https://agent-bom-lookup.up.railway.app` (the "lookup service"),
@@ -8,6 +8,10 @@ which is operated by Mohamed Wagdy Saad, operating as Koda AI ("we"). Apart from
 service, the agent-bom project offers no public hosted service, and the software and
 plugins send the project no data. Anyone else who runs agent-bom as a service for
 others is its operator, and that operator's own notice applies to what they store.
+
+**Status:** the lookup service is not yet deployed; that address does not answer
+yet. Until it does, no data reaches it, and the sections about it describe how it
+will handle requests once it is live.
 
 ## Scope and information processed
 

@@ -98,7 +98,7 @@ before advertising compatibility.
 
 For the private, login-gated single-host instance where a real cloud account is
 connected read-only, follow
-[Hosted Authenticated Instance + Connect Your Cloud](authenticated-hosted-instance.md).
+[Authenticated Self-Hosted Instance + Connect Your Cloud](authenticated-hosted-instance.md).
 
 `agent-bom` is one product with two deployable images:
 
