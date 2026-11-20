@@ -51,6 +51,10 @@ SCAN_ROOTS: tuple[Path, ...] = (
     ROOT / "site-docs",
     ROOT / "deploy",
     ROOT / "integrations",
+    # Copy-paste CI templates: the GitLab/Azure/Bitbucket pipelines and the
+    # reusable workflow callers pin by path.
+    ROOT / "examples" / "ci",
+    ROOT / ".github" / "workflows" / "agent-bom-reusable.yml",
     ROOT / "ui" / "components" / "persona-start-routes.tsx",
     ROOT / "ui" / "lib" / "deployment-context.ts",
 )
@@ -125,6 +129,13 @@ MANAGED_PATTERNS: tuple[ManagedPattern, ...] = (
     ManagedPattern(
         "GitHub Action ref",
         re.compile(r"((?:msaad00|koda-ai-studio)/agent-bom@v)(\d+\.\d+\.\d+)"),
+        "published",
+    ),
+    # `@<commit> # vX`: the version comment is managed here; the commit must be
+    # the one that tag names (sha_pin_drift / rewrite keep the two together).
+    ManagedPattern(
+        "SHA-pinned GitHub Action ref",
+        re.compile(r"((?:msaad00|koda-ai-studio)/agent-bom@[0-9a-f]{40}[ \t]+#[ \t]*v)(\d+\.\d+\.\d+)"),
         "published",
     ),
     ManagedPattern(
@@ -312,6 +323,54 @@ def _release_tags() -> set[str]:
     return {tag for tag in (line.strip() for line in result.stdout.splitlines()) if re.fullmatch(r"v\d+\.\d+\.\d+", tag)}
 
 
+def _tag_commit(tag: str) -> str | None:
+    """Commit a local release tag names; None when git or the tag is unavailable."""
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(ROOT), "rev-parse", "--verify", "--quiet", f"refs/tags/{tag}^{{commit}}"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    commit = result.stdout.strip()
+    return commit if result.returncode == 0 and re.fullmatch(r"[0-9a-f]{40}", commit) else None
+
+
+_SHA_PINNED_ACTION = re.compile(r"((?:msaad00|koda-ai-studio)/agent-bom@)([0-9a-f]{40})([ \t]+#[ \t]*v)(\d+\.\d+\.\d+)")
+
+
+def sha_pin_drift(rel_path: str, text: str) -> list[str]:
+    """SHA-pinned Action refs whose commit is not the one their version comment's tag names.
+
+    A checkout without the tag (shallow CI) cannot verify the commit, so it is
+    not reported; the version comment itself is still checked by the sweep.
+    """
+    drift: list[str] = []
+    for match in _SHA_PINNED_ACTION.finditer(text):
+        tag = f"v{match.group(4)}"
+        commit = _tag_commit(tag)
+        if commit is not None and commit != match.group(2):
+            where = f"{rel_path}:{_line_of(text, match.start(2))}"
+            drift.append(f"{where}: SHA-pinned GitHub Action ref {match.group(2)} is not the commit {tag} names ({commit})")
+    return drift
+
+
+def _repin_sha_actions(rel_path: str, text: str) -> str:
+    """Point every SHA-pinned Action ref at the commit its (rewritten) version tag names."""
+
+    def repin(match: re.Match[str]) -> str:
+        tag = f"v{match.group(4)}"
+        commit = _tag_commit(tag)
+        if commit is None:
+            raise SystemExit(f"{rel_path}: cannot resolve {tag} to a commit; fetch release tags before rewriting SHA-pinned Action refs")
+        return f"{match.group(1)}{commit}{match.group(3)}{match.group(4)}"
+
+    return _SHA_PINNED_ACTION.sub(repin, text)
+
+
 def expected_version(rel_path: str, tracks: str, version: str, published: str) -> str:
     """Return the version a managed reference in *rel_path* must carry."""
     if tracks == "image" and rel_path in SOURCE_BUILT:
@@ -352,6 +411,7 @@ def scan_text(rel_path: str, text: str, version: str, *, published: str | None =
             line = lines[lineno - 1].strip() if lineno <= len(lines) else ""
             drift.append(f"{rel_path}:{lineno}: {managed.label} pinned to {found} (expected {want}) -> {line}")
     drift.extend(helm_install_drift(rel_path, text))
+    drift.extend(sha_pin_drift(rel_path, text))
     return drift
 
 
@@ -478,6 +538,8 @@ def rewrite(version: str, *, published: str | None = None) -> tuple[int, list[Pa
                 last = match.end(2)
                 file_hits += 1
             new_text = "".join(pieces) + new_text[last:]
+        if file_hits:
+            new_text = _repin_sha_actions(rel, new_text)
         if file_hits and new_text != text:
             path.write_text(new_text, encoding="utf-8")
             total += file_hits
