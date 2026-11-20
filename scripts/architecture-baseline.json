@@ -625,7 +625,7 @@
     "api/pipeline.py": {
       "broad_except": 17,
       "deferred_imports": 17,
-      "file_lines": 819
+      "file_lines": 803
     },
     "api/pipeline_fleet.py": {
       "deferred_imports": 2
@@ -1201,8 +1201,8 @@
       "deferred_imports": 4
     },
     "api/scan_queue.py": {
-      "broad_except": 4,
-      "deferred_imports": 2,
+      "broad_except": 5,
+      "deferred_imports": 3,
       "raw_env_reads": 2
     },
     "api/scan_report_support.py": {
@@ -1244,7 +1244,7 @@
       "raw_env_reads": 4
     },
     "api/server.py": {
-      "broad_except": 14,
+      "broad_except": 13,
       "deferred_imports": 34,
       "file_lines": 975,
       "raw_env_reads": 6
@@ -1254,7 +1254,7 @@
     },
     "api/server.py::_lifespan": {
       "complexity": 21,
-      "function_lines": 176
+      "function_lines": 169
     },
     "api/server.py::configure_api": {
       "function_lines": 82
@@ -1751,14 +1751,17 @@
       "function_lines": 81
     },
     "cli/_gateway.py": {
-      "api_imports": 2,
-      "broad_except": 2,
-      "deferred_imports": 13,
-      "file_lines": 767
+      "api_imports": 1,
+      "broad_except": 1,
+      "deferred_imports": 4
     },
     "cli/_gateway.py::serve_cmd": {
-      "complexity": 42,
-      "function_lines": 318
+      "function_lines": 147
+    },
+    "cli/_gateway_serve.py": {
+      "api_imports": 1,
+      "broad_except": 1,
+      "deferred_imports": 8
     },
     "cli/_gateway_upstream.py": {
       "deferred_imports": 2
@@ -2026,7 +2029,7 @@
     },
     "cli/agents/scan_pipeline/policy.py": {
       "broad_except": 2,
-      "deferred_imports": 14,
+      "deferred_imports": 15,
       "raw_env_reads": 1
     },
     "cli/agents/scan_pipeline/preflight.py": {
@@ -2386,11 +2389,7 @@
       "broad_except": 1
     },
     "cloud/crusoe.py": {
-      "broad_except": 1,
       "raw_env_reads": 2
-    },
-    "cloud/crusoe.py::discover": {
-      "function_lines": 104
     },
     "cloud/databricks.py": {
       "broad_except": 4,
@@ -2553,7 +2552,6 @@
       "deferred_imports": 3
     },
     "cloud/lambda_labs.py": {
-      "broad_except": 1,
       "raw_env_reads": 1
     },
     "cloud/mlflow_provider.py": {
@@ -2741,12 +2739,9 @@
       "raw_env_reads": 4
     },
     "cloud/vastai.py": {
-      "broad_except": 2,
+      "broad_except": 1,
       "deferred_imports": 1,
       "raw_env_reads": 1
-    },
-    "cloud/vastai.py::discover": {
-      "function_lines": 104
     },
     "cloud/vector_db.py": {
       "broad_except": 6,
@@ -2821,16 +2816,12 @@
     },
     "context_graph.py": {
       "broad_except": 1,
-      "deferred_imports": 6,
-      "file_lines": 994
+      "deferred_imports": 4,
+      "file_lines": 903
     },
     "context_graph.py::_build_lateral_path": {
       "complexity": 42,
       "function_lines": 118
-    },
-    "context_graph.py::build_context_graph": {
-      "complexity": 26,
-      "function_lines": 308
     },
     "context_graph.py::compute_interaction_risks": {
       "complexity": 32,
@@ -3468,10 +3459,6 @@
     "graph/cnapp_overlay.py::_sensitive_text": {
       "complexity": 22
     },
-    "graph/cnapp_overlay.py::apply_cnapp_overlay": {
-      "complexity": 52,
-      "function_lines": 286
-    },
     "graph/component_paths.py": {
       "deferred_imports": 1
     },
@@ -3532,13 +3519,9 @@
       "deferred_imports": 4
     },
     "graph/governance_overlay.py": {
-      "broad_except": 5,
+      "broad_except": 3,
       "deferred_imports": 3,
       "graph_api_imports": 4
-    },
-    "graph/governance_overlay.py::apply_governance_overlay": {
-      "complexity": 45,
-      "function_lines": 317
     },
     "graph/gpu_projection.py": {
       "deferred_imports": 1
@@ -3896,15 +3879,8 @@
     },
     "mcp_server_specialized.py": {
       "broad_except": 1,
-      "deferred_imports": 8,
+      "deferred_imports": 5,
       "raw_env_reads": 4
-    },
-    "mcp_server_specialized.py::register_specialized_ai_tools": {
-      "complexity": 20,
-      "function_lines": 424
-    },
-    "mcp_server_specialized.py::register_specialized_ai_tools.ingest_external_scan": {
-      "function_lines": 87
     },
     "mcp_strict_args.py": {
       "deferred_imports": 1
@@ -4295,15 +4271,7 @@
     },
     "output/cyclonedx_fmt.py": {
       "deferred_imports": 2,
-      "file_lines": 920
-    },
-    "output/cyclonedx_fmt.py::_cyclonedx_vulnerability": {
-      "complexity": 16,
-      "function_lines": 102
-    },
-    "output/cyclonedx_fmt.py::to_cyclonedx": {
-      "complexity": 51,
-      "function_lines": 334
+      "file_lines": 858
     },
     "output/exposure_path.py": {
       "deferred_imports": 3
@@ -4462,16 +4430,8 @@
     "output/spdx_fmt.py": {
       "deferred_imports": 2
     },
-    "output/spdx_fmt.py::to_spdx": {
-      "complexity": 24,
-      "function_lines": 272
-    },
     "output/svg.py": {
       "deferred_imports": 1
-    },
-    "output/svg.py::to_svg": {
-      "complexity": 34,
-      "function_lines": 319
     },
     "owasp.py": {
       "deferred_imports": 1
@@ -4748,16 +4708,12 @@
     },
     "proxy.py": {
       "broad_except": 4,
-      "deferred_imports": 8,
-      "file_lines": 943,
+      "deferred_imports": 7,
+      "file_lines": 931,
       "raw_env_reads": 3
     },
     "proxy.py::_maybe_block_on_firewall": {
-      "function_lines": 89
-    },
-    "proxy.py::_proxy_sse_server": {
-      "complexity": 35,
-      "function_lines": 333
+      "function_lines": 84
     },
     "proxy_audit.py": {
       "api_imports": 2,
@@ -5182,12 +5138,6 @@
     "scanners/package_scan.py::scan_agents": {
       "complexity": 32,
       "function_lines": 222
-    },
-    "scanners/registry.py": {
-      "file_lines": 625
-    },
-    "scanners/registry.py::builtin_scanner_registrations": {
-      "function_lines": 401
     },
     "scanners/repo_ignore.py": {
       "broad_except": 1
