@@ -348,14 +348,14 @@ def _record_rule_exposure(graph: UnifiedGraph, misconfigs: list[UnifiedNode], af
     return exposed_ids
 
 
-def _data_store_node(ds_id: str, node: UnifiedNode) -> UnifiedNode:
+def _data_store_node(node: UnifiedNode) -> UnifiedNode:
     # The companion inherits the backing resource's estate coordinates.
     # Without them a crown-jewel data store carries no provider, account,
     # region, or environment and silently falls out of every scoped
     # projection (/v1/graph/scoped, /v1/inventory facets) while the
     # resource it mirrors stays in — two views of one asset disagreeing.
     return UnifiedNode(
-        id=ds_id,
+        id=f"data_store:{node.id}",
         entity_type=EntityType.DATA_STORE,
         label=f"data: {node.label}",
         severity="info",
@@ -391,7 +391,7 @@ def _attach_data_stores(graph: UnifiedGraph, cloud_resources: list[UnifiedNode])
         ds_id = f"data_store:{node.id}"
         data_store_for_resource[node.id] = ds_id
         if ds_id not in graph.nodes:
-            graph.add_node(_data_store_node(ds_id, node))
+            graph.add_node(_data_store_node(node))
             data_stores_added += 1
         graph.nodes[ds_id].attributes.update(_content_classification_evidence(node))
         graph.add_edge(
