@@ -327,6 +327,9 @@ def _push_report(ctx: ScanContext, report: Any, push_url: str, push_api_key: str
     except Exception as exc:  # noqa: BLE001
         reason = f": {sanitize_error(exc)}"
     message = f"results were not delivered to {endpoint}{reason}; the local report is unaffected"
+    _record_exit_reason(
+        ctx, f"results were not delivered to {endpoint}; the push error is printed above and the local report is unaffected"
+    )
     if quiet:
         stderr_notice(message)
     else:

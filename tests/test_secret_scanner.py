@@ -7,7 +7,7 @@ from agent_bom.secret_scanner import scan_secrets
 
 def test_scan_secrets_detects_real_findings_and_skips_test_fixtures(tmp_path: Path):
     (tmp_path / ".env").write_text(
-        "DB_PASSWORD=supersecret123\nCONTACT_EMAIL=alice@example.com\n",
+        "DB_PASSWORD=supersecret123\nCONTACT_EMAIL=alice@acme-widgets.net\n",
         encoding="utf-8",
     )
     (tmp_path / "app.py").write_text(
@@ -27,7 +27,7 @@ def test_scan_secrets_detects_real_findings_and_skips_test_fixtures(tmp_path: Pa
     assert all(not finding.file_path.startswith("tests/") for finding in result.findings)
     assert result.files_scanned == 2
     assert all("supersecret123" not in finding.matched_preview for finding in result.findings)
-    assert all("alice@example.com" not in finding.matched_preview for finding in result.findings)
+    assert all("alice@acme-widgets.net" not in finding.matched_preview for finding in result.findings)
     assert all("sk-proj" not in finding.matched_preview for finding in result.findings)
     assert {finding.matched_preview for finding in result.findings} == {
         "[CREDENTIAL_REDACTED]",
@@ -222,7 +222,7 @@ def test_connection_string_schemes_and_non_credentials(tmp_path: Path):
         "b: rediss://default:tok3nValue@cache.internal:6380\n"
         "c: postgres://db.internal:5432/prod\n"
         "d: postgresql://app:${DB_PASSWORD}@db.internal/prod\n"
-        "e: ops@example.org\n",
+        "e: ops@acme-widgets.net\n",
         encoding="utf-8",
     )
 

@@ -220,8 +220,9 @@ describe("kind page follow-ups", () => {
     render(<InventoryProvider><InventoryIndex /></InventoryProvider>);
     await screen.findByLabelText("Filter by environment");
     const allOptions = () => [...document.querySelectorAll("select option[value='']")].map((option) => option.textContent);
-    await waitFor(() => expect(allOptions()).toHaveLength(5));
-    expect(allOptions().sort()).toEqual(["All environments", "All finding severities", "All providers", "All sources", "All types"]);
+    await waitFor(() =>
+      expect(allOptions().sort()).toEqual(["All environments", "All finding severities", "All providers", "All sources", "All types"]),
+    );
   });
 
   it("shows one matching count unfiltered and adds the all-types count only when a type narrows it", async () => {

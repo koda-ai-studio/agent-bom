@@ -100,6 +100,8 @@ def build_graph_elements(
     providers_seen: set[str] = set()
 
     cve_nodes_seen: set[str] = set()
+    # A package shared by several servers is one node with one edge per server.
+    pkg_edge_evidence: dict[str, dict[str, Any]] = {}
 
     pkg_to_vulns: dict[tuple[str, str, str], list[dict]] = {}
     for finding in findings:
@@ -251,26 +253,21 @@ def build_graph_elements(
                     )
 
             # ── Package nodes (vulnerable only) ───────────────────────
-            seen_pkg_ids: set[str] = set()
+            server_pkg_ids: set[str] = set()
             for pkg in srv.packages:
                 pkg_key = (pkg.name, pkg.ecosystem, pkg.version)
                 if pkg_key not in vuln_pkg_keys:
                     continue
 
                 pid = _package_node_id(*pkg_key, agent_name=agent.name, server_name=srv.name, scoped=collapse_cves, purl=pkg.purl)
-                if pid in seen_pkg_ids:
-                    # Just add another edge for shared package
-                    elements.append(
-                        {
-                            "data": {
-                                "source": sid,
-                                "target": pid,
-                                "type": pkg_edge_type,
-                            }
-                        }
-                    )
+                if pid in server_pkg_ids:
                     continue
-                seen_pkg_ids.add(pid)
+                server_pkg_ids.add(pid)
+                if pid in pkg_edge_evidence:
+                    occurrence = json.dumps(package_version_provenance(pkg))
+                    edge = {"source": sid, "target": pid, "type": pkg_edge_type, **pkg_edge_evidence[pid], "versionProvenance": occurrence}
+                    elements.append({"data": edge})
+                    continue
 
                 package_vulns = pkg_to_vulns.get(pkg_key, [])
                 vuln_summary = _summarize_package_vulns(package_vulns)
@@ -313,19 +310,9 @@ def build_graph_elements(
                         }
                     }
                 )
-                # Edge: server → package
-                elements.append(
-                    {
-                        "data": {
-                            "source": sid,
-                            "target": pid,
-                            "type": pkg_edge_type,
-                            "versionProvenance": json.dumps(version_provenance),
-                            "maxSeverity": max_severity,
-                            "vulnCount": vc,
-                        }
-                    }
-                )
+                pkg_edge_evidence[pid] = {"maxSeverity": max_severity, "vulnCount": vc}
+                edge = {"source": sid, "target": pid, "type": pkg_edge_type, "versionProvenance": json.dumps(version_provenance)}
+                elements.append({"data": {**edge, **pkg_edge_evidence[pid]}})
 
                 # ── CVE nodes ─────────────────────────────────────────
                 if include_cve_nodes and not collapse_cves and pkg_key in pkg_to_vulns:
@@ -801,6 +788,20 @@ def build_attack_flow_elements(
     return elements
 
 
+def _first_node_occurrences(elements: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Every edge, and each node id once: the first occurrence wins."""
+    seen: set[str] = set()
+    kept: list[dict[str, Any]] = []
+    for element in elements:
+        data = element.get("data")
+        if isinstance(data, dict) and "source" not in data and "target" not in data and "id" in data:
+            if str(data["id"]) in seen:
+                continue
+            seen.add(str(data["id"]))
+        kept.append(element)
+    return kept
+
+
 def sanitize_graph_elements(elements: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, str]]:
     """Redact Cytoscape elements while preserving distinct node coordinates."""
     from agent_bom.output.finding_views import sanitize_output_text
@@ -830,7 +831,7 @@ def sanitize_graph_elements(elements: list[dict[str, Any]]) -> tuple[list[dict[s
             safe_id(data["id"])
 
     projected: list[dict[str, Any]] = []
-    for element in elements:
+    for element in _first_node_occurrences(elements):
         data = element.get("data")
         if not isinstance(data, dict):
             continue
