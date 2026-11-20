@@ -22,6 +22,7 @@ from typing import Annotated, Any, TypeVar, cast
 from fastapi import APIRouter, HTTPException, Query, Request
 
 from agent_bom.api.current_graph import refuse_unpinned_read_while_seeding
+from agent_bom.api.fleet_counts import distinct_counts as _distinct_counts
 from agent_bom.api.fleet_stats import fleet_stats_payload
 from agent_bom.api.idempotency_store import IdempotencyConflictError, idempotency_request_fingerprint
 from agent_bom.api.mcp_observation_store import MCPObservation, agent_observation_id, merge_observations
@@ -32,7 +33,6 @@ from agent_bom.api.stores import _get_fleet_store, _get_idempotency_store, _get_
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.api.tenant_quota import enforce_fleet_agents_quota, tenant_quota_guard
 from agent_bom.backpressure import BackpressureRejectedError, adaptive_backpressure
-from agent_bom.core.packages import canonical_package_key
 from agent_bom.domain.mcp_model import server_dict_counts_as_mcp_server
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
 from agent_bom.rbac import require_authenticated_permission
@@ -245,41 +245,6 @@ async def get_fleet_agent(request: Request, agent_id: str) -> dict[str, Any]:
     if agent is None:
         raise HTTPException(status_code=404, detail="Fleet agent not found")
     return cast(dict[str, Any], agent.model_dump())
-
-
-def _field(item: Any, name: str) -> Any:
-    return item.get(name) if isinstance(item, dict) else getattr(item, name, None)
-
-
-def _distinct_counts(servers: list[Any]) -> tuple[int, int, int]:
-    """Packages, credential names and vulnerabilities an agent has, each counted once.
-
-    Servers often share a package or a credential variable; summing per server
-    counted those once per server. A vulnerability is one (package, advisory)
-    pair; a server that reports only its total adds that total.
-    """
-    packages: set[str] = set()
-    credentials: set[str] = set()
-    advisories: set[tuple[str, str]] = set()
-    unattributed = 0
-    for server in servers:
-        listed = 0
-        for package in _field(server, "packages") or []:
-            key = canonical_package_key(
-                str(_field(package, "name") or ""),
-                str(_field(package, "version") or ""),
-                str(_field(package, "ecosystem") or ""),
-                _field(package, "purl"),
-            )
-            packages.add(key)
-            for vulnerability in _field(package, "vulnerabilities") or []:
-                if advisory := _field(vulnerability, "id"):
-                    advisories.add((key, str(advisory)))
-                    listed += 1
-        credentials.update(str(name) for name in _field(server, "credential_names") or [])
-        if not listed:
-            unattributed += int(_field(server, "total_vulnerabilities") or 0)
-    return len(packages), len(credentials), len(advisories) + unattributed
 
 
 def _server_counts(agent: Any) -> tuple[int, int, int, int]:
