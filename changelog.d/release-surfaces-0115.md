@@ -7,3 +7,6 @@
 
 ### Security
 - Container images move to CPython releases that include the `ssl` compromised-intermediate denylist (CVE-2026-115557, critical) and the `tarfile` extraction-filter fix (CVE-2026-87910): 3.12.16 for the MCP stdio, MCP HTTP, runtime, collector, public lookup and Glama images, 3.11.18 for the Snowflake images, and 3.14.10 for the CLI/API image, which no longer needs its hand-applied `tarfile` overlay. The MCP publish gate failed on this finding, so `agent-bom-mcp` and `agent-bom-sse` were not published for 0.115.4.
+
+### Docs
+- The privacy notice, terms and OpenAI plugin README state that the public lookup service (`agent-bom-lookup.up.railway.app`) is not yet deployed instead of describing it as running.
