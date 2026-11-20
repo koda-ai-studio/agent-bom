@@ -24,36 +24,40 @@ runs:
 
     - name: Pin npm
       shell: bash
+      env:
+        NPM_VERSION: ${{ inputs.npm-version }}
       run: |
         set -euo pipefail
         npm config set fetch-retries 5
         npm config set fetch-retry-mintimeout 20000
         npm config set fetch-retry-maxtimeout 120000
         for attempt in 1 2 3; do
-          if npm install -g "npm@${{ inputs.npm-version }}"; then
+          if npm install -g "npm@${NPM_VERSION}"; then
             break
           fi
           if [ "${attempt}" = "3" ]; then
-            echo "::error::Failed to install npm ${{ inputs.npm-version }} after ${attempt} attempts"
+            echo "::error::Failed to install npm ${NPM_VERSION} after ${attempt} attempts"
             exit 1
           fi
           sleep $((attempt * 10))
         done
         actual="$(npm --version)"
-        if [ "${actual}" != "${{ inputs.npm-version }}" ]; then
-          echo "::error::Expected npm ${{ inputs.npm-version }}, got ${actual}"
+        if [ "${actual}" != "${NPM_VERSION}" ]; then
+          echo "::error::Expected npm ${NPM_VERSION}, got ${actual}"
           exit 1
         fi
 
     - name: Verify UI package manager declaration
       shell: bash
       working-directory: ${{ inputs.working-directory }}
+      env:
+        NPM_VERSION: ${{ inputs.npm-version }}
       run: |
         set -euo pipefail
         node -e '
           const fs = require("fs");
           const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
-          const expected = "npm@${{ inputs.npm-version }}";
+          const expected = `npm@${process.env.NPM_VERSION}`;
           if (pkg.packageManager !== expected) {
             console.error(`::error::ui/package.json packageManager must be ${expected}; found ${pkg.packageManager}`);
             process.exit(1);

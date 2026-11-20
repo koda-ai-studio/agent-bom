@@ -1,6 +1,7 @@
 ### CI
 - The daily surface-freshness monitor now checks every published image family — the API image on GHCR and Docker Hub plus the MCP stdio (`agent-bom-mcp`) and HTTP (`agent-bom-sse`) images — so a stale MCP image is reported instead of hidden behind a fresh API image.
 - The reusable workflow (`agent-bom-reusable.yml`) and the GitLab, Azure Pipelines and Bitbucket examples pin the published release (0.115.4) instead of 0.110.0. The release pin sweep now covers them, and a commit-pinned Action ref must be the commit its `# vX.Y.Z` tag names; the post-release pin update rewrites both together.
+- Workflow and composite-action inputs reach shell steps through `env:` instead of being pasted into the script (Postgres scale evidence dispatch inputs, the Snowflake release channel and the UI npm version), and a test rejects any new `${{ inputs.* }}` inside `run:`.
 
 ### Fixed
 - The release self-SBOM (`agent-bom-sbom.cdx.json`) declares agent-bom as its root `metadata.component` with name, version and `pkg:pypi` purl, and the release fails if it does not; the documented `jq` inspection no longer prints `null`.
