@@ -1771,7 +1771,7 @@
    ],
    [
     "Could not list Snowflake MCP tool specification: MCP tool specification missing or invalid. Assessment incomplete.",
-    "Could not describe MCP Server bad name: Unsafe Snowflake identifier: 'bad name'",
+    "snowflake:mcp-server-tools:unavailable: Provider read failed or returned invalid data; retry or check availability. Assessment incomplete.",
     "Could not list Snowflake MCP tool specification: MCP tool specification missing or invalid. Assessment incomplete.",
     "Skipping Snowflake notebook with unsafe identifier: Unsafe Snowflake identifier: 'NB\\x01BAD'",
     "Could not describe Snowflake notebook 'NB_FAIL': describe failed for NB_FAIL"
@@ -2996,7 +2996,7 @@
    ],
    [
     "Could not list Snowflake MCP tool specification: MCP tool specification missing or invalid. Assessment incomplete.",
-    "Could not describe MCP Server bad name: Unsafe Snowflake identifier: 'bad name'",
+    "snowflake:mcp-server-tools:unavailable: Provider read failed or returned invalid data; retry or check availability. Assessment incomplete.",
     "Could not list Snowflake MCP tool specification: MCP tool specification missing or invalid. Assessment incomplete.",
     "Skipping Snowflake notebook with unsafe identifier: Snowflake identifier must be a non-empty string",
     "Skipping Snowflake notebook with unsafe identifier: Snowflake identifier must be a non-empty string",
@@ -3050,14 +3050,14 @@
   "result": [
    [],
    [
-    "Could not list Cortex Search Services: SQL access control error: Insufficient privileges; permission denied for test-object",
+    "snowflake:cortex-search:unavailable: Provider read failed or returned invalid data; retry or check availability. Assessment incomplete.",
     "Skipped Cortex Agents: role lacks SHOW AGENTS IN ACCOUNT \u2014 add it to the read-only policy to cover this resource type. (SQL access control error: Insufficient privileges; permission denied for test-object)",
     "Skipped Snowflake MCP Servers: role lacks SHOW MCP SERVERS IN ACCOUNT \u2014 add it to the read-only policy to cover this resource type. (SQL access control error: Insufficient privileges; permission denied for test-object)",
-    "Could not query Snowflake query history: SQL access control error: Insufficient privileges; permission denied for test-object",
-    "Could not query custom functions: SQL access control error: Insufficient privileges; permission denied for test-object",
-    "Could not query stored procedures: SQL access control error: Insufficient privileges; permission denied for test-object",
-    "Could not query Snowpark packages: SQL access control error: Insufficient privileges; permission denied for test-object",
-    "Could not list Streamlit apps: SQL access control error: Insufficient privileges; permission denied for test-object",
+    "snowflake:query-history:unavailable: Provider read failed or returned invalid data; retry or check availability. Assessment incomplete.",
+    "snowflake:custom-functions:unavailable: Provider read failed or returned invalid data; retry or check availability. Assessment incomplete.",
+    "snowflake:stored-procedures:unavailable: Provider read failed or returned invalid data; retry or check availability. Assessment incomplete.",
+    "snowflake:snowpark-packages:unavailable: Provider read failed or returned invalid data; retry or check availability. Assessment incomplete.",
+    "snowflake:streamlit:unavailable: Provider read failed or returned invalid data; retry or check availability. Assessment incomplete.",
     "Could not list Snowflake Notebooks: SQL access control error: Insufficient privileges; permission denied for test-object"
    ]
   ],
@@ -3114,14 +3114,14 @@
   "result": [
    [],
    [
-    "Could not list Cortex Search Services: SQL compilation error: [SHOW CORTEX SEARCH SERVICES] does not exist or syntax error",
+    "snowflake:cortex-search:unavailable: Provider read failed or returned invalid data; retry or check availability. Assessment incomplete.",
     "Could not list Cortex Agents: SQL compilation error: [SHOW AGENTS IN ACCOUNT] does not exist or syntax error",
     "Could not list Snowflake MCP Servers: SQL compilation error: [SHOW MCP SERVERS IN ACCOUNT] does not exist or syntax error",
-    "Could not query Snowflake query history: SQL compilation error: [SELECT query_text, user_name, start_time FROM TABLE(INFORMATION_SCHEMA.QUERY_HISTORY()) WHERE query_text ILIKE '%CREATE%MCP SERVER%' OR query_text ILIKE '%CREAT] does not exist",
-    "Could not query custom functions: SQL compilation error: [SELECT function_name, argument_signature, data_type, function_language FROM INFORMATION_SCHEMA.FUNCTIONS WHERE function_schema NOT IN ('INFORMATION_SCHEMA') ORD] does not exist",
-    "Could not query stored procedures: SQL compilation error: [SELECT procedure_name, argument_signature, data_type, procedure_language FROM INFORMATION_SCHEMA.PROCEDURES WHERE procedure_schema NOT IN ('INFORMATION_SCHEMA')] does not exist",
-    "Could not query Snowpark packages: SQL compilation error: [SELECT PACKAGE_NAME, VERSION FROM INFORMATION_SCHEMA.PACKAGES WHERE LANGUAGE = 'python' ORDER BY PACKAGE_NAME] does not exist or syntax error",
-    "Could not list Streamlit apps: SQL compilation error: [SHOW STREAMLITS IN ACCOUNT] does not exist or syntax error",
+    "snowflake:query-history:unavailable: Provider read failed or returned invalid data; retry or check availability. Assessment incomplete.",
+    "snowflake:custom-functions:unavailable: Provider read failed or returned invalid data; retry or check availability. Assessment incomplete.",
+    "snowflake:stored-procedures:unavailable: Provider read failed or returned invalid data; retry or check availability. Assessment incomplete.",
+    "snowflake:snowpark-packages:unavailable: Provider read failed or returned invalid data; retry or check availability. Assessment incomplete.",
+    "snowflake:streamlit:unavailable: Provider read failed or returned invalid data; retry or check availability. Assessment incomplete.",
     "Snowflake Notebooks discovery not available (requires Snowflake 2024.3+)"
    ]
   ],
@@ -3178,14 +3178,14 @@
   "result": [
    [],
    [
-    "Could not list Cortex Search Services: network timeout contacting test endpoint",
+    "snowflake:cortex-search:unavailable: Provider read failed or returned invalid data; retry or check availability. Assessment incomplete.",
     "Could not list Cortex Agents: network timeout contacting test endpoint",
     "Could not list Snowflake MCP Servers: network timeout contacting test endpoint",
-    "Could not query Snowflake query history: network timeout contacting test endpoint",
-    "Could not query custom functions: network timeout contacting test endpoint",
-    "Could not query stored procedures: network timeout contacting test endpoint",
-    "Could not query Snowpark packages: network timeout contacting test endpoint",
-    "Could not list Streamlit apps: network timeout contacting test endpoint",
+    "snowflake:query-history:unavailable: Provider read failed or returned invalid data; retry or check availability. Assessment incomplete.",
+    "snowflake:custom-functions:unavailable: Provider read failed or returned invalid data; retry or check availability. Assessment incomplete.",
+    "snowflake:stored-procedures:unavailable: Provider read failed or returned invalid data; retry or check availability. Assessment incomplete.",
+    "snowflake:snowpark-packages:unavailable: Provider read failed or returned invalid data; retry or check availability. Assessment incomplete.",
+    "snowflake:streamlit:unavailable: Provider read failed or returned invalid data; retry or check availability. Assessment incomplete.",
     "Could not list Snowflake Notebooks: network timeout contacting test endpoint"
    ]
   ],

@@ -131,7 +131,7 @@ def test_kubernetes_coverage_preserves_rest_inventory_and_scope(kubectl_availabl
     ):
         agents, warnings = discover(api_key="fixture-key", project_id="fixture-project")
     assert agents == [rest_agent]
-    assert kubectl.call_count == (2 if kubectl_available else 0)
+    assert kubectl.call_count == (1 if kubectl_available else 0)  # both Kubernetes passes share one read
     if kubectl_available:
         assert warnings == []
     else:

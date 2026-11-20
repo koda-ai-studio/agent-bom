@@ -6,6 +6,8 @@ Successful empty collections produce no warning; failed reads remain incomplete.
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from enum import Enum
 
 import httpx
@@ -63,3 +65,14 @@ def inventory_list(data: object, *keys: str) -> list:
     if not isinstance(data, list):
         raise CloudDiscoveryError("Invalid inventory collection")
     return data
+
+
+@contextmanager
+def isolated_record(
+    warnings: list[str], errors: tuple[type[BaseException], ...], render: Callable[[str, Exception], str], resource: str
+) -> Iterator[None]:
+    """Convert one listed record; a malformed record becomes a fixed warning and the listing goes on."""
+    try:
+        yield
+    except errors as exc:
+        warnings.append(render(resource, exc))  # type: ignore[arg-type]

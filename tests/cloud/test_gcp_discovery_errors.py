@@ -158,3 +158,47 @@ def test_disabled_text_cannot_hide_denial(service):
     warnings = discover("project", "us-central1")[1]
     assert not isinstance(warnings[0], ServiceNotInUse)
     assert warnings[0].startswith(f"gcp:{label}:denied:")
+
+
+def _good_record(label, name):
+    return {
+        "Vertex AI": SimpleNamespace(name=f"projects/p/locations/r/endpoints/{name}", display_name=name, deployed_models=[]),
+        "Cloud Functions": SimpleNamespace(name=f"projects/p/locations/r/functions/{name}"),
+        "GKE": SimpleNamespace(name=name, endpoint="127.0.0.1"),
+        "Cloud Run": SimpleNamespace(
+            name=f"projects/p/locations/r/services/{name}", template=SimpleNamespace(containers=[SimpleNamespace(image="example/app:1")])
+        ),
+    }[label]
+
+
+_BAD_RECORDS = {
+    "Vertex AI": SimpleNamespace(name="projects/p/locations/r/endpoints/bad", display_name="bad", deployed_models=5),
+    "Cloud Functions": SimpleNamespace(name=7),
+    "GKE": SimpleNamespace(name="bad", node_pools=5),
+    "Cloud Run": SimpleNamespace(
+        name="projects/p/locations/r/services/bad", template=SimpleNamespace(containers=[SimpleNamespace(image=7)])
+    ),
+}
+
+
+def test_malformed_record_keeps_later_records(service):
+    discover, read, label = service
+    records = [_good_record(label, "first"), _BAD_RECORDS[label], _good_record(label, "last")]
+    read.return_value = SimpleNamespace(clusters=records) if label == "GKE" else records
+    agents, warnings = discover("project", "us-central1")
+    assert len(agents) == 2
+    assert len(warnings) == 1
+    assert warnings[0].startswith(f"gcp:{label}:unavailable:")
+
+
+def test_cloud_run_multi_container_service_is_one_identity(service):
+    discover, read, label = service
+    if label != "Cloud Run":
+        pytest.skip("Cloud Run only")
+    containers = [SimpleNamespace(name="app", image="example/app:1"), SimpleNamespace(name="sidecar", image="example/proxy:2")]
+    read.return_value = [SimpleNamespace(name="projects/p/locations/r/services/s", template=SimpleNamespace(containers=containers))]
+    agents, warnings = discover("project", "us-central1")
+    assert warnings == []
+    assert len(agents) == 1
+    assert [s.args for s in agents[0].mcp_servers] == [["run", "example/app:1"], ["run", "example/proxy:2"]]
+    assert len({s.name for s in agents[0].mcp_servers}) == 2

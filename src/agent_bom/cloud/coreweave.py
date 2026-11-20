@@ -14,10 +14,11 @@ credentials is the only prerequisite.
 
 from __future__ import annotations
 
-import json
 import logging
 import shutil
 import subprocess
+from collections.abc import Callable
+from functools import partial
 from urllib.parse import quote
 
 from agent_bom.discovery_envelope import RedactionStatus, ScanMode, attach_envelope_to_agents
@@ -25,8 +26,14 @@ from agent_bom.models import Agent, AgentType, MCPServer, TransportType
 from agent_bom.security import sanitize_error
 
 from .base import CloudDiscoveryError
-from .k8s_errors import kubectl_failure_code
-from .k8s_gpu_common import build_training_agent, container_image_packages, iter_gpu_containers, iter_infiniband_pods
+from .k8s_gpu_common import (
+    build_training_agent,
+    container_image_packages,
+    iter_gpu_containers,
+    iter_infiniband_pods,
+    read_once,
+    run_kubectl_list,
+)
 from .normalization import build_cloud_origin
 
 logger = logging.getLogger(__name__)
@@ -44,29 +51,12 @@ def _kubectl(
     context: str | None = None,
     timeout: int = 60,
 ) -> dict:
-    """Run a kubectl command and return parsed JSON output.
+    """Run a read-only kubectl list command and return ``{"items": [...]}``.
 
     Raises:
-        CloudDiscoveryError: if kubectl is not installed or returns an error.
+        CloudDiscoveryError: classified, fixed-text failure (never stderr/stdout).
     """
-    cmd = ["kubectl"]
-    if context:
-        cmd.extend(["--context", context])
-    cmd.extend(args)
-    cmd.extend(["-o", "json"])
-
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
-
-    if result.returncode != 0:
-        raise CloudDiscoveryError(f"kubectl: {kubectl_failure_code(result.stderr)}")
-
-    try:
-        data = json.loads(result.stdout)
-    except json.JSONDecodeError:
-        raise CloudDiscoveryError("Invalid inventory response from kubectl. Assessment incomplete.") from None
-    if not isinstance(data, dict) or not isinstance(data.get("items"), list):
-        raise CloudDiscoveryError("Invalid inventory response from kubectl. Assessment incomplete.")
-    return data
+    return {"items": run_kubectl_list(args, context=context, timeout=timeout)}
 
 
 def discover(
@@ -94,12 +84,15 @@ def discover(
     agents: list[Agent] = []
     warnings: list[str] = []
 
+    ns_args = ["-n", namespace] if namespace else ["-A"]
+    pods = read_once(lambda: _kubectl(["get", "pods", *ns_args], context=context))
     # Each pass is isolated: a failure becomes a warning and the next pass runs.
+    # The GPU and InfiniBand passes share one pod read.
     stages = (
         ("VirtualServer", _discover_virtual_servers),
         ("InferenceService", _discover_inference_services),
-        ("GPU pod", _discover_gpu_pods),
-        ("InfiniBand", _discover_infiniband_jobs),
+        ("GPU pod", partial(_discover_gpu_pods, pods=pods)),
+        ("InfiniBand", partial(_discover_infiniband_jobs, pods=pods)),
     )
     for label, stage in stages:
         try:
@@ -336,24 +329,21 @@ def _inference_service_agent(item: dict, *, context: str | None = None) -> Agent
 def _discover_gpu_pods(
     context: str | None,
     namespace: str | None,
+    pods: Callable[[], dict] | None = None,
 ) -> tuple[list[Agent], list[str]]:
     """Discover pods requesting nvidia.com/gpu and detect NVIDIA NIM containers."""
     agents: list[Agent] = []
     warnings: list[str] = []
 
     ns_args = ["-n", namespace] if namespace else ["-A"]
-    data = _kubectl(["get", "pods", *ns_args], context=context)
+    data = pods() if pods else _kubectl(["get", "pods", *ns_args], context=context)
 
-    pods: dict[tuple[str, str], list[tuple[str, str, int]]] = {}
-    for pod in data.get("items", []):
-        try:
-            for pod_ns, pod_name, container, image_ref, gpu_limit, gpu_request in iter_gpu_containers([pod]):
-                limit, request = str(gpu_limit), str(gpu_request)
-                gpus = int(limit) if limit != "0" else int(request)
-                pods.setdefault((pod_ns, pod_name), []).append((str(container.get("name") or "unknown"), image_ref, gpus))
-        except (TypeError, ValueError, AttributeError, KeyError):
-            warnings.append("CoreWeave GPU pod record has invalid metadata. Assessment incomplete.")
-    for (pod_ns, pod_name), containers in pods.items():
+    errors: list[Exception] = []
+    grouped: dict[tuple[str, str], list[tuple[str, str, int]]] = {}
+    for found in iter_gpu_containers(data["items"], errors=errors):
+        grouped.setdefault((found.namespace, found.pod), []).append((found.container, found.image, found.gpus))
+    warnings.extend("CoreWeave GPU pod record has invalid metadata. Assessment incomplete." for _ in errors)
+    for (pod_ns, pod_name), containers in grouped.items():
         agents.append(_gpu_pod_agent(pod_ns, pod_name, containers, context=context))
 
     return agents, warnings
@@ -426,37 +416,34 @@ def _gpu_pod_agent(pod_ns: str, pod_name: str, containers: list[tuple[str, str, 
 def _discover_infiniband_jobs(
     context: str | None,
     namespace: str | None,
+    pods: Callable[[], dict] | None = None,
 ) -> tuple[list[Agent], list[str]]:
     """Discover multi-node training jobs using InfiniBand (rdma/ib resources)."""
     agents: list[Agent] = []
     warnings: list[str] = []
 
     ns_args = ["-n", namespace] if namespace else ["-A"]
-    data = _kubectl(["get", "pods", *ns_args], context=context)
+    data = pods() if pods else _kubectl(["get", "pods", *ns_args], context=context)
 
-    seen_jobs: set[tuple[str, str]] = set()
-    for pod in data.get("items", []):
+    errors: list[Exception] = []
+    for pod_ns, pod_name, image_ref, gpu_count in iter_infiniband_pods(data["items"], errors=errors):
+        location, previous_paths = _context_location(f"training/{pod_ns}/{pod_name}", context)
         try:
-            for pod_ns, pod_name, image_ref, gpu_limits in iter_infiniband_pods([pod]):
-                job_key = (pod_ns, pod_name)
-                if job_key in seen_jobs:
-                    continue
-                location, previous_paths = _context_location(f"training/{pod_ns}/{pod_name}", context)
-                agents.append(
-                    build_training_agent(
-                        provider="coreweave",
-                        pod_ns=pod_ns,
-                        pod_name=pod_name,
-                        image_ref=image_ref,
-                        gpu_limits=gpu_limits,
-                        config_path=location,
-                        cluster=context,
-                        previous_config_paths=previous_paths,
-                    )
+            agents.append(
+                build_training_agent(
+                    provider="coreweave",
+                    pod_ns=pod_ns,
+                    pod_name=pod_name,
+                    image_ref=image_ref,
+                    gpu_count=gpu_count,
+                    config_path=location,
+                    cluster=context,
+                    previous_config_paths=previous_paths,
                 )
-                seen_jobs.add(job_key)
-        except (TypeError, ValueError, AttributeError, KeyError):
-            warnings.append("CoreWeave InfiniBand pod record has invalid metadata. Assessment incomplete.")
+            )
+        except (TypeError, ValueError, AttributeError, KeyError) as exc:
+            errors.append(exc)
+    warnings.extend("CoreWeave InfiniBand pod record has invalid metadata. Assessment incomplete." for _ in errors)
 
     return agents, warnings
 
