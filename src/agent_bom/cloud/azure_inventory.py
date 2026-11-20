@@ -42,6 +42,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 from agent_bom.discovery_envelope import DiscoveryEnvelope, RedactionStatus, ScanMode
+from agent_bom.security import sanitize_text
 
 from .aws_inventory import dedupe_missing_permissions
 from .azure_inv._base import (  # noqa: F401 - facade re-export
@@ -511,7 +512,8 @@ def discover_all_subscription_inventories(
     if credential is None:
         try:
             credential = DefaultAzureCredential()
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001 — credential chain errors must not crash a scan
+            logger.warning("Azure credential unavailable; inventory skipped: %s", sanitize_text(sanitize_discovery_warning(exc)))
             return []
 
     sub_ids, _warnings = (

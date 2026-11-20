@@ -13,6 +13,7 @@ from ..azure_graph import (
     CONDITIONAL_ACCESS_POLICIES_PATH,
     GraphError,
 )
+from ..cis_read_errors import read_error_label
 from ._base import (
     _IAM_SECTION,
     _ca_enabled,
@@ -216,7 +217,7 @@ def _check_1_5(auth_client: Any, subscription_id: str) -> CISCheckResult:
             result.evidence = f"No custom roles with full administrative permissions found ({len(definitions)} custom role(s) reviewed)."
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not enumerate custom role definitions: {exc}"
+        result.evidence = f"Could not enumerate custom role definitions: {read_error_label(exc)}"
     return result
 
 
@@ -277,7 +278,7 @@ def _check_1_7(auth_client: Any, subscription_id: str) -> CISCheckResult:
             result.evidence = f"No custom Owner-level roles at subscription scope found ({len(definitions)} custom role(s) reviewed)."
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not enumerate custom role definitions: {exc}"
+        result.evidence = f"Could not enumerate custom role definitions: {read_error_label(exc)}"
     return result
 
 

@@ -1199,7 +1199,7 @@ def test_bucket_partial_collection_never_reports_clean_or_wrong_remediation(monk
         "SERVICE_DISABLED": "service_disabled",
         "BILLING_DISABLED": "billing_disabled",
         "PERMISSION_DENIED": "permission denied",
-        "unavailable": "unavailable",
+        "unavailable": "read_failed",
     }[reason]
     assert expected in result.evidence
     if reason in {"SERVICE_DISABLED", "BILLING_DISABLED"}:

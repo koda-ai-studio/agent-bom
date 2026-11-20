@@ -8,6 +8,7 @@ from agent_bom.security import sanitize_text
 
 from ..aws_cis_benchmark import CheckStatus, CISCheckResult, finalize_read_coverage
 from ..aws_inventory import is_access_denied_error
+from ..cis_read_errors import read_error_label, record_read_failure
 from ._base import (
     _STORAGE_SECTION,
     _enum_text,
@@ -44,7 +45,7 @@ def _check_3_1(storage_client: Any) -> CISCheckResult:
             )
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not list storage accounts: {exc}"
+        result.evidence = f"Could not list storage accounts: {read_error_label(exc)}"
     return result
 
 
@@ -76,7 +77,7 @@ def _check_3_7(storage_client: Any) -> CISCheckResult:
             )
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check storage account blob access settings: {exc}"
+        result.evidence = f"Could not check storage account blob access settings: {read_error_label(exc)}"
     return result
 
 
@@ -95,6 +96,7 @@ def _check_3_10(storage_client: Any) -> CISCheckResult:
         failing = []
         inspected = 0
         denied: list[str] = []
+        unavailable: dict[str, list[str]] = {}
         for acct in accounts:
             acct_name = acct.name or "unknown"
             # Extract resource group from account ID
@@ -117,6 +119,8 @@ def _check_3_10(storage_client: Any) -> CISCheckResult:
             except Exception as exc:
                 if is_access_denied_error(exc):
                     denied.append(acct_name)
+                else:
+                    record_read_failure(unavailable, acct_name)
                 logger.debug("Could not check soft delete for %s: %s", acct_name, sanitize_text(exc))
 
         if failing:
@@ -128,13 +132,14 @@ def _check_3_10(storage_client: Any) -> CISCheckResult:
                 result,
                 inspected=inspected,
                 denied=denied,
+                unavailable=unavailable,
                 permission="Microsoft.Storage/storageAccounts/blobServices/read",
                 resource_kind="storage account",
                 pass_evidence=f"All {len(accounts)} storage account(s) have blob soft delete enabled.",
             )
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check storage account soft delete settings: {exc}"
+        result.evidence = f"Could not check storage account soft delete settings: {read_error_label(exc)}"
     return result
 
 
@@ -167,7 +172,7 @@ def _check_3_3(storage_client: Any) -> CISCheckResult:
             )
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check storage account encryption settings: {exc}"
+        result.evidence = f"Could not check storage account encryption settings: {read_error_label(exc)}"
     return result
 
 
@@ -191,7 +196,7 @@ def _check_3_4(storage_client: Any) -> CISCheckResult:
         )
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not list storage accounts: {exc}"
+        result.evidence = f"Could not list storage accounts: {read_error_label(exc)}"
     return result
 
 
@@ -215,7 +220,7 @@ def _check_3_5(storage_client: Any) -> CISCheckResult:
         )
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not list storage accounts: {exc}"
+        result.evidence = f"Could not list storage accounts: {read_error_label(exc)}"
     return result
 
 
@@ -239,7 +244,7 @@ def _check_3_6(storage_client: Any) -> CISCheckResult:
         )
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not list storage accounts: {exc}"
+        result.evidence = f"Could not list storage accounts: {read_error_label(exc)}"
     return result
 
 
@@ -272,7 +277,7 @@ def _check_3_8(storage_client: Any) -> CISCheckResult:
             )
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check storage account network rules: {exc}"
+        result.evidence = f"Could not check storage account network rules: {read_error_label(exc)}"
     return result
 
 
@@ -305,7 +310,7 @@ def _check_3_9(storage_client: Any) -> CISCheckResult:
             )
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check storage account trusted services settings: {exc}"
+        result.evidence = f"Could not check storage account trusted services settings: {read_error_label(exc)}"
     return result
 
 
@@ -336,7 +341,7 @@ def _check_3_11(storage_client: Any) -> CISCheckResult:
             )
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check storage account private endpoints: {exc}"
+        result.evidence = f"Could not check storage account private endpoints: {read_error_label(exc)}"
     return result
 
 
@@ -368,5 +373,5 @@ def _check_3_12(storage_client: Any) -> CISCheckResult:
             )
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check storage account infrastructure encryption: {exc}"
+        result.evidence = f"Could not check storage account infrastructure encryption: {read_error_label(exc)}"
     return result

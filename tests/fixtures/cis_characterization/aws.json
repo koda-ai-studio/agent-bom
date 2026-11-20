@@ -1599,7 +1599,7 @@
      "account_id": "",
      "check_id": "1.17",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "Could not check AWSSupportAccess attachment: scenario boom",
+     "evidence": "Could not check AWSSupportAccess attachment: RuntimeError",
      "network_exposure": [],
      "recommendation": "Create an IAM role with AWSSupportAccess policy attached.",
      "remediation": {},
@@ -1663,7 +1663,7 @@
      "account_id": "",
      "check_id": "1.22",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "Could not check AWSCloudShellFullAccess: scenario boom",
+     "evidence": "Could not check AWSCloudShellFullAccess: RuntimeError",
      "network_exposure": [],
      "recommendation": "Remove AWSCloudShellFullAccess from users/groups/roles that do not need it.",
      "remediation": {},
@@ -1735,7 +1735,7 @@
      "account_id": "",
      "check_id": "2.2.1",
      "cis_section": "2 - Storage",
-     "evidence": "Could not check EBS encryption default: scenario boom",
+     "evidence": "Could not check EBS encryption default: RuntimeError",
      "network_exposure": [],
      "recommendation": "Enable EBS encryption by default via EC2 > Settings > EBS encryption.",
      "remediation": {},
@@ -1767,7 +1767,7 @@
      "account_id": "",
      "check_id": "3.10",
      "cis_section": "3 - Logging",
-     "evidence": "Could not check object-level logging: scenario boom",
+     "evidence": "Could not check object-level logging: RuntimeError",
      "network_exposure": [],
      "recommendation": "Enable S3 object-level write event logging in at least one CloudTrail trail.",
      "remediation": {},
@@ -1783,7 +1783,7 @@
      "account_id": "",
      "check_id": "3.11",
      "cis_section": "3 - Logging",
-     "evidence": "Could not check object-level logging: scenario boom",
+     "evidence": "Could not check object-level logging: RuntimeError",
      "network_exposure": [],
      "recommendation": "Enable S3 object-level read event logging in at least one CloudTrail trail.",
      "remediation": {},
@@ -1827,7 +1827,7 @@
      "account_id": "",
      "check_id": "4.1",
      "cis_section": "4 - Monitoring",
-     "evidence": "Could not query metric filters: scenario boom",
+     "evidence": "Could not query metric filters: RuntimeError",
      "network_exposure": [],
      "recommendation": "Create a CloudWatch metric filter and alarm for unauthorized API calls.",
      "remediation": {},
@@ -1843,7 +1843,7 @@
      "account_id": "",
      "check_id": "4.10",
      "cis_section": "4 - Monitoring",
-     "evidence": "Could not query metric filters: scenario boom",
+     "evidence": "Could not query metric filters: RuntimeError",
      "network_exposure": [],
      "recommendation": "Create a CloudWatch metric filter and alarm for security group changes.",
      "remediation": {},
@@ -1859,7 +1859,7 @@
      "account_id": "",
      "check_id": "4.11",
      "cis_section": "4 - Monitoring",
-     "evidence": "Could not query metric filters: scenario boom",
+     "evidence": "Could not query metric filters: RuntimeError",
      "network_exposure": [],
      "recommendation": "Create a CloudWatch metric filter and alarm for NACL changes.",
      "remediation": {},
@@ -1875,7 +1875,7 @@
      "account_id": "",
      "check_id": "4.12",
      "cis_section": "4 - Monitoring",
-     "evidence": "Could not query metric filters: scenario boom",
+     "evidence": "Could not query metric filters: RuntimeError",
      "network_exposure": [],
      "recommendation": "Create a CloudWatch metric filter and alarm for network gateway changes.",
      "remediation": {},
@@ -1891,7 +1891,7 @@
      "account_id": "",
      "check_id": "4.13",
      "cis_section": "4 - Monitoring",
-     "evidence": "Could not query metric filters: scenario boom",
+     "evidence": "Could not query metric filters: RuntimeError",
      "network_exposure": [],
      "recommendation": "Create a CloudWatch metric filter and alarm for route table changes.",
      "remediation": {},
@@ -1907,7 +1907,7 @@
      "account_id": "",
      "check_id": "4.14",
      "cis_section": "4 - Monitoring",
-     "evidence": "Could not query metric filters: scenario boom",
+     "evidence": "Could not query metric filters: RuntimeError",
      "network_exposure": [],
      "recommendation": "Create a CloudWatch metric filter and alarm for VPC changes.",
      "remediation": {},
@@ -1955,7 +1955,7 @@
      "account_id": "",
      "check_id": "4.2",
      "cis_section": "4 - Monitoring",
-     "evidence": "Could not query metric filters: scenario boom",
+     "evidence": "Could not query metric filters: RuntimeError",
      "network_exposure": [],
      "recommendation": "Create a CloudWatch metric filter and alarm for console sign-in without MFA.",
      "remediation": {},
@@ -1987,7 +1987,7 @@
      "account_id": "",
      "check_id": "4.4",
      "cis_section": "4 - Monitoring",
-     "evidence": "Could not query metric filters: scenario boom",
+     "evidence": "Could not query metric filters: RuntimeError",
      "network_exposure": [],
      "recommendation": "Create a CloudWatch metric filter and alarm for IAM policy changes.",
      "remediation": {},
@@ -2019,7 +2019,7 @@
      "account_id": "",
      "check_id": "4.6",
      "cis_section": "4 - Monitoring",
-     "evidence": "Could not query metric filters: scenario boom",
+     "evidence": "Could not query metric filters: RuntimeError",
      "network_exposure": [],
      "recommendation": "Create a CloudWatch metric filter and alarm for console authentication failures.",
      "remediation": {},
@@ -2035,7 +2035,7 @@
      "account_id": "",
      "check_id": "4.7",
      "cis_section": "4 - Monitoring",
-     "evidence": "Could not query metric filters: scenario boom",
+     "evidence": "Could not query metric filters: RuntimeError",
      "network_exposure": [],
      "recommendation": "Create a CloudWatch metric filter and alarm for KMS key disabling/deletion.",
      "remediation": {},
@@ -2051,7 +2051,7 @@
      "account_id": "",
      "check_id": "4.8",
      "cis_section": "4 - Monitoring",
-     "evidence": "Could not query metric filters: scenario boom",
+     "evidence": "Could not query metric filters: RuntimeError",
      "network_exposure": [],
      "recommendation": "Create a CloudWatch metric filter and alarm for S3 bucket policy changes.",
      "remediation": {},
@@ -2067,7 +2067,7 @@
      "account_id": "",
      "check_id": "4.9",
      "cis_section": "4 - Monitoring",
-     "evidence": "Could not query metric filters: scenario boom",
+     "evidence": "Could not query metric filters: RuntimeError",
      "network_exposure": [],
      "recommendation": "Create a CloudWatch metric filter and alarm for AWS Config changes.",
      "remediation": {},
@@ -2083,7 +2083,7 @@
      "account_id": "",
      "check_id": "5.1",
      "cis_section": "5 - Networking",
-     "evidence": "Could not query Network ACLs: scenario boom",
+     "evidence": "Could not query Network ACLs: RuntimeError",
      "network_exposure": [],
      "recommendation": "Restrict NACLs to deny ingress from 0.0.0.0/0 and ::/0 to ports 22 and 3389.",
      "remediation": {},
@@ -2107,7 +2107,7 @@
      "account_id": "",
      "check_id": "5.4",
      "cis_section": "5 - Networking",
-     "evidence": "Could not query route tables: scenario boom",
+     "evidence": "Could not query route tables: RuntimeError",
      "network_exposure": [],
      "recommendation": "Ensure VPC peering route table entries do not use overly broad CIDR ranges (e.g. 0.0.0.0/0).",
      "remediation": {},
@@ -3183,7 +3183,7 @@
       "attack_techniques": [],
       "check_id": "1.4",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3206,7 +3206,7 @@
       "attack_techniques": [],
       "check_id": "1.5",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3229,7 +3229,7 @@
       "attack_techniques": [],
       "check_id": "1.6",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3252,7 +3252,7 @@
       "attack_techniques": [],
       "check_id": "1.7",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3275,7 +3275,7 @@
       "attack_techniques": [],
       "check_id": "1.8",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3298,7 +3298,7 @@
       "attack_techniques": [],
       "check_id": "1.9",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3321,7 +3321,7 @@
       "attack_techniques": [],
       "check_id": "1.10",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3344,7 +3344,7 @@
       "attack_techniques": [],
       "check_id": "1.11",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3367,7 +3367,7 @@
       "attack_techniques": [],
       "check_id": "1.12",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3390,7 +3390,7 @@
       "attack_techniques": [],
       "check_id": "1.13",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3413,7 +3413,7 @@
       "attack_techniques": [],
       "check_id": "1.14",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3436,7 +3436,7 @@
       "attack_techniques": [],
       "check_id": "1.15",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3459,7 +3459,7 @@
       "attack_techniques": [],
       "check_id": "1.16",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3482,7 +3482,7 @@
       "attack_techniques": [],
       "check_id": "1.17",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "Could not check AWSSupportAccess attachment: scenario boom",
+      "evidence": "Could not check AWSSupportAccess attachment: RuntimeError",
       "network_exposure": [],
       "recommendation": "Create an IAM role with AWSSupportAccess policy attached.",
       "remediation": {
@@ -3556,7 +3556,7 @@
       "attack_techniques": [],
       "check_id": "1.22",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "Could not check AWSCloudShellFullAccess: scenario boom",
+      "evidence": "Could not check AWSCloudShellFullAccess: RuntimeError",
       "network_exposure": [],
       "recommendation": "Remove AWSCloudShellFullAccess from users/groups/roles that do not need it.",
       "remediation": {
@@ -3584,7 +3584,7 @@
       "attack_techniques": [],
       "check_id": "2.1.1",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3607,7 +3607,7 @@
       "attack_techniques": [],
       "check_id": "2.1.2",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3630,7 +3630,7 @@
       "attack_techniques": [],
       "check_id": "2.1.3",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3653,7 +3653,7 @@
       "attack_techniques": [],
       "check_id": "2.1.4",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3676,7 +3676,7 @@
       "attack_techniques": [],
       "check_id": "2.2.1",
       "cis_section": "",
-      "evidence": "Could not check EBS encryption default: scenario boom; [eu-west-1] Could not check EBS encryption default: scenario boom",
+      "evidence": "Could not check EBS encryption default: RuntimeError; [eu-west-1] Could not check EBS encryption default: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3699,7 +3699,7 @@
       "attack_techniques": [],
       "check_id": "2.3.1",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom; [eu-west-1] Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError; [eu-west-1] Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3722,7 +3722,7 @@
       "attack_techniques": [],
       "check_id": "2.3.2",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom; [eu-west-1] Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError; [eu-west-1] Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3745,7 +3745,7 @@
       "attack_techniques": [],
       "check_id": "2.4.1",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom; [eu-west-1] Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError; [eu-west-1] Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3768,7 +3768,7 @@
       "attack_techniques": [],
       "check_id": "3.1",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom; [eu-west-1] Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError; [eu-west-1] Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3791,7 +3791,7 @@
       "attack_techniques": [],
       "check_id": "3.2",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom; [eu-west-1] Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError; [eu-west-1] Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3814,7 +3814,7 @@
       "attack_techniques": [],
       "check_id": "3.3",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3837,7 +3837,7 @@
       "attack_techniques": [],
       "check_id": "3.4",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom; [eu-west-1] Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError; [eu-west-1] Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3860,7 +3860,7 @@
       "attack_techniques": [],
       "check_id": "3.5",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom; [eu-west-1] Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError; [eu-west-1] Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3883,7 +3883,7 @@
       "attack_techniques": [],
       "check_id": "3.6",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3906,7 +3906,7 @@
       "attack_techniques": [],
       "check_id": "3.7",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom; [eu-west-1] Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError; [eu-west-1] Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3929,7 +3929,7 @@
       "attack_techniques": [],
       "check_id": "3.9",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom; [eu-west-1] Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError; [eu-west-1] Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3952,7 +3952,7 @@
       "attack_techniques": [],
       "check_id": "3.10",
       "cis_section": "",
-      "evidence": "Could not check object-level logging: scenario boom; [eu-west-1] Could not check object-level logging: scenario boom",
+      "evidence": "Could not check object-level logging: RuntimeError; [eu-west-1] Could not check object-level logging: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3975,7 +3975,7 @@
       "attack_techniques": [],
       "check_id": "3.11",
       "cis_section": "",
-      "evidence": "Could not check object-level logging: scenario boom; [eu-west-1] Could not check object-level logging: scenario boom",
+      "evidence": "Could not check object-level logging: RuntimeError; [eu-west-1] Could not check object-level logging: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -3998,7 +3998,7 @@
       "attack_techniques": [],
       "check_id": "4.1",
       "cis_section": "",
-      "evidence": "Could not query metric filters: scenario boom; [eu-west-1] Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError; [eu-west-1] Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -4021,7 +4021,7 @@
       "attack_techniques": [],
       "check_id": "4.2",
       "cis_section": "",
-      "evidence": "Could not query metric filters: scenario boom; [eu-west-1] Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError; [eu-west-1] Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -4067,7 +4067,7 @@
       "attack_techniques": [],
       "check_id": "4.4",
       "cis_section": "",
-      "evidence": "Could not query metric filters: scenario boom; [eu-west-1] Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError; [eu-west-1] Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -4113,7 +4113,7 @@
       "attack_techniques": [],
       "check_id": "4.6",
       "cis_section": "",
-      "evidence": "Could not query metric filters: scenario boom; [eu-west-1] Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError; [eu-west-1] Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -4136,7 +4136,7 @@
       "attack_techniques": [],
       "check_id": "4.7",
       "cis_section": "",
-      "evidence": "Could not query metric filters: scenario boom; [eu-west-1] Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError; [eu-west-1] Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -4159,7 +4159,7 @@
       "attack_techniques": [],
       "check_id": "4.8",
       "cis_section": "",
-      "evidence": "Could not query metric filters: scenario boom; [eu-west-1] Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError; [eu-west-1] Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -4182,7 +4182,7 @@
       "attack_techniques": [],
       "check_id": "4.9",
       "cis_section": "",
-      "evidence": "Could not query metric filters: scenario boom; [eu-west-1] Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError; [eu-west-1] Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -4205,7 +4205,7 @@
       "attack_techniques": [],
       "check_id": "4.10",
       "cis_section": "",
-      "evidence": "Could not query metric filters: scenario boom; [eu-west-1] Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError; [eu-west-1] Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -4228,7 +4228,7 @@
       "attack_techniques": [],
       "check_id": "4.11",
       "cis_section": "",
-      "evidence": "Could not query metric filters: scenario boom; [eu-west-1] Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError; [eu-west-1] Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -4251,7 +4251,7 @@
       "attack_techniques": [],
       "check_id": "4.12",
       "cis_section": "",
-      "evidence": "Could not query metric filters: scenario boom; [eu-west-1] Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError; [eu-west-1] Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -4274,7 +4274,7 @@
       "attack_techniques": [],
       "check_id": "4.13",
       "cis_section": "",
-      "evidence": "Could not query metric filters: scenario boom; [eu-west-1] Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError; [eu-west-1] Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -4297,7 +4297,7 @@
       "attack_techniques": [],
       "check_id": "4.14",
       "cis_section": "",
-      "evidence": "Could not query metric filters: scenario boom; [eu-west-1] Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError; [eu-west-1] Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -4366,7 +4366,7 @@
       "attack_techniques": [],
       "check_id": "5.1",
       "cis_section": "",
-      "evidence": "Could not query Network ACLs: scenario boom; [eu-west-1] Could not query Network ACLs: scenario boom",
+      "evidence": "Could not query Network ACLs: RuntimeError; [eu-west-1] Could not query Network ACLs: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -4389,7 +4389,7 @@
       "attack_techniques": [],
       "check_id": "5.2",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom; [eu-west-1] Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError; [eu-west-1] Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -4412,7 +4412,7 @@
       "attack_techniques": [],
       "check_id": "5.3",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom; [eu-west-1] Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError; [eu-west-1] Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -4435,7 +4435,7 @@
       "attack_techniques": [],
       "check_id": "5.4",
       "cis_section": "",
-      "evidence": "Could not query route tables: scenario boom; [eu-west-1] Could not query route tables: scenario boom",
+      "evidence": "Could not query route tables: RuntimeError; [eu-west-1] Could not query route tables: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -4458,7 +4458,7 @@
       "attack_techniques": [],
       "check_id": "5.5",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom; [eu-west-1] Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError; [eu-west-1] Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -4681,7 +4681,7 @@
       "attack_techniques": [],
       "check_id": "1.4",
       "cis_section": "",
-      "evidence": "Check failed: TypeError: '>' not supported between instances of 'MagicMock' and 'int'",
+      "evidence": "Check failed: TypeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -4760,7 +4760,7 @@
       "attack_techniques": [],
       "check_id": "1.7",
       "cis_section": "",
-      "evidence": "Check failed: TypeError: initial_value must be str or None, not MagicMock",
+      "evidence": "Check failed: TypeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -4783,7 +4783,7 @@
       "attack_techniques": [],
       "check_id": "1.8",
       "cis_section": "",
-      "evidence": "Check failed: TypeError: '<' not supported between instances of 'MagicMock' and 'int'",
+      "evidence": "Check failed: TypeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -4806,7 +4806,7 @@
       "attack_techniques": [],
       "check_id": "1.9",
       "cis_section": "",
-      "evidence": "Check failed: TypeError: '<' not supported between instances of 'MagicMock' and 'int'",
+      "evidence": "Check failed: TypeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -4857,7 +4857,7 @@
       "attack_techniques": [],
       "check_id": "1.11",
       "cis_section": "",
-      "evidence": "Check failed: TypeError: initial_value must be str or None, not MagicMock",
+      "evidence": "Check failed: TypeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -4880,7 +4880,7 @@
       "attack_techniques": [],
       "check_id": "1.12",
       "cis_section": "",
-      "evidence": "Check failed: TypeError: initial_value must be str or None, not MagicMock",
+      "evidence": "Check failed: TypeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -6309,7 +6309,7 @@
       "attack_techniques": [],
       "check_id": "1.4",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -6332,7 +6332,7 @@
       "attack_techniques": [],
       "check_id": "1.5",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -6355,7 +6355,7 @@
       "attack_techniques": [],
       "check_id": "1.6",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -6378,7 +6378,7 @@
       "attack_techniques": [],
       "check_id": "1.7",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -6401,7 +6401,7 @@
       "attack_techniques": [],
       "check_id": "1.8",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -6424,7 +6424,7 @@
       "attack_techniques": [],
       "check_id": "1.9",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -6447,7 +6447,7 @@
       "attack_techniques": [],
       "check_id": "1.10",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -6470,7 +6470,7 @@
       "attack_techniques": [],
       "check_id": "1.11",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -6493,7 +6493,7 @@
       "attack_techniques": [],
       "check_id": "1.12",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -6516,7 +6516,7 @@
       "attack_techniques": [],
       "check_id": "1.13",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -6539,7 +6539,7 @@
       "attack_techniques": [],
       "check_id": "1.14",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -6562,7 +6562,7 @@
       "attack_techniques": [],
       "check_id": "1.15",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -6585,7 +6585,7 @@
       "attack_techniques": [],
       "check_id": "1.16",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -6720,7 +6720,7 @@
       "attack_techniques": [],
       "check_id": "2.1.1",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -6743,7 +6743,7 @@
       "attack_techniques": [],
       "check_id": "2.1.2",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -6766,7 +6766,7 @@
       "attack_techniques": [],
       "check_id": "2.1.3",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -6789,7 +6789,7 @@
       "attack_techniques": [],
       "check_id": "2.1.4",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -6838,7 +6838,7 @@
       "attack_techniques": [],
       "check_id": "2.3.1",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -6861,7 +6861,7 @@
       "attack_techniques": [],
       "check_id": "2.3.2",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -6884,7 +6884,7 @@
       "attack_techniques": [],
       "check_id": "2.4.1",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -6907,7 +6907,7 @@
       "attack_techniques": [],
       "check_id": "3.1",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -6930,7 +6930,7 @@
       "attack_techniques": [],
       "check_id": "3.2",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -6953,7 +6953,7 @@
       "attack_techniques": [],
       "check_id": "3.3",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -6976,7 +6976,7 @@
       "attack_techniques": [],
       "check_id": "3.4",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -6999,7 +6999,7 @@
       "attack_techniques": [],
       "check_id": "3.5",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -7022,7 +7022,7 @@
       "attack_techniques": [],
       "check_id": "3.6",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -7045,7 +7045,7 @@
       "attack_techniques": [],
       "check_id": "3.7",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -7068,7 +7068,7 @@
       "attack_techniques": [],
       "check_id": "3.9",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -7586,7 +7586,7 @@
       "attack_techniques": [],
       "check_id": "5.2",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -7609,7 +7609,7 @@
       "attack_techniques": [],
       "check_id": "5.3",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -7659,7 +7659,7 @@
       "attack_techniques": [],
       "check_id": "5.5",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -7882,7 +7882,7 @@
       "attack_techniques": [],
       "check_id": "1.4",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -7905,7 +7905,7 @@
       "attack_techniques": [],
       "check_id": "1.5",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -7928,7 +7928,7 @@
       "attack_techniques": [],
       "check_id": "1.6",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -7951,7 +7951,7 @@
       "attack_techniques": [],
       "check_id": "1.7",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -7974,7 +7974,7 @@
       "attack_techniques": [],
       "check_id": "1.8",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -7997,7 +7997,7 @@
       "attack_techniques": [],
       "check_id": "1.9",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -8020,7 +8020,7 @@
       "attack_techniques": [],
       "check_id": "1.10",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -8043,7 +8043,7 @@
       "attack_techniques": [],
       "check_id": "1.11",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -8066,7 +8066,7 @@
       "attack_techniques": [],
       "check_id": "1.12",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -8089,7 +8089,7 @@
       "attack_techniques": [],
       "check_id": "1.13",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -8112,7 +8112,7 @@
       "attack_techniques": [],
       "check_id": "1.14",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -8135,7 +8135,7 @@
       "attack_techniques": [],
       "check_id": "1.15",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -8158,7 +8158,7 @@
       "attack_techniques": [],
       "check_id": "1.16",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -8293,7 +8293,7 @@
       "attack_techniques": [],
       "check_id": "2.1.1",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -8316,7 +8316,7 @@
       "attack_techniques": [],
       "check_id": "2.1.2",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -8339,7 +8339,7 @@
       "attack_techniques": [],
       "check_id": "2.1.3",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -8362,7 +8362,7 @@
       "attack_techniques": [],
       "check_id": "2.1.4",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -8411,7 +8411,7 @@
       "attack_techniques": [],
       "check_id": "2.3.1",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -8434,7 +8434,7 @@
       "attack_techniques": [],
       "check_id": "2.3.2",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -8457,7 +8457,7 @@
       "attack_techniques": [],
       "check_id": "2.4.1",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -8480,7 +8480,7 @@
       "attack_techniques": [],
       "check_id": "3.1",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -8503,7 +8503,7 @@
       "attack_techniques": [],
       "check_id": "3.2",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -8526,7 +8526,7 @@
       "attack_techniques": [],
       "check_id": "3.3",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -8549,7 +8549,7 @@
       "attack_techniques": [],
       "check_id": "3.4",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -8572,7 +8572,7 @@
       "attack_techniques": [],
       "check_id": "3.5",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -8595,7 +8595,7 @@
       "attack_techniques": [],
       "check_id": "3.6",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -8618,7 +8618,7 @@
       "attack_techniques": [],
       "check_id": "3.7",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -8641,7 +8641,7 @@
       "attack_techniques": [],
       "check_id": "3.9",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -9159,7 +9159,7 @@
       "attack_techniques": [],
       "check_id": "5.2",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -9182,7 +9182,7 @@
       "attack_techniques": [],
       "check_id": "5.3",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -9232,7 +9232,7 @@
       "attack_techniques": [],
       "check_id": "5.5",
       "cis_section": "",
-      "evidence": "AWS API error: AccessDenied \u2014 scenario denied",
+      "evidence": "AWS API error: AccessDenied",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -9568,7 +9568,7 @@
       "attack_techniques": [],
       "check_id": "1.7",
       "cis_section": "",
-      "evidence": "Check failed: TypeError: initial_value must be str or None, not _Empty",
+      "evidence": "Check failed: TypeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -9687,7 +9687,7 @@
       "attack_techniques": [],
       "check_id": "1.11",
       "cis_section": "",
-      "evidence": "Check failed: TypeError: initial_value must be str or None, not _Empty",
+      "evidence": "Check failed: TypeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -9710,7 +9710,7 @@
       "attack_techniques": [],
       "check_id": "1.12",
       "cis_section": "",
-      "evidence": "Check failed: TypeError: initial_value must be str or None, not _Empty",
+      "evidence": "Check failed: TypeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -11423,7 +11423,7 @@
       "attack_techniques": [],
       "check_id": "1.7",
       "cis_section": "",
-      "evidence": "Check failed: TypeError: initial_value must be str or None, not _Empty",
+      "evidence": "Check failed: TypeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -11542,7 +11542,7 @@
       "attack_techniques": [],
       "check_id": "1.11",
       "cis_section": "",
-      "evidence": "Check failed: TypeError: initial_value must be str or None, not _Empty",
+      "evidence": "Check failed: TypeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -11565,7 +11565,7 @@
       "attack_techniques": [],
       "check_id": "1.12",
       "cis_section": "",
-      "evidence": "Check failed: TypeError: initial_value must be str or None, not _Empty",
+      "evidence": "Check failed: TypeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -13159,7 +13159,7 @@
       "attack_techniques": [],
       "check_id": "1.4",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -13182,7 +13182,7 @@
       "attack_techniques": [],
       "check_id": "1.5",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -13205,7 +13205,7 @@
       "attack_techniques": [],
       "check_id": "1.6",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -13228,7 +13228,7 @@
       "attack_techniques": [],
       "check_id": "1.7",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -13251,7 +13251,7 @@
       "attack_techniques": [],
       "check_id": "1.8",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -13274,7 +13274,7 @@
       "attack_techniques": [],
       "check_id": "1.9",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -13297,7 +13297,7 @@
       "attack_techniques": [],
       "check_id": "1.10",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -13320,7 +13320,7 @@
       "attack_techniques": [],
       "check_id": "1.11",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -13343,7 +13343,7 @@
       "attack_techniques": [],
       "check_id": "1.12",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -13366,7 +13366,7 @@
       "attack_techniques": [],
       "check_id": "1.13",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -13389,7 +13389,7 @@
       "attack_techniques": [],
       "check_id": "1.14",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -13412,7 +13412,7 @@
       "attack_techniques": [],
       "check_id": "1.15",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -13435,7 +13435,7 @@
       "attack_techniques": [],
       "check_id": "1.16",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -13458,7 +13458,7 @@
       "attack_techniques": [],
       "check_id": "1.17",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "Could not check AWSSupportAccess attachment: scenario boom",
+      "evidence": "Could not check AWSSupportAccess attachment: RuntimeError",
       "network_exposure": [],
       "recommendation": "Create an IAM role with AWSSupportAccess policy attached.",
       "remediation": {
@@ -13542,7 +13542,7 @@
       "attack_techniques": [],
       "check_id": "1.22",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "Could not check AWSCloudShellFullAccess: scenario boom",
+      "evidence": "Could not check AWSCloudShellFullAccess: RuntimeError",
       "network_exposure": [],
       "recommendation": "Remove AWSCloudShellFullAccess from users/groups/roles that do not need it.",
       "remediation": {
@@ -13570,7 +13570,7 @@
       "attack_techniques": [],
       "check_id": "2.1.1",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -13593,7 +13593,7 @@
       "attack_techniques": [],
       "check_id": "2.1.2",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -13616,7 +13616,7 @@
       "attack_techniques": [],
       "check_id": "2.1.3",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -13639,7 +13639,7 @@
       "attack_techniques": [],
       "check_id": "2.1.4",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -13662,7 +13662,7 @@
       "attack_techniques": [],
       "check_id": "2.2.1",
       "cis_section": "2 - Storage",
-      "evidence": "Could not check EBS encryption default: scenario boom",
+      "evidence": "Could not check EBS encryption default: RuntimeError",
       "network_exposure": [],
       "recommendation": "Enable EBS encryption by default via EC2 > Settings > EBS encryption.",
       "remediation": {
@@ -13688,7 +13688,7 @@
       "attack_techniques": [],
       "check_id": "2.3.1",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -13711,7 +13711,7 @@
       "attack_techniques": [],
       "check_id": "2.3.2",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -13734,7 +13734,7 @@
       "attack_techniques": [],
       "check_id": "2.4.1",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -13757,7 +13757,7 @@
       "attack_techniques": [],
       "check_id": "3.1",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -13780,7 +13780,7 @@
       "attack_techniques": [],
       "check_id": "3.2",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -13803,7 +13803,7 @@
       "attack_techniques": [],
       "check_id": "3.3",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -13826,7 +13826,7 @@
       "attack_techniques": [],
       "check_id": "3.4",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -13849,7 +13849,7 @@
       "attack_techniques": [],
       "check_id": "3.5",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -13872,7 +13872,7 @@
       "attack_techniques": [],
       "check_id": "3.6",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -13895,7 +13895,7 @@
       "attack_techniques": [],
       "check_id": "3.7",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -13918,7 +13918,7 @@
       "attack_techniques": [],
       "check_id": "3.9",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -13941,7 +13941,7 @@
       "attack_techniques": [],
       "check_id": "3.10",
       "cis_section": "3 - Logging",
-      "evidence": "Could not check object-level logging: scenario boom",
+      "evidence": "Could not check object-level logging: RuntimeError",
       "network_exposure": [],
       "recommendation": "Enable S3 object-level write event logging in at least one CloudTrail trail.",
       "remediation": {
@@ -13967,7 +13967,7 @@
       "attack_techniques": [],
       "check_id": "3.11",
       "cis_section": "3 - Logging",
-      "evidence": "Could not check object-level logging: scenario boom",
+      "evidence": "Could not check object-level logging: RuntimeError",
       "network_exposure": [],
       "recommendation": "Enable S3 object-level read event logging in at least one CloudTrail trail.",
       "remediation": {
@@ -13993,7 +13993,7 @@
       "attack_techniques": [],
       "check_id": "4.1",
       "cis_section": "4 - Monitoring",
-      "evidence": "Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "Create a CloudWatch metric filter and alarm for unauthorized API calls.",
       "remediation": {
@@ -14019,7 +14019,7 @@
       "attack_techniques": [],
       "check_id": "4.2",
       "cis_section": "4 - Monitoring",
-      "evidence": "Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "Create a CloudWatch metric filter and alarm for console sign-in without MFA.",
       "remediation": {
@@ -14071,7 +14071,7 @@
       "attack_techniques": [],
       "check_id": "4.4",
       "cis_section": "4 - Monitoring",
-      "evidence": "Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "Create a CloudWatch metric filter and alarm for IAM policy changes.",
       "remediation": {
@@ -14123,7 +14123,7 @@
       "attack_techniques": [],
       "check_id": "4.6",
       "cis_section": "4 - Monitoring",
-      "evidence": "Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "Create a CloudWatch metric filter and alarm for console authentication failures.",
       "remediation": {
@@ -14149,7 +14149,7 @@
       "attack_techniques": [],
       "check_id": "4.7",
       "cis_section": "4 - Monitoring",
-      "evidence": "Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "Create a CloudWatch metric filter and alarm for KMS key disabling/deletion.",
       "remediation": {
@@ -14175,7 +14175,7 @@
       "attack_techniques": [],
       "check_id": "4.8",
       "cis_section": "4 - Monitoring",
-      "evidence": "Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "Create a CloudWatch metric filter and alarm for S3 bucket policy changes.",
       "remediation": {
@@ -14201,7 +14201,7 @@
       "attack_techniques": [],
       "check_id": "4.9",
       "cis_section": "4 - Monitoring",
-      "evidence": "Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "Create a CloudWatch metric filter and alarm for AWS Config changes.",
       "remediation": {
@@ -14227,7 +14227,7 @@
       "attack_techniques": [],
       "check_id": "4.10",
       "cis_section": "4 - Monitoring",
-      "evidence": "Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "Create a CloudWatch metric filter and alarm for security group changes.",
       "remediation": {
@@ -14253,7 +14253,7 @@
       "attack_techniques": [],
       "check_id": "4.11",
       "cis_section": "4 - Monitoring",
-      "evidence": "Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "Create a CloudWatch metric filter and alarm for NACL changes.",
       "remediation": {
@@ -14279,7 +14279,7 @@
       "attack_techniques": [],
       "check_id": "4.12",
       "cis_section": "4 - Monitoring",
-      "evidence": "Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "Create a CloudWatch metric filter and alarm for network gateway changes.",
       "remediation": {
@@ -14305,7 +14305,7 @@
       "attack_techniques": [],
       "check_id": "4.13",
       "cis_section": "4 - Monitoring",
-      "evidence": "Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "Create a CloudWatch metric filter and alarm for route table changes.",
       "remediation": {
@@ -14331,7 +14331,7 @@
       "attack_techniques": [],
       "check_id": "4.14",
       "cis_section": "4 - Monitoring",
-      "evidence": "Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "Create a CloudWatch metric filter and alarm for VPC changes.",
       "remediation": {
@@ -14409,7 +14409,7 @@
       "attack_techniques": [],
       "check_id": "5.1",
       "cis_section": "5 - Networking",
-      "evidence": "Could not query Network ACLs: scenario boom",
+      "evidence": "Could not query Network ACLs: RuntimeError",
       "network_exposure": [],
       "recommendation": "Restrict NACLs to deny ingress from 0.0.0.0/0 and ::/0 to ports 22 and 3389.",
       "remediation": {
@@ -14436,7 +14436,7 @@
       "attack_techniques": [],
       "check_id": "5.2",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -14459,7 +14459,7 @@
       "attack_techniques": [],
       "check_id": "5.3",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -14482,7 +14482,7 @@
       "attack_techniques": [],
       "check_id": "5.4",
       "cis_section": "5 - Networking",
-      "evidence": "Could not query route tables: scenario boom",
+      "evidence": "Could not query route tables: RuntimeError",
       "network_exposure": [],
       "recommendation": "Ensure VPC peering route table entries do not use overly broad CIDR ranges (e.g. 0.0.0.0/0).",
       "remediation": {
@@ -14509,7 +14509,7 @@
       "attack_techniques": [],
       "check_id": "5.5",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -14732,7 +14732,7 @@
       "attack_techniques": [],
       "check_id": "1.4",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -14755,7 +14755,7 @@
       "attack_techniques": [],
       "check_id": "1.5",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -14778,7 +14778,7 @@
       "attack_techniques": [],
       "check_id": "1.6",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -14801,7 +14801,7 @@
       "attack_techniques": [],
       "check_id": "1.7",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -14824,7 +14824,7 @@
       "attack_techniques": [],
       "check_id": "1.8",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -14847,7 +14847,7 @@
       "attack_techniques": [],
       "check_id": "1.9",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -14870,7 +14870,7 @@
       "attack_techniques": [],
       "check_id": "1.10",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -14893,7 +14893,7 @@
       "attack_techniques": [],
       "check_id": "1.11",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -14916,7 +14916,7 @@
       "attack_techniques": [],
       "check_id": "1.12",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -14939,7 +14939,7 @@
       "attack_techniques": [],
       "check_id": "1.13",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -14962,7 +14962,7 @@
       "attack_techniques": [],
       "check_id": "1.14",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -14985,7 +14985,7 @@
       "attack_techniques": [],
       "check_id": "1.15",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -15008,7 +15008,7 @@
       "attack_techniques": [],
       "check_id": "1.16",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -15031,7 +15031,7 @@
       "attack_techniques": [],
       "check_id": "1.17",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "Could not check AWSSupportAccess attachment: scenario boom",
+      "evidence": "Could not check AWSSupportAccess attachment: RuntimeError",
       "network_exposure": [],
       "recommendation": "Create an IAM role with AWSSupportAccess policy attached.",
       "remediation": {
@@ -15115,7 +15115,7 @@
       "attack_techniques": [],
       "check_id": "1.22",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "Could not check AWSCloudShellFullAccess: scenario boom",
+      "evidence": "Could not check AWSCloudShellFullAccess: RuntimeError",
       "network_exposure": [],
       "recommendation": "Remove AWSCloudShellFullAccess from users/groups/roles that do not need it.",
       "remediation": {
@@ -15143,7 +15143,7 @@
       "attack_techniques": [],
       "check_id": "2.1.1",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -15166,7 +15166,7 @@
       "attack_techniques": [],
       "check_id": "2.1.2",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -15189,7 +15189,7 @@
       "attack_techniques": [],
       "check_id": "2.1.3",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -15212,7 +15212,7 @@
       "attack_techniques": [],
       "check_id": "2.1.4",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -15235,7 +15235,7 @@
       "attack_techniques": [],
       "check_id": "2.2.1",
       "cis_section": "2 - Storage",
-      "evidence": "Could not check EBS encryption default: scenario boom",
+      "evidence": "Could not check EBS encryption default: RuntimeError",
       "network_exposure": [],
       "recommendation": "Enable EBS encryption by default via EC2 > Settings > EBS encryption.",
       "remediation": {
@@ -15261,7 +15261,7 @@
       "attack_techniques": [],
       "check_id": "2.3.1",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -15284,7 +15284,7 @@
       "attack_techniques": [],
       "check_id": "2.3.2",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -15307,7 +15307,7 @@
       "attack_techniques": [],
       "check_id": "2.4.1",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -15330,7 +15330,7 @@
       "attack_techniques": [],
       "check_id": "3.1",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -15353,7 +15353,7 @@
       "attack_techniques": [],
       "check_id": "3.2",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -15376,7 +15376,7 @@
       "attack_techniques": [],
       "check_id": "3.3",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -15399,7 +15399,7 @@
       "attack_techniques": [],
       "check_id": "3.4",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -15422,7 +15422,7 @@
       "attack_techniques": [],
       "check_id": "3.5",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -15445,7 +15445,7 @@
       "attack_techniques": [],
       "check_id": "3.6",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -15468,7 +15468,7 @@
       "attack_techniques": [],
       "check_id": "3.7",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -15491,7 +15491,7 @@
       "attack_techniques": [],
       "check_id": "3.9",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -15514,7 +15514,7 @@
       "attack_techniques": [],
       "check_id": "3.10",
       "cis_section": "3 - Logging",
-      "evidence": "Could not check object-level logging: scenario boom",
+      "evidence": "Could not check object-level logging: RuntimeError",
       "network_exposure": [],
       "recommendation": "Enable S3 object-level write event logging in at least one CloudTrail trail.",
       "remediation": {
@@ -15540,7 +15540,7 @@
       "attack_techniques": [],
       "check_id": "3.11",
       "cis_section": "3 - Logging",
-      "evidence": "Could not check object-level logging: scenario boom",
+      "evidence": "Could not check object-level logging: RuntimeError",
       "network_exposure": [],
       "recommendation": "Enable S3 object-level read event logging in at least one CloudTrail trail.",
       "remediation": {
@@ -15566,7 +15566,7 @@
       "attack_techniques": [],
       "check_id": "4.1",
       "cis_section": "4 - Monitoring",
-      "evidence": "Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "Create a CloudWatch metric filter and alarm for unauthorized API calls.",
       "remediation": {
@@ -15592,7 +15592,7 @@
       "attack_techniques": [],
       "check_id": "4.2",
       "cis_section": "4 - Monitoring",
-      "evidence": "Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "Create a CloudWatch metric filter and alarm for console sign-in without MFA.",
       "remediation": {
@@ -15644,7 +15644,7 @@
       "attack_techniques": [],
       "check_id": "4.4",
       "cis_section": "4 - Monitoring",
-      "evidence": "Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "Create a CloudWatch metric filter and alarm for IAM policy changes.",
       "remediation": {
@@ -15696,7 +15696,7 @@
       "attack_techniques": [],
       "check_id": "4.6",
       "cis_section": "4 - Monitoring",
-      "evidence": "Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "Create a CloudWatch metric filter and alarm for console authentication failures.",
       "remediation": {
@@ -15722,7 +15722,7 @@
       "attack_techniques": [],
       "check_id": "4.7",
       "cis_section": "4 - Monitoring",
-      "evidence": "Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "Create a CloudWatch metric filter and alarm for KMS key disabling/deletion.",
       "remediation": {
@@ -15748,7 +15748,7 @@
       "attack_techniques": [],
       "check_id": "4.8",
       "cis_section": "4 - Monitoring",
-      "evidence": "Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "Create a CloudWatch metric filter and alarm for S3 bucket policy changes.",
       "remediation": {
@@ -15774,7 +15774,7 @@
       "attack_techniques": [],
       "check_id": "4.9",
       "cis_section": "4 - Monitoring",
-      "evidence": "Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "Create a CloudWatch metric filter and alarm for AWS Config changes.",
       "remediation": {
@@ -15800,7 +15800,7 @@
       "attack_techniques": [],
       "check_id": "4.10",
       "cis_section": "4 - Monitoring",
-      "evidence": "Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "Create a CloudWatch metric filter and alarm for security group changes.",
       "remediation": {
@@ -15826,7 +15826,7 @@
       "attack_techniques": [],
       "check_id": "4.11",
       "cis_section": "4 - Monitoring",
-      "evidence": "Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "Create a CloudWatch metric filter and alarm for NACL changes.",
       "remediation": {
@@ -15852,7 +15852,7 @@
       "attack_techniques": [],
       "check_id": "4.12",
       "cis_section": "4 - Monitoring",
-      "evidence": "Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "Create a CloudWatch metric filter and alarm for network gateway changes.",
       "remediation": {
@@ -15878,7 +15878,7 @@
       "attack_techniques": [],
       "check_id": "4.13",
       "cis_section": "4 - Monitoring",
-      "evidence": "Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "Create a CloudWatch metric filter and alarm for route table changes.",
       "remediation": {
@@ -15904,7 +15904,7 @@
       "attack_techniques": [],
       "check_id": "4.14",
       "cis_section": "4 - Monitoring",
-      "evidence": "Could not query metric filters: scenario boom",
+      "evidence": "Could not query metric filters: RuntimeError",
       "network_exposure": [],
       "recommendation": "Create a CloudWatch metric filter and alarm for VPC changes.",
       "remediation": {
@@ -15982,7 +15982,7 @@
       "attack_techniques": [],
       "check_id": "5.1",
       "cis_section": "5 - Networking",
-      "evidence": "Could not query Network ACLs: scenario boom",
+      "evidence": "Could not query Network ACLs: RuntimeError",
       "network_exposure": [],
       "recommendation": "Restrict NACLs to deny ingress from 0.0.0.0/0 and ::/0 to ports 22 and 3389.",
       "remediation": {
@@ -16009,7 +16009,7 @@
       "attack_techniques": [],
       "check_id": "5.2",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -16032,7 +16032,7 @@
       "attack_techniques": [],
       "check_id": "5.3",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -16055,7 +16055,7 @@
       "attack_techniques": [],
       "check_id": "5.4",
       "cis_section": "5 - Networking",
-      "evidence": "Could not query route tables: scenario boom",
+      "evidence": "Could not query route tables: RuntimeError",
       "network_exposure": [],
       "recommendation": "Ensure VPC peering route table entries do not use overly broad CIDR ranges (e.g. 0.0.0.0/0).",
       "remediation": {
@@ -16082,7 +16082,7 @@
       "attack_techniques": [],
       "check_id": "5.5",
       "cis_section": "",
-      "evidence": "Check failed: RuntimeError: scenario boom",
+      "evidence": "Check failed: RuntimeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -16302,7 +16302,7 @@
       "attack_techniques": [],
       "check_id": "1.4",
       "cis_section": "",
-      "evidence": "Check failed: TypeError: '>' not supported between instances of 'MagicMock' and 'int'",
+      "evidence": "Check failed: TypeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -16381,7 +16381,7 @@
       "attack_techniques": [],
       "check_id": "1.7",
       "cis_section": "",
-      "evidence": "Check failed: TypeError: initial_value must be str or None, not MagicMock",
+      "evidence": "Check failed: TypeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -16404,7 +16404,7 @@
       "attack_techniques": [],
       "check_id": "1.8",
       "cis_section": "",
-      "evidence": "Check failed: TypeError: '<' not supported between instances of 'MagicMock' and 'int'",
+      "evidence": "Check failed: TypeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -16427,7 +16427,7 @@
       "attack_techniques": [],
       "check_id": "1.9",
       "cis_section": "",
-      "evidence": "Check failed: TypeError: '<' not supported between instances of 'MagicMock' and 'int'",
+      "evidence": "Check failed: TypeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -16478,7 +16478,7 @@
       "attack_techniques": [],
       "check_id": "1.11",
       "cis_section": "",
-      "evidence": "Check failed: TypeError: initial_value must be str or None, not MagicMock",
+      "evidence": "Check failed: TypeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -16501,7 +16501,7 @@
       "attack_techniques": [],
       "check_id": "1.12",
       "cis_section": "",
-      "evidence": "Check failed: TypeError: initial_value must be str or None, not MagicMock",
+      "evidence": "Check failed: TypeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -18055,7 +18055,7 @@
       "attack_techniques": [],
       "check_id": "1.4",
       "cis_section": "",
-      "evidence": "Check failed: TypeError: '>' not supported between instances of 'MagicMock' and 'int'",
+      "evidence": "Check failed: TypeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -18134,7 +18134,7 @@
       "attack_techniques": [],
       "check_id": "1.7",
       "cis_section": "",
-      "evidence": "Check failed: TypeError: initial_value must be str or None, not MagicMock",
+      "evidence": "Check failed: TypeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -18157,7 +18157,7 @@
       "attack_techniques": [],
       "check_id": "1.8",
       "cis_section": "",
-      "evidence": "Check failed: TypeError: '<' not supported between instances of 'MagicMock' and 'int'",
+      "evidence": "Check failed: TypeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -18180,7 +18180,7 @@
       "attack_techniques": [],
       "check_id": "1.9",
       "cis_section": "",
-      "evidence": "Check failed: TypeError: '<' not supported between instances of 'MagicMock' and 'int'",
+      "evidence": "Check failed: TypeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -18231,7 +18231,7 @@
       "attack_techniques": [],
       "check_id": "1.11",
       "cis_section": "",
-      "evidence": "Check failed: TypeError: initial_value must be str or None, not MagicMock",
+      "evidence": "Check failed: TypeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -18254,7 +18254,7 @@
       "attack_techniques": [],
       "check_id": "1.12",
       "cis_section": "",
-      "evidence": "Check failed: TypeError: initial_value must be str or None, not MagicMock",
+      "evidence": "Check failed: TypeError",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {

@@ -6,6 +6,7 @@ import logging
 
 from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult, finalize_read_coverage, not_applicable_if_empty
 from agent_bom.cloud.aws_inventory import classify_project_disabled_error, is_access_denied_error
+from agent_bom.cloud.cis_read_errors import record_read_failure
 from agent_bom.security import sanitize_text
 
 from ._base import (
@@ -54,7 +55,7 @@ def _check_5_1(project_id: str) -> CISCheckResult:
                 elif is_access_denied_error(exc):
                     denied.append(bucket.name)
                 else:
-                    unavailable.setdefault("unavailable", []).append(bucket.name)
+                    record_read_failure(unavailable, bucket.name)
                 logger.debug("Could not check IAM policy for bucket %s: %s", bucket.name, sanitize_text(exc))
 
         if public_buckets:

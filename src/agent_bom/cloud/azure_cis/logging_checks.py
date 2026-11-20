@@ -8,6 +8,7 @@ from agent_bom.security import sanitize_text
 
 from ..aws_cis_benchmark import CheckStatus, CISCheckResult, finalize_read_coverage
 from ..aws_inventory import is_access_denied_error
+from ..cis_read_errors import read_error_label, record_read_failure
 from ._base import (
     _LOGGING_SECTION,
     _pass_or_no_data,
@@ -54,7 +55,7 @@ def _check_5_1_2(monitor_client: Any, subscription_id: str) -> CISCheckResult:
             )
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check log profile retention: {exc}"
+        result.evidence = f"Could not check log profile retention: {read_error_label(exc)}"
     return result
 
 
@@ -93,7 +94,7 @@ def _check_activity_log_alert(monitor_client: Any, check_id: str, title: str, op
             result.evidence = f"No Activity Log alert found for operation '{operation_name}'."
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check Activity Log alerts: {exc}"
+        result.evidence = f"Could not check Activity Log alerts: {read_error_label(exc)}"
     return result
 
 
@@ -152,6 +153,7 @@ def _check_5_2_1(postgresql_client: Any) -> CISCheckResult:
         failing = []
         inspected = 0
         denied: list[str] = []
+        unavailable: dict[str, list[str]] = {}
         for server in servers:
             server_name = server.name or "unknown"
             server_id = getattr(server, "id", "") or ""
@@ -170,6 +172,8 @@ def _check_5_2_1(postgresql_client: Any) -> CISCheckResult:
             except Exception as exc:
                 if is_access_denied_error(exc):
                     denied.append(server_name)
+                else:
+                    record_read_failure(unavailable, server_name)
                 logger.debug("Could not check log_connections for PostgreSQL server %s: %s", server_name, sanitize_text(exc))
         if failing:
             result.status = CheckStatus.FAIL
@@ -180,13 +184,14 @@ def _check_5_2_1(postgresql_client: Any) -> CISCheckResult:
                 result,
                 inspected=inspected,
                 denied=denied,
+                unavailable=unavailable,
                 permission="Microsoft.DBforPostgreSQL/servers/configurations/read",
                 resource_kind="PostgreSQL server",
                 pass_evidence=f"All {len(servers)} PostgreSQL server(s) have log_connections enabled.",
             )
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check PostgreSQL log_connections setting: {exc}"
+        result.evidence = f"Could not check PostgreSQL log_connections setting: {read_error_label(exc)}"
     return result
 
 
@@ -205,6 +210,7 @@ def _check_5_2_2(postgresql_client: Any) -> CISCheckResult:
         failing = []
         inspected = 0
         denied: list[str] = []
+        unavailable: dict[str, list[str]] = {}
         for server in servers:
             server_name = server.name or "unknown"
             server_id = getattr(server, "id", "") or ""
@@ -223,6 +229,8 @@ def _check_5_2_2(postgresql_client: Any) -> CISCheckResult:
             except Exception as exc:
                 if is_access_denied_error(exc):
                     denied.append(server_name)
+                else:
+                    record_read_failure(unavailable, server_name)
                 logger.debug("Could not check log_disconnections for PostgreSQL server %s: %s", server_name, sanitize_text(exc))
         if failing:
             result.status = CheckStatus.FAIL
@@ -233,13 +241,14 @@ def _check_5_2_2(postgresql_client: Any) -> CISCheckResult:
                 result,
                 inspected=inspected,
                 denied=denied,
+                unavailable=unavailable,
                 permission="Microsoft.DBforPostgreSQL/servers/configurations/read",
                 resource_kind="PostgreSQL server",
                 pass_evidence=f"All {len(servers)} PostgreSQL server(s) have log_disconnections enabled.",
             )
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check PostgreSQL log_disconnections setting: {exc}"
+        result.evidence = f"Could not check PostgreSQL log_disconnections setting: {read_error_label(exc)}"
     return result
 
 
@@ -258,6 +267,7 @@ def _check_5_2_3(postgresql_client: Any) -> CISCheckResult:
         failing = []
         inspected = 0
         denied: list[str] = []
+        unavailable: dict[str, list[str]] = {}
         for server in servers:
             server_name = server.name or "unknown"
             server_id = getattr(server, "id", "") or ""
@@ -276,6 +286,8 @@ def _check_5_2_3(postgresql_client: Any) -> CISCheckResult:
             except Exception as exc:
                 if is_access_denied_error(exc):
                     denied.append(server_name)
+                else:
+                    record_read_failure(unavailable, server_name)
                 logger.debug("Could not check connection_throttling for PostgreSQL server %s: %s", server_name, sanitize_text(exc))
         if failing:
             result.status = CheckStatus.FAIL
@@ -286,11 +298,12 @@ def _check_5_2_3(postgresql_client: Any) -> CISCheckResult:
                 result,
                 inspected=inspected,
                 denied=denied,
+                unavailable=unavailable,
                 permission="Microsoft.DBforPostgreSQL/servers/configurations/read",
                 resource_kind="PostgreSQL server",
                 pass_evidence=f"All {len(servers)} PostgreSQL server(s) have connection_throttling enabled.",
             )
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check PostgreSQL connection_throttling setting: {exc}"
+        result.evidence = f"Could not check PostgreSQL connection_throttling setting: {read_error_label(exc)}"
     return result

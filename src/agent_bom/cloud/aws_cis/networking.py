@@ -6,6 +6,7 @@ from typing import Any
 
 from agent_bom.security import sanitize_text
 
+from ..cis_read_errors import read_error_label
 from ._base import CheckStatus, CISCheckResult, logger, not_applicable_if_empty
 
 # ---------------------------------------------------------------------------
@@ -211,7 +212,7 @@ def _check_5_1(ec2_client: Any) -> CISCheckResult:
         error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
         logger.debug("Could not check NACLs: %s (%s)", sanitize_text(exc), error_code)
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not query Network ACLs: {error_code or exc}"
+        result.evidence = f"Could not query Network ACLs: {error_code or read_error_label(exc)}"
         return result
 
     open_nacls = list(dict.fromkeys(open_nacls))
@@ -269,5 +270,5 @@ def _check_5_4(ec2_client: Any) -> CISCheckResult:
         error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
         logger.debug("Could not check route tables: %s (%s)", sanitize_text(exc), error_code)
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not query route tables: {error_code or exc}"
+        result.evidence = f"Could not query route tables: {error_code or read_error_label(exc)}"
     return result

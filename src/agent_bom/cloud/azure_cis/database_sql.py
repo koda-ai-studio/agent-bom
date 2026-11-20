@@ -8,6 +8,7 @@ from agent_bom.security import sanitize_text
 
 from ..aws_cis_benchmark import CheckStatus, CISCheckResult, finalize_read_coverage
 from ..aws_inventory import is_access_denied_error
+from ..cis_read_errors import read_error_label, record_read_failure
 from ._base import (
     _DATABASE_SECTION,
     _enum_text,
@@ -31,6 +32,7 @@ def _check_4_1_1(sql_client: Any) -> CISCheckResult:
         failing = []
         inspected = 0
         denied: list[str] = []
+        unavailable: dict[str, list[str]] = {}
         for server in servers:
             server_name = server.name or "unknown"
             server_id = getattr(server, "id", "") or ""
@@ -51,6 +53,8 @@ def _check_4_1_1(sql_client: Any) -> CISCheckResult:
             except Exception as exc:
                 if is_access_denied_error(exc):
                     denied.append(server_name)
+                else:
+                    record_read_failure(unavailable, server_name)
                 logger.debug("Could not check auditing for SQL server %s: %s", server_name, sanitize_text(exc))
 
         if failing:
@@ -62,13 +66,14 @@ def _check_4_1_1(sql_client: Any) -> CISCheckResult:
                 result,
                 inspected=inspected,
                 denied=denied,
+                unavailable=unavailable,
                 permission="Microsoft.Sql/servers/auditingSettings/read",
                 resource_kind="SQL server",
                 pass_evidence=f"All {len(servers)} SQL server(s) have auditing enabled.",
             )
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check SQL server auditing settings: {exc}"
+        result.evidence = f"Could not check SQL server auditing settings: {read_error_label(exc)}"
     return result
 
 
@@ -103,7 +108,7 @@ def _check_4_2_1(sql_client: Any) -> CISCheckResult:
             _pass_or_no_data(result, len(servers), "SQL server", f"All {len(servers)} SQL server(s) enforce TLS 1.2 or higher.")
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check database server TLS settings: {exc}"
+        result.evidence = f"Could not check database server TLS settings: {read_error_label(exc)}"
     return result
 
 
@@ -122,6 +127,7 @@ def _check_4_1_2(sql_client: Any) -> CISCheckResult:
         failing = []
         inspected = 0
         denied: list[str] = []
+        unavailable: dict[str, list[str]] = {}
         for server in servers:
             server_name = server.name or "unknown"
             server_id = getattr(server, "id", "") or ""
@@ -141,6 +147,8 @@ def _check_4_1_2(sql_client: Any) -> CISCheckResult:
             except Exception as exc:
                 if is_access_denied_error(exc):
                     denied.append(server_name)
+                else:
+                    record_read_failure(unavailable, server_name)
                 logger.debug("Could not check TDE for SQL server %s: %s", server_name, sanitize_text(exc))
         if failing:
             result.status = CheckStatus.FAIL
@@ -151,13 +159,14 @@ def _check_4_1_2(sql_client: Any) -> CISCheckResult:
                 result,
                 inspected=inspected,
                 denied=denied,
+                unavailable=unavailable,
                 permission="Microsoft.Sql/servers/encryptionProtector/read",
                 resource_kind="SQL server",
                 pass_evidence=f"All {len(servers)} SQL server(s) have Transparent Data Encryption configured.",
             )
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check SQL server TDE settings: {exc}"
+        result.evidence = f"Could not check SQL server TDE settings: {read_error_label(exc)}"
     return result
 
 
@@ -176,6 +185,7 @@ def _check_4_1_3(sql_client: Any) -> CISCheckResult:
         failing = []
         inspected = 0
         denied: list[str] = []
+        unavailable: dict[str, list[str]] = {}
         for server in servers:
             server_name = server.name or "unknown"
             server_id = getattr(server, "id", "") or ""
@@ -193,6 +203,8 @@ def _check_4_1_3(sql_client: Any) -> CISCheckResult:
             except Exception as exc:
                 if is_access_denied_error(exc):
                     denied.append(server_name)
+                else:
+                    record_read_failure(unavailable, server_name)
                 logger.debug("Could not check AD admin for SQL server %s: %s", server_name, sanitize_text(exc))
         if failing:
             result.status = CheckStatus.FAIL
@@ -203,13 +215,14 @@ def _check_4_1_3(sql_client: Any) -> CISCheckResult:
                 result,
                 inspected=inspected,
                 denied=denied,
+                unavailable=unavailable,
                 permission="Microsoft.Sql/servers/administrators/read",
                 resource_kind="SQL server",
                 pass_evidence=f"All {len(servers)} SQL server(s) have Azure AD admin configured.",
             )
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check SQL server AD admin settings: {exc}"
+        result.evidence = f"Could not check SQL server AD admin settings: {read_error_label(exc)}"
     return result
 
 
@@ -228,6 +241,7 @@ def _check_4_1_4(sql_client: Any) -> CISCheckResult:
         failing = []
         inspected = 0
         denied: list[str] = []
+        unavailable: dict[str, list[str]] = {}
         for server in servers:
             server_name = server.name or "unknown"
             server_id = getattr(server, "id", "") or ""
@@ -246,6 +260,8 @@ def _check_4_1_4(sql_client: Any) -> CISCheckResult:
             except Exception as exc:
                 if is_access_denied_error(exc):
                     denied.append(server_name)
+                else:
+                    record_read_failure(unavailable, server_name)
                 logger.debug("Could not check ATP for SQL server %s: %s", server_name, sanitize_text(exc))
         if failing:
             result.status = CheckStatus.FAIL
@@ -256,13 +272,14 @@ def _check_4_1_4(sql_client: Any) -> CISCheckResult:
                 result,
                 inspected=inspected,
                 denied=denied,
+                unavailable=unavailable,
                 permission="Microsoft.Sql/servers/advancedThreatProtectionSettings/read",
                 resource_kind="SQL server",
                 pass_evidence=f"All {len(servers)} SQL server(s) have Advanced Threat Protection enabled.",
             )
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check SQL server ATP settings: {exc}"
+        result.evidence = f"Could not check SQL server ATP settings: {read_error_label(exc)}"
     return result
 
 
@@ -305,7 +322,7 @@ def _check_4_1_5(sql_client: Any) -> CISCheckResult:
             )
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check SQL server Vulnerability Assessment settings: {exc}"
+        result.evidence = f"Could not check SQL server Vulnerability Assessment settings: {read_error_label(exc)}"
     return result
 
 
@@ -335,5 +352,5 @@ def _check_4_1_6(sql_client: Any) -> CISCheckResult:
             _pass_or_no_data(result, len(servers), "SQL server", f"All {len(servers)} SQL server(s) have public network access disabled.")
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check SQL server public network access: {exc}"
+        result.evidence = f"Could not check SQL server public network access: {read_error_label(exc)}"
     return result

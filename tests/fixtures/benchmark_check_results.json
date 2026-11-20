@@ -674,13 +674,13 @@
     },
     "aws-4.1-read_error": {
       "status": "error",
-      "evidence": "Could not query metric filters: provider unavailable",
+      "evidence": "Could not query metric filters: RuntimeError",
       "resource_ids": [],
       "vacuous": false
     },
     "aws-4.2-read_error": {
       "status": "error",
-      "evidence": "Could not query metric filters: provider unavailable",
+      "evidence": "Could not query metric filters: RuntimeError",
       "resource_ids": [],
       "vacuous": false
     },
@@ -692,7 +692,7 @@
     },
     "aws-4.4-read_error": {
       "status": "error",
-      "evidence": "Could not query metric filters: provider unavailable",
+      "evidence": "Could not query metric filters: RuntimeError",
       "resource_ids": [],
       "vacuous": false
     },
@@ -704,55 +704,55 @@
     },
     "aws-4.6-read_error": {
       "status": "error",
-      "evidence": "Could not query metric filters: provider unavailable",
+      "evidence": "Could not query metric filters: RuntimeError",
       "resource_ids": [],
       "vacuous": false
     },
     "aws-4.7-read_error": {
       "status": "error",
-      "evidence": "Could not query metric filters: provider unavailable",
+      "evidence": "Could not query metric filters: RuntimeError",
       "resource_ids": [],
       "vacuous": false
     },
     "aws-4.8-read_error": {
       "status": "error",
-      "evidence": "Could not query metric filters: provider unavailable",
+      "evidence": "Could not query metric filters: RuntimeError",
       "resource_ids": [],
       "vacuous": false
     },
     "aws-4.9-read_error": {
       "status": "error",
-      "evidence": "Could not query metric filters: provider unavailable",
+      "evidence": "Could not query metric filters: RuntimeError",
       "resource_ids": [],
       "vacuous": false
     },
     "aws-4.10-read_error": {
       "status": "error",
-      "evidence": "Could not query metric filters: provider unavailable",
+      "evidence": "Could not query metric filters: RuntimeError",
       "resource_ids": [],
       "vacuous": false
     },
     "aws-4.11-read_error": {
       "status": "error",
-      "evidence": "Could not query metric filters: provider unavailable",
+      "evidence": "Could not query metric filters: RuntimeError",
       "resource_ids": [],
       "vacuous": false
     },
     "aws-4.12-read_error": {
       "status": "error",
-      "evidence": "Could not query metric filters: provider unavailable",
+      "evidence": "Could not query metric filters: RuntimeError",
       "resource_ids": [],
       "vacuous": false
     },
     "aws-4.13-read_error": {
       "status": "error",
-      "evidence": "Could not query metric filters: provider unavailable",
+      "evidence": "Could not query metric filters: RuntimeError",
       "resource_ids": [],
       "vacuous": false
     },
     "aws-4.14-read_error": {
       "status": "error",
-      "evidence": "Could not query metric filters: provider unavailable",
+      "evidence": "Could not query metric filters: RuntimeError",
       "resource_ids": [],
       "vacuous": false
     },
@@ -896,43 +896,43 @@
     },
     "gcp-6.1-malformed_name": {
       "status": "error",
-      "evidence": "Could not check Cloud SQL SSL configuration: sequence item 0: expected str instance, int found",
+      "evidence": "Could not check Cloud SQL SSL configuration: TypeError",
       "resource_ids": [],
       "vacuous": false
     },
     "gcp-6.2-malformed_name": {
       "status": "error",
-      "evidence": "Could not check Cloud SQL public IPs: sequence item 0: expected str instance, int found",
+      "evidence": "Could not check Cloud SQL public IPs: TypeError",
       "resource_ids": [],
       "vacuous": false
     },
     "gcp-6.3-malformed_name": {
       "status": "error",
-      "evidence": "Could not check Cloud SQL backup configuration: sequence item 0: expected str instance, int found",
+      "evidence": "Could not check Cloud SQL backup configuration: TypeError",
       "resource_ids": [],
       "vacuous": false
     },
     "gcp-6.4-malformed_name": {
       "status": "error",
-      "evidence": "Could not check PostgreSQL log_error_verbosity: sequence item 0: expected str instance, int found",
+      "evidence": "Could not check PostgreSQL log_error_verbosity: TypeError",
       "resource_ids": [],
       "vacuous": false
     },
     "gcp-6.5-malformed_name": {
       "status": "error",
-      "evidence": "Could not check PostgreSQL log_connections: sequence item 0: expected str instance, int found",
+      "evidence": "Could not check PostgreSQL log_connections: TypeError",
       "resource_ids": [],
       "vacuous": false
     },
     "gcp-6.6-malformed_name": {
       "status": "error",
-      "evidence": "Could not check PostgreSQL log_disconnections: sequence item 0: expected str instance, int found",
+      "evidence": "Could not check PostgreSQL log_disconnections: TypeError",
       "resource_ids": [],
       "vacuous": false
     },
     "gcp-6.7-malformed_name": {
       "status": "error",
-      "evidence": "Could not check PostgreSQL log_min_duration_statement: sequence item 0: expected str instance, int found",
+      "evidence": "Could not check PostgreSQL log_min_duration_statement: TypeError",
       "resource_ids": [],
       "vacuous": false
     },
@@ -1014,19 +1014,19 @@
     },
     "gcp-6.4-null_flags": {
       "status": "error",
-      "evidence": "Could not check PostgreSQL log_error_verbosity: 'NoneType' object has no attribute 'lower'",
+      "evidence": "Could not check PostgreSQL log_error_verbosity: AttributeError",
       "resource_ids": [],
       "vacuous": false
     },
     "gcp-6.5-null_flags": {
       "status": "error",
-      "evidence": "Could not check PostgreSQL log_connections: 'NoneType' object has no attribute 'lower'",
+      "evidence": "Could not check PostgreSQL log_connections: AttributeError",
       "resource_ids": [],
       "vacuous": false
     },
     "gcp-6.6-null_flags": {
       "status": "error",
-      "evidence": "Could not check PostgreSQL log_disconnections: 'NoneType' object has no attribute 'lower'",
+      "evidence": "Could not check PostgreSQL log_disconnections: AttributeError",
       "resource_ids": [],
       "vacuous": false
     },
@@ -1062,19 +1062,19 @@
     },
     "gcp-6.4-numeric_flags": {
       "status": "error",
-      "evidence": "Could not check PostgreSQL log_error_verbosity: 'int' object has no attribute 'lower'",
+      "evidence": "Could not check PostgreSQL log_error_verbosity: AttributeError",
       "resource_ids": [],
       "vacuous": false
     },
     "gcp-6.5-numeric_flags": {
       "status": "error",
-      "evidence": "Could not check PostgreSQL log_connections: 'int' object has no attribute 'lower'",
+      "evidence": "Could not check PostgreSQL log_connections: AttributeError",
       "resource_ids": [],
       "vacuous": false
     },
     "gcp-6.6-numeric_flags": {
       "status": "error",
-      "evidence": "Could not check PostgreSQL log_disconnections: 'int' object has no attribute 'lower'",
+      "evidence": "Could not check PostgreSQL log_disconnections: AttributeError",
       "resource_ids": [],
       "vacuous": false
     },
@@ -1142,7 +1142,7 @@
     },
     "gcp-6.1-malformed_settings": {
       "status": "error",
-      "evidence": "Could not check Cloud SQL SSL configuration: 'NoneType' object has no attribute 'get'",
+      "evidence": "Could not check Cloud SQL SSL configuration: AttributeError",
       "resource_ids": [],
       "vacuous": false
     },
@@ -1154,31 +1154,31 @@
     },
     "gcp-6.3-malformed_settings": {
       "status": "error",
-      "evidence": "Could not check Cloud SQL backup configuration: 'NoneType' object has no attribute 'get'",
+      "evidence": "Could not check Cloud SQL backup configuration: AttributeError",
       "resource_ids": [],
       "vacuous": false
     },
     "gcp-6.4-malformed_settings": {
       "status": "error",
-      "evidence": "Could not check PostgreSQL log_error_verbosity: 'NoneType' object has no attribute 'get'",
+      "evidence": "Could not check PostgreSQL log_error_verbosity: AttributeError",
       "resource_ids": [],
       "vacuous": false
     },
     "gcp-6.5-malformed_settings": {
       "status": "error",
-      "evidence": "Could not check PostgreSQL log_connections: 'NoneType' object has no attribute 'get'",
+      "evidence": "Could not check PostgreSQL log_connections: AttributeError",
       "resource_ids": [],
       "vacuous": false
     },
     "gcp-6.6-malformed_settings": {
       "status": "error",
-      "evidence": "Could not check PostgreSQL log_disconnections: 'NoneType' object has no attribute 'get'",
+      "evidence": "Could not check PostgreSQL log_disconnections: AttributeError",
       "resource_ids": [],
       "vacuous": false
     },
     "gcp-6.7-malformed_settings": {
       "status": "error",
-      "evidence": "Could not check PostgreSQL log_min_duration_statement: 'NoneType' object has no attribute 'get'",
+      "evidence": "Could not check PostgreSQL log_min_duration_statement: AttributeError",
       "resource_ids": [],
       "vacuous": false
     },
@@ -1615,43 +1615,43 @@
     },
     "gcp-6.1-read_error": {
       "status": "error",
-      "evidence": "Could not check Cloud SQL SSL configuration: provider unavailable",
+      "evidence": "Could not check Cloud SQL SSL configuration: RuntimeError",
       "resource_ids": [],
       "vacuous": false
     },
     "gcp-6.2-read_error": {
       "status": "error",
-      "evidence": "Could not check Cloud SQL public IPs: provider unavailable",
+      "evidence": "Could not check Cloud SQL public IPs: RuntimeError",
       "resource_ids": [],
       "vacuous": false
     },
     "gcp-6.3-read_error": {
       "status": "error",
-      "evidence": "Could not check Cloud SQL backup configuration: provider unavailable",
+      "evidence": "Could not check Cloud SQL backup configuration: RuntimeError",
       "resource_ids": [],
       "vacuous": false
     },
     "gcp-6.4-read_error": {
       "status": "error",
-      "evidence": "Could not check PostgreSQL log_error_verbosity: provider unavailable",
+      "evidence": "Could not check PostgreSQL log_error_verbosity: RuntimeError",
       "resource_ids": [],
       "vacuous": false
     },
     "gcp-6.5-read_error": {
       "status": "error",
-      "evidence": "Could not check PostgreSQL log_connections: provider unavailable",
+      "evidence": "Could not check PostgreSQL log_connections: RuntimeError",
       "resource_ids": [],
       "vacuous": false
     },
     "gcp-6.6-read_error": {
       "status": "error",
-      "evidence": "Could not check PostgreSQL log_disconnections: provider unavailable",
+      "evidence": "Could not check PostgreSQL log_disconnections: RuntimeError",
       "resource_ids": [],
       "vacuous": false
     },
     "gcp-6.7-read_error": {
       "status": "error",
-      "evidence": "Could not check PostgreSQL log_min_duration_statement: provider unavailable",
+      "evidence": "Could not check PostgreSQL log_min_duration_statement: RuntimeError",
       "resource_ids": [],
       "vacuous": false
     }

@@ -8,6 +8,7 @@ from agent_bom.security import sanitize_text
 
 from ..aws_cis_benchmark import CheckStatus, CISCheckResult, finalize_read_coverage
 from ..aws_inventory import is_access_denied_error
+from ..cis_read_errors import read_error_label, record_read_failure
 from ._base import (
     _APPSERVICE_SECTION,
     _enum_text,
@@ -31,6 +32,7 @@ def _check_9_1(webapp_client: Any) -> CISCheckResult:
         failing = []
         inspected = 0
         denied: list[str] = []
+        unavailable: dict[str, list[str]] = {}
         for app in apps:
             app_name = app.name or "unknown"
             app_id = getattr(app, "id", "") or ""
@@ -49,6 +51,8 @@ def _check_9_1(webapp_client: Any) -> CISCheckResult:
             except Exception as exc:
                 if is_access_denied_error(exc):
                     denied.append(app_name)
+                else:
+                    record_read_failure(unavailable, app_name)
                 logger.debug("Could not check auth settings for app %s: %s", app_name, sanitize_text(exc))
         if failing:
             result.status = CheckStatus.FAIL
@@ -59,13 +63,14 @@ def _check_9_1(webapp_client: Any) -> CISCheckResult:
                 result,
                 inspected=inspected,
                 denied=denied,
+                unavailable=unavailable,
                 permission="Microsoft.Web/sites/config/list (authsettings)",
                 resource_kind="web app",
                 pass_evidence=f"All {len(apps)} web app(s) have App Service Authentication enabled.",
             )
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check App Service authentication settings: {exc}"
+        result.evidence = f"Could not check App Service authentication settings: {read_error_label(exc)}"
     return result
 
 
@@ -95,7 +100,7 @@ def _check_9_2(webapp_client: Any) -> CISCheckResult:
             _pass_or_no_data(result, len(apps), "web app", f"All {len(apps)} web app(s) have HTTPS-only enabled.")
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check web app HTTPS settings: {exc}"
+        result.evidence = f"Could not check web app HTTPS settings: {read_error_label(exc)}"
     return result
 
 
@@ -114,6 +119,7 @@ def _check_9_3(webapp_client: Any) -> CISCheckResult:
         failing = []
         inspected = 0
         denied: list[str] = []
+        unavailable: dict[str, list[str]] = {}
         for app in apps:
             app_name = app.name or "unknown"
             app_id = getattr(app, "id", "") or ""
@@ -136,6 +142,8 @@ def _check_9_3(webapp_client: Any) -> CISCheckResult:
             except Exception as exc:
                 if is_access_denied_error(exc):
                     denied.append(app_name)
+                else:
+                    record_read_failure(unavailable, app_name)
                 logger.debug("Could not check TLS for app %s: %s", app_name, sanitize_text(exc))
         if failing:
             result.status = CheckStatus.FAIL
@@ -146,13 +154,14 @@ def _check_9_3(webapp_client: Any) -> CISCheckResult:
                 result,
                 inspected=inspected,
                 denied=denied,
+                unavailable=unavailable,
                 permission="Microsoft.Web/sites/config/read",
                 resource_kind="web app",
                 pass_evidence=f"All {len(apps)} web app(s) use TLS 1.2 or higher.",
             )
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check web app TLS settings: {exc}"
+        result.evidence = f"Could not check web app TLS settings: {read_error_label(exc)}"
     return result
 
 
@@ -186,7 +195,7 @@ def _check_9_4(webapp_client: Any) -> CISCheckResult:
             _pass_or_no_data(result, len(apps), "web app", f"All {len(apps)} web app(s) have Managed Identity enabled.")
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check web app Managed Identity settings: {exc}"
+        result.evidence = f"Could not check web app Managed Identity settings: {read_error_label(exc)}"
     return result
 
 
@@ -216,7 +225,7 @@ def _check_9_5(webapp_client: Any) -> CISCheckResult:
             _pass_or_no_data(result, len(apps), "web app", f"All {len(apps)} web app(s) have client certificates enabled.")
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check web app client certificate settings: {exc}"
+        result.evidence = f"Could not check web app client certificate settings: {read_error_label(exc)}"
     return result
 
 
@@ -235,6 +244,7 @@ def _check_9_6(webapp_client: Any) -> CISCheckResult:
         failing = []
         inspected = 0
         denied: list[str] = []
+        unavailable: dict[str, list[str]] = {}
         for app in apps:
             app_name = app.name or "unknown"
             app_id = getattr(app, "id", "") or ""
@@ -253,6 +263,8 @@ def _check_9_6(webapp_client: Any) -> CISCheckResult:
             except Exception as exc:
                 if is_access_denied_error(exc):
                     denied.append(app_name)
+                else:
+                    record_read_failure(unavailable, app_name)
                 logger.debug("Could not check FTP state for app %s: %s", app_name, sanitize_text(exc))
         if failing:
             result.status = CheckStatus.FAIL
@@ -263,11 +275,12 @@ def _check_9_6(webapp_client: Any) -> CISCheckResult:
                 result,
                 inspected=inspected,
                 denied=denied,
+                unavailable=unavailable,
                 permission="Microsoft.Web/sites/config/read",
                 resource_kind="web app",
                 pass_evidence=f"All {len(apps)} web app(s) have FTP access disabled or FTPS-only.",
             )
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check App Service FTP settings: {exc}"
+        result.evidence = f"Could not check App Service FTP settings: {read_error_label(exc)}"
     return result

@@ -10,7 +10,7 @@ from typing import Any
 
 from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult
 from agent_bom.cloud.aws_inventory import classify_project_disabled_error
-from agent_bom.cloud.normalization import sanitize_discovery_warning
+from agent_bom.cloud.cis_read_errors import read_error_label
 from agent_bom.domain.report_payloads import BenchmarkPayload
 
 __all__ = [
@@ -290,4 +290,4 @@ def _check_failure_evidence(exc: Exception) -> str:
         return "Service API disabled; this control is unevaluated. Enable the required API if this service is in scope, then rescan."
     if cause == "billing_disabled":
         return "Project billing disabled; this control is unevaluated. Restore billing if this project is in scope, then rescan."
-    return sanitize_discovery_warning(exc)
+    return read_error_label(exc)
