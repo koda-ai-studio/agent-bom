@@ -275,16 +275,11 @@ def _classify_sensitive_data(graph: UnifiedGraph) -> set[str]:
     return sensitive_ids
 
 
-def apply_cnapp_overlay(graph: UnifiedGraph) -> dict[str, int]:
-    """Enrich ``graph`` with exposure + data-store structure in place.
-
-    Returns counts of exposed nodes, data stores, and toxic combinations added.
-    Never raises into the builder.
-    """
+def _partition_resources(graph: UnifiedGraph) -> tuple[list[UnifiedNode], list[UnifiedNode]]:
     # Single streaming pass over the node set that keeps only the (bounded)
     # cloud-resource and misconfiguration subsets — never a full materialised list
     # of every node — so the producer's peak stays bounded when the graph is
-    # store-backed (#4055/#4075). Byte-identical to the prior two comprehensions.
+    # store-backed (#4055/#4075).
     cloud_resources: list[UnifiedNode] = []
     misconfigs: list[UnifiedNode] = []
     for n in graph.nodes_of_types((EntityType.CLOUD_RESOURCE, EntityType.RESOURCE, EntityType.SERVER, EntityType.MISCONFIGURATION)):
@@ -293,15 +288,17 @@ def apply_cnapp_overlay(graph: UnifiedGraph) -> dict[str, int]:
             cloud_resources.append(n)
         elif et == EntityType.MISCONFIGURATION:
             misconfigs.append(n)
+    return cloud_resources, misconfigs
 
-    # Resource id → set of vulnerability node ids affecting it (via VULNERABLE_TO).
+
+def _edge_indexes(graph: UnifiedGraph) -> tuple[set[str], set[str], dict[str, list[str]]]:
+    """Exploit-chain vulnerable resources, WAF-associated targets, and misconfig → affected resources."""
     vulnerable_resources: set[str] = set()
     for edge in graph.edges:
         if edge.relationship == RelationshipType.VULNERABLE_TO:
             vulnerability = graph.nodes.get(edge.target)
             if vulnerability is not None and node_reachability(vulnerability.attributes).permits_exploit_chain:
                 vulnerable_resources.add(edge.source)
-
     # A protection association is inventory, not evidence that any particular
     # vulnerability is mitigated. Keep the association without lowering risk.
     waf_associated_ids: set[str] = set()
@@ -310,14 +307,15 @@ def apply_cnapp_overlay(graph: UnifiedGraph) -> dict[str, int]:
             source = graph.nodes.get(edge.source)
             if source is not None and source.attributes.get("resource_type") == "waf":
                 waf_associated_ids.add(edge.target)
-
-    # Map a misconfiguration to the resources it AFFECTS so exposure can attach
-    # to the real asset rather than the finding node.
+    # Exposure attaches to the real asset a misconfiguration AFFECTS, not the finding node.
     affected_by_misconfig: dict[str, list[str]] = {}
     for edge in graph.edges:
         if edge.relationship == RelationshipType.AFFECTS:
             affected_by_misconfig.setdefault(edge.source, []).append(edge.target)
+    return vulnerable_resources, waf_associated_ids, affected_by_misconfig
 
+
+def _record_rule_exposure(graph: UnifiedGraph, misconfigs: list[UnifiedNode], affected_by_misconfig: dict[str, list[str]]) -> set[str]:
     exposed_ids: set[str] = set()
     for mc in misconfigs:
         # A descriptive name or finding title is search context, not a network
@@ -347,82 +345,63 @@ def apply_cnapp_overlay(graph: UnifiedGraph) -> dict[str, int]:
                 exposed_ids.add(target_id)
                 if ports:
                     node.attributes.setdefault("exposed_ports", []).extend(ports)
-    # Read explicit resource flags without turning string false/unknown values
-    # or resource names into observed exposure.
-    # Re-resolve through the graph before mutating so the write persists on a
-    # store-backed container (a held subset object may have been evicted from the
-    # LRU during the scan above); in-RAM this returns the same object, byte-identical.
-    for resource in cloud_resources:
-        node = graph.nodes.get(resource.id)
-        if node is None:
-            continue
-        if coerce_truthy(node.attributes.get("internet_exposed")):
-            exposed_ids.add(node.id)
+    return exposed_ids
 
-    for resource_id in waf_associated_ids:
-        node = graph.nodes.get(resource_id)
-        if node is None:
-            continue
-        node.attributes["waf_association_recorded"] = True
 
-    # Classify data stores and attach a DATA_STORE companion node.
+def _data_store_node(ds_id: str, node: UnifiedNode) -> UnifiedNode:
+    # The companion inherits the backing resource's estate coordinates.
+    # Without them a crown-jewel data store carries no provider, account,
+    # region, or environment and silently falls out of every scoped
+    # projection (/v1/graph/scoped, /v1/inventory facets) while the
+    # resource it mirrors stays in — two views of one asset disagreeing.
+    return UnifiedNode(
+        id=ds_id,
+        entity_type=EntityType.DATA_STORE,
+        label=f"data: {node.label}",
+        severity="info",
+        data_sources=[_OVERLAY_SOURCE],
+        attributes={
+            "backed_by": node.id,
+            "internet_exposed": coerce_bool_or_none(node.attributes.get("internet_exposed")),
+            **(
+                {"internet_exposure_evidence": dict(node.attributes["internet_exposure_evidence"])}
+                if isinstance(node.attributes.get("internet_exposure_evidence"), dict)
+                else {}
+            ),
+            **{
+                key: value
+                for key in ("cloud_provider", "account_id", "location", "environment", "resource_name")
+                if (value := node.attributes.get(key))
+            },
+        },
+        dimensions=replace(node.dimensions),
+    )
+
+
+def _attach_data_stores(graph: UnifiedGraph, cloud_resources: list[UnifiedNode]) -> tuple[dict[str, str], int]:
+    """Give each data-store-like resource a DATA_STORE companion; return resource → store id and count added."""
     data_stores_added = 0
     data_store_for_resource: dict[str, str] = {}
-    # Re-resolve each held subset node through the graph so the exposure verdict read
-    # below (``internet_exposed``, set above) reflects the store-canonical object, not
-    # a possibly-evicted held copy. In-RAM this is the same object, byte-identical.
+    # Re-resolve each held subset node through the graph so the exposure verdict
+    # reflects the store-canonical object, not a possibly-evicted held copy.
     for resource in cloud_resources:
         node = graph.nodes.get(resource.id)
-        if node is None:
-            continue
-        if node.entity_type == EntityType.SERVER:
-            continue
-        if not _matches(_text_of(node), _DATA_STORE_KEYWORDS):
+        if node is None or node.entity_type == EntityType.SERVER or not _matches(_text_of(node), _DATA_STORE_KEYWORDS):
             continue
         ds_id = f"data_store:{node.id}"
         data_store_for_resource[node.id] = ds_id
         if ds_id not in graph.nodes:
-            # The companion inherits the backing resource's estate coordinates.
-            # Without them a crown-jewel data store carries no provider, account,
-            # region, or environment and silently falls out of every scoped
-            # projection (/v1/graph/scoped, /v1/inventory facets) while the
-            # resource it mirrors stays in — two views of one asset disagreeing.
-            graph.add_node(
-                UnifiedNode(
-                    id=ds_id,
-                    entity_type=EntityType.DATA_STORE,
-                    label=f"data: {node.label}",
-                    severity="info",
-                    data_sources=[_OVERLAY_SOURCE],
-                    attributes={
-                        "backed_by": node.id,
-                        "internet_exposed": coerce_bool_or_none(node.attributes.get("internet_exposed")),
-                        **(
-                            {"internet_exposure_evidence": dict(node.attributes["internet_exposure_evidence"])}
-                            if isinstance(node.attributes.get("internet_exposure_evidence"), dict)
-                            else {}
-                        ),
-                        **{
-                            key: value
-                            for key in ("cloud_provider", "account_id", "location", "environment", "resource_name")
-                            if (value := node.attributes.get(key))
-                        },
-                    },
-                    dimensions=replace(node.dimensions),
-                )
-            )
+            graph.add_node(_data_store_node(ds_id, node))
             data_stores_added += 1
         graph.nodes[ds_id].attributes.update(_content_classification_evidence(node))
         graph.add_edge(
-            UnifiedEdge(
-                source=node.id,
-                target=ds_id,
-                relationship=RelationshipType.STORES,
-                provenance={"source": _OVERLAY_SOURCE},
-            )
+            UnifiedEdge(source=node.id, target=ds_id, relationship=RelationshipType.STORES, provenance={"source": _OVERLAY_SOURCE})
         )
+    return data_store_for_resource, data_stores_added
 
-    # EXPOSED_TO: an internet-exposed resource reaches the data stores it backs.
+
+def _link_exposed_data_stores(graph: UnifiedGraph, exposed_ids: set[str], data_store_for_resource: dict[str, str]) -> None:
+    """EXPOSED_TO: an internet-exposed resource reaches the data stores it backs."""
     for resource_id in exposed_ids:
         exposed_ds = data_store_for_resource.get(resource_id)
         if exposed_ds:
@@ -437,10 +416,11 @@ def apply_cnapp_overlay(graph: UnifiedGraph) -> dict[str, int]:
                 )
             )
 
-    # Recorded public exposure plus a vulnerability warrants attention; the
-    # presence of an associated control alone cannot lower that risk.
+
+def _flag_exposed_vulnerable(graph: UnifiedGraph, resource_ids: list[str]) -> int:
+    """Recorded public exposure plus a vulnerability; an associated control alone cannot lower that risk."""
     toxic = 0
-    for resource_id in sorted(exposed_ids & vulnerable_resources):
+    for resource_id in resource_ids:
         node = graph.nodes.get(resource_id)
         if node is None:
             continue
@@ -458,37 +438,36 @@ def apply_cnapp_overlay(graph: UnifiedGraph) -> dict[str, int]:
             )
         )
         toxic += 1
+    return toxic
 
-    # ── Data sensitivity (PII/PHI/secrets) on datasets and data stores ──
-    sensitive_ids = _classify_sensitive_data(graph)
 
-    # Who/what can reach sensitive data stores, from the same permission/runtime
-    # edges as the rest of ContextGraph.
-    access_relationships = _DATA_ACCESS_RELATIONSHIPS
+def _access_subjects(graph: UnifiedGraph, node: UnifiedNode) -> list[dict[str, str]]:
+    """Distinct traversable identity/tool sources with data access to ``node``, excluding its backing resource."""
+    subjects: list[dict[str, str]] = []
+    seen_subjects: set[str] = set()
+    for edge in graph.edges:
+        if not edge.traversable or edge.target != node.id or edge.relationship not in _DATA_ACCESS_RELATIONSHIPS:
+            continue
+        if edge.source == node.attributes.get("backed_by"):
+            continue
+        source = graph.nodes.get(edge.source)
+        if source is None or source.id in seen_subjects:
+            continue
+        seen_subjects.add(source.id)
+        subjects.append(
+            {"id": source.id, "label": source.label, "entity_type": source.entity_type.value, "relationship": edge.relationship.value}
+        )
+    return subjects
+
+
+def _record_sensitive_access(graph: UnifiedGraph, sensitive_ids: set[str]) -> int:
+    """Who/what can reach sensitive data stores, from the same permission/runtime edges as ContextGraph."""
     sensitive_access_paths = 0
     for node_id in sorted(sensitive_ids):
         node = graph.nodes.get(node_id)
         if node is None:
             continue
-        subjects: list[dict[str, str]] = []
-        seen_subjects: set[str] = set()
-        for edge in graph.edges:
-            if not edge.traversable or edge.target != node_id or edge.relationship not in access_relationships:
-                continue
-            if edge.source == node.attributes.get("backed_by"):
-                continue
-            source = graph.nodes.get(edge.source)
-            if source is None or source.id in seen_subjects:
-                continue
-            seen_subjects.add(source.id)
-            subjects.append(
-                {
-                    "id": source.id,
-                    "label": source.label,
-                    "entity_type": source.entity_type.value,
-                    "relationship": edge.relationship.value,
-                }
-            )
+        subjects = _access_subjects(graph, node)
         if not subjects:
             continue
         sensitive_access_paths += len(subjects)
@@ -505,8 +484,11 @@ def apply_cnapp_overlay(graph: UnifiedGraph) -> dict[str, int]:
                 owasp_agentic_tag=None,
             )
         )
+    return sensitive_access_paths
 
-    # Toxic: sensitive data that is internet-exposed.
+
+def _flag_exposed_sensitive(graph: UnifiedGraph, sensitive_ids: set[str]) -> int:
+    """Toxic: sensitive data that is internet-exposed."""
     exposed_sensitive = 0
     for node_id in sorted(sensitive_ids):
         node = graph.nodes.get(node_id)
@@ -534,6 +516,36 @@ def apply_cnapp_overlay(graph: UnifiedGraph) -> dict[str, int]:
             )
         )
         exposed_sensitive += 1
+    return exposed_sensitive
+
+
+def apply_cnapp_overlay(graph: UnifiedGraph) -> dict[str, int]:
+    """Enrich ``graph`` with exposure + data-store structure in place.
+
+    Returns counts of exposed nodes, data stores, and toxic combinations added.
+    Never raises into the builder.
+    """
+    cloud_resources, misconfigs = _partition_resources(graph)
+    vulnerable_resources, waf_associated_ids, affected_by_misconfig = _edge_indexes(graph)
+    exposed_ids = _record_rule_exposure(graph, misconfigs, affected_by_misconfig)
+    # Read explicit resource flags without turning string false/unknown values
+    # or resource names into observed exposure. Re-resolve through the graph so
+    # a write persists on a store-backed container whose LRU evicted the held copy.
+    for resource in cloud_resources:
+        node = graph.nodes.get(resource.id)
+        if node is not None and coerce_truthy(node.attributes.get("internet_exposed")):
+            exposed_ids.add(node.id)
+    for resource_id in waf_associated_ids:
+        node = graph.nodes.get(resource_id)
+        if node is not None:
+            node.attributes["waf_association_recorded"] = True
+
+    data_store_for_resource, data_stores_added = _attach_data_stores(graph, cloud_resources)
+    _link_exposed_data_stores(graph, exposed_ids, data_store_for_resource)
+    toxic = _flag_exposed_vulnerable(graph, sorted(exposed_ids & vulnerable_resources))
+    sensitive_ids = _classify_sensitive_data(graph)
+    sensitive_access_paths = _record_sensitive_access(graph, sensitive_ids)
+    exposed_sensitive = _flag_exposed_sensitive(graph, sensitive_ids)
 
     return {
         "exposed_nodes": len(exposed_ids),
