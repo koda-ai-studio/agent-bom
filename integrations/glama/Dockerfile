@@ -7,13 +7,13 @@
 # Provide this Dockerfile via Glama Admin > Server Settings > Build.
 
 ## ── Builder stage ────────────────────────────────────────────────────────────
-# Base image: python:3.12.15-slim (Debian-based). The main Dockerfile uses
-# python:3.14.3-alpine3.23 (musl) instead — Glama's Dockerfile deliberately
+# Base image: python:3.12.16-slim (Debian-based). The main Dockerfile uses
+# python:3.14.10-alpine3.23 (musl) instead — Glama's Dockerfile deliberately
 # diverges because its locked wheels (cryptography, lxml, etc.) may lack
 # musl-built artefacts, which would force a long compile
 # step or wheel-incompatibility errors on Alpine. Both bases are
 # independently digest-pinned and bumped by dependabot. Tracking: #1961.
-FROM python:3.12.15-slim@sha256:05cda9777409a9c3ffddd94a4c476b79f0769a0b4857f0c7ed9226b6800b0d6f AS builder
+FROM python:3.12.16-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b AS builder
 
 WORKDIR /app
 
@@ -25,7 +25,7 @@ COPY src/ ./src/
 RUN uv sync --locked --no-dev --no-editable --extra mcp-server
 
 ## ── Runtime stage ────────────────────────────────────────────────────────────
-FROM python:3.12.15-slim@sha256:05cda9777409a9c3ffddd94a4c476b79f0769a0b4857f0c7ed9226b6800b0d6f
+FROM python:3.12.16-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b
 
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/LICENSE /app/LICENSE

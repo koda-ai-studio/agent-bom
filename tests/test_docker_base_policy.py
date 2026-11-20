@@ -218,3 +218,45 @@ def test_scanner_fixtures_are_exempt_but_other_test_dockerfiles_are_not(
     captured = capsys.readouterr()
     assert "tests/integration/Dockerfile" in captured.err
     assert "tests/fixtures/" not in captured.err
+
+
+# First CPython release per minor line that fixes CVE-2026-115557 (ssl
+# compromised-intermediate denylist, CRITICAL) and CVE-2026-87910 (tarfile
+# filter bypass). A base below this floor fails the publish gates' image scan.
+_CPYTHON_PATCH_FLOOR = {(3, 11): (3, 11, 18), (3, 12): (3, 12, 16), (3, 13): (3, 13, 18), (3, 14): (3, 14, 10)}
+
+
+def _pinned_python_versions() -> dict[str, tuple[int, ...]]:
+    script = _load_script()
+    versions: dict[str, tuple[int, ...]] = {}
+    for key, policy in script.POLICY.items():
+        if policy.image != "python":
+            continue
+        path = ROOT / key
+        for line in path.read_text(encoding="utf-8").splitlines():
+            match = script.FROM_RE.match(line)
+            if not match:
+                continue
+            _repo, tag, _digest = script._split_image(match.group("image"))
+            assert tag, f"{key} python base has no tag"
+            versions[f"{key}:{tag}"] = tuple(int(part) for part in tag.split("-", 1)[0].split("."))
+    return versions
+
+
+def test_python_bases_include_the_ssl_and_tarfile_fixes() -> None:
+    versions = _pinned_python_versions()
+    assert any(name.startswith("deploy/docker/Dockerfile.mcp:") for name in versions)
+    below_floor = {name: version for name, version in versions.items() if version < _CPYTHON_PATCH_FLOOR.get(version[:2], version)}
+    unknown_line = {name: version for name, version in versions.items() if version[:2] not in _CPYTHON_PATCH_FLOOR}
+    assert not below_floor, f"python bases below the CVE-2026-115557 fix: {below_floor}"
+    assert not unknown_line, f"add the patch floor for these CPython lines: {unknown_line}"
+
+
+def test_main_image_no_longer_carries_the_3_14_8_tarfile_overlay() -> None:
+    """3.14.10 ships the upstream tarfile repair, so the hand overlay must go."""
+    dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+    assert "apply_tarfile_fix" not in dockerfile
+    assert "cpython-3.14.8" not in dockerfile
+    assert not (ROOT / "deploy/docker/vendor/cpython-3.14.8").exists()
+    refresh = (ROOT / ".github/workflows/refresh-latest-container.yml").read_text(encoding="utf-8")
+    assert "cpython-3.14.8" not in refresh
