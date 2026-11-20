@@ -171,44 +171,42 @@ def _port_open(host: str, port: int, timeout: int = _DEFAULT_TIMEOUT) -> bool:
         return False
 
 
+def _json_object(body: bytes) -> object:
+    try:
+        return json.loads(body)
+    except (TypeError, ValueError):
+        return None
+
+
 def _parse_version(db_type: str, body: bytes) -> str:
-    """Extract version string from health endpoint response body."""
-    try:
-        data = json.loads(body)
-    except Exception:
+    """Extract version string from health endpoint response body ("" when absent or unreadable)."""
+    data = _json_object(body)
+    if not isinstance(data, dict):
         return ""
-    if db_type == "qdrant":
-        return data.get("version", "") or data.get("result", {}).get("version", "")
-    if db_type == "weaviate":
-        return data.get("version", "")
-    if db_type == "chroma":
-        return data.get("version", "")
-    if db_type == "milvus":
-        # Milvus /v1/vector/collections or /healthz doesn't always include version
-        return data.get("version", "")
-    return ""
+    version = data.get("version")
+    if version is None and db_type == "qdrant" and isinstance(data.get("result"), dict):
+        version = data["result"].get("version")
+    return version if isinstance(version, str) else ""
 
 
-def _count_collections(db_type: str, body: bytes) -> int:
-    """Count collections/indexes from a collection listing response body."""
-    try:
-        data = json.loads(body)
-    except Exception:
-        return 0
-    if db_type == "qdrant":
-        # {"result": {"collections": [...]}}
-        return len(data.get("result", {}).get("collections", []))
-    if db_type == "weaviate":
-        # {"classes": [...]}
-        classes = data.get("classes", [])
-        return len(classes) if isinstance(classes, list) else 0
+def _count_collections(db_type: str, body: bytes) -> int | None:
+    """Count collections/indexes from a listing body; ``None`` when the body is unreadable.
+
+    An unreadable listing is not an empty one: callers must not report zero
+    exposed collections for it.
+    """
+    data = _json_object(body)
+    listed: object = None
     if db_type == "chroma":
-        # [{"name": "...", ...}, ...]
-        return len(data) if isinstance(data, list) else 0
-    if db_type == "milvus":
-        # {"data": [...]}
-        return len(data.get("data", []))
-    return 0
+        listed = data
+    elif isinstance(data, dict) and db_type == "qdrant":
+        result = data.get("result")
+        listed = result.get("collections") if isinstance(result, dict) else None
+    elif isinstance(data, dict) and db_type == "weaviate":
+        listed = data.get("classes")
+    elif isinstance(data, dict) and db_type == "milvus":
+        listed = data.get("data")
+    return len(listed) if isinstance(listed, list) else None
 
 
 # ---------------------------------------------------------------------------
@@ -293,9 +291,14 @@ def check_vector_db(
     if auth_status == 200:
         result.requires_auth = False
         result.risk_flags.append("no_auth")
-        result.collection_count = _count_collections(db_type, auth_body)
-        if result.collection_count > 0:
-            result.risk_flags.append("collections_exposed")
+        count = _count_collections(db_type, auth_body)
+        if count is None:
+            result.metadata["collection_count"] = "unknown"
+            result.risk_flags.append("collections_unverified")
+        else:
+            result.collection_count = count
+            if count > 0:
+                result.risk_flags.append("collections_exposed")
     elif auth_status in (401, 403):
         result.requires_auth = True  # Auth is enforced
     # Other status codes (404, 500, etc.) — leave requires_auth=True conservatively
