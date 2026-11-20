@@ -17,7 +17,7 @@ def pod(name):
 
 def discover(monkeypatch, items):
     monkeypatch.setattr(nebius.shutil, "which", lambda *a: "/fixture/kubectl")
-    monkeypatch.setattr(nebius, "_kubectl_get_all_pods", lambda: SimpleNamespace(returncode=0, stdout=json.dumps({"items": items})))
+    monkeypatch.setattr(nebius, "_kubectl_get_all_pods", lambda *a: SimpleNamespace(returncode=0, stdout=json.dumps({"items": items})))
     return nebius._discover_k8s_gpu_pods("fixture", "fixture-project")
 
 
@@ -57,10 +57,10 @@ def test_empty_is_complete(monkeypatch):
 def test_conversion_failure_keeps_other_pods_and_hides_details(monkeypatch):
     original = nebius._k8s_gpu_pod_agent
 
-    def convert(project_id, namespace, name, containers):
+    def convert(project_id, namespace, name, containers, *rest):
         if name == "bad":
             raise ValueError("private-marker")
-        return original(project_id, namespace, name, containers)
+        return original(project_id, namespace, name, containers, *rest)
 
     monkeypatch.setattr(nebius, "_k8s_gpu_pod_agent", convert)
     agents, warnings = discover(monkeypatch, [pod("first"), pod("bad"), pod("last")])

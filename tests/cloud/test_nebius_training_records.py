@@ -21,7 +21,7 @@ def pod(name, quantity="2"):
 
 def discover(monkeypatch, pods):
     monkeypatch.setattr(nebius.shutil, "which", lambda *a: "/fixture/kubectl")
-    monkeypatch.setattr(nebius, "_kubectl_get_all_pods", lambda: SimpleNamespace(returncode=0, stdout=json.dumps({"items": pods})))
+    monkeypatch.setattr(nebius, "_kubectl_get_all_pods", lambda *a: SimpleNamespace(returncode=0, stdout=json.dumps({"items": pods})))
     return nebius._discover_infiniband_jobs("fixture", "fixture-project")
 
 
