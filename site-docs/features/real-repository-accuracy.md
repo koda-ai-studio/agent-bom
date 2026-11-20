@@ -12,7 +12,9 @@ pinned commits and compare every result with an independent ground truth.
   [OSV](https://osv.dev) and matched through advisory aliases.
 - **Scan**: `agent-bom scan` with a freshly synced local advisory database, one
   repository at a time. The offline run (`--offline`) was compared for Go.
-- **Measured** on 2026-10-25 against the 0.111.0 code.
+- **Measured once** on 2026-10-25 against agent-bom 0.111.0. It has not been
+  re-measured on later releases, so parser and matcher changes since then are
+  not reflected in the table below.
 
 ## Results
 
@@ -46,4 +48,20 @@ dependencies are not locked. Add a lockfile to get a complete answer.
 - NuGet, RubyGems and Composer were not part of this measurement.
 - The Go toolchain's own standard library advisories are not reported.
 
-Results will be re-measured each release.
+## Reproduce
+
+The measurement is not scripted in this repository, and the exact commits were
+not recorded on this page. To repeat it on a repository of your choice:
+
+1. [Populate the local advisory database](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/FIRST_RUN.md),
+   then, from the repository root, run:
+
+    ```bash
+    agent-bom scan . -f json -o agent-bom-report.json
+    ```
+
+2. Independently parse each lockfile or manifest into `name@version` pairs and
+   query every pair at [OSV](https://osv.dev), resolving advisory aliases.
+3. Compare the packages and advisory IDs in `agent-bom-report.json` with that
+   ground truth, and read `scan_run` and `coverage_warnings` before counting a
+   miss: a `partial` scan names the manifest it could not resolve.

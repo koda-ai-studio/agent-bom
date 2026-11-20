@@ -9,7 +9,8 @@ unnoticed for months (root cause of the 3-month Smithery drift).
 Surfaces probed:
     pypi      — https://pypi.org/pypi/agent-bom/json  -> info.version
     mcp       — official MCP Registry identity, version and installation contract
-    docker    — ghcr.io / Docker Hub latest tag       -> resolved via registry API
+    docker    — API image on ghcr.io and Docker Hub, plus the MCP stdio and
+                HTTP images                            -> registry tags API
     glama     — public marketplace listing            -> scripts/check_glama_listing.py
     smithery  — public Smithery catalog API            -> api.smithery.ai
 
@@ -46,6 +47,13 @@ GLAMA_SCRIPT = ROOT / "scripts" / "check_glama_listing.py"
 
 PYPI_PACKAGE = "agent-bom"
 DEFAULT_DOCKER_IMAGE = "ghcr.io/koda-ai-studio/agent-bom"
+# Every other image family docs/RELEASE_VERIFICATION.md promises per release.
+# Each is its own surface so one stale family cannot hide behind a fresh one.
+RELEASE_IMAGE_SURFACES: tuple[tuple[str, str], ...] = (
+    ("Docker Hub", "agentbom/agent-bom"),
+    ("MCP image (stdio)", "ghcr.io/koda-ai-studio/agent-bom-mcp"),
+    ("MCP image (HTTP)", "ghcr.io/koda-ai-studio/agent-bom-sse"),
+)
 DEFAULT_SMITHERY_SERVER = "agentbom/agent-bom"
 # Requests to this origin carry an anonymous-pull bearer token, so pagination
 # links must never move off it.
@@ -399,7 +407,7 @@ def _require_origin(url: str, origin: str) -> str:
     return url
 
 
-def probe_docker(expected: str, image: str, **kw: Any) -> dict[str, Any]:
+def probe_docker(expected: str, image: str, *, surface: str = "Docker", **kw: Any) -> dict[str, Any]:
     """Confirm the expected tag exists on the registry.
 
     For ghcr we query the package-tags listing (anonymous for public packages);
@@ -444,18 +452,18 @@ def probe_docker(expected: str, image: str, **kw: Any) -> dict[str, Any]:
         # normalize so the comparison is prefix-insensitive.
         norm = {t.lstrip("v") for t in tags}
         if expected in norm:
-            return _classify("Docker", expected, expected)
+            return _classify(surface, expected, expected)
         # The expected tag is missing — report the surface as stale, naming the
         # newest semver tag we did find so the issue is actionable.
         semver = sorted(
             (t for t in norm if re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", t)),
             key=lambda v: [int(p) for p in v.split(".")],
         )
-        return _classify("Docker", semver[-1] if semver else None, expected)
+        return _classify(surface, semver[-1] if semver else None, expected)
     except RuntimeError as exc:
-        return _classify("Docker", None, expected, error=str(exc))
+        return _classify(surface, None, expected, error=str(exc))
     except ValueError as exc:
-        return _classify("Docker", None, expected, error=str(exc))
+        return _classify(surface, None, expected, error=str(exc))
 
 
 def probe_glama(
@@ -710,6 +718,7 @@ def main(argv: list[str] | None = None) -> int:
                 probe_pypi(expected, **kw),
                 probe_mcp_registry(expected, registry_manifest, **kw),
                 probe_docker(expected, args.docker_image, **kw),
+                *(probe_docker(expected, image, surface=name, **kw) for name, image in RELEASE_IMAGE_SURFACES),
                 probe_glama(
                     expected,
                     expected_tool_count=tool_count,

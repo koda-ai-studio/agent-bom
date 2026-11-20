@@ -11,7 +11,7 @@
 #   AGENT_BOM_LOG      — Path to audit JSONL log (mounted volume)
 
 ## ── Builder stage ────────────────────────────────────────────────────────────
-FROM python:3.12.15-slim@sha256:05cda9777409a9c3ffddd94a4c476b79f0769a0b4857f0c7ed9226b6800b0d6f AS builder
+FROM python:3.12.16-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b AS builder
 
 WORKDIR /app
 COPY --from=ghcr.io/astral-sh/uv:0.13.5@sha256:32a7bb39b496babbd997b0a39a4d66c126bdaf5661b302bf6f06abda8deca6ff /uv /uvx /bin/
@@ -40,7 +40,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 RUN uv sync --locked --no-dev --no-editable --extra runtime
 
 ## ── Runtime stage ────────────────────────────────────────────────────────────
-FROM python:3.12.15-slim@sha256:05cda9777409a9c3ffddd94a4c476b79f0769a0b4857f0c7ed9226b6800b0d6f
+FROM python:3.12.16-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b
 
 ARG VERSION=0.115.4
 ARG HTTP_PROXY

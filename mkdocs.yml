@@ -79,6 +79,7 @@ extra:
 nav:
   - Home: index.md
   - Getting Started:
+      - Start Here by Role: getting-started/start-by-role.md
       - Installation: getting-started/install.md
       - Quick Start: getting-started/quickstart.md
       - MCP Server Setup: getting-started/mcp-server.md
@@ -114,13 +115,14 @@ nav:
           - Runtime Operations: deployment/runtime-operations.md
           - Gateway Auto-Discovery: deployment/gateway-auto-discovery.md
       - Enterprise Controls:
-          - Hosted Authenticated Instance + Connect Your Cloud: deployment/authenticated-hosted-instance.md
+          - Authenticated Self-Hosted Instance + Connect Your Cloud: deployment/authenticated-hosted-instance.md
           - Enterprise Auth and Tenancy: deployment/enterprise-auth-and-tenancy.md
           - Data Access Boundaries: deployment/data-access-boundaries.md
           - Customer Data and Support Boundary: deployment/customer-data-and-support-boundary.md
           - Data Retention by Class: deployment/data-retention.md
           - Audit Chain vs Compliance Signing: deployment/audit-and-compliance-verification.md
-      - Operations Reference:
+  - Operations:
+      - Runbooks and Tuning:
           - Packaged API + UI Control Plane: deployment/control-plane-helm.md
           - Postgres Provisioning Workflow: deployment/postgres-provisioning.md
           - LLM Key Exposure Drill: deployment/llm-key-exposure-drill.md
@@ -132,7 +134,7 @@ nav:
           - SIEM Integration: deployment/siem-integration.md
           - Posture Event Streaming: deployment/posture-event-streaming.md
           - Grafana Dashboard: deployment/grafana.md
-      - Specialized Reference:
+      - Specialized Deployments and Backends:
           - Deployment Modes and Alignment: deployment/deployment-modes-and-alignment.md
           - AWS Company Rollout: deployment/aws-company-rollout.md
           - Enterprise MCP / Endpoint Pilot: deployment/enterprise-pilot.md

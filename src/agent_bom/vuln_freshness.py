@@ -184,7 +184,7 @@ class VulnDataFreshness:
     def _base_summary(self) -> str:
         if self.mode == "bundled-demo":
             noun = "advisory" if self.record_count == 1 else "advisories"
-            return f"Vuln data: bundled demo advisory DB ({self.record_count} curated {noun})"
+            return f"Vuln data: bundled demo advisory DB ({self.record_count} curated {noun} in catalog)"
         sources = "+".join(self.sources) if self.sources else "OSV"
         if self.mode == "live":
             return f"Vuln data: {sources} live (no local cache — run `agent-bom db update` for faster offline scans)"

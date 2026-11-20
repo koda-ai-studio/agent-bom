@@ -534,6 +534,26 @@ def test_compact_export_hint_vuln_total_is_scope_labeled():
     assert " vulns" not in output
 
 
+def test_compact_export_hint_states_unique_beside_instances():
+    """One advisory on one package version shared by two servers is two instances, one unique."""
+
+    def pkg() -> Package:
+        return Package(name="requests", version="1.0.0", ecosystem="pypi", vulnerabilities=[_vuln()])
+
+    servers = [_make_server(name="a", packages=[pkg()]), _make_server(name="b", packages=[pkg()])]
+    report = AIBOMReport(agents=[_make_agent(servers=servers)])
+    output = _plain(_capture(print_compact_export_hint, report))
+    assert "2 package CVE instances (1 unique)" in output
+
+
+def test_compact_export_hint_omits_unique_when_equal():
+    pkg = Package(name="requests", version="1.0.0", ecosystem="pypi", vulnerabilities=[_vuln()])
+    report = AIBOMReport(agents=[_make_agent(servers=[_make_server(packages=[pkg])])])
+    output = _plain(_capture(print_compact_export_hint, report))
+    assert "1 package CVE instance" in output
+    assert "unique" not in output
+
+
 def test_compact_cis_posture_uses_govern_lane():
     """CIS posture is a governance surface in the compact CLI."""
     report = AIBOMReport(

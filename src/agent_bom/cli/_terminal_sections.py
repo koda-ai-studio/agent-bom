@@ -9,12 +9,14 @@ from __future__ import annotations
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Iterator
 
+from rich.markup import escape
 from rich.panel import Panel
 from rich.rule import Rule
 
 from agent_bom.core.verbose_hint import verbose_hint
 from agent_bom.output.brand_tokens import lane_title
 from agent_bom.output.compact import _compact_detail
+from agent_bom.output.next_steps import graph_dashboard_command
 
 if TYPE_CHECKING:
     from rich.console import Console
@@ -137,6 +139,7 @@ def print_scan_next_steps(con: Console, report: AIBOMReport, *, quiet: bool = Fa
         steps.append("agent-bom cloud scan --verbose --show-passed   # full CIS plan")
 
     print_section_divider(con, "Next")
+    con.print(f"  [cyan]→[/cyan] [bold]See the security graph in the local dashboard:[/bold] {escape(graph_dashboard_command(target))}")
     for step in steps:
         con.print(f"  [cyan]→[/cyan] {step}")
 

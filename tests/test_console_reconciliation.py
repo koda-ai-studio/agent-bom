@@ -102,6 +102,30 @@ def test_package_cve_instance_total_is_scope_labeled(demo_console_output):
     assert re.search(r"\d+ package CVE instance", demo_console_output)
 
 
+def test_package_cve_footer_reconciles_unique_with_headline(demo_console_output):
+    """The instance total names its unique count, and that count is the headline's."""
+    headline = re.search(r"Found (\d+) known vulnerabilit(?:y|ies) in", demo_console_output)
+    footer = re.search(r"(\d+) package CVE instances? \((\d+) unique\)", demo_console_output)
+    assert headline and footer
+    assert int(footer.group(1)) > int(footer.group(2))
+    assert footer.group(2) == headline.group(1)
+
+
+def test_catalog_size_is_not_read_as_matches(demo_console_output):
+    assert re.search(r"\d+ curated advisories in catalog", demo_console_output)
+
+
+def test_risk_ranked_findings_table_says_how_it_is_ranked(demo_console_output):
+    """A reachable MEDIUM can outrank an isolated HIGH; the table must say so."""
+    assert "Ranked by contextual risk" in demo_console_output
+
+
+def test_next_steps_lead_with_the_dashboard_graph(demo_console_output):
+    next_block = demo_console_output.split("Next", 1)[1]
+    first_step = next(line for line in next_block.splitlines() if "→" in line)
+    assert "quickstart --run --offline --open" in first_step
+
+
 def test_no_wrap_artifact_in_summary_box(demo_console_output):
     """No stray wrapped '—…' cell fragment at the default 80-col width."""
     assert not re.search(r"^│\s*—…", demo_console_output, flags=re.MULTILINE)

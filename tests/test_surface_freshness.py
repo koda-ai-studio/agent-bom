@@ -739,9 +739,10 @@ def test_surface_freshness_main_skips_blank_docker_and_smithery_env(monkeypatch,
 
     seen: dict[str, str] = {}
 
-    def fake_docker(expected, image, **_kw):
-        seen["docker"] = image
-        return {"surface": "Docker", "status": "fresh", "version": expected, "expected": expected}
+    def fake_docker(expected, image, *, surface="Docker", **_kw):
+        if surface == "Docker":
+            seen["docker"] = image
+        return {"surface": surface, "status": "fresh", "version": expected, "expected": expected}
 
     def fake_smithery(expected, qualified_name, **_kw):
         seen["smithery"] = qualified_name
