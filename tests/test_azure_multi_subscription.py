@@ -77,3 +77,21 @@ def test_falls_back_to_single_sub_when_no_mg(monkeypatch) -> None:
     monkeypatch.setattr(az, "discover_inventory", lambda subscription_id=None, **_k: {"account_id": subscription_id, "status": "ok"})
     out = az.discover_all_subscription_inventories(credential=object(), force=True)
     assert [p["account_id"] for p in out] == ["solo-sub"]
+
+
+def test_credential_failure_logs_sanitized_warning(monkeypatch, caplog) -> None:
+    import logging
+    import sys
+    import types
+
+    def _boom(**_k):
+        raise RuntimeError("no credential at /Users/someone/.azure/token secret=abc123")
+
+    azid = types.ModuleType("azure.identity")
+    azid.DefaultAzureCredential = _boom
+    monkeypatch.setitem(sys.modules, "azure.identity", azid)
+    with caplog.at_level(logging.WARNING, logger=az.logger.name):
+        assert az.discover_all_subscription_inventories(force=True) == []
+    messages = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
+    assert any("Azure credential unavailable" in m for m in messages), messages
+    assert not any("abc123" in m or "/Users/someone" in m for m in messages), messages

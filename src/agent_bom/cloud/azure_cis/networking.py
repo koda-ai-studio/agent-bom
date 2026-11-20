@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..aws_cis_benchmark import CheckStatus, CISCheckResult, not_applicable_if_empty
+from ..cis_read_errors import read_error_label
 from ._base import (
     _NETWORK_SECTION,
     _pass_or_no_data,
@@ -42,7 +43,7 @@ def _check_6_1(network_client: Any) -> CISCheckResult:
             not_applicable_if_empty(result, len(nsgs), "network security group")
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check NSG rules: {exc}"
+        result.evidence = f"Could not check NSG rules: {read_error_label(exc)}"
     return result
 
 
@@ -77,7 +78,7 @@ def _check_6_2(network_client: Any) -> CISCheckResult:
             not_applicable_if_empty(result, len(nsgs), "network security group")
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check NSG rules: {exc}"
+        result.evidence = f"Could not check NSG rules: {read_error_label(exc)}"
     return result
 
 
@@ -113,7 +114,7 @@ def _check_6_3(network_client: Any) -> CISCheckResult:
             not_applicable_if_empty(result, len(nsgs), "network security group")
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check NSG rules for SQL access: {exc}"
+        result.evidence = f"Could not check NSG rules for SQL access: {read_error_label(exc)}"
     return result
 
 
@@ -138,7 +139,7 @@ def _check_6_5(network_client: Any) -> CISCheckResult:
             result.evidence = "No Network Watcher instances found. Enable Network Watcher in all regions with deployed resources."
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check Network Watcher status: {exc}"
+        result.evidence = f"Could not check Network Watcher status: {read_error_label(exc)}"
     return result
 
 
@@ -173,7 +174,7 @@ def _check_6_4(network_client: Any) -> CISCheckResult:
             not_applicable_if_empty(result, len(nsgs), "network security group")
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check NSG rules for UDP access: {exc}"
+        result.evidence = f"Could not check NSG rules for UDP access: {read_error_label(exc)}"
     return result
 
 
@@ -210,7 +211,7 @@ def _check_6_6(network_client: Any) -> CISCheckResult:
             result.evidence = "No Application Gateways found; WAF check is not applicable."
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check Application Gateway WAF settings: {exc}"
+        result.evidence = f"Could not check Application Gateway WAF settings: {read_error_label(exc)}"
     return result
 
 

@@ -7,6 +7,7 @@ from typing import Any
 from agent_bom.security import sanitize_text
 
 from ..aws_inventory import is_access_denied_error
+from ..cis_read_errors import READ_FAILED, read_error_label, record_read_failure
 from ._base import CheckStatus, CISCheckResult, finalize_read_coverage, logger, not_applicable_if_empty
 
 # ---------------------------------------------------------------------------
@@ -59,6 +60,7 @@ def _check_2_1_2(s3_client: Any) -> CISCheckResult:
     unencrypted = []
     inspected = 0
     denied: list[str] = []
+    unavailable: dict[str, list[str]] = {}
     for bucket in buckets:
         name = bucket["Name"]
         try:
@@ -73,7 +75,7 @@ def _check_2_1_2(s3_client: Any) -> CISCheckResult:
             elif is_access_denied_error(exc):
                 denied.append(name)
             else:
-                # Skip buckets we can't access (cross-region, deleted, etc.)
+                record_read_failure(unavailable, name)
                 logger.debug("Could not check encryption for bucket %s: %s", name, sanitize_text(exc))
 
     if unencrypted:
@@ -87,6 +89,7 @@ def _check_2_1_2(s3_client: Any) -> CISCheckResult:
             result,
             inspected=inspected,
             denied=denied,
+            unavailable=unavailable,
             permission="s3:GetEncryptionConfiguration",
             resource_kind="bucket",
             pass_evidence=f"All {len(buckets)} bucket(s) have server-side encryption enabled.",
@@ -108,6 +111,7 @@ def _check_2_1_3(s3_client: Any) -> CISCheckResult:
     no_mfa_delete: list[str] = []
     inspected = 0
     denied: list[str] = []
+    unavailable: dict[str, list[str]] = {}
     for bucket in buckets:
         name = bucket["Name"]
         try:
@@ -118,6 +122,8 @@ def _check_2_1_3(s3_client: Any) -> CISCheckResult:
         except Exception as exc:
             if is_access_denied_error(exc):
                 denied.append(name)
+            else:
+                record_read_failure(unavailable, name)
             logger.debug("Could not check MFA Delete for bucket %s: %s", name, sanitize_text(exc))
 
     if no_mfa_delete:
@@ -131,6 +137,7 @@ def _check_2_1_3(s3_client: Any) -> CISCheckResult:
             result,
             inspected=inspected,
             denied=denied,
+            unavailable=unavailable,
             permission="s3:GetBucketVersioning",
             resource_kind="bucket",
             pass_evidence=f"All {len(buckets)} bucket(s) have MFA Delete enabled.",
@@ -152,6 +159,7 @@ def _check_2_1_4(s3_client: Any) -> CISCheckResult:
     unversioned = []
     inspected = 0
     denied: list[str] = []
+    unavailable: dict[str, list[str]] = {}
     for bucket in buckets:
         name = bucket["Name"]
         try:
@@ -163,6 +171,8 @@ def _check_2_1_4(s3_client: Any) -> CISCheckResult:
             # Skip inaccessible buckets (permissions, deleted, etc.)
             if is_access_denied_error(exc):
                 denied.append(name)
+            else:
+                record_read_failure(unavailable, name)
             logger.debug("Could not check versioning for bucket %s: %s", name, sanitize_text(exc))
 
     if unversioned:
@@ -176,6 +186,7 @@ def _check_2_1_4(s3_client: Any) -> CISCheckResult:
             result,
             inspected=inspected,
             denied=denied,
+            unavailable=unavailable,
             permission="s3:GetBucketVersioning",
             resource_kind="bucket",
             pass_evidence=f"All {len(buckets)} bucket(s) have versioning enabled.",
@@ -204,7 +215,7 @@ def _check_2_2_1(ec2_client: Any) -> CISCheckResult:
         error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
         logger.debug("Could not check EBS default encryption: %s (%s)", sanitize_text(exc), error_code)
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check EBS encryption default: {error_code or exc}"
+        result.evidence = f"Could not check EBS encryption default: {error_code or read_error_label(exc)}"
     return result
 
 
@@ -326,7 +337,7 @@ def _check_2_4_1(kms_client: Any) -> CISCheckResult:
             denied=denied,
             permission="kms:GetKeyRotationStatus",
             resource_kind="customer-managed KMS key",
-            unavailable={"read_failed": unreadable},
+            unavailable={READ_FAILED: unreadable},
             pass_evidence="All customer-managed KMS keys have rotation enabled.",
         )
     return result

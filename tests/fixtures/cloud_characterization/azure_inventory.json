@@ -417,7 +417,13 @@
   },
   "all_subs_no_credentials": {
     "result": [],
-    "logs": []
+    "logs": [
+      [
+        "WARNING",
+        "agent_bom.cloud.azure_inventory",
+        "Azure credential unavailable; inventory skipped: no credential"
+      ]
+    ]
   },
   "all_subs_sdk_missing": {
     "result": [],

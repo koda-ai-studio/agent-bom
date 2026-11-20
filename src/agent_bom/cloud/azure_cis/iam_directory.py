@@ -12,6 +12,7 @@ from ..azure_graph import (
     SECURITY_DEFAULTS_PATH,
     GraphError,
 )
+from ..cis_read_errors import read_error_label
 from ._base import (
     _IAM_SECTION,
     _ca_client_app_types,
@@ -166,7 +167,7 @@ def _check_1_15(auth_client: Any, subscription_id: str) -> CISCheckResult:
             result.evidence = f"No custom subscription Administrator roles found ({len(definitions)} custom role(s) reviewed)."
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not enumerate custom role definitions: {exc}"
+        result.evidence = f"Could not enumerate custom role definitions: {read_error_label(exc)}"
     return result
 
 

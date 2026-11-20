@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..aws_cis_benchmark import CheckStatus, CISCheckResult, not_applicable_if_empty
+from ..cis_read_errors import read_error_label
 from ._base import (
     _VM_SECTION,
     _pass_or_no_data,
@@ -40,7 +41,7 @@ def _check_7_1(compute_client: Any) -> CISCheckResult:
             _pass_or_no_data(result, len(vms), "VM", f"All {len(vms)} VM(s) use Managed Disks.")
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check VM disk configuration: {exc}"
+        result.evidence = f"Could not check VM disk configuration: {read_error_label(exc)}"
     return result
 
 
@@ -72,7 +73,7 @@ def _check_7_2(compute_client: Any) -> CISCheckResult:
             _pass_or_no_data(result, len(vms), "VM", f"All {len(vms)} VM(s) use Managed Disks for OS disks.")
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check VM managed disk configuration: {exc}"
+        result.evidence = f"Could not check VM managed disk configuration: {read_error_label(exc)}"
     return result
 
 
@@ -106,7 +107,7 @@ def _check_7_3(compute_client: Any) -> CISCheckResult:
             _pass_or_no_data(result, len(disks), "disk", f"All {len(disks)} disk(s) are encrypted with Customer Managed Key.")
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check disk encryption settings: {exc}"
+        result.evidence = f"Could not check disk encryption settings: {read_error_label(exc)}"
     return result
 
 
@@ -146,7 +147,7 @@ def _check_7_4(compute_client: Any) -> CISCheckResult:
             not_applicable_if_empty(result, 0, "VM")
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check VM extensions: {exc}"
+        result.evidence = f"Could not check VM extensions: {read_error_label(exc)}"
     return result
 
 
@@ -170,7 +171,7 @@ def _check_7_5(compute_client: Any) -> CISCheckResult:
         )
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not list virtual machines: {exc}"
+        result.evidence = f"Could not list virtual machines: {read_error_label(exc)}"
     return result
 
 
@@ -208,5 +209,5 @@ def _check_7_6(compute_client: Any) -> CISCheckResult:
             _pass_or_no_data(result, len(vms), "VM", f"All {len(vms)} VM(s) have endpoint protection extensions installed.")
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check VM endpoint protection: {exc}"
+        result.evidence = f"Could not check VM endpoint protection: {read_error_label(exc)}"
     return result

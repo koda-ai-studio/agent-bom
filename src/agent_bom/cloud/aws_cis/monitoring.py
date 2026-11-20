@@ -6,6 +6,7 @@ from typing import Any, Callable
 
 from agent_bom.security import sanitize_text
 
+from ..cis_read_errors import read_error_label
 from ._base import CheckStatus, CISCheckResult, _safe_error_evidence, logger
 
 # ---------------------------------------------------------------------------
@@ -78,7 +79,7 @@ def _check_metric_filter(
     except Exception as exc:
         error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not query metric filters: {sanitize_text(error_code or exc)}"
+        result.evidence = f"Could not query metric filters: {error_code or read_error_label(exc)}"
     if result.status is CheckStatus.PASS:
         return _require_targeting_alarm(result, logs_client, cloudwatch_client, matches_filter=matches_filter)
     return result
@@ -190,7 +191,7 @@ def _check_4_4(logs_client: Any, cloudwatch_client: Any = None) -> CISCheckResul
         error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
         logger.debug("Could not check metric filters: %s (%s)", sanitize_text(exc), error_code)
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not query metric filters: {error_code or exc}"
+        result.evidence = f"Could not query metric filters: {error_code or read_error_label(exc)}"
     if result.status is CheckStatus.PASS:
         return _require_targeting_alarm(
             result,

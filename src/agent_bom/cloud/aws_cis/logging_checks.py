@@ -7,6 +7,7 @@ from typing import Any
 from agent_bom.security import sanitize_text
 
 from ..aws_inventory import is_access_denied_error
+from ..cis_read_errors import record_read_failure
 from ._base import CheckStatus, CISCheckResult, finalize_read_coverage, logger
 
 # ---------------------------------------------------------------------------
@@ -173,6 +174,7 @@ def _check_3_6(s3_client: Any, cloudtrail_client: Any) -> CISCheckResult:
     no_logging = []
     inspected = 0
     denied: list[str] = []
+    unavailable: dict[str, list[str]] = {}
     for bucket_name in ct_buckets:
         try:
             logging_conf = s3_client.get_bucket_logging(Bucket=bucket_name)
@@ -183,6 +185,8 @@ def _check_3_6(s3_client: Any, cloudtrail_client: Any) -> CISCheckResult:
             # Skip inaccessible buckets
             if is_access_denied_error(exc):
                 denied.append(bucket_name)
+            else:
+                record_read_failure(unavailable, bucket_name)
             logger.debug("Could not check logging for bucket %s: %s", bucket_name, sanitize_text(exc))
 
     if no_logging:
@@ -194,6 +198,7 @@ def _check_3_6(s3_client: Any, cloudtrail_client: Any) -> CISCheckResult:
             result,
             inspected=inspected,
             denied=denied,
+            unavailable=unavailable,
             permission="s3:GetBucketLogging",
             resource_kind="CloudTrail bucket",
             pass_evidence="All CloudTrail S3 buckets have access logging enabled.",
@@ -224,11 +229,11 @@ def _check_3_3(s3_client: Any, cloudtrail_client: Any) -> CISCheckResult:
     public_buckets: list[str] = []
     inspected = 0
     denied: list[str] = []
+    unavailable: dict[str, list[str]] = {}
 
     for bucket_name in ct_buckets:
         try:
             policy_resp = s3_client.get_bucket_policy(Bucket=bucket_name)
-            inspected += 1
             policy_doc = _json.loads(policy_resp["Policy"])
             for stmt in policy_doc.get("Statement", []):
                 principal = stmt.get("Principal", {})
@@ -238,6 +243,7 @@ def _check_3_3(s3_client: Any, cloudtrail_client: Any) -> CISCheckResult:
                         if not condition:
                             public_buckets.append(bucket_name)
                             break
+            inspected += 1
         except Exception as exc:
             error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
             if error_code == "NoSuchBucketPolicy":
@@ -247,6 +253,7 @@ def _check_3_3(s3_client: Any, cloudtrail_client: Any) -> CISCheckResult:
             if is_access_denied_error(exc):
                 denied.append(bucket_name)
                 continue
+            record_read_failure(unavailable, bucket_name)
             logger.debug("Could not check bucket policy for %s: %s", bucket_name, sanitize_text(exc))
 
     if public_buckets:
@@ -258,6 +265,7 @@ def _check_3_3(s3_client: Any, cloudtrail_client: Any) -> CISCheckResult:
             result,
             inspected=inspected,
             denied=denied,
+            unavailable=unavailable,
             permission="s3:GetBucketPolicy",
             resource_kind="CloudTrail bucket",
             pass_evidence="No CloudTrail S3 buckets have public bucket policies.",

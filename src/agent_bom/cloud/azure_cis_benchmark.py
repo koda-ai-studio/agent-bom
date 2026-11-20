@@ -178,6 +178,7 @@ from .azure_cis.virtual_machines import _check_7_4 as _check_7_4
 from .azure_cis.virtual_machines import _check_7_5 as _check_7_5
 from .azure_cis.virtual_machines import _check_7_6 as _check_7_6
 from .base import CloudDiscoveryError
+from .cis_read_errors import read_error_label
 
 # ---------------------------------------------------------------------------
 # CIS 5.1.1 — subscription diagnostic settings (patch seam kept on this module)
@@ -262,7 +263,7 @@ def _check_5_1_1(monitor_client: Any, subscription_id: str, *, credential: Any =
             result.evidence = "No diagnostic settings found for the subscription Activity Log. Audit events are not being exported."
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not list diagnostic settings: {exc}"
+        result.evidence = f"Could not list diagnostic settings: {read_error_label(exc)}"
     return result
 
 

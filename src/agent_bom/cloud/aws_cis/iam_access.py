@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from ..aws_inventory import is_access_denied_error
+from ..cis_read_errors import read_error_label, record_read_failure
 from ._base import CheckStatus, CISCheckResult, _safe_error_evidence, finalize_read_coverage, logger, not_applicable_if_empty
 from .iam_account import _IAM_SECTION
 
@@ -356,6 +357,7 @@ def _check_1_16(iam_client: Any) -> CISCheckResult:
     admin_policies: list[str] = []
     inspected = 0
     denied: list[str] = []
+    unavailable: dict[str, list[str]] = {}
 
     for page in paginator.paginate(Scope="Local", OnlyAttached=True):
         for policy in page["Policies"]:
@@ -365,7 +367,6 @@ def _check_1_16(iam_client: Any) -> CISCheckResult:
                     PolicyArn=policy["Arn"],
                     VersionId=version_id,
                 )["PolicyVersion"]
-                inspected += 1
                 doc = version.get("Document", {})
                 # Document may be URL-encoded JSON string
                 if isinstance(doc, str):
@@ -387,9 +388,12 @@ def _check_1_16(iam_client: Any) -> CISCheckResult:
                     if "*" in actions and "*" in resources:
                         admin_policies.append(policy["PolicyName"])
                         break
+                inspected += 1
             except Exception as exc:
                 if is_access_denied_error(exc):
                     denied.append(policy.get("PolicyName") or policy.get("Arn", "unknown"))
+                else:
+                    record_read_failure(unavailable, policy.get("PolicyName") or policy.get("Arn", "unknown"))
                 logger.debug("Could not inspect policy %s", policy.get("Arn"))
 
     if admin_policies:
@@ -403,6 +407,7 @@ def _check_1_16(iam_client: Any) -> CISCheckResult:
             result,
             inspected=inspected,
             denied=denied,
+            unavailable=unavailable,
             permission="iam:GetPolicyVersion",
             resource_kind="policy",
             pass_evidence="No attached customer-managed policies grant full '*:*' admin privileges.",
@@ -436,7 +441,7 @@ def _check_1_17(iam_client: Any) -> CISCheckResult:
     except Exception as exc:
         error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check AWSSupportAccess attachment: {error_code or exc}"
+        result.evidence = f"Could not check AWSSupportAccess attachment: {error_code or read_error_label(exc)}"
     return result
 
 
@@ -535,5 +540,5 @@ def _check_1_22(iam_client: Any) -> CISCheckResult:
     except Exception as exc:
         error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check AWSCloudShellFullAccess: {error_code or exc}"
+        result.evidence = f"Could not check AWSCloudShellFullAccess: {error_code or read_error_label(exc)}"
     return result

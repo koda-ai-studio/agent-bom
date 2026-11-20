@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..aws_cis_benchmark import CheckStatus, CISCheckResult
+from ..cis_read_errors import read_error_label
 from ._base import (
     _DEFENDER_SECTION,
 )
@@ -31,7 +32,7 @@ def _check_2_1(security_client: Any, subscription_id: str) -> CISCheckResult:
             result.evidence = f"Microsoft Defender for Servers pricing tier is '{tier}', expected 'Standard'."
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check Defender for Servers pricing: {exc}"
+        result.evidence = f"Could not check Defender for Servers pricing: {read_error_label(exc)}"
     return result
 
 
@@ -56,7 +57,7 @@ def _check_2_2(security_client: Any, subscription_id: str) -> CISCheckResult:
             result.evidence = f"Microsoft Defender for App Services pricing tier is '{tier}', expected 'Standard'."
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check Defender for App Services pricing: {exc}"
+        result.evidence = f"Could not check Defender for App Services pricing: {read_error_label(exc)}"
     return result
 
 
@@ -81,7 +82,7 @@ def _check_2_3(security_client: Any, subscription_id: str) -> CISCheckResult:
             result.evidence = f"Microsoft Defender for SQL Servers pricing tier is '{tier}', expected 'Standard'."
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check Defender for SQL Servers pricing: {exc}"
+        result.evidence = f"Could not check Defender for SQL Servers pricing: {read_error_label(exc)}"
     return result
 
 
@@ -106,7 +107,7 @@ def _check_2_4(security_client: Any, subscription_id: str) -> CISCheckResult:
             result.evidence = f"Microsoft Defender for Storage pricing tier is '{tier}', expected 'Standard'."
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check Defender for Storage pricing: {exc}"
+        result.evidence = f"Could not check Defender for Storage pricing: {read_error_label(exc)}"
     return result
 
 
@@ -131,7 +132,7 @@ def _check_2_5(security_client: Any, subscription_id: str) -> CISCheckResult:
             result.evidence = f"Microsoft Defender for Key Vault pricing tier is '{tier}', expected 'Standard'."
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check Defender for Key Vault pricing: {exc}"
+        result.evidence = f"Could not check Defender for Key Vault pricing: {read_error_label(exc)}"
     return result
 
 
@@ -157,7 +158,7 @@ def _check_2_6(security_client: Any, subscription_id: str) -> CISCheckResult:
     except Exception as exc:
         # DNS Defender may not be available in all subscriptions
         result.status = CheckStatus.NOT_APPLICABLE
-        result.evidence = f"Microsoft Defender for DNS may not be available for this subscription: {exc}"
+        result.evidence = f"Microsoft Defender for DNS may not be available for this subscription: {read_error_label(exc)}"
     return result
 
 
@@ -182,7 +183,7 @@ def _check_2_7(security_client: Any, subscription_id: str) -> CISCheckResult:
             result.evidence = f"Microsoft Defender for Resource Manager pricing tier is '{tier}', expected 'Standard'."
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check Defender for Resource Manager pricing: {exc}"
+        result.evidence = f"Could not check Defender for Resource Manager pricing: {read_error_label(exc)}"
     return result
 
 
@@ -207,7 +208,7 @@ def _check_2_8(security_client: Any, subscription_id: str) -> CISCheckResult:
             result.evidence = f"Microsoft Defender for Open-Source Relational Databases pricing tier is '{tier}', expected 'Standard'."
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check Defender for Open-Source Relational Databases pricing: {exc}"
+        result.evidence = f"Could not check Defender for Open-Source Relational Databases pricing: {read_error_label(exc)}"
     return result
 
 
@@ -232,7 +233,7 @@ def _check_2_9(security_client: Any, subscription_id: str) -> CISCheckResult:
             result.evidence = f"Microsoft Defender for Cosmos DB pricing tier is '{tier}', expected 'Standard'."
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check Defender for Cosmos DB pricing: {exc}"
+        result.evidence = f"Could not check Defender for Cosmos DB pricing: {read_error_label(exc)}"
     return result
 
 
@@ -257,7 +258,7 @@ def _check_2_10(security_client: Any, subscription_id: str) -> CISCheckResult:
             result.evidence = f"Microsoft Defender for Containers pricing tier is '{tier}', expected 'Standard'."
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check Defender for Containers pricing: {exc}"
+        result.evidence = f"Could not check Defender for Containers pricing: {read_error_label(exc)}"
     return result
 
 
@@ -287,7 +288,7 @@ def _check_2_11(security_client: Any, subscription_id: str) -> CISCheckResult:
         result.evidence = "No default auto-provisioning setting found."
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check auto-provisioning settings: {exc}"
+        result.evidence = f"Could not check auto-provisioning settings: {read_error_label(exc)}"
     return result
 
 
@@ -317,7 +318,7 @@ def _check_2_12(security_client: Any, subscription_id: str) -> CISCheckResult:
             result.evidence = "No additional email addresses configured for security contact notifications."
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check security contact settings: {exc}"
+        result.evidence = f"Could not check security contact settings: {read_error_label(exc)}"
     return result
 
 
@@ -353,5 +354,5 @@ def _check_2_13(security_client: Any, subscription_id: str) -> CISCheckResult:
             result.evidence = "Email notifications for high severity alerts are not enabled."
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check security alert notification settings: {exc}"
+        result.evidence = f"Could not check security alert notification settings: {read_error_label(exc)}"
     return result

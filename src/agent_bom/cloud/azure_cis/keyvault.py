@@ -8,6 +8,7 @@ from agent_bom.security import sanitize_text
 
 from ..aws_cis_benchmark import CheckStatus, CISCheckResult, finalize_read_coverage, not_applicable_if_empty
 from ..aws_inventory import is_access_denied_error
+from ..cis_read_errors import read_error_label, record_read_failure
 from ._base import (
     _KEYVAULT_SECTION,
     logger,
@@ -80,7 +81,7 @@ def _check_8_1(kv_client: Any, subscription_id: str) -> CISCheckResult:
             _finish_vault_items(result, items, "key", denied)
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not enumerate Key Vault keys: {exc}"
+        result.evidence = f"Could not enumerate Key Vault keys: {read_error_label(exc)}"
     return result
 
 
@@ -137,7 +138,7 @@ def _check_8_2(kv_client: Any, subscription_id: str) -> CISCheckResult:
             _finish_vault_items(result, items, "secret", denied)
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not enumerate Key Vault secrets: {exc}"
+        result.evidence = f"Could not enumerate Key Vault secrets: {read_error_label(exc)}"
     return result
 
 
@@ -156,6 +157,7 @@ def _check_8_3(kv_client: Any, subscription_id: str) -> CISCheckResult:
         failing = []
         inspected = 0
         denied: list[str] = []
+        unavailable: dict[str, list[str]] = {}
         for vault in vaults:
             vault_name = vault.name or "unknown"
             vault_id = getattr(vault, "id", "") or ""
@@ -181,6 +183,8 @@ def _check_8_3(kv_client: Any, subscription_id: str) -> CISCheckResult:
             except Exception as exc:
                 if is_access_denied_error(exc):
                     denied.append(vault_name)
+                else:
+                    record_read_failure(unavailable, vault_name)
                 logger.debug("Could not check recoverability for vault %s: %s", vault_name, sanitize_text(exc))
         if failing:
             result.status = CheckStatus.FAIL
@@ -191,13 +195,14 @@ def _check_8_3(kv_client: Any, subscription_id: str) -> CISCheckResult:
                 result,
                 inspected=inspected,
                 denied=denied,
+                unavailable=unavailable,
                 permission="Microsoft.KeyVault/vaults/read",
                 resource_kind="Key Vault",
                 pass_evidence="All Key Vault(s) have soft-delete and purge protection enabled.",
             )
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check Key Vault recoverability: {exc}"
+        result.evidence = f"Could not check Key Vault recoverability: {read_error_label(exc)}"
     return result
 
 
@@ -269,7 +274,7 @@ def _check_8_4(kv_client: Any, subscription_id: str) -> CISCheckResult:
             _finish_vault_items(result, items, "key", denied)
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check Key Vault key expiration: {exc}"
+        result.evidence = f"Could not check Key Vault key expiration: {read_error_label(exc)}"
     return result
 
 
@@ -341,7 +346,7 @@ def _check_8_5(kv_client: Any, subscription_id: str) -> CISCheckResult:
             _finish_vault_items(result, items, "secret", denied)
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check Key Vault secret expiration: {exc}"
+        result.evidence = f"Could not check Key Vault secret expiration: {read_error_label(exc)}"
     return result
 
 
@@ -398,7 +403,7 @@ def _check_8_6(kv_client: Any, subscription_id: str) -> CISCheckResult:
             _finish_vault_items(result, items, "secret", denied)
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check Key Vault secret content types: {exc}"
+        result.evidence = f"Could not check Key Vault secret content types: {read_error_label(exc)}"
     return result
 
 
@@ -417,6 +422,7 @@ def _check_8_7(kv_client: Any, subscription_id: str) -> CISCheckResult:
         failing = []
         inspected = 0
         denied: list[str] = []
+        unavailable: dict[str, list[str]] = {}
         for vault in vaults:
             vault_name = vault.name or "unknown"
             vault_id = getattr(vault, "id", "") or ""
@@ -436,6 +442,8 @@ def _check_8_7(kv_client: Any, subscription_id: str) -> CISCheckResult:
             except Exception as exc:
                 if is_access_denied_error(exc):
                     denied.append(vault_name)
+                else:
+                    record_read_failure(unavailable, vault_name)
                 logger.debug("Could not check private endpoints for vault %s: %s", vault_name, sanitize_text(exc))
         if failing:
             result.status = CheckStatus.FAIL
@@ -446,11 +454,12 @@ def _check_8_7(kv_client: Any, subscription_id: str) -> CISCheckResult:
                 result,
                 inspected=inspected,
                 denied=denied,
+                unavailable=unavailable,
                 permission="Microsoft.KeyVault/vaults/read",
                 resource_kind="Key Vault",
                 pass_evidence="All Key Vault(s) have private endpoints configured.",
             )
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check Key Vault private endpoints: {exc}"
+        result.evidence = f"Could not check Key Vault private endpoints: {read_error_label(exc)}"
     return result

@@ -154,6 +154,7 @@ from .aws_cis.storage import (
     _check_2_4_1,
 )
 from .base import CloudDiscoveryError
+from .cis_read_errors import read_error_label
 
 # Re-exported so callers, tests and monkeypatch targets keep using this module.
 __all__ = [
@@ -303,7 +304,7 @@ def _check_3_10(cloudtrail_client: Any) -> CISCheckResult:
     except Exception as exc:
         error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check object-level logging: {error_code or exc}"
+        result.evidence = f"Could not check object-level logging: {error_code or read_error_label(exc)}"
     return result
 
 
@@ -361,7 +362,7 @@ def _check_3_11(cloudtrail_client: Any) -> CISCheckResult:
     except Exception as exc:
         error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check object-level logging: {error_code or exc}"
+        result.evidence = f"Could not check object-level logging: {error_code or read_error_label(exc)}"
     return result
 
 
@@ -546,7 +547,7 @@ def run_benchmark(
                     title=_extract_title(check_fn),
                     status=CheckStatus.ERROR,
                     severity="unknown",
-                    evidence=f"AWS API error: {code} — {exc.response['Error'].get('Message', '')}",
+                    evidence=f"AWS API error: {code}",
                 )
             )
         except Exception as exc:
@@ -557,7 +558,7 @@ def run_benchmark(
                     title=_extract_title(check_fn),
                     status=CheckStatus.ERROR,
                     severity="unknown",
-                    evidence=f"Check failed: {type(exc).__name__}: {exc}",
+                    evidence=f"Check failed: {read_error_label(exc)}",
                 )
             )
 
