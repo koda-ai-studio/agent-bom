@@ -32,6 +32,7 @@ from agent_bom.api.stores import _get_fleet_store, _get_idempotency_store, _get_
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.api.tenant_quota import enforce_fleet_agents_quota, tenant_quota_guard
 from agent_bom.backpressure import BackpressureRejectedError, adaptive_backpressure
+from agent_bom.core.packages import canonical_package_key
 from agent_bom.domain.mcp_model import server_dict_counts_as_mcp_server
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
 from agent_bom.rbac import require_authenticated_permission
@@ -246,23 +247,49 @@ async def get_fleet_agent(request: Request, agent_id: str) -> dict[str, Any]:
     return cast(dict[str, Any], agent.model_dump())
 
 
+def _field(item: Any, name: str) -> Any:
+    return item.get(name) if isinstance(item, dict) else getattr(item, name, None)
+
+
+def _distinct_counts(servers: list[Any]) -> tuple[int, int, int]:
+    """Packages, credential names and vulnerabilities an agent has, each counted once.
+
+    Servers often share a package or a credential variable; summing per server
+    counted those once per server. A vulnerability is one (package, advisory)
+    pair; a server that reports only its total adds that total.
+    """
+    packages: set[str] = set()
+    credentials: set[str] = set()
+    advisories: set[tuple[str, str]] = set()
+    unattributed = 0
+    for server in servers:
+        listed = 0
+        for package in _field(server, "packages") or []:
+            key = canonical_package_key(
+                str(_field(package, "name") or ""),
+                str(_field(package, "version") or ""),
+                str(_field(package, "ecosystem") or ""),
+                _field(package, "purl"),
+            )
+            packages.add(key)
+            for vulnerability in _field(package, "vulnerabilities") or []:
+                if advisory := _field(vulnerability, "id"):
+                    advisories.add((key, str(advisory)))
+                    listed += 1
+        credentials.update(str(name) for name in _field(server, "credential_names") or [])
+        if not listed:
+            unattributed += int(_field(server, "total_vulnerabilities") or 0)
+    return len(packages), len(credentials), len(advisories) + unattributed
+
+
 def _server_counts(agent: Any) -> tuple[int, int, int, int]:
-    server_count = agent.total_mcp_servers
-    pkg_count = sum(len(s.packages) for s in agent.mcp_servers)
-    cred_count = sum(len(s.credential_names) for s in agent.mcp_servers)
-    vuln_count = sum(s.total_vulnerabilities for s in agent.mcp_servers)
-    return server_count, pkg_count, cred_count, vuln_count
+    return (agent.total_mcp_servers, *_distinct_counts(list(agent.mcp_servers)))
 
 
 def _payload_counts(agent: dict) -> tuple[int, int, int, int]:
-    servers = agent.get("mcp_servers", []) or []
-    server_count = sum(1 for server in servers if isinstance(server, dict) and server_dict_counts_as_mcp_server(server))
-    pkg_count = cred_count = vuln_count = 0
-    for server in servers:
-        pkg_count += len(server.get("packages", []) or [])
-        cred_count += len(server.get("credential_names", []) or [])
-        vuln_count += int(server.get("total_vulnerabilities", 0) or 0)
-    return server_count, pkg_count, cred_count, vuln_count
+    servers = [server for server in agent.get("mcp_servers", []) or [] if isinstance(server, dict)]
+    server_count = sum(1 for server in servers if server_dict_counts_as_mcp_server(server))
+    return (server_count, *_distinct_counts(servers))
 
 
 def _payload_tags(agent: dict) -> list[str]:
