@@ -47,7 +47,7 @@ from agent_bom.scanners.secret_models import SecretScanResult as SecretScanResul
 from agent_bom.scanners.secret_path_context import apply_path_context as apply_path_context
 from agent_bom.scanners.secret_path_context import credential_severity as _credential_severity
 from agent_bom.scanners.secret_value_shape import QUOTED_STRING_EXTENSIONS, LineLocators, is_translation_file
-from agent_bom.scanners.source_pii import bare_number_has_field, machine_identity_match, source_pii_match
+from agent_bom.scanners.source_pii import bare_number_has_field, machine_identity_match, package_metadata_contact, source_pii_match
 from agent_bom.traversal import iter_discovery_files
 
 logger = logging.getLogger(__name__)
@@ -335,7 +335,7 @@ def _pii_type(file_path: Path, line: str) -> str | None:
     locators: LineLocators | None = None
     for name, pattern in PII_PATTERNS:
         for match in pattern.finditer(line):
-            if machine_identity_match(name, match):
+            if machine_identity_match(name, match) or package_metadata_contact(file_path.name, line, name, match):
                 continue
             locators = locators or LineLocators(line)
             if locators.contains(match.start(), match.end()):

@@ -20,12 +20,44 @@ _BARE_NUMBER_FIELD = re.compile(
 _BARE_NUMBER = re.compile(r"\+?\d+")
 _BARE_NUMBER_TYPES = frozenset({"US Phone Number", "Credit Card (Visa)", "Credit Card (Mastercard)", "Credit Card (Amex)"})
 
-_GCP_SERVICE_ACCOUNT = re.compile(r"[a-z0-9-]+@[a-z0-9-]+\.iam\.gserviceaccount\.com", re.IGNORECASE)
+# RFC 2606 / RFC 6761 names that can never deliver to a person.
+_RESERVED_TLDS = frozenset({"example", "invalid", "localhost", "test"})
+_RESERVED_DOMAINS = frozenset({"example.com", "example.net", "example.org"})
+_NO_REPLY_LOCAL_PARTS = frozenset({"noreply", "no-reply", "donotreply", "do-not-reply"})
+# Provider-issued or transport addresses that identify a machine, not a person.
+_MACHINE_DOMAINS = ("gserviceaccount.com", "users.noreply.github.com")
+_SCM_SSH_HOSTS = frozenset({"github.com", "gitlab.com", "bitbucket.org", "ssh.dev.azure.com"})
+
+_PACKAGE_METADATA_FILES = frozenset({"pyproject.toml", "setup.cfg", "setup.py", "package.json", "Cargo.toml"})
+_MAINTAINER_FIELD = re.compile(
+    r"(?i)(?:^|[^a-z0-9_])(?:authors?|maintainers?|contributors?|author_email|maintainer_email|email)[\"']?\s*[=:]"
+)
+
+
+def _domain_is_or_under(domain: str, suffix: str) -> bool:
+    return domain == suffix or domain.endswith("." + suffix)
+
+
+def non_personal_email(address: str) -> bool:
+    """Reserved documentation domains, no-reply mailboxes and machine accounts reach no person."""
+    local, _, domain = address.lower().rpartition("@")
+    if not local or not domain:
+        return False
+    if domain.rsplit(".", 1)[-1] in _RESERVED_TLDS or any(_domain_is_or_under(domain, d) for d in _RESERVED_DOMAINS):
+        return True
+    if local in _NO_REPLY_LOCAL_PARTS or any(_domain_is_or_under(domain, d) for d in _MACHINE_DOMAINS):
+        return True
+    return local == "git" and domain in _SCM_SSH_HOSTS
 
 
 def machine_identity_match(name: str, match: re.Match[str]) -> bool:
-    """A provider-issued service-account address identifies a machine, not a person."""
-    return name == "Email Address" and bool(_GCP_SERVICE_ACCOUNT.fullmatch(match.group()))
+    """An email match that names a machine, mailbox placeholder or documentation domain, not a person."""
+    return name == "Email Address" and non_personal_email(match.group())
+
+
+def package_metadata_contact(file_name: str, line: str, name: str, match: re.Match[str]) -> bool:
+    """Author and maintainer addresses in a package manifest are published registry metadata."""
+    return name == "Email Address" and file_name in _PACKAGE_METADATA_FILES and bool(_MAINTAINER_FIELD.search(line[: match.start()]))
 
 
 def bare_number_has_field(line: str, name: str, match: re.Match[str]) -> bool:
