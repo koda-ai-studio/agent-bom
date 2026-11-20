@@ -81,7 +81,7 @@ from agent_bom.api.overview_rollup import (
     _exec_estate,
     _fold_findings,
     _graph_drill_href,
-    _job_package_count,
+    _job_package_ids,
     _merge_top_risks,
     _reconciled_exec_counts,
     _rollup_from_blast_radius,
@@ -153,7 +153,7 @@ def _estate_rollup(jobs: list[Any]) -> dict[str, Any]:
     kev = 0
     credential_exposed = 0
     unique_findings = 0
-    unique_packages = 0
+    unique_packages, package_ids = 0, set[str]()  # a compacted result keeps only its own unique count: a floor
     latest_scan_at: str | None = None
 
     from agent_bom.api import time_window
@@ -209,7 +209,7 @@ def _estate_rollup(jobs: list[Any]) -> dict[str, Any]:
             kev += add_kev
             credential_exposed += add_cred
             unique_findings += added
-            unique_packages += _job_package_count(result)
+            package_ids |= _job_package_ids(result)
         elif blast_radius:
             # Fallback: no spine on this result — CVE-only blast_radius. Every
             # entry is a dependency CVE, so it folds into the vuln lane.
@@ -222,7 +222,7 @@ def _estate_rollup(jobs: list[Any]) -> dict[str, Any]:
             credential_exposed += partial["credential_exposed"]
             unique_findings += partial["unique_cves"]
             top_risks.extend(partial["top_risks"])
-            unique_packages += _job_package_count(result)
+            package_ids |= _job_package_ids(result)
         else:
             # Fallback: compacted result — only the compact summary survives.
             partial = _rollup_from_summary(result)
@@ -260,7 +260,7 @@ def _estate_rollup(jobs: list[Any]) -> dict[str, Any]:
         "kev": kev,
         "credential_exposed": credential_exposed,
         "unique_findings": unique_findings,
-        "unique_packages": unique_packages,
+        "unique_packages": max(len(package_ids), unique_packages),
         "top_risks": top_risks[:10],
         "latest_scan_at": latest_scan_at,
         "compliance_failing": len(failing_frameworks),

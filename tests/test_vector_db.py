@@ -193,7 +193,7 @@ def test_count_collections_empty():
 
 
 def test_count_collections_invalid_json():
-    assert _count_collections("qdrant", b"bad json") == 0
+    assert _count_collections("qdrant", b"bad json") is None  # unreadable, not empty
 
 
 # ---------------------------------------------------------------------------

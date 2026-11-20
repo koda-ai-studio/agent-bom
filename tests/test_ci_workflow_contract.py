@@ -1083,6 +1083,26 @@ def test_action_classifier_includes_the_cyclonedx_dogfood_fixture() -> None:
     assert not re.search(pattern[1], "docs/readme.md")
 
 
+def test_api_image_builds_before_merge_when_its_inputs_change() -> None:
+    """A Dockerfile pin that no longer resolves must fail a PR, not the post-merge multi-arch build."""
+    import re
+
+    jobs = _ci()["jobs"]
+    script = next(step["run"] for step in jobs["changes"]["steps"] if step.get("id") == "classify")
+    pattern = re.search(r"grep -E '([^']+)' > /dev/null; then\n\s+api_image=true", script)
+    assert pattern is not None
+    for path in ("Dockerfile", ".dockerignore", "pyproject.toml", "uv.lock", ".github/workflows/ci.yml"):
+        assert re.search(pattern[1], path), path
+    for path in ("deploy/docker/Dockerfile.mcp", "docs/Dockerfile.md", "src/agent_bom/cli/main.py"):
+        assert not re.search(pattern[1], path), path
+    run = "\n".join(step.get("run", "") for step in jobs["api-image"]["steps"])
+    assert "docker build -t agent-bom-api:ci ." in run
+    assert '!= "0"' in run
+    for event in ("pull_request", "merge_group", "workflow_dispatch"):
+        assert _evaluate(jobs["api-image"]["if"], event, {**_outputs("false", proven=""), "api_image": "true"})
+        assert not _evaluate(jobs["api-image"]["if"], event, {**_outputs("false", proven=""), "api_image": "false"})
+
+
 def test_every_main_push_proves_all_release_ui_lanes_once():
     """A queue-proven push reuses the merge group's UI proof; any other main push runs every UI lane."""
     for name in ("ui", "ui-export", "ui-e2e", "ui-e2e-shard", "ui-container-smoke"):
@@ -1150,12 +1170,12 @@ def test_required_context_rejects_missing_or_failed_compatibility_proof() -> Non
     import subprocess
 
     job = _ci()["jobs"]["test"]
-    assert {"test-alpine", "ui-e2e", "mcp-images"} <= set(job["needs"])
+    assert {"test-alpine", "ui-e2e", "mcp-images", "api-image"} <= set(job["needs"])
     step = job["steps"][0]
     base = {**os.environ, "CORE_RESULT": "success", "DOCKER_RESULT": "skipped", "DOCKER_REQUIRED": "false"}
     for required in ("true", "false"):
         for outcome in ("success", "skipped", "failure", "cancelled"):
-            for lane in ("ALPINE", "UI_E2E", "MCP_IMAGES"):
+            for lane in ("ALPINE", "UI_E2E", "MCP_IMAGES", "API_IMAGE"):
                 env = {
                     **base,
                     "ALPINE_REQUIRED": "false",
@@ -1164,6 +1184,8 @@ def test_required_context_rejects_missing_or_failed_compatibility_proof() -> Non
                     "UI_E2E_RESULT": "skipped",
                     "MCP_IMAGES_REQUIRED": "false",
                     "MCP_IMAGES_RESULT": "skipped",
+                    "API_IMAGE_REQUIRED": "false",
+                    "API_IMAGE_RESULT": "skipped",
                     f"{lane}_REQUIRED": required,
                     f"{lane}_RESULT": outcome,
                 }
@@ -1632,6 +1654,7 @@ _CLASSIFIER_OUTPUTS = (
     "alpine",
     "alpine_full",
     "alpine_pr",
+    "api_image",
     "compose",
     "docs",
     "docs_only",
@@ -1718,7 +1741,7 @@ def test_required_aggregator_expects_exactly_the_lanes_that_run() -> None:
     """``Test (Python 3.13)`` requires a lane exactly when its job condition selects it."""
     jobs = _ci()["jobs"]
     env = jobs["test"]["steps"][0]["env"]
-    for lane, job in (("ALPINE", "test-alpine"), ("UI_E2E", "ui-e2e"), ("MCP_IMAGES", "mcp-images")):
+    for lane, job in (("ALPINE", "test-alpine"), ("UI_E2E", "ui-e2e"), ("MCP_IMAGES", "mcp-images"), ("API_IMAGE", "api-image")):
         for event in ("pull_request", "merge_group", "push", "schedule", "workflow_dispatch"):
             for flag in ("true", "false", ""):
                 for proven in ("true", "false", ""):

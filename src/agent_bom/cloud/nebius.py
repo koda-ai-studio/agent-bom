@@ -7,25 +7,34 @@ Nebius does not have an official Python SDK, so all API calls use REST via the s
 
 from __future__ import annotations
 
-import json
 import os
 import shutil
 import subprocess
+from collections.abc import Callable
+from functools import partial
 from typing import Any
+from urllib.parse import quote
 
 from agent_bom import http_client
+from agent_bom.core.settings import env_opt
 from agent_bom.discovery_envelope import RedactionStatus, ScanMode, attach_envelope_to_agents
 from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, TransportType
 
 from .base import CloudDiscoveryError
-from .collection_errors import COLLECTION_ERRORS, CollectionError, CollectionStatus, collection_warning, inventory_list
-from .k8s_errors import kubectl_failure_code
-from .k8s_gpu_common import build_training_agent, container_image_packages, iter_gpu_containers, iter_infiniband_pods
+from .collection_errors import COLLECTION_ERRORS, collection_warning
+from .k8s_gpu_common import (
+    build_training_agent,
+    container_image_packages,
+    iter_gpu_containers,
+    iter_infiniband_pods,
+    kubectl_command,
+    parse_kubectl_list,
+    read_once,
+)
+from .nebius_records import _container_service_agent, _gpu_instance_agent, _record, _text
 from .normalization import build_cloud_origin, build_package_purl
 
 # AI workload image patterns (lowercase) — used to identify GPU/AI instances
-_AI_IMAGE_PATTERNS = ("nvidia", "cuda", "pytorch", "tensorflow", "triton", "vllm", "tgi", "deepspeed", "nemo")
-
 _API_TIMEOUT = 15
 
 
@@ -96,7 +105,7 @@ def _nebius_get_all(
                 # object and the native "items" field, but not an unrelated payload.
                 empty: list[dict] | None = [] if set(data) <= {"nextPageToken", "next_page_token"} else None
                 items = data.get(items_key, data.get("items", data.get("data", empty)))
-                if not isinstance(items, list) or any(not isinstance(item, dict) for item in items):
+                if not isinstance(items, list) or (warnings is None and any(not isinstance(item, dict) for item in items)):
                     raise CloudDiscoveryError("Nebius: invalid response page items")
                 all_items.extend(items)
 
@@ -121,11 +130,15 @@ def _nebius_get_all(
 def discover(
     api_key: str | None = None,
     project_id: str | None = None,
+    kube_context: str | None = None,
 ) -> tuple[list[Agent], list[str]]:
     """Discover AI workloads from Nebius GPU cloud.
 
     Discovers AI Studio inference endpoints, GPU compute instances,
     Managed K8s GPU pods, container services, and InfiniBand training jobs.
+    The Kubernetes passes share one ``kubectl get pods`` read, pinned to
+    ``kube_context`` (or ``NEBIUS_KUBE_CONTEXT``) when given; otherwise the
+    current kubeconfig context is used and no cluster is recorded.
 
     Returns:
         (agents, warnings) — discovered agents and non-fatal warnings.
@@ -147,13 +160,15 @@ def discover(
         warnings.append("NEBIUS_PROJECT_ID not set. Provide --nebius-project-id or set the NEBIUS_PROJECT_ID env var.")
         return agents, warnings
 
+    context = kube_context or env_opt("NEBIUS_KUBE_CONTEXT")
+    pods = read_once(lambda: _kubectl_pod_items(context))
     # Each pass is isolated: a failure becomes a warning and the next pass runs.
     stages = (
         (_discover_ai_studio, "Nebius AI Studio discovery error", "ai-studio"),
         (_discover_gpu_instances, "Nebius GPU instance discovery error", "instances"),
-        (_discover_k8s_gpu_pods, "Nebius K8s GPU pod discovery error", "k8s-gpu-pods"),
+        (partial(_discover_k8s_gpu_pods, kube_context=context, pods=pods), "Nebius K8s GPU pod discovery error", "k8s-gpu-pods"),
         (_discover_container_services, "Nebius container service discovery error", "containers"),
-        (_discover_infiniband_jobs, "Nebius InfiniBand discovery error", "infiniband-jobs"),
+        (partial(_discover_infiniband_jobs, kube_context=context, pods=pods), "Nebius InfiniBand discovery error", "infiniband-jobs"),
     )
     for stage, error_label, resource in stages:
         try:
@@ -167,6 +182,8 @@ def discover(
     scope: list[str] = []
     if resolved_project:
         scope.append(f"nebius:project/{resolved_project}")
+    if context:
+        scope.append(f"nebius:context/{context}")
     attach_envelope_to_agents(
         agents,
         scan_mode=ScanMode.CLOUD_READ_ONLY,
@@ -204,12 +221,13 @@ def _discover_ai_studio(api_key: str, project_id: str) -> tuple[list[Agent], lis
 
         for model in models:
             try:
-                model_id = model.get("id", "unknown")
-                model_name = model.get("name", model_id)
-                if not isinstance(model_name, str):
-                    raise CloudDiscoveryError("Invalid AI Studio model name")
-                model_version = model.get("version", model.get("model_version", "latest"))
-                status = model.get("status", model.get("state", "UNKNOWN"))
+                model = _record(model)
+                model_id = _text(model, "id") or _text(model, "name")
+                if not model_id:
+                    raise CloudDiscoveryError("Unrecognised AI Studio model record")
+                model_name = _text(model, "name") or model_id
+                model_version = _text(model, "version", allow_int=True) or _text(model, "model_version", allow_int=True) or "latest"
+                status = _text(model, "status") or _text(model, "state") or "UNKNOWN"
 
                 tools = [
                     MCPTool(
@@ -301,119 +319,33 @@ def _discover_gpu_instances(
     return agents, warnings
 
 
-def _gpu_instance_agent(inst: dict, project_id: str) -> Agent | None:
-    """Build the agent for one compute instance, or ``None`` if it has no GPU."""
-    inst_id = inst.get("id", "unknown")
-    inst_name = inst.get("name", inst_id)
-    if not isinstance(inst_name, str):
-        raise CloudDiscoveryError("Invalid compute instance name")
-    platform_id = inst.get("platform_id", "")
-    status = inst.get("status", "UNKNOWN")
-
-    # Filter for GPU instances
-    resources = inst.get("resources", {})
-    gpu_count = resources.get("gpus", resources.get("gpu_count", 0))
-    is_gpu = gpu_count > 0 or "gpu" in platform_id.lower()
-
-    if not is_gpu:
-        return None
-
-    # Check boot disk image for AI workload patterns
-    boot_disk = inst.get("boot_disk", {})
-    image_id = boot_disk.get("image_id", "")
-    image_name = boot_disk.get("image_name", image_id).lower()
-    is_ai_workload = any(pat in image_name for pat in _AI_IMAGE_PATTERNS)
-
-    gpu_type = resources.get("gpu_type", platform_id)
-    desc_parts = [f"GPU:{gpu_type}x{gpu_count}", f"status:{status}"]
-    if is_ai_workload:
-        desc_parts.append(f"image:{boot_disk.get('image_name', image_id)}")
-
-    tools = [
-        MCPTool(
-            name=inst_name,
-            description=f"Nebius GPU instance — {', '.join(desc_parts)}",
-        )
-    ]
-
-    packages: list[Package] = []
-    if is_ai_workload:
-        packages.append(
-            Package(
-                name=boot_disk.get("image_name", image_id),
-                version="detected",
-                ecosystem="nebius-compute-image",
-                purl=build_package_purl(
-                    ecosystem="nebius-compute-image",
-                    name=boot_disk.get("image_name", image_id),
-                    version="detected",
-                ),
-            )
-        )
-
-    server = MCPServer(
-        name=f"nebius-gpu:{inst_name}",
-        transport=TransportType.UNKNOWN,
-        tools=tools,
-        packages=packages,
-        env={"NEBIUS_INSTANCE_ID": inst_id},
-    )
-
-    return Agent(
-        name=f"nebius-gpu:{inst_name}",
-        agent_type=AgentType.CUSTOM,
-        config_path=f"nebius://{project_id}/compute/{inst_id}",
-        source="nebius-gpu",
-        version=status,
-        mcp_servers=[server],
-        metadata={
-            "gpu_count": gpu_count,
-            "gpu_type": gpu_type,
-            "ai_workload": is_ai_workload,
-            "cloud_origin": build_cloud_origin(
-                provider="nebius",
-                service="compute",
-                resource_type="gpu-instance",
-                resource_id=inst_id,
-                resource_name=inst_name,
-                project_id=project_id,
-                raw_identity={"id": inst_id, "name": inst_name, "platform_id": platform_id, "status": status},
-            ),
-        },
-    )
-
-
 # ── K8s GPU Pods ──────────────────────────────────────────────────────────
 
 
-def _kubectl_get_all_pods() -> subprocess.CompletedProcess[str]:
-    """Run ``kubectl get pods -A -o json`` against the current context."""
-    return subprocess.run(
-        ["kubectl", "get", "pods", "-A", "-o", "json"],
-        capture_output=True,
-        text=True,
-        timeout=60,
-    )
+PodReader = Callable[[], list]
 
 
-def _kubectl_pod_items() -> list[dict]:
-    """Require an explicit pod list and classify only fixed stderr categories."""
-    result = _kubectl_get_all_pods()
-    if result.returncode != 0:
-        code = kubectl_failure_code(result.stderr)
-        status = {
-            "permission_denied": CollectionStatus.DENIED,
-            "invalid_credentials": CollectionStatus.DENIED,
-            "throttled": CollectionStatus.THROTTLED,
-        }.get(code, CollectionStatus.UNAVAILABLE)
-        raise CollectionError(status)
-    items = inventory_list(json.loads(result.stdout), "items")
-    if any(not isinstance(item, dict) for item in items):
-        raise CollectionError(CollectionStatus.UNAVAILABLE)
-    return items
+def _kubectl_get_all_pods(context: str | None = None) -> subprocess.CompletedProcess[str]:
+    """Run ``kubectl get pods -A -o json``, pinned to ``context`` when one is named."""
+    return subprocess.run(kubectl_command(["get", "pods", "-A"], context), capture_output=True, text=True, timeout=60)
 
 
-def _k8s_gpu_pod_agent(project_id: str, pod_ns: str, pod_name: str, containers: list[tuple[str, str, Any]]) -> Agent:
+def _kubectl_pod_items(context: str | None = None) -> list:
+    """Require an explicit pod list; elements are validated per record by the iterators."""
+    return parse_kubectl_list(_kubectl_get_all_pods(context))
+
+
+def _pod_location(kind: str, project_id: str, pod_ns: str, pod_name: str, context: str | None) -> tuple[str, list[str]]:
+    """Config path scoped by kube context, plus the unscoped path it replaces."""
+    unscoped = f"nebius://{project_id}/{kind}/{pod_ns}/{pod_name}"
+    if not context:
+        return unscoped, []
+    return f"nebius://{project_id}/{kind}/{quote(context, safe='')}/{pod_ns}/{pod_name}", [unscoped]
+
+
+def _k8s_gpu_pod_agent(
+    project_id: str, pod_ns: str, pod_name: str, containers: list[tuple[str, str, int]], context: str | None = None
+) -> Agent:
     """One agent per GPU pod, one server per GPU container."""
     servers = [
         MCPServer(
@@ -427,13 +359,14 @@ def _k8s_gpu_pod_agent(project_id: str, pod_ns: str, pod_name: str, containers: 
     ]
     first_name, first_image, _ = containers[0]
     gpus = [str(count) for _name, _image, count in containers]
-    raw_identity: dict[str, Any] = {"namespace": pod_ns, "pod": pod_name}
+    raw_identity: dict[str, Any] = {"namespace": pod_ns, "pod": pod_name, **({"context": context} if context else {})}
     if len(containers) == 1:
         raw_identity.update({"container": first_name, "image": first_image})
+    location, previous_paths = _pod_location("k8s-gpu", project_id, pod_ns, pod_name, context)
     return Agent(
         name=f"nebius-k8s-gpu:{pod_ns}/{pod_name}",
         agent_type=AgentType.CUSTOM,
-        config_path=f"nebius://{project_id}/k8s-gpu/{pod_ns}/{pod_name}",
+        config_path=location,
         source="nebius-k8s-gpu",
         version=f"gpu-request:{'+'.join(gpus)}",
         mcp_servers=servers,
@@ -448,13 +381,17 @@ def _k8s_gpu_pod_agent(project_id: str, pod_ns: str, pod_name: str, containers: 
                 resource_id=f"{pod_ns}/{pod_name}",
                 resource_name=pod_name,
                 project_id=project_id,
+                cluster=context,
                 raw_identity=raw_identity,
             ),
+            **({"previous_config_paths": previous_paths} if previous_paths else {}),
         },
     )
 
 
-def _discover_k8s_gpu_pods(api_key: str, project_id: str) -> tuple[list[Agent], list[str]]:
+def _discover_k8s_gpu_pods(
+    api_key: str, project_id: str, *, kube_context: str | None = None, pods: PodReader | None = None
+) -> tuple[list[Agent], list[str]]:
     """Discover GPU pod images using configured Nebius kubectl credentials."""
     agents: list[Agent] = []
     warnings: list[str] = []
@@ -464,21 +401,17 @@ def _discover_k8s_gpu_pods(api_key: str, project_id: str) -> tuple[list[Agent], 
         return agents, warnings
 
     try:
-        items = _kubectl_pod_items()
+        items = (pods or (lambda: _kubectl_pod_items(kube_context)))()
         # Check all container types (including init containers) for GPU resource requests.
         # One pod is one workload: each GPU container is a server under the pod's agent.
-        pods: dict[tuple[str, str], list[tuple[str, str, Any]]] = {}
-        for pod in items:
+        errors: list[Exception] = []
+        grouped: dict[tuple[str, str], list[tuple[str, str, int]]] = {}
+        for found in iter_gpu_containers(items, include_init_containers=True, errors=errors):
+            grouped.setdefault((found.namespace, found.pod), []).append((found.container, found.image, found.gpus))
+        warnings.extend(collection_warning("nebius", "k8s-gpu-pods", exc) for exc in errors)
+        for (pod_ns, pod_name), containers in grouped.items():
             try:
-                for pod_ns, pod_name, container, image_ref, gpu_limit, gpu_request in iter_gpu_containers(
-                    [pod], include_init_containers=True
-                ):
-                    pods.setdefault((pod_ns, pod_name), []).append((container.get("name", "unknown"), image_ref, gpu_request or gpu_limit))
-            except COLLECTION_ERRORS as exc:
-                warnings.append(collection_warning("nebius", "k8s-gpu-pods", exc))
-        for (pod_ns, pod_name), containers in pods.items():
-            try:
-                agents.append(_k8s_gpu_pod_agent(project_id, pod_ns, pod_name, containers))
+                agents.append(_k8s_gpu_pod_agent(project_id, pod_ns, pod_name, containers, kube_context))
             except COLLECTION_ERRORS as exc:
                 warnings.append(collection_warning("nebius", "k8s-gpu-pods", exc))
 
@@ -512,42 +445,10 @@ def _discover_container_services(
         )
 
         for svc in services:
-            svc_id = svc.get("id", "unknown")
-            svc_name = svc.get("name", svc_id)
-            image = svc.get("image", "")
-
-            if image:
-                server = MCPServer(
-                    name=f"nebius-container:{svc_name}",
-                    command="docker",
-                    args=["run", str(image)],
-                    transport=TransportType.STDIO,
-                )
-            else:
-                server = MCPServer(
-                    name=f"nebius-container:{svc_name}",
-                    transport=TransportType.UNKNOWN,
-                )
-
-            agent = Agent(
-                name=f"nebius-container:{svc_name}",
-                agent_type=AgentType.CUSTOM,
-                config_path=f"nebius://{project_id}/containers/{svc_id}",
-                source="nebius-container",
-                mcp_servers=[server],
-                metadata={
-                    "cloud_origin": build_cloud_origin(
-                        provider="nebius",
-                        service="containers",
-                        resource_type="container",
-                        resource_id=svc_id,
-                        resource_name=svc_name,
-                        project_id=project_id,
-                        raw_identity={"id": svc_id, "name": svc_name, "image": image},
-                    )
-                },
-            )
-            agents.append(agent)
+            try:
+                agents.append(_container_service_agent(svc, project_id))
+            except COLLECTION_ERRORS as exc:
+                warnings.append(collection_warning("nebius", "containers", exc))
 
     except (*COLLECTION_ERRORS, RuntimeError) as exc:
         warnings.append(collection_warning("nebius", "containers", exc))
@@ -558,7 +459,9 @@ def _discover_container_services(
 # ── InfiniBand Training Jobs ──────────────────────────────────────────────
 
 
-def _discover_infiniband_jobs(api_key: str, project_id: str) -> tuple[list[Agent], list[str]]:
+def _discover_infiniband_jobs(
+    api_key: str, project_id: str, *, kube_context: str | None = None, pods: PodReader | None = None
+) -> tuple[list[Agent], list[str]]:
     """Discover rdma/ib training pods using configured Nebius kubectl credentials."""
     agents: list[Agent] = []
     warnings: list[str] = []
@@ -568,26 +471,27 @@ def _discover_infiniband_jobs(api_key: str, project_id: str) -> tuple[list[Agent
         return agents, warnings
 
     try:
-        items = _kubectl_pod_items()
-        seen: set[tuple[str, str]] = set()
-        for pod in items:
+        items = (pods or (lambda: _kubectl_pod_items(kube_context)))()
+        errors: list[Exception] = []
+        for pod_ns, pod_name, image_ref, gpu_count in iter_infiniband_pods(items, errors=errors):
+            location, previous_paths = _pod_location("training", project_id, pod_ns, pod_name, kube_context)
             try:
-                for pod_ns, pod_name, image_ref, gpu_limits in iter_infiniband_pods([pod]):
-                    if (pod_ns, pod_name) in seen:
-                        continue
-                    agent = build_training_agent(
+                agents.append(
+                    build_training_agent(
                         provider="nebius",
                         pod_ns=pod_ns,
                         pod_name=pod_name,
                         image_ref=image_ref,
-                        gpu_limits=gpu_limits,
-                        config_path=f"nebius://{project_id}/training/{pod_ns}/{pod_name}",
+                        gpu_count=gpu_count,
+                        config_path=location,
                         project_id=project_id,
+                        cluster=kube_context,
+                        previous_config_paths=previous_paths,
                     )
-                    agents.append(agent)
-                    seen.add((pod_ns, pod_name))
+                )
             except COLLECTION_ERRORS as exc:
-                warnings.append(collection_warning("nebius", "infiniband-jobs", exc))
+                errors.append(exc)
+        warnings.extend(collection_warning("nebius", "infiniband-jobs", exc) for exc in errors)
 
     except subprocess.TimeoutExpired:
         warnings.append("nebius:infiniband-jobs:unavailable: kubectl timed out. Assessment incomplete.")

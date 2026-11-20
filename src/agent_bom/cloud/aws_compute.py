@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from agent_bom.cloud.aws_errors import aws_read_warning
+from agent_bom.cloud.collection_errors import COLLECTION_ERRORS
 from agent_bom.cloud.normalization import (
     build_cloud_origin,
     build_cloud_principal,
@@ -30,7 +32,7 @@ def _discover_ecs_images(session: Any, region: str) -> tuple[list[dict[str, str]
         for page in paginator.paginate():
             cluster_arns.extend(page.get("clusterArns", []))
     except Exception as exc:
-        return [], [f"Could not list ECS clusters: {exc}"]
+        return [], [aws_read_warning("ecs-clusters", exc)]
 
     for cluster_arn in cluster_arns:
         try:
@@ -61,7 +63,7 @@ def _discover_ecs_images(session: Any, region: str) -> tuple[list[dict[str, str]
                                 }
                             )
         except Exception as exc:
-            warnings.append(f"Could not list tasks in ECS cluster {cluster_arn}: {exc}")
+            warnings.append(aws_read_warning("ecs-tasks", exc))
 
     return image_refs, warnings
 
@@ -81,7 +83,7 @@ def _discover_sagemaker(session: Any, region: str, *, account_id: str | None = N
         for page in paginator.paginate(StatusEquals="InService"):
             endpoints.extend(page.get("Endpoints", []))
     except Exception as exc:
-        return [], [f"Could not list SageMaker endpoints: {exc}"]
+        return [], [aws_read_warning("sagemaker-endpoints", exc)]
 
     for ep in endpoints:
         ep_name = ep["EndpointName"]
@@ -107,7 +109,7 @@ def _discover_sagemaker(session: Any, region: str, *, account_id: str | None = N
                     agents.append(agent)
 
         except Exception as exc:
-            warnings.append(f"Could not describe SageMaker endpoint {ep_name}: {exc}")
+            warnings.append(aws_read_warning("sagemaker-endpoints", exc))
 
     return agents, warnings
 
@@ -173,11 +175,13 @@ def _discover_ec2_instances(
         for page in paginator.paginate(Filters=filters):
             for reservation in page.get("Reservations", []):
                 for instance in reservation.get("Instances", []):
-                    agent = _ec2_instance_agent(instance, region, account_id)
-                    agents.append(agent)
+                    try:
+                        agents.append(_ec2_instance_agent(instance, region, account_id))
+                    except COLLECTION_ERRORS as exc:
+                        warnings.append(aws_read_warning("ec2-instances", exc))
 
-    except Exception as exc:
-        warnings.append(f"Could not describe EC2 instances: {exc}")
+    except Exception as exc:  # noqa: BLE001 - classified, fixed-text coverage gap
+        warnings.append(aws_read_warning("ec2-instances", exc))
 
     return agents, warnings
 

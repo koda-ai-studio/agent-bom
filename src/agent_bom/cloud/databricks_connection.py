@@ -6,7 +6,27 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from agent_bom.cloud.base import CloudDiscoveryError
+from agent_bom.cloud.collection_errors import CollectionError, CollectionStatus, collection_status, collection_warning
 from agent_bom.security import sanitize_error
+
+
+def databricks_read_status(exc: Exception) -> CollectionStatus:
+    """Classify by databricks-sdk error type and HTTP status, never message text."""
+    try:
+        from databricks.sdk.errors import PermissionDenied, ResourceExhausted, TooManyRequests, Unauthenticated
+    except ImportError:
+        return collection_status(exc)
+    denied = tuple(t for t in (PermissionDenied, Unauthenticated) if isinstance(t, type))
+    throttled = tuple(t for t in (TooManyRequests, ResourceExhausted) if isinstance(t, type))
+    if isinstance(exc, denied):
+        return CollectionStatus.DENIED
+    if isinstance(exc, throttled):
+        return CollectionStatus.THROTTLED
+    return collection_status(exc)
+
+
+def databricks_read_warning(resource: str, exc: Exception) -> str:
+    return collection_warning("databricks", resource, CollectionError(databricks_read_status(exc)))
 
 
 def discovery_error_hint(exc: Exception) -> str:

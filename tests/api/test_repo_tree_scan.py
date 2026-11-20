@@ -176,7 +176,7 @@ def test_repo_tree_preserves_explicit_skip_classification(monkeypatch: pytest.Mo
 
 
 def test_repo_pii_warning_does_not_claim_credentials(tmp_path):
-    (tmp_path / "config.yaml").write_text("customer_email: alice@example.com\n")
+    (tmp_path / "config.yaml").write_text("customer_email: alice@acme-widgets.net\n")
     warnings = []
     result = scan_cloned_repo_tree(str(tmp_path), agents=[], warnings=warnings, offline=True)
     assert result.ai_inventory_data["secrets"]["by_category"] == {"pii": 1}

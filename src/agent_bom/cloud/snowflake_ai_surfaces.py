@@ -7,8 +7,8 @@ import re
 from typing import Any
 
 from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, TransportType
-from agent_bom.security import sanitize_error
 
+from .collection_errors import COLLECTION_ERRORS, CollectionError, CollectionStatus, collection_status, collection_warning
 from .normalization import (
     build_package_purl,
 )
@@ -17,6 +17,34 @@ from .snowflake_discovery.cortex_agents import describe_cortex_agent, list_corte
 
 # Log under the façade's logger so existing log routing and filters keep applying.
 logger = logging.getLogger("agent_bom.cloud.snowflake")
+
+
+# Snowflake server error numbers and SQLSTATEs for access/authentication failures:
+# 002003 object does not exist or not authorized, 003001 insufficient privileges,
+# 390100/390144/390318 failed or expired authentication.
+_DENIED_ERRNOS = frozenset({2003, 3001, 390100, 390144, 390318})
+_DENIED_SQLSTATES = frozenset({"42501", "28000"})
+
+
+def _surface_status(exc: Exception) -> CollectionStatus:
+    """Classify from structured error numbers only; Snowflake messages name objects."""
+    errno, sqlstate = getattr(exc, "errno", None), getattr(exc, "sqlstate", None)
+    if (isinstance(errno, int) and errno in _DENIED_ERRNOS) or (isinstance(sqlstate, str) and sqlstate in _DENIED_SQLSTATES):
+        return CollectionStatus.DENIED
+    return collection_status(exc)
+
+
+def _surface_warning(resource: str, exc: Exception) -> str:
+    return collection_warning("snowflake", resource, CollectionError(_surface_status(exc)))
+
+
+def _row_text(value: object, fallback: str | None = None) -> str:
+    """A SHOW-command string column; a non-string value is a malformed row."""
+    if value is None and fallback is not None:
+        return fallback
+    if not isinstance(value, str) or not (value or fallback is not None):
+        raise TypeError("Invalid Snowflake row")
+    return value
 
 
 def _discover_cortex_services(
@@ -36,48 +64,51 @@ def _discover_cortex_services(
         columns = [desc[0].lower() for desc in cursor.description] if cursor.description else []
 
         for row in rows:
-            row_dict = dict(zip(columns, row)) if columns else {}
-            service_name = row_dict.get("name", str(row[0]) if row else "unknown")
-            svc_database = row_dict.get("database_name", database or "")
-            svc_schema = row_dict.get("schema_name", schema or "")
+            try:
+                row_dict = dict(zip(columns, row)) if columns else {}
+                service_name = _row_text(row_dict.get("name", row[0] if row else None))
+                svc_database = _row_text(row_dict.get("database_name"), database or "")
+                svc_schema = _row_text(row_dict.get("schema_name"), schema or "")
 
-            config_path = f"snowflake://{account}/{svc_database}/{svc_schema}/{service_name}"
+                config_path = f"snowflake://{account}/{svc_database}/{svc_schema}/{service_name}"
 
-            tools = [
-                MCPTool(name="semantic_search", description="Search indexed documents"),
-                MCPTool(name="document_retrieve", description="Retrieve document by ID"),
-            ]
+                tools = [
+                    MCPTool(name="semantic_search", description="Search indexed documents"),
+                    MCPTool(name="document_retrieve", description="Retrieve document by ID"),
+                ]
 
-            server = MCPServer(
-                name=f"cortex-search:{service_name}",
-                transport=TransportType.STREAMABLE_HTTP,
-                url=f"https://{account}.snowflakecomputing.com/cortex/search/{service_name}",
-                tools=tools,
-            )
+                server = MCPServer(
+                    name=f"cortex-search:{service_name}",
+                    transport=TransportType.STREAMABLE_HTTP,
+                    url=f"https://{account}.snowflakecomputing.com/cortex/search/{service_name}",
+                    tools=tools,
+                )
 
-            agent = Agent(
-                name=f"cortex:{service_name}",
-                agent_type=AgentType.CUSTOM,
-                config_path=config_path,
-                source="snowflake-cortex",
-                mcp_servers=[server],
-                metadata={
-                    "cloud_origin": _sf()._snowflake_cloud_origin(
-                        account=account,
-                        service="cortex-search",
-                        resource_type="service",
-                        resource_id=config_path,
-                        resource_name=service_name,
-                        database=svc_database,
-                        schema=svc_schema,
-                    )
-                },
-            )
-            agents.append(agent)
+                agent = Agent(
+                    name=f"cortex:{service_name}",
+                    agent_type=AgentType.CUSTOM,
+                    config_path=config_path,
+                    source="snowflake-cortex",
+                    mcp_servers=[server],
+                    metadata={
+                        "cloud_origin": _sf()._snowflake_cloud_origin(
+                            account=account,
+                            service="cortex-search",
+                            resource_type="service",
+                            resource_id=config_path,
+                            resource_name=service_name,
+                            database=svc_database,
+                            schema=svc_schema,
+                        )
+                    },
+                )
+                agents.append(agent)
+            except COLLECTION_ERRORS as exc:
+                warnings.append(_surface_warning("cortex-search", exc))
 
     except Exception as exc:
         # Cortex Search Services may not be available in all accounts
-        warnings.append(f"Could not list Cortex Search Services: {sanitize_error(exc)}")
+        warnings.append(_surface_warning("cortex-search", exc))
 
     finally:
         cursor.close()
@@ -110,7 +141,7 @@ def _discover_snowpark_packages(
 
     except Exception as exc:
         # INFORMATION_SCHEMA.PACKAGES may not exist or may not be accessible
-        warnings.append(f"Could not query Snowpark packages: {sanitize_error(exc)}")
+        warnings.append(_surface_warning("snowpark-packages", exc))
 
     finally:
         cursor.close()
@@ -133,27 +164,30 @@ def _discover_streamlit_apps(
         columns = [desc[0].lower() for desc in cursor.description] if cursor.description else []
 
         for row in rows:
-            row_dict = dict(zip(columns, row)) if columns else {}
-            app_name = row_dict.get("name", str(row[0]) if row else "unknown")
-            app_db = row_dict.get("database_name", "")
-            app_schema = row_dict.get("schema_name", "")
+            try:
+                row_dict = dict(zip(columns, row)) if columns else {}
+                app_name = _row_text(row_dict.get("name", row[0] if row else None))
+                app_db = _row_text(row_dict.get("database_name"), "")
+                app_schema = _row_text(row_dict.get("schema_name"), "")
 
-            server = MCPServer(
-                name=f"streamlit:{app_name}",
-                transport=TransportType.STREAMABLE_HTTP,
-                url=f"https://{account}.snowflakecomputing.com/streamlit/{app_name}",
-            )
-            agent = Agent(
-                name=f"streamlit:{app_name}",
-                agent_type=AgentType.CUSTOM,
-                config_path=f"snowflake://{account}/{app_db}/{app_schema}/streamlit/{app_name}",
-                source="snowflake-streamlit",
-                mcp_servers=[server],
-            )
-            agents.append(agent)
+                server = MCPServer(
+                    name=f"streamlit:{app_name}",
+                    transport=TransportType.STREAMABLE_HTTP,
+                    url=f"https://{account}.snowflakecomputing.com/streamlit/{app_name}",
+                )
+                agent = Agent(
+                    name=f"streamlit:{app_name}",
+                    agent_type=AgentType.CUSTOM,
+                    config_path=f"snowflake://{account}/{app_db}/{app_schema}/streamlit/{app_name}",
+                    source="snowflake-streamlit",
+                    mcp_servers=[server],
+                )
+                agents.append(agent)
+            except COLLECTION_ERRORS as exc:
+                warnings.append(_surface_warning("streamlit", exc))
 
     except Exception as exc:
-        warnings.append(f"Could not list Streamlit apps: {sanitize_error(exc)}")
+        warnings.append(_surface_warning("streamlit", exc))
 
     finally:
         cursor.close()
@@ -371,7 +405,7 @@ def _describe_mcp_server_tools(
             )
 
     except Exception as exc:
-        warnings.append(f"Could not describe MCP Server {server_name}: {sanitize_error(exc)}")
+        warnings.append(_surface_warning("mcp-server-tools", exc))
 
     finally:
         cursor.close()
@@ -438,7 +472,7 @@ def _discover_from_query_history(
             agents.append(agent)
 
     except Exception as exc:
-        warnings.append(f"Could not query Snowflake query history: {sanitize_error(exc)}")
+        warnings.append(_surface_warning("query-history", exc))
 
     finally:
         cursor.close()
@@ -496,7 +530,7 @@ def _discover_custom_tools(
                 )
             )
     except Exception as exc:
-        warnings.append(f"Could not query custom functions: {sanitize_error(exc)}")
+        warnings.append(_surface_warning("custom-functions", exc))
     finally:
         cursor.close()
 
@@ -527,7 +561,7 @@ def _discover_custom_tools(
                 )
             )
     except Exception as exc:
-        warnings.append(f"Could not query stored procedures: {sanitize_error(exc)}")
+        warnings.append(_surface_warning("stored-procedures", exc))
     finally:
         proc_cursor.close()
 

@@ -38,7 +38,7 @@ from agent_bom.runtime.pii_numbers import pii_value_valid
 from agent_bom.scanners.aws_secret_validation import AwsCredentialValidator, aws_secret_candidates, nearest_aws_secret
 from agent_bom.scanners.build_metadata import mask_build_config_quantities
 from agent_bom.scanners.credential_validation import CredentialValidator, ValidationStatus
-from agent_bom.scanners.public_source_samples import mask_public_docstrings, mask_public_module_links, python_docstring_lines
+from agent_bom.scanners.public_source_samples import documentation_lines, mask_public_docstrings, mask_public_module_links
 from agent_bom.scanners.repo_ignore import RepositoryIgnore
 from agent_bom.scanners.secret_lines import ENTROPY_PLACEHOLDER_RE as _ENTROPY_PLACEHOLDER_RE
 from agent_bom.scanners.secret_lines import is_comment_line, is_documentation_sample, match_credential, match_file_secret
@@ -47,7 +47,7 @@ from agent_bom.scanners.secret_models import SecretScanResult as SecretScanResul
 from agent_bom.scanners.secret_path_context import apply_path_context as apply_path_context
 from agent_bom.scanners.secret_path_context import credential_severity as _credential_severity
 from agent_bom.scanners.secret_value_shape import QUOTED_STRING_EXTENSIONS, LineLocators, is_translation_file
-from agent_bom.scanners.source_pii import bare_number_has_field, machine_identity_match, source_pii_match
+from agent_bom.scanners.source_pii import bare_number_has_field, machine_identity_match, package_metadata_contact, source_pii_match
 from agent_bom.traversal import iter_discovery_files
 
 logger = logging.getLogger(__name__)
@@ -335,7 +335,7 @@ def _pii_type(file_path: Path, line: str) -> str | None:
     locators: LineLocators | None = None
     for name, pattern in PII_PATTERNS:
         for match in pattern.finditer(line):
-            if machine_identity_match(name, match):
+            if machine_identity_match(name, match) or package_metadata_contact(file_path.name, line, name, match):
                 continue
             locators = locators or LineLocators(line)
             if locators.contains(match.start(), match.end()):
@@ -399,7 +399,7 @@ def _scan_file(
     aws_secrets = aws_secret_candidates(lines) if aws_validator is not None else []
     code_file = file_path.suffix.lower() in QUOTED_STRING_EXTENSIONS
     translation_file = is_translation_file(rel_path)
-    docstring_lines = python_docstring_lines(content, file_path)
+    docstring_lines = documentation_lines(content, file_path)
 
     # Check each line against all patterns
     for line_num, line in enumerate(lines, 1):

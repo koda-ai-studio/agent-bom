@@ -43,3 +43,7 @@ If `kubectl` is missing, GPU pods and InfiniBand jobs are marked "not tested"
 in discovery warnings; scan coverage is partial even when REST discovery
 succeeds. Install and configure `kubectl`, rerun the scan, and inspect its
 coverage before treating an empty Kubernetes inventory as evidence.
+Both Kubernetes passes share one read-only `kubectl get pods -A` call. Set
+`NEBIUS_KUBE_CONTEXT` to pin that call to a named kubeconfig context; the
+context is then recorded as the cluster in each pod's cloud origin and config
+path. Without it the current context is used and no cluster is recorded.

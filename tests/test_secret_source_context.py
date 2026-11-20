@@ -31,8 +31,8 @@ def test_arithmetic_and_digit_tables_are_not_personal_data(source):
         ("phone_number = 2125550199", "US Phone Number"),
         ('value = "123-45-6789"', "US SSN"),
         ('value = "212-555-0199"', "US Phone Number"),
-        ('user_email = "person@example.test"', "Email Address"),
-        ('"""customer_email = person@example.test"""', "Email Address"),
+        ('user_email = "person@acme-widgets.net"', "Email Address"),
+        ('"""customer_email = person@acme-widgets.net"""', "Email Address"),
     ],
 )
 def test_personal_fields_and_formatted_values_still_report(source, kind):
@@ -139,7 +139,7 @@ def test_secret_literals_outside_a_complete_style_map_still_report(source):
     [
         ('{"version":1,"config":{"cacheLife":{"default":{"expire":4294967294}},"env":{"phone":2125550199}}}', "US Phone Number"),
         ('{"version":1,"config":{"experimental":{"imgOptMaxInputPixels":268402689},"env":{"ssn":123456789}}}', "US SSN"),
-        ('const x={service:"reader@project.iam.gserviceaccount.com",person:"person@example.test"}', "Email Address"),
+        ('const x={service:"reader@project.iam.gserviceaccount.com",person:"person@acme-widgets.net"}', "Email Address"),
     ],
 )
 def test_non_personal_match_does_not_hide_later_personal_value(source, kind):

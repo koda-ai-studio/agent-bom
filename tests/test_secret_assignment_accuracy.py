@@ -167,8 +167,8 @@ def test_personal_data_patterns_do_not_match_inside_urls_or_asset_paths(name, li
         ("ssn: 123-45-6789", "US SSN"),
         ("phone: 415-555-0199", "US Phone Number"),
         ("callback: https://api.invalid/lookup?ssn=123-45-6789", "US SSN"),
-        ("contact: jane.doe@mail.invalid", "Email Address"),
-        ("contact: mailto:jane.doe@mail.invalid", "Email Address"),
+        ("contact: jane.doe@acme-widgets.net", "Email Address"),
+        ("contact: mailto:jane.doe@acme-widgets.net", "Email Address"),
     ],
 )
 def test_personal_data_outside_a_locator_still_reports(line, expected):

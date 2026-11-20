@@ -365,12 +365,15 @@ def apply_repo_structure_overlay(
                 pkg_node = graph.nodes.get(pkg_id)
                 if pkg_node is None or not pkg_node.attributes.get("is_direct", True):
                     continue
+                # The manifest inventory node already holds this package and carries
+                # its attack paths; the file edge locates it without a second path root.
                 graph.add_edge(
                     UnifiedEdge(
                         source=rep_id,
                         target=pkg_id,
                         relationship=RelationshipType.DEPENDS_ON,
-                        evidence={"source": _OVERLAY_SOURCE, "declared_in": rep_path},
+                        evidence={"source": _OVERLAY_SOURCE, "declared_in": rep_path, "path_identity": server_id},
+                        traversable=False,
                     )
                 )
                 counts["file_package_edges"] += 1

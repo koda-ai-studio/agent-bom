@@ -123,3 +123,13 @@ def python_docstring_lines(content: str, path: Path) -> frozenset[int]:
         if isinstance(first, ast.Expr) and isinstance(first.value, ast.Constant) and isinstance(first.value.value, str):
             numbers.update(range(first.lineno, (first.end_lineno or first.lineno) + 1))
     return frozenset(numbers)
+
+
+_PROSE_DOC_EXTENSIONS = frozenset({".md", ".markdown", ".rst", ".adoc"})
+
+
+def documentation_lines(content: str, path: Path) -> frozenset[int]:
+    """Lines read as documentation: every line of a prose document, or a Python file's docstrings."""
+    if path.suffix.lower() in _PROSE_DOC_EXTENSIONS:
+        return frozenset(range(1, content.count("\n") + 2))
+    return python_docstring_lines(content, path)
