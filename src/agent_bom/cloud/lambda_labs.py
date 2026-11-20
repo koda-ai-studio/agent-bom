@@ -11,7 +11,6 @@ from __future__ import annotations
 import logging
 import os
 
-from agent_bom import http_client  # noqa: F401  # module attribute kept as the documented patch point
 from agent_bom.discovery_envelope import RedactionStatus, ScanMode, attach_envelope_to_agents
 from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, TransportType
 
