@@ -18,6 +18,8 @@ from agent_bom.core.path_context import CONTEXT_SEVERITY, classify_path_context,
 from agent_bom.scanners.secret_models import SecretFinding
 
 _FIXTURE_DIRS = frozenset({"testdata", "__fixtures__", "__mocks__"})
+# Secret-scanner configs whose allowlists name values the repository declared synthetic.
+_SECRET_ALLOWLIST_FILES = frozenset({".gitleaks.toml", "gitleaks.toml", ".gitleaksignore", ".secrets.baseline"})
 _CI_PIPELINE_FILES = frozenset({".gitlab-ci.yml", ".gitlab-ci.yaml", "azure-pipelines.yml", "bitbucket-pipelines.yml"})
 _DSN_HOST_RE = re.compile(r"://[^@\s/]{1,400}@(\[[0-9a-fA-F:.]{2,45}\]|[^\s/:'\"`?]{1,253})")
 CI_LOOPBACK_DSN_REASON = (
@@ -54,11 +56,17 @@ def ci_loopback_dsn(rel_path: str, matched: str) -> bool:
 
 def apply_path_context(rel_path: str, findings: list[SecretFinding]) -> list[SecretFinding]:
     """Label findings in documentation/example/test paths and lower them to ``low``."""
-    context = classify_path_context(rel_path)
+    file_name = PurePosixPath(rel_path.replace("\\", "/")).name
+    context = "test" if file_name in _SECRET_ALLOWLIST_FILES else classify_path_context(rel_path)
     if context is None:
         return findings
     fixture_dir = next((part for part in Path(rel_path).parts[:-1] if part in _FIXTURE_DIRS), None)
-    reason = f"test fixture path ({fixture_dir}); verify the value is synthetic" if fixture_dir else context_downgrade_reason(context)
+    if file_name in _SECRET_ALLOWLIST_FILES:
+        reason = f"declared in the repository's secret-scanner allowlist ({file_name}); verify the value is synthetic"
+    elif fixture_dir:
+        reason = f"test fixture path ({fixture_dir}); verify the value is synthetic"
+    else:
+        reason = context_downgrade_reason(context)
     for finding in findings:
         finding.path_context = context
         if finding.validation_status == "valid":
