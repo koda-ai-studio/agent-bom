@@ -46,6 +46,68 @@ SPDX_3_DATA_LICENSE = "https://spdx.org/licenses/CC0-1.0"
 # Action statement is mandatory on a VEX "affected" assessment. When no fixed
 # version is known the honest statement is that no upgrade path exists yet.
 _NO_FIX_ACTION = "No fixed version is known; mitigate exposure or remove the affected package."
+# (compliance tags, workflow metadata, ATLAS receipts) keyed by vulnerability.
+_ExportContext = tuple[dict, dict, dict]
+
+
+class _SpdxGraph:
+    """Mints namespaced SPDX 3 ids and accumulates the flat ``@graph`` nodes."""
+
+    def __init__(self, document_namespace: str) -> None:
+        self.namespace = document_namespace
+        self._counter = 0
+        self.elements: list[dict[str, Any]] = []
+        self.relationships: list[dict[str, Any]] = []
+        # SPDX 3 has no inline ``annotation`` property: an Annotation is its own
+        # Element pointing at the annotated Element through ``subject``.
+        self.annotations: list[dict[str, Any]] = []
+        self.pkg_ref_map: dict[str, str] = {}
+        self._supplier_ids: dict[str, str] = {}
+        self._license_ids: dict[str, str] = {}
+
+    def next_id(self, prefix: str = "SPDXRef") -> str:
+        self._counter += 1
+        return f"{self.namespace}/{prefix}-{self._counter}"
+
+    def annotate(self, subject: str, statement: str) -> None:
+        self.annotations.append(
+            {
+                "type": "Annotation",
+                "spdxId": self.next_id("SPDXRef-Annotation"),
+                "annotationType": "other",
+                "subject": subject,
+                "statement": statement,
+            }
+        )
+
+    def relate(self, relationship_type: str, source: str, target: str) -> None:
+        self.relationships.append(
+            {
+                "type": "Relationship",
+                "spdxId": self.next_id("SPDXRef-Rel"),
+                "relationshipType": relationship_type,
+                "from": source,
+                "to": [target],
+            }
+        )
+
+    def supplier_ref(self, name: str) -> str:
+        if name not in self._supplier_ids:
+            self._supplier_ids[name] = self.next_id("SPDXRef-Supplier")
+            self.elements.append({"type": "Organization", "spdxId": self._supplier_ids[name], "name": name})
+        return self._supplier_ids[name]
+
+    def license_ref(self, expression: str) -> str:
+        if expression not in self._license_ids:
+            self._license_ids[expression] = self.next_id("SPDXRef-License")
+            self.elements.append(
+                {
+                    "type": "simplelicensing_LicenseExpression",
+                    "spdxId": self._license_ids[expression],
+                    "simplelicensing_licenseExpression": expression,
+                }
+            )
+        return self._license_ids[expression]
 
 
 def to_spdx(report: AIBOMReport) -> dict:
@@ -61,238 +123,76 @@ def to_spdx(report: AIBOMReport) -> dict:
       ``security_*VulnAssessmentRelationship`` edges
     - Dependency edges become ``dependsOn`` relationships
     """
-    spdx_id_counter = [0]
     # SPDX 3 ``spdxId`` is an IRI, not the local ``SPDXRef-*`` token used by
     # SPDX 2.x. Keep the namespace deterministic so repeated exports of the
     # same scan remain byte-identical.
     namespace_seed = report.scan_id or report.generated_at.isoformat()
-    document_namespace = f"https://agent-bom.dev/spdx/{uuid5(NAMESPACE_URL, namespace_seed)}"
+    graph = _SpdxGraph(f"https://agent-bom.dev/spdx/{uuid5(NAMESPACE_URL, namespace_seed)}")
+    document_id = graph.next_id("SPDXRef-DOCUMENT")
+    tool_id = f"{graph.namespace}/SPDXRef-Tool-agent-bom"
+    graph.elements.append(_tool_element(tool_id, report.tool_version))
 
-    def _next_id(prefix: str = "SPDXRef") -> str:
-        spdx_id_counter[0] += 1
-        return f"{document_namespace}/{prefix}-{spdx_id_counter[0]}"
+    context = _finding_export_context(report)
+    root_element_ids = [_add_agent(graph, agent, report, context) for agent in report.agents]
 
-    elements: list[dict[str, Any]] = []
-    relationships: list[dict[str, Any]] = []
-    # SPDX 3 has no inline ``annotation`` property: an Annotation is its own
-    # Element pointing at the annotated Element through ``subject``.
-    annotations: list[dict[str, Any]] = []
+    # Stamp the shared CreationInfo back-reference on every element / relationship
+    # node (Relationships are Elements in SPDX 3.0 and require creationInfo too).
+    for node in (*graph.elements, *graph.relationships, *graph.annotations):
+        node.setdefault("creationInfo", _CREATION_INFO_ID)
 
-    def _annotate(subject: str, statement: str) -> None:
-        annotations.append(
-            {
-                "type": "Annotation",
-                "spdxId": _next_id("SPDXRef-Annotation"),
-                "annotationType": "other",
-                "subject": subject,
-                "statement": statement,
-            }
-        )
+    # Canonical JSON-LD: a single flat @graph holding the CreationInfo blank node,
+    # the SpdxDocument root, and every element + relationship.
+    document = {
+        "@context": SPDX_3_CONTEXT,
+        "@graph": [
+            _creation_info(report, tool_id),
+            _spdx_document(report, document_id, root_element_ids),
+            *graph.elements,
+            *graph.relationships,
+            *graph.annotations,
+        ],
+    }
+    from agent_bom.output.interop_security import sanitize_linked_document
 
-    supplier_ids: dict[str, str] = {}
-    license_ids: dict[str, str] = {}
+    # Element IDs are minted here from the uuid5 namespace plus a fixed prefix
+    # and counter, so they carry no input text; skip re-redacting each one.
+    minted_ids = re.compile(re.escape(graph.namespace) + r"/SPDXRef-[A-Za-z]+(?:-[A-Za-z]+)*(?:-[0-9a-f]+)?")
+    return attach_cloud_context(sanitize_linked_document(document, trusted_ids=minted_ids), report, "spdx")
 
-    def _supplier_ref(name: str) -> str:
-        if name not in supplier_ids:
-            supplier_ids[name] = _next_id("SPDXRef-Supplier")
-            elements.append({"type": "Organization", "spdxId": supplier_ids[name], "name": name})
-        return supplier_ids[name]
 
-    def _license_ref(expression: str) -> str:
-        if expression not in license_ids:
-            license_ids[expression] = _next_id("SPDXRef-License")
-            elements.append(
-                {
-                    "type": "simplelicensing_LicenseExpression",
-                    "spdxId": license_ids[expression],
-                    "simplelicensing_licenseExpression": expression,
-                }
-            )
-        return license_ids[expression]
-
-    root_element_ids: list[str] = []
-    document_id = _next_id("SPDXRef-DOCUMENT")
-    tool_id = f"{document_namespace}/SPDXRef-Tool-agent-bom"
-
+def _creation_info(report: AIBOMReport, tool_id: str) -> dict[str, Any]:
     created = (
         report.generated_at.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         if report.generated_at.tzinfo
         else report.generated_at.strftime("%Y-%m-%dT%H:%M:%SZ") + "Z"
     )
-    creation_info = {
+    return {
         "@id": _CREATION_INFO_ID,
         "type": "CreationInfo",
         "specVersion": SPDX_3_SPEC_VERSION,
         "created": created,
         "createdBy": [tool_id],
     }
-    tool_element: dict[str, Any] = {
+
+
+def _tool_element(tool_id: str, tool_version: str) -> dict[str, Any]:
+    return {
         "type": "Tool",
         "spdxId": tool_id,
         "creationInfo": _CREATION_INFO_ID,
-        "name": f"agent-bom {report.tool_version}",
+        "name": f"agent-bom {tool_version}",
         "externalIdentifier": [
             {
                 "type": "ExternalIdentifier",
                 "externalIdentifierType": "packageUrl",
-                "identifier": f"pkg:pypi/agent-bom@{report.tool_version}",
+                "identifier": f"pkg:pypi/agent-bom@{tool_version}",
             }
         ],
     }
-    elements.append(tool_element)
 
-    pkg_ref_map: dict[str, str] = {}
-    vuln_compliance_tags, vuln_workflow, atlas_by_vulnerability = _finding_export_context(report)
 
-    for agent in report.agents:
-        agent_id = _next_id("SPDXRef-Agent")
-        root_element_ids.append(agent_id)
-
-        agent_element: dict[str, Any] = {
-            "type": "software_Package",
-            "spdxId": agent_id,
-            "name": agent.name,
-            "software_primaryPurpose": "application",
-            "description": f"AI Agent ({agent.agent_type.value})",
-        }
-        _annotate(agent_id, f"agent-bom:ai-agent-type={agent.agent_type.value}")
-        if agent.config_path:
-            agent_element["comment"] = f"config_path: {agent.config_path}, status: {agent.status.value}"
-        if agent.source:
-            # ``Agent.source`` is discovery provenance (for example
-            # ``project`` or ``snowflake``), not an SPDX Agent identity. Keep
-            # it as an annotation instead of emitting an invalid originatedBy
-            # reference to a non-existent Element.
-            _annotate(agent_id, f"agent-bom:discovery-source={agent.source}")
-        elements.append(agent_element)
-
-        for server in agent.mcp_servers:
-            server_id = _next_id("SPDXRef-MCPServer")
-
-            server_desc = server_surface_description(server)
-            if server.tools:
-                server_desc += f" — {len(server.tools)} tool(s): {', '.join(t.name for t in server.tools[:10])}"
-                if len(server.tools) > 10:
-                    server_desc += f" (+{len(server.tools) - 10} more)"
-            server_element: dict[str, Any] = {
-                "type": "software_Package",
-                "spdxId": server_id,
-                "name": server.name,
-                "software_primaryPurpose": "application",
-                "description": server_desc,
-            }
-            if server.mcp_version:
-                server_element["software_packageVersion"] = server.mcp_version
-            elements.append(server_element)
-            for tool in server.tools:
-                _annotate(server_id, f"agent-bom:mcp-tool={tool.name}" + (f": {tool.description[:120]}" if tool.description else ""))
-
-            relationships.append(
-                {
-                    "type": "Relationship",
-                    "spdxId": _next_id("SPDXRef-Rel"),
-                    "relationshipType": "contains",
-                    "from": agent_id,
-                    "to": [server_id],
-                }
-            )
-
-            for pkg in server.packages:
-                pkg_key = pkg.stable_id
-                if pkg_key not in pkg_ref_map:
-                    pkg_id = f"{document_namespace}/SPDXRef-Pkg-" + hashlib.sha256(pkg.stable_id.encode()).hexdigest()[:24]
-                    pkg_ref_map[pkg_key] = pkg_id
-
-                    pkg_element: dict[str, object] = {
-                        "type": "software_Package",
-                        "spdxId": pkg_id,
-                        "name": pkg.name,
-                        "software_packageVersion": pkg.version,
-                        "software_primaryPurpose": "library",
-                    }
-                    for statement in _package_statements(pkg):
-                        _annotate(pkg_id, statement)
-                    pkg_element.update(_package_optional_fields(pkg, _supplier_ref))
-                    elements.append(pkg_element)
-                    declared_license = pkg.license_expression or pkg.license
-                    if declared_license:
-                        # Licensing is a hasDeclaredLicense edge to a
-                        # LicenseExpression element, not a package property.
-                        relationships.append(
-                            {
-                                "type": "Relationship",
-                                "spdxId": _next_id("SPDXRef-Rel"),
-                                "relationshipType": "hasDeclaredLicense",
-                                "from": pkg_id,
-                                "to": [_license_ref(declared_license)],
-                            }
-                        )
-
-                pkg_id = pkg_ref_map[pkg_key]
-                for vuln in pkg.vulnerabilities:
-                    vuln_element_id = _next_id("SPDXRef-Vuln")
-                    vuln_element: dict[str, object] = {
-                        "type": "security_Vulnerability",
-                        "spdxId": vuln_element_id,
-                        "name": vuln.id,
-                        "description": vuln.summary or "",
-                        "externalIdentifier": (
-                            [{"type": "ExternalIdentifier", "externalIdentifierType": "cve", "identifier": vuln.id}]
-                            if vuln.id.startswith("CVE-")
-                            else []
-                        ),
-                    }
-                    elements.append(vuln_element)
-                    cvss_type = _cvss_assessment_type(vuln.cvss_vector) if vuln.cvss_score is not None else None
-                    for statement in _vulnerability_statements(
-                        vuln,
-                        compliance_tags=vuln_compliance_tags.get(_vulnerability_key(pkg, vuln), []),
-                        observed_at=report.generated_at.isoformat(),
-                        workflow=vuln_workflow.get(_vulnerability_key(pkg, vuln)),
-                        atlas_receipts=atlas_by_vulnerability.get(_vulnerability_key(pkg, vuln)),
-                        cvss_in_assessment=cvss_type is not None,
-                    ):
-                        _annotate(vuln_element_id, statement)
-
-                    # CVSS is a security-profile assessment relationship in
-                    # SPDX 3.0, not an ad-hoc score object on the vulnerability.
-                    # The class follows the vector's CVSS version and the vector
-                    # is mandatory; without one the score rides on an annotation.
-                    if cvss_type is not None and vuln.cvss_score is not None:
-                        relationships.append(
-                            {
-                                "type": cvss_type,
-                                "spdxId": _next_id("SPDXRef-Cvss"),
-                                "relationshipType": "hasAssessmentFor",
-                                "from": vuln_element_id,
-                                "to": [pkg_id],
-                                "security_score": vuln.cvss_score,
-                                "security_severity": _cvss_qualitative_severity(vuln.cvss_score),
-                                "security_vectorString": vuln.cvss_vector,
-                            }
-                        )
-
-                    assessment_id = _next_id("SPDXRef-VulnAssessment")
-                    assessment: dict[str, object] = {
-                        "type": "security_VexAffectedVulnAssessmentRelationship",
-                        "spdxId": assessment_id,
-                        "relationshipType": "affects",
-                        "from": vuln_element_id,
-                        "to": [pkg_id],
-                        "security_actionStatement": (f"Upgrade to {vuln.fixed_version}" if vuln.fixed_version else _NO_FIX_ACTION),
-                    }
-                    if vuln.is_kev:
-                        assessment["comment"] = "CISA KEV: actively exploited in the wild"
-                    relationships.append(assessment)
-
-            relationships.extend(spdx3_package_relationships(server.packages, pkg_ref_map, server_id, _next_id, _annotate))
-
-    # Stamp the shared CreationInfo back-reference on every element / relationship
-    # node (Relationships are Elements in SPDX 3.0 and require creationInfo too).
-    for node in (*elements, *relationships, *annotations):
-        node.setdefault("creationInfo", _CREATION_INFO_ID)
-
-    spdx_document: dict[str, Any] = {
+def _spdx_document(report: AIBOMReport, document_id: str, root_element_ids: list[str]) -> dict[str, Any]:
+    return {
         "type": "SpdxDocument",
         "spdxId": document_id,
         "creationInfo": _CREATION_INFO_ID,
@@ -307,19 +207,151 @@ def to_spdx(report: AIBOMReport) -> dict:
         ),
     }
 
-    # Canonical JSON-LD: a single flat @graph holding the CreationInfo blank node,
-    # the SpdxDocument root, and every element + relationship.
-    graph: list[dict[str, Any]] = [creation_info, spdx_document, *elements, *relationships, *annotations]
-    document = {
-        "@context": SPDX_3_CONTEXT,
-        "@graph": graph,
-    }
-    from agent_bom.output.interop_security import sanitize_linked_document
 
-    # Element IDs are minted here from the uuid5 namespace plus a fixed prefix
-    # and counter, so they carry no input text; skip re-redacting each one.
-    minted_ids = re.compile(re.escape(document_namespace) + r"/SPDXRef-[A-Za-z]+(?:-[A-Za-z]+)*(?:-[0-9a-f]+)?")
-    return attach_cloud_context(sanitize_linked_document(document, trusted_ids=minted_ids), report, "spdx")
+def _add_agent(graph: _SpdxGraph, agent: Any, report: AIBOMReport, context: _ExportContext) -> str:
+    agent_id = graph.next_id("SPDXRef-Agent")
+    agent_element: dict[str, Any] = {
+        "type": "software_Package",
+        "spdxId": agent_id,
+        "name": agent.name,
+        "software_primaryPurpose": "application",
+        "description": f"AI Agent ({agent.agent_type.value})",
+    }
+    graph.annotate(agent_id, f"agent-bom:ai-agent-type={agent.agent_type.value}")
+    if agent.config_path:
+        agent_element["comment"] = f"config_path: {agent.config_path}, status: {agent.status.value}"
+    if agent.source:
+        # ``Agent.source`` is discovery provenance (for example
+        # ``project`` or ``snowflake``), not an SPDX Agent identity. Keep
+        # it as an annotation instead of emitting an invalid originatedBy
+        # reference to a non-existent Element.
+        graph.annotate(agent_id, f"agent-bom:discovery-source={agent.source}")
+    graph.elements.append(agent_element)
+    for server in agent.mcp_servers:
+        _add_server(graph, agent_id, server, report, context)
+    return agent_id
+
+
+def _add_server(graph: _SpdxGraph, agent_id: str, server: Any, report: AIBOMReport, context: _ExportContext) -> None:
+    server_id = graph.next_id("SPDXRef-MCPServer")
+    server_desc = server_surface_description(server)
+    if server.tools:
+        server_desc += f" — {len(server.tools)} tool(s): {', '.join(t.name for t in server.tools[:10])}"
+        if len(server.tools) > 10:
+            server_desc += f" (+{len(server.tools) - 10} more)"
+    server_element: dict[str, Any] = {
+        "type": "software_Package",
+        "spdxId": server_id,
+        "name": server.name,
+        "software_primaryPurpose": "application",
+        "description": server_desc,
+    }
+    if server.mcp_version:
+        server_element["software_packageVersion"] = server.mcp_version
+    graph.elements.append(server_element)
+    for tool in server.tools:
+        graph.annotate(server_id, f"agent-bom:mcp-tool={tool.name}" + (f": {tool.description[:120]}" if tool.description else ""))
+    graph.relate("contains", agent_id, server_id)
+
+    for pkg in server.packages:
+        pkg_id = _add_package(graph, pkg)
+        for vuln in pkg.vulnerabilities:
+            _add_vulnerability(graph, pkg, pkg_id, vuln, report, context)
+
+    graph.relationships.extend(spdx3_package_relationships(server.packages, graph.pkg_ref_map, server_id, graph.next_id, graph.annotate))
+
+
+def _add_package(graph: _SpdxGraph, pkg: Any) -> str:
+    """Emit each distinct package once; return its element id."""
+    pkg_key = pkg.stable_id
+    if pkg_key in graph.pkg_ref_map:
+        return graph.pkg_ref_map[pkg_key]
+    pkg_id = f"{graph.namespace}/SPDXRef-Pkg-" + hashlib.sha256(pkg.stable_id.encode()).hexdigest()[:24]
+    graph.pkg_ref_map[pkg_key] = pkg_id
+    pkg_element: dict[str, object] = {
+        "type": "software_Package",
+        "spdxId": pkg_id,
+        "name": pkg.name,
+        "software_packageVersion": pkg.version,
+        "software_primaryPurpose": "library",
+    }
+    for statement in _package_statements(pkg):
+        graph.annotate(pkg_id, statement)
+    pkg_element.update(_package_optional_fields(pkg, graph.supplier_ref))
+    graph.elements.append(pkg_element)
+    declared_license = pkg.license_expression or pkg.license
+    if declared_license:
+        # Licensing is a hasDeclaredLicense edge to a LicenseExpression
+        # element, not a package property.
+        graph.relationships.append(
+            {
+                "type": "Relationship",
+                "spdxId": graph.next_id("SPDXRef-Rel"),
+                "relationshipType": "hasDeclaredLicense",
+                "from": pkg_id,
+                "to": [graph.license_ref(declared_license)],
+            }
+        )
+    return pkg_id
+
+
+def _add_vulnerability(graph: _SpdxGraph, pkg: Any, pkg_id: str, vuln: Any, report: AIBOMReport, context: _ExportContext) -> None:
+    vuln_compliance_tags, vuln_workflow, atlas_by_vulnerability = context
+    vuln_element_id = graph.next_id("SPDXRef-Vuln")
+    graph.elements.append(
+        {
+            "type": "security_Vulnerability",
+            "spdxId": vuln_element_id,
+            "name": vuln.id,
+            "description": vuln.summary or "",
+            "externalIdentifier": (
+                [{"type": "ExternalIdentifier", "externalIdentifierType": "cve", "identifier": vuln.id}]
+                if vuln.id.startswith("CVE-")
+                else []
+            ),
+        }
+    )
+    cvss_type = _cvss_assessment_type(vuln.cvss_vector) if vuln.cvss_score is not None else None
+    key = _vulnerability_key(pkg, vuln)
+    for statement in _vulnerability_statements(
+        vuln,
+        compliance_tags=vuln_compliance_tags.get(key, []),
+        observed_at=report.generated_at.isoformat(),
+        workflow=vuln_workflow.get(key),
+        atlas_receipts=atlas_by_vulnerability.get(key),
+        cvss_in_assessment=cvss_type is not None,
+    ):
+        graph.annotate(vuln_element_id, statement)
+
+    # CVSS is a security-profile assessment relationship in SPDX 3.0, not an
+    # ad-hoc score object on the vulnerability. The class follows the vector's
+    # CVSS version and the vector is mandatory; without one the score rides on
+    # an annotation.
+    if cvss_type is not None and vuln.cvss_score is not None:
+        graph.relationships.append(
+            {
+                "type": cvss_type,
+                "spdxId": graph.next_id("SPDXRef-Cvss"),
+                "relationshipType": "hasAssessmentFor",
+                "from": vuln_element_id,
+                "to": [pkg_id],
+                "security_score": vuln.cvss_score,
+                "security_severity": _cvss_qualitative_severity(vuln.cvss_score),
+                "security_vectorString": vuln.cvss_vector,
+            }
+        )
+
+    assessment: dict[str, object] = {
+        "type": "security_VexAffectedVulnAssessmentRelationship",
+        "spdxId": graph.next_id("SPDXRef-VulnAssessment"),
+        "relationshipType": "affects",
+        "from": vuln_element_id,
+        "to": [pkg_id],
+        "security_actionStatement": (f"Upgrade to {vuln.fixed_version}" if vuln.fixed_version else _NO_FIX_ACTION),
+    }
+    if vuln.is_kev:
+        assessment["comment"] = "CISA KEV: actively exploited in the wild"
+    graph.relationships.append(assessment)
 
 
 def _package_statements(pkg: Any) -> list[str]:
