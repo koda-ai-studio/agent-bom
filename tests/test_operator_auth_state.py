@@ -128,3 +128,31 @@ def test_suppressed_source_receipts_do_not_exhaust_other_sources(tmp_path):
     # First receipts keep a higher ceiling, while repeats stop at the deployment one.
     assert sum(store.audit_allowed(f"{i + 1}.51.100.1", 100) for i in range(100)) == 100
     assert store.audit_allowed("1.51.100.1", 100) is False
+
+
+def test_slow_receipt_write_cannot_hold_up_failure_counting(tmp_path):
+    import threading
+
+    from agent_bom.api.auth_failure_store import SQLiteAuthFailureStore
+
+    path = str(tmp_path / "limits.db")
+    receipts, counts = SQLiteAuthFailureStore(path), SQLiteAuthFailureStore(path)
+    held, release = threading.Event(), threading.Event()
+
+    def stalled_receipt():
+        with receipts.receipt_budget():
+            held.set()
+            release.wait(5)
+
+    worker = threading.Thread(target=stalled_receipt)
+    worker.start()
+    try:
+        assert held.wait(5)
+        # Longer than the store's 400 ms bound passes while the receipt holds its lock.
+        for _ in range(4):
+            counts.record("192.0.2.9", 100, limit=3, base=10, maximum=60)
+        assert counts.remaining("192.0.2.9", 101) == 9
+    finally:
+        release.set()
+        worker.join(5)
+    assert counts.audit_allowed("192.0.2.9", 100) is True
