@@ -15,12 +15,15 @@
 
 <p align="center"><b>AI supply-chain BOM: <a href="#what-it-covers">supported</a> agents, MCP servers and AI packages, and what each one can reach.</b></p>
 
-For AppSec teams and developers who run Claude Code, Cursor, Codex or any MCP
-client: see which agents, MCP servers, tools and packages are installed, which
-are vulnerable, and what each one can reach. Local scans need no account.
+agent-bom maps the chain your AI tools create, **agent → MCP server → tool →
+package → credential**, and what each link can reach in code, cloud and data.
+For AppSec, platform and AI teams who run Claude Code, Cursor, Codex or any MCP
+client: findings are ranked by that reach on one graph that runs on your
+machine or your own infrastructure. Local scans need no account.
 
 <p align="center">
   <a href="#quick-start"><b>Quick start</b></a> ·
+  <a href="site-docs/getting-started/start-by-role.md"><b>Start by role</b></a> ·
   <a href="https://koda-ai-studio.github.io/agent-bom/demo/"><b>Try in browser</b></a> ·
   <a href="#from-laptop-to-team-to-org">Laptop → team → org</a> ·
   <a href="docs/GALLERY.md">Product tour</a> ·
@@ -37,7 +40,8 @@ uvx agent-bom scan . -f html -o agent-bom-report.html
 
 Open `agent-bom-report.html` for inventory, findings and fix guidance. Run it
 again later to see what changed. No MCP configuration in the project? Package
-findings still apply.
+findings still apply. To explore the same chain as a graph, see
+[open the sample graph](#open-the-sample-graph).
 
 No project handy? `uvx agent-bom scan --demo --offline` scans a bundled sample.
 Exit `1` is expected there: the sample trips the security gate. Elsewhere, a
@@ -78,10 +82,17 @@ is no managed cloud offering today; community support runs on GitHub
 
 ## Why an AI supply-chain BOM
 
+**Why now.** Coding agents and MCP servers give software new reach: they start
+local processes, load packages, hold API tokens and call tools on your behalf,
+often from configuration nobody reviews. Package inventories stop at the
+package, so nothing records which agent can use which credential through which
+server.
+
 A CVE in an AI package, a poisoned tool description or an over-scoped
-credential matters by what the agent that loads it can reach. A package SBOM
-stops at packages; agent-bom records the chain, agent → MCP server → tool →
-package → credential → data, and keeps the evidence for every edge.
+credential matters by what the agent that loads it can reach. agent-bom records
+the chain, agent → MCP server → tool → package → credential → data, keeps the
+evidence for every edge, and ranks findings by that reach. Start with the
+[five-minute path for your role](site-docs/getting-started/start-by-role.md).
 
 <p align="center"><a href="docs/images/graph-environment-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-environment-light-live.png"><img src="docs/images/graph-environment-dark-live.png" alt="Sample production AI environment: Document Intake Agent uses a document-tools MCP server that depends on pillow 9.0.0, linked to KEV-listed CVE-2023-4863; Support Triage Agent uses a ticketing MCP server that references TICKETING_API_KEY, which can access a customer ticket archive" width="1100"></picture></a></p>
 
@@ -202,7 +213,8 @@ pip install 'agent-bom[ui]==0.115.4'
 agent-bom quickstart --run --offline
 ```
 
-Run the server command it prints, then open its graph URL. Offline quickstart
+Run the server command it prints, then open its graph URL, or add `--open` to
+start the server and open the graph in one step. Offline quickstart
 skips package-CVE lookup, so zero CVEs is not a clean verdict; use the bundled
 demo for advisory-backed findings or [populate the advisory database](docs/FIRST_RUN.md).
 

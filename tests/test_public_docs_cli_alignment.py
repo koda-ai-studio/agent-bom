@@ -226,7 +226,8 @@ def test_readme_storefront_is_concise_ordered_and_actionable() -> None:
     assert headline in hero
     assert "## What it covers" in readme
     assert "every agent" not in hero
-    assert "For AppSec teams and developers who run Claude Code, Cursor, Codex or any MCP" in hero
+    assert "For AppSec, platform and AI teams who run Claude Code, Cursor, Codex or any MCP" in hero
+    assert "agent → MCP server → tool →\npackage → credential" in hero, "the reach chain leads the pitch"
     assert "local scans need no account" in " ".join(hero.split()).lower()
     assert "https://koda-ai-studio.github.io/agent-bom/demo/" in hero.split("<!-- mcp-name:", 1)[0], "the hero opens the browser demo"
     assert "Try in browser" in hero
