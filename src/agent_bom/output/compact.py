@@ -452,6 +452,11 @@ def print_compact_blast_radius(report: AIBOMReport, limit: int = 10, fixable_onl
     else:
         title = f"Findings ({shown_n})"
     print_findings_heading(title, kernel_groups)
+    if report.blast_radii:
+        console.print(
+            "  [dim]Ranked by contextual risk: severity, known or likely exploitation, and reach to agents, "
+            "credentials and tools, so a reachable MEDIUM can outrank an isolated HIGH.[/dim]"
+        )
 
     # Context-aware table layout. The vulnerability ID column has no ratio so
     # it sizes to content and never truncates — the ID is the one cell that
@@ -868,17 +873,32 @@ def print_compact_export_hint(report: AIBOMReport) -> None:
     """Single-line summary with key metrics."""
     from agent_bom.output import console
 
-    vuln_color = "red" if report.total_vulnerabilities > 0 else "green"
-    # Label this per-package CVE-instance total with an explicit scope so it
-    # never reads as the same number as the scan-lane finding count or the
-    # severity breakdown (they legitimately differ — see honest-counts). The
-    # same CVE counts once per package copy here, so "instance(s)" keeps it
-    # distinct from the deduped "package CVEs" finding total on the scan line.
+    instances = report.total_vulnerabilities
+    vuln_color = "red" if instances > 0 else "green"
+    # The same CVE counts once per package copy here; naming the unique count
+    # beside it reconciles this total with the deduplicated scan headline.
+    unique = _unique_package_cves(report)
+    noun = "instance" if instances == 1 else "instances"
+    unique_note = f" ({unique} unique)" if unique != instances else ""
     console.print(
         f"\n  {inventory_subjects(report)} · "
         f"[bold]{report.total_servers} servers[/bold] · "
         f"[bold]{report.total_packages} packages[/bold] · "
-        f"[bold {vuln_color}]{report.total_vulnerabilities} package CVE instance(s)[/bold {vuln_color}]"
+        f"[bold {vuln_color}]{instances} package CVE {noun}{unique_note}[/bold {vuln_color}]"
+    )
+
+
+def _unique_package_cves(report: AIBOMReport) -> int:
+    """Distinct advisory × package-version pairs over the copies ``total_vulnerabilities`` counts."""
+    return len(
+        {
+            (vuln.id, pkg.ecosystem, pkg.name, pkg.version)
+            for agent in report.agents
+            for server in agent.mcp_servers
+            if not server.package_binding_of
+            for pkg in server.packages
+            for vuln in pkg.vulnerabilities
+        }
     )
 
 

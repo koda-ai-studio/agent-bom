@@ -121,6 +121,36 @@ def test_scan_next_steps_echo_the_scan_target():
     assert "scan . " not in out
 
 
+def _next_steps(report: AIBOMReport, target: str) -> list[str]:
+    buf = StringIO()
+    con = Console(file=buf, force_terminal=False, width=200)
+    print_scan_next_steps(con, report, quiet=False, target=target)
+    return [line.strip() for line in buf.getvalue().splitlines() if "→" in line]
+
+
+def test_scan_next_steps_lead_with_the_project_graph(monkeypatch):
+    """The correlated graph is the first next step, for the project that was scanned."""
+    monkeypatch.setattr("agent_bom.output.next_steps.dashboard_installed", lambda: True)
+    steps = _next_steps(AIBOMReport(agents=[_configured_agent("a")]), ".")
+    assert "agent-bom quickstart --project . --run" in steps[0]
+    assert "graph" in steps[0].lower()
+
+
+def test_scan_next_steps_demo_graph_opens_the_sample_dashboard(monkeypatch):
+    monkeypatch.setattr("agent_bom.output.next_steps.dashboard_installed", lambda: True)
+    steps = _next_steps(AIBOMReport(agents=[_configured_agent("a")]), "--demo --offline")
+    assert "agent-bom quickstart --run --offline --open" in steps[0]
+    steps = _next_steps(AIBOMReport(agents=[_configured_agent("a")]), "--demo")
+    assert "agent-bom quickstart --run --open" in steps[0]
+
+
+def test_scan_next_steps_graph_names_the_ui_extra_when_missing(monkeypatch):
+    """Without the API/UI dependencies the dashboard command must bring them."""
+    monkeypatch.setattr("agent_bom.output.next_steps.dashboard_installed", lambda: False)
+    steps = _next_steps(AIBOMReport(agents=[_configured_agent("a")]), ".")
+    assert "uvx --from 'agent-bom[ui]' agent-bom quickstart --project . --run" in steps[0]
+
+
 def test_run_benchmarks_does_not_render_cis_inline(monkeypatch):
     """CIS grouped plan renders at report time only, not during benchmarks."""
     from agent_bom.cli.agents._cloud import run_benchmarks

@@ -6,6 +6,7 @@ Plain text and links only: nothing here contacts a service or records usage.
 from __future__ import annotations
 
 from html import escape
+from importlib.util import find_spec
 from typing import Any, NamedTuple
 
 REPO_URL = "https://github.com/koda-ai-studio/agent-bom"
@@ -17,6 +18,25 @@ class Hint(NamedTuple):
     label: str
     command: str
     url: str = ""
+
+
+def dashboard_installed() -> bool:
+    """Whether this environment has the API server the local dashboard runs on."""
+    return all(find_spec(module) is not None for module in ("fastapi", "uvicorn"))
+
+
+def graph_dashboard_command(target: str = ".") -> str:
+    """Command that persists a scan and serves its security graph in the local dashboard.
+
+    The demo has no project to activate, so it opens the bundled sample graph;
+    any other target is activated as a project and prints the server command.
+    """
+    if target.startswith("--demo"):
+        offline = " --offline" if "--offline" in target.split() else ""
+        command = f"agent-bom quickstart --run{offline} --open"
+    else:
+        command = f"agent-bom quickstart --project {target or '.'} --run"
+    return command if dashboard_installed() else f"uvx --from 'agent-bom[ui]' {command}"
 
 
 def _has_findings(report: Any) -> bool:
@@ -47,4 +67,13 @@ def next_steps_html(report: Any) -> str:
     return f'<section class="next-steps" aria-label="Next steps"><strong>Next steps</strong><ul>{"".join(rows)}</ul></section>'
 
 
-__all__ = ["ACTION_DOCS_URL", "MCP_DOCS_URL", "REPO_URL", "Hint", "next_step_items", "next_steps_html"]
+__all__ = [
+    "ACTION_DOCS_URL",
+    "MCP_DOCS_URL",
+    "REPO_URL",
+    "Hint",
+    "dashboard_installed",
+    "graph_dashboard_command",
+    "next_step_items",
+    "next_steps_html",
+]

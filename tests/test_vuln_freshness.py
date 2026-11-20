@@ -142,7 +142,7 @@ def test_bundled_demo_freshness_is_versioned_evidence_not_ambient_db_age():
     assert fresh.age_hours is None
     assert fresh.stale is False
     assert fresh.danger is False
-    assert fresh.summary_line() == f"Vuln data: bundled demo advisory DB ({len(DEMO_ADVISORIES)} curated advisories)"
+    assert fresh.summary_line() == f"Vuln data: bundled demo advisory DB ({len(DEMO_ADVISORIES)} curated advisories in catalog)"
     assert should_refresh(fresh, offline=False) is False
     assert db_staleness(fresh) == (False, None)
 

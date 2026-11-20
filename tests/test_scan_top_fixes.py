@@ -74,6 +74,8 @@ def test_file_output_scan_ends_with_top_fixes_and_a_next_step(tmp_path) -> None:
     assert "1. " in tail
     assert "Next:" in tail and "--remediate remediation.md" in tail
     assert "scan --demo --offline --remediate remediation.md" in " ".join(tail.split())
+    assert "See the security graph in the local dashboard" in tail
+    assert "quickstart --run --offline --open" in " ".join(tail.split())
 
 
 def test_console_and_quiet_scans_do_not_repeat_top_fixes(tmp_path) -> None:
