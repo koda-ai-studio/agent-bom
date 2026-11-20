@@ -138,6 +138,12 @@ MANAGED_PATTERNS: tuple[ManagedPattern, ...] = (
         re.compile(r"((?:msaad00|koda-ai-studio)/agent-bom@[0-9a-f]{40}[ \t]+#[ \t]*v)(\d+\.\d+\.\d+)"),
         "published",
     ),
+    # Prose that names a release tag on its own, e.g. "pin `@v0.111.0`".
+    ManagedPattern(
+        "inline Action ref",
+        re.compile(r"(`@v)(\d+\.\d+\.\d+)(?=`)"),
+        "published",
+    ),
     ManagedPattern(
         "consumer pre-commit rev",
         re.compile(r"(repo: https://github\.com/(?:msaad00|koda-ai-studio)/agent-bom\n[#\s]*rev:[ \t]+v)(\d+\.\d+\.\d+)"),

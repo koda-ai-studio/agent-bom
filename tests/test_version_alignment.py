@@ -56,6 +56,14 @@ def test_scan_text_flags_stale_action_ref() -> None:
     assert "GitHub Action ref" in drift[0]
 
 
+def test_scan_text_flags_a_bare_inline_action_ref() -> None:
+    """Prose such as "pin a release tag (for example `@v0.90.0`)" is copied as an Action ref."""
+    cva = _load_script("check_version_alignment.py")
+    drift = cva.scan_text("site-docs/integrations/github-action.md", "Pin a release tag (for example `@v0.90.0`).\n", "0.97.1")
+    assert len(drift) == 1 and "0.97.1" in drift[0]
+    assert cva.scan_text("site-docs/x.md", "Pin `@v0.97.1` or `actions/checkout@v4`.\n", "0.97.1") == []
+
+
 def test_scan_text_passes_when_aligned() -> None:
     cva = _load_script("check_version_alignment.py")
     text = "image: agentbom/agent-bom:0.97.1\nuses: msaad00/agent-bom@v0.97.1\n"
