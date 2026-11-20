@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import re
+from dataclasses import dataclass, field
 from typing import Any
 from uuid import uuid4
 
@@ -536,6 +537,24 @@ def _build_training_component(run: dict, comp_id: int) -> tuple[dict, str]:
 # ── Main export ──────────────────────────────────────────────────────────────
 
 
+@dataclass
+class _CdxParts:
+    """Document arrays accumulated while walking agents -> servers -> packages."""
+
+    components: list[dict] = field(default_factory=list)
+    services: list[dict] = field(default_factory=list)
+    dependencies: list[dict] = field(default_factory=list)
+    vulnerabilities_by_id: dict[str, dict] = field(default_factory=dict)
+    unresolved_parents: set[str] = field(default_factory=set)
+    # Bom-refs are unique: a package reachable via several servers is emitted
+    # once; every referencing server keeps its dependency edge.
+    seen_component_refs: set[str] = field(default_factory=set)
+
+
+# (workflow metadata, ATLAS receipts) keyed by (ecosystem, name, version, vuln id).
+_VulnContext = tuple[dict, dict]
+
+
 def to_cyclonedx(report: AIBOMReport, *, spec_version: str = "1.7") -> dict:
     """Build CycloneDX 1.7 dict from report with ML BOM extensions.
 
@@ -545,11 +564,43 @@ def to_cyclonedx(report: AIBOMReport, *, spec_version: str = "1.7") -> dict:
     """
     if spec_version not in {"1.6", "1.7"}:
         raise ValueError("Supported CycloneDX versions are 1.6 and 1.7")
-    components = []
     scan_run = effective_scan_run(report)
-    services: list[dict] = []
-    vulnerabilities_by_id: dict[str, dict] = {}
     atlas_by_vulnerability = atlas_receipts_by_vulnerability(report)
+    context: _VulnContext = (_workflow_by_vulnerability(report), atlas_by_vulnerability)
+    parts = _CdxParts()
+    for agent in report.agents:
+        _add_agent(parts, agent, report, context)
+    parts.components.extend(_ml_components(report))
+
+    # Discovery paths overlap by design. Normalize the document-level arrays
+    # once after all builders have contributed so uniqueness applies globally,
+    # not only to package components.
+    components = _merge_bom_ref_items(parts.components)
+    services = _merge_bom_ref_items(parts.services)
+    dependencies = _merge_dependencies(parts.dependencies)
+    vulnerabilities_cdx = [collapse_vulnerability_sla(parts.vulnerabilities_by_id[key]) for key in sorted(parts.vulnerabilities_by_id)]
+    vulnerabilities_cdx += undecided_cdx(report, _sanitize_bom_ref)
+
+    cdx = _cyclonedx_document(report, spec_version, scan_run, components, dependencies)
+    if services:
+        cdx["services"] = services
+    if vulnerabilities_cdx:
+        cdx["vulnerabilities"] = vulnerabilities_cdx
+
+    compositions = cyclonedx_compositions(
+        components,
+        incomplete=bool(parts.unresolved_parents) or scan_run.outcome is not ScanOutcome.COMPLETE or imported_bom_incomplete(report.agents),
+        unknown=imported_bom_unknown(report.agents),
+    )
+    if compositions:
+        cdx["compositions"] = compositions
+
+    from agent_bom.output.interop_security import sanitize_linked_document
+
+    return attach_cloud_context(sanitize_linked_document(cdx), report, "cyclonedx")
+
+
+def _workflow_by_vulnerability(report: AIBOMReport) -> dict[tuple[str, str, str | None, str], dict[str, str]]:
     workflow_by_vulnerability: dict[tuple[str, str, str | None, str], dict[str, str]] = {}
     for finding in cve_findings(report):
         workflow = export_workflow_metadata(finding, report.generated_at)
@@ -557,264 +608,233 @@ def to_cyclonedx(report: AIBOMReport, *, spec_version: str = "1.7") -> dict:
             workflow_by_vulnerability[
                 (package_ecosystem(finding), package_name(finding), package_version(finding), finding.cve_id or finding.id)
             ] = workflow
-    dependencies = []
-    unresolved_parents: set[str] = set()
+    return workflow_by_vulnerability
 
-    comp_id = 0
-    bom_ref_map = {}
-    ml_component_refs: list[str] = []  # Track ML components for top-level deps
-    # Bom-refs are unique: a package reachable via several servers is emitted
-    # once; every referencing server keeps its dependency edge.
-    seen_component_refs: set[str] = set()
 
-    for agent in report.agents:
-        agent_ref = _sanitize_bom_ref(f"agent-{agent.stable_id}")
-        agent_deps = []
-        agent_provenance = agent_discovery_provenance(agent)
-        agent_properties = [
-            {"name": "agent-bom:type", "value": "ai-agent"},
-            {"name": "agent-bom:canonical-id", "value": agent.canonical_id},
-            {"name": "agent-bom:canonical-id-schema-version", "value": CANONICAL_ID_SCHEMA_VERSION},
-            {"name": "agent-bom:config-path", "value": sanitize_path_label(agent.config_path) if agent.config_path else ""},
-            {"name": "agent-bom:status", "value": agent.status.value},
-        ]
-        agent_properties.extend(
-            {"name": "agent-bom:previous-canonical-id", "value": legacy_id} for legacy_id in agent.previous_canonical_ids
+def _add_agent(parts: _CdxParts, agent: Any, report: AIBOMReport, context: _VulnContext) -> None:
+    agent_ref = _sanitize_bom_ref(f"agent-{agent.stable_id}")
+    agent_provenance = agent_discovery_provenance(agent)
+    agent_properties = [
+        {"name": "agent-bom:type", "value": "ai-agent"},
+        {"name": "agent-bom:canonical-id", "value": agent.canonical_id},
+        {"name": "agent-bom:canonical-id-schema-version", "value": CANONICAL_ID_SCHEMA_VERSION},
+        {"name": "agent-bom:config-path", "value": sanitize_path_label(agent.config_path) if agent.config_path else ""},
+        {"name": "agent-bom:status", "value": agent.status.value},
+    ]
+    agent_properties.extend({"name": "agent-bom:previous-canonical-id", "value": legacy_id} for legacy_id in agent.previous_canonical_ids)
+    _append_discovery_provenance_properties(agent_properties, agent_provenance)
+    parts.components.append(
+        {
+            "type": "application",
+            "bom-ref": agent_ref,
+            "name": agent.name,
+            "version": agent.version or "unknown",
+            "description": f"AI Agent ({agent.agent_type.value})",
+            "properties": agent_properties,
+        }
+    )
+    agent_deps = [_add_server(parts, agent, server, agent_provenance, report, context) for server in agent.mcp_servers]
+    parts.dependencies.append({"ref": agent_ref, "dependsOn": agent_deps})
+
+
+def _add_server(
+    parts: _CdxParts, agent: Any, server: Any, agent_provenance: dict | None, report: AIBOMReport, context: _VulnContext
+) -> str:
+    server_ref = _sanitize_bom_ref(f"mcp-server-{server_occurrence_id(server, agent)}")
+    package_dependencies, server_deps, unresolved = cyclonedx_package_dependencies(
+        server.packages, lambda package_id: _sanitize_bom_ref(f"pkg-{package_id}")
+    )
+    parts.unresolved_parents.update(unresolved)
+    parts.dependencies.extend(package_dependencies)
+    server_provenance = sanitize_discovery_provenance(getattr(server, "discovery_provenance", None), defaults=agent_provenance)
+    parts.components.append(
+        {
+            "type": "application",
+            "bom-ref": server_ref,
+            "name": server.name,
+            "description": server_surface_description(server),
+            "properties": _server_properties(server, server_provenance),
+        }
+    )
+    # MCP tools go in top-level ``services``: nesting them in a component fails strict 1.7 validation.
+    for tool in server.tools:
+        service_entry: dict = {"bom-ref": _sanitize_bom_ref(f"service-{server_ref}-{tool.name}"), "name": tool.name}
+        if tool.description:
+            service_entry["description"] = tool.description
+        parts.services.append(service_entry)
+    for prompt in server.prompts:
+        prompt_component, prompt_ref = _build_mcp_prompt_component(prompt)
+        parts.components.append(prompt_component)
+        server_deps.append(prompt_ref)
+    for resource in server.resources:
+        resource_component, resource_ref = _build_mcp_resource_component(resource)
+        parts.components.append(resource_component)
+        server_deps.append(resource_ref)
+    for pkg in server.packages:
+        _add_package(parts, pkg, server_provenance, report, context)
+    parts.dependencies.append({"ref": server_ref, "dependsOn": server_deps})
+    return server_ref
+
+
+def _server_properties(server: Any, server_provenance: dict | None) -> list[dict]:
+    server_props = [
+        {
+            "name": "agent-bom:inventory-members",
+            "value": json.dumps(sorted(_sanitize_bom_ref(f"pkg-{p.stable_id}") for p in server.packages)),
+        },
+        {"name": "agent-bom:type", "value": "mcp-server" if server.counts_as_mcp_server else "dependency-surface"},
+        {"name": "agent-bom:canonical-id", "value": server.canonical_id},
+        {"name": "agent-bom:surface", "value": server.surface.value},
+        {"name": "agent-bom:command", "value": sanitize_launch_command(server.command, server.args)},
+        {"name": "agent-bom:transport", "value": server.transport.value},
+    ]
+    _append_discovery_provenance_properties(server_props, server_provenance)
+    if server.has_credentials:
+        server_props.append({"name": "agent-bom:has-credentials", "value": "true"})
+    if server.tools:
+        server_props.append({"name": "agent-bom:tool-count", "value": str(len(server.tools))})
+        # Export each tool as a property for SBOM consumers
+        for tool in server.tools:
+            tool_val = f"{tool.name}: {tool.description[:120]}" if tool.description else tool.name
+            server_props.append({"name": "agent-bom:mcp-tool", "value": tool_val})
+    return server_props
+
+
+def _add_package(parts: _CdxParts, pkg: Any, server_provenance: dict | None, report: AIBOMReport, context: _VulnContext) -> None:
+    workflow_by_vulnerability, atlas_by_vulnerability = context
+    pkg_ref = _sanitize_bom_ref(f"pkg-{pkg.stable_id}")
+    for vuln in pkg.vulnerabilities:
+        key = (pkg.ecosystem, pkg.name, pkg.version, vuln.id)
+        _merge_vulnerability_observation(
+            parts.vulnerabilities_by_id,
+            _cyclonedx_vulnerability(
+                vuln,
+                pkg_ref,
+                observed_at=report.generated_at.isoformat(),
+                workflow=workflow_by_vulnerability.get(key),
+                atlas_receipts=atlas_by_vulnerability.get(key),
+            ),
         )
-        _append_discovery_provenance_properties(agent_properties, agent_provenance)
+    if pkg_ref in parts.seen_component_refs:
+        return
+    parts.seen_component_refs.add(pkg_ref)
+    parts.components.append(_package_component(pkg, pkg_ref, server_provenance))
 
-        components.append(
-            {
-                "type": "application",
-                "bom-ref": agent_ref,
-                "name": agent.name,
-                "version": agent.version or "unknown",
-                "description": f"AI Agent ({agent.agent_type.value})",
-                "properties": agent_properties,
-            }
-        )
 
-        for server in agent.mcp_servers:
-            server_ref = _sanitize_bom_ref(f"mcp-server-{server_occurrence_id(server, agent)}")
-            package_dependencies, server_deps, unresolved = cyclonedx_package_dependencies(
-                server.packages, lambda package_id: _sanitize_bom_ref(f"pkg-{package_id}")
-            )
-            unresolved_parents.update(unresolved)
-            dependencies.extend(package_dependencies)
-            server_provenance = sanitize_discovery_provenance(getattr(server, "discovery_provenance", None), defaults=agent_provenance)
+def _package_properties(pkg: Any, server_provenance: dict | None, verdict: dict | None) -> list[dict]:
+    package_provenance = package_discovery_provenance(pkg, inherited=server_provenance)
+    version_provenance = package_version_provenance(pkg, inherited=server_provenance)
+    pkg_properties = [
+        {"name": "agent-bom:ecosystem", "value": pkg.ecosystem},
+        {"name": "agent-bom:canonical-id", "value": pkg.canonical_id},
+        {"name": "agent-bom:is-direct", "value": "unknown" if pkg.is_direct is None else str(pkg.is_direct).lower()},
+        {"name": "agent-bom:dependency-depth", "value": str(pkg.dependency_depth)},
+        {"name": "agent-bom:dependency-scope", "value": pkg.dependency_scope},
+        {"name": "agent-bom:reachability-evidence", "value": pkg.reachability_evidence},
+        {"name": "agent-bom:resolved-from-registry", "value": str(pkg.resolved_from_registry).lower()},
+        {"name": "agent-bom:version-source", "value": pkg.version_source},
+        {"name": "agent-bom:version-provenance-source", "value": version_provenance.get("version_source", "unknown")},
+        {"name": "agent-bom:version-provenance-confidence", "value": version_provenance.get("confidence", "unknown")},
+        {"name": "agent-bom:floating-reference", "value": str(pkg.floating_reference).lower()},
+    ]
+    _append_discovery_provenance_properties(pkg_properties, package_provenance)
+    if pkg.floating_reference_reason:
+        pkg_properties.append({"name": "agent-bom:floating-reference-reason", "value": pkg.floating_reference_reason})
+    if pkg.parent_package:
+        pkg_properties.append({"name": "agent-bom:parent-package", "value": pkg.parent_package})
+    if pkg.scorecard_score is not None:
+        pkg_properties.append({"name": "agent-bom:scorecard-score", "value": str(pkg.scorecard_score)})
+    pkg_properties.extend(cyclonedx_malicious_properties(pkg))
+    # --verify-integrity verdict. The namespaced properties give a consumer an
+    # unambiguous boolean; the identity evidence says the same thing in the
+    # spec's own vocabulary.
+    if verdict is not None:
+        if "integrity_verified" in verdict:
+            pkg_properties.append({"name": "agent-bom:integrity-verified", "value": str(verdict["integrity_verified"]).lower()})
+        if "provenance_attested" in verdict:
+            pkg_properties.append({"name": "agent-bom:provenance-attested", "value": str(verdict["provenance_attested"]).lower()})
+        if verdict.get("provenance_source"):
+            pkg_properties.append({"name": "agent-bom:provenance-source", "value": str(verdict["provenance_source"])})
+        if verdict.get("provenance_status"):
+            pkg_properties.append({"name": "agent-bom:provenance-status", "value": str(verdict["provenance_status"])})
+    return pkg_properties
 
-            server_props = [
-                {
-                    "name": "agent-bom:inventory-members",
-                    "value": json.dumps(sorted(_sanitize_bom_ref(f"pkg-{p.stable_id}") for p in server.packages)),
-                },
-                {"name": "agent-bom:type", "value": "mcp-server" if server.counts_as_mcp_server else "dependency-surface"},
-                {"name": "agent-bom:canonical-id", "value": server.canonical_id},
-                {"name": "agent-bom:surface", "value": server.surface.value},
-                {"name": "agent-bom:command", "value": sanitize_launch_command(server.command, server.args)},
-                {"name": "agent-bom:transport", "value": server.transport.value},
-            ]
-            _append_discovery_provenance_properties(server_props, server_provenance)
-            if server.has_credentials:
-                server_props.append({"name": "agent-bom:has-credentials", "value": "true"})
-            if server.tools:
-                server_props.append({"name": "agent-bom:tool-count", "value": str(len(server.tools))})
-                # Export each tool as a property for SBOM consumers
-                for tool in server.tools:
-                    tool_val = tool.name
-                    if tool.description:
-                        tool_val = f"{tool.name}: {tool.description[:120]}"
-                    server_props.append({"name": "agent-bom:mcp-tool", "value": tool_val})
 
-            server_component: dict = {
-                "type": "application",
-                "bom-ref": server_ref,
-                "name": server.name,
-                "description": server_surface_description(server),
-                "properties": server_props,
-            }
-            components.append(server_component)
-            # MCP tools go in top-level ``services``: nesting them in a component fails strict 1.7 validation.
-            for tool in server.tools:
-                service_entry: dict = {
-                    "bom-ref": _sanitize_bom_ref(f"service-{server_ref}-{tool.name}"),
-                    "name": tool.name,
-                }
-                if tool.description:
-                    service_entry["description"] = tool.description
-                services.append(service_entry)
-            for prompt in server.prompts:
-                prompt_component, prompt_ref = _build_mcp_prompt_component(prompt)
-                components.append(prompt_component)
-                server_deps.append(prompt_ref)
-            for resource in server.resources:
-                resource_component, resource_ref = _build_mcp_resource_component(resource)
-                components.append(resource_component)
-                server_deps.append(resource_ref)
-            agent_deps.append(server_ref)
+def _package_component(pkg: Any, pkg_ref: str, server_provenance: dict | None) -> dict:
+    verdict = integrity_verdict(pkg)
+    pkg_component: dict = {
+        "type": "library",
+        "bom-ref": pkg_ref,
+        "name": pkg.name,
+        "version": pkg.version,
+        "properties": _package_properties(pkg, server_provenance, verdict),
+    }
+    # purl is the join key for downstream SBOM consumers: pass the resolved
+    # purl through, else synthesize one from the known ecosystem+name+version.
+    pkg_component.update(cyclonedx_identifiers(pkg))
+    if verdict is not None:
+        identities = _integrity_identity_evidence(pkg, verdict, pkg_component.get("purl"))
+        if identities:
+            pkg_component["evidence"] = {"identity": identities}
+    if pkg.license_expression or pkg.license:
+        lic_val = pkg.license_expression or pkg.license or ""
+        # CycloneDX 1.7: compound expressions (AND/OR/WITH) use "expression" at
+        # the licenses array level; single SPDX IDs use "license.id".
+        if any(op in lic_val for op in (" AND ", " OR ", " WITH ")):
+            pkg_component["licenses"] = [{"expression": lic_val}]
+        else:
+            pkg_component["licenses"] = [{"license": {"id": lic_val}}]
+    hashes = cyclonedx_hashes(pkg.checksums)
+    if hashes:
+        pkg_component["hashes"] = hashes
+    if pkg.supplier:
+        pkg_component["supplier"] = {"name": pkg.supplier}
+    for attr, key in (("author", "author"), ("description", "description"), ("copyright_text", "copyright")):
+        if getattr(pkg, attr):
+            pkg_component[key] = getattr(pkg, attr)
+    ext_refs = [
+        {"type": ref_type, "url": url}
+        for ref_type, url in (("website", pkg.homepage), ("vcs", pkg.repository_url), ("distribution", pkg.download_url))
+        if url
+    ]
+    if ext_refs:
+        pkg_component["externalReferences"] = ext_refs
+    return pkg_component
 
-            for pkg in server.packages:
-                pkg_ref = _sanitize_bom_ref(f"pkg-{pkg.stable_id}")
-                bom_ref_map[f"{pkg.ecosystem}:{pkg.name}@{pkg.version}"] = pkg_ref
-                for vuln in pkg.vulnerabilities:
-                    _merge_vulnerability_observation(
-                        vulnerabilities_by_id,
-                        _cyclonedx_vulnerability(
-                            vuln,
-                            pkg_ref,
-                            observed_at=report.generated_at.isoformat(),
-                            workflow=workflow_by_vulnerability.get((pkg.ecosystem, pkg.name, pkg.version, vuln.id)),
-                            atlas_receipts=atlas_by_vulnerability.get((pkg.ecosystem, pkg.name, pkg.version, vuln.id)),
-                        ),
-                    )
-                if pkg_ref in seen_component_refs:
-                    continue
-                seen_component_refs.add(pkg_ref)
-                package_provenance = package_discovery_provenance(pkg, inherited=server_provenance)
-                version_provenance = package_version_provenance(pkg, inherited=server_provenance)
 
-                pkg_properties = [
-                    {"name": "agent-bom:ecosystem", "value": pkg.ecosystem},
-                    {"name": "agent-bom:canonical-id", "value": pkg.canonical_id},
-                    {"name": "agent-bom:is-direct", "value": "unknown" if pkg.is_direct is None else str(pkg.is_direct).lower()},
-                    {"name": "agent-bom:dependency-depth", "value": str(pkg.dependency_depth)},
-                    {"name": "agent-bom:dependency-scope", "value": pkg.dependency_scope},
-                    {"name": "agent-bom:reachability-evidence", "value": pkg.reachability_evidence},
-                    {"name": "agent-bom:resolved-from-registry", "value": str(pkg.resolved_from_registry).lower()},
-                    {"name": "agent-bom:version-source", "value": pkg.version_source},
-                    {"name": "agent-bom:version-provenance-source", "value": version_provenance.get("version_source", "unknown")},
-                    {"name": "agent-bom:version-provenance-confidence", "value": version_provenance.get("confidence", "unknown")},
-                    {"name": "agent-bom:floating-reference", "value": str(pkg.floating_reference).lower()},
-                ]
-                _append_discovery_provenance_properties(pkg_properties, package_provenance)
-                if pkg.floating_reference_reason:
-                    pkg_properties.append({"name": "agent-bom:floating-reference-reason", "value": pkg.floating_reference_reason})
-                if pkg.parent_package:
-                    pkg_properties.append({"name": "agent-bom:parent-package", "value": pkg.parent_package})
-                if pkg.scorecard_score is not None:
-                    pkg_properties.append({"name": "agent-bom:scorecard-score", "value": str(pkg.scorecard_score)})
-                pkg_properties.extend(cyclonedx_malicious_properties(pkg))
-                # --verify-integrity verdict. The namespaced properties give a
-                # consumer an unambiguous boolean; the identity evidence below
-                # says the same thing in the spec's own vocabulary.
-                verdict = integrity_verdict(pkg)
-                if verdict is not None:
-                    if "integrity_verified" in verdict:
-                        pkg_properties.append({"name": "agent-bom:integrity-verified", "value": str(verdict["integrity_verified"]).lower()})
-                    if "provenance_attested" in verdict:
-                        pkg_properties.append(
-                            {"name": "agent-bom:provenance-attested", "value": str(verdict["provenance_attested"]).lower()}
-                        )
-                    if verdict.get("provenance_source"):
-                        pkg_properties.append({"name": "agent-bom:provenance-source", "value": str(verdict["provenance_source"])})
-                    if verdict.get("provenance_status"):
-                        pkg_properties.append({"name": "agent-bom:provenance-status", "value": str(verdict["provenance_status"])})
+def _ml_components(report: AIBOMReport) -> list[dict]:
+    """ML BOM extensions: model provenance, model files, dataset cards, training runs."""
+    datasets = report.dataset_cards.get("datasets", []) if report.dataset_cards and isinstance(report.dataset_cards, dict) else []
+    runs = report.training_pipelines.get("runs", []) if report.training_pipelines and isinstance(report.training_pipelines, dict) else []
+    sources: list[tuple[Any, list]] = [
+        (_build_model_component, report.model_provenance),
+        (_build_model_file_component, report.model_files),
+        (_build_dataset_component, datasets),
+        (_build_training_component, runs),
+    ]
+    components: list[dict] = []
+    for build, items in sources:
+        for item in items:
+            component, _ref = build(item, len(components))
+            components.append(component)
+    return components
 
-                pkg_component: dict = {
-                    "type": "library",
-                    "bom-ref": pkg_ref,
-                    "name": pkg.name,
-                    "version": pkg.version,
-                    "properties": pkg_properties,
-                }
-                # purl is the join key for downstream SBOM consumers: pass the
-                # resolved purl through, else synthesize one from the known
-                # ecosystem+name+version.
-                pkg_component.update(cyclonedx_identifiers(pkg))
-                if verdict is not None:
-                    identities = _integrity_identity_evidence(pkg, verdict, pkg_component.get("purl"))
-                    if identities:
-                        pkg_component["evidence"] = {"identity": identities}
-                if pkg.license_expression or pkg.license:
-                    lic_val = pkg.license_expression or pkg.license or ""
-                    # CycloneDX 1.7: compound expressions (AND/OR/WITH) use
-                    # "expression" at the licenses array level, not "license.id".
-                    # Single SPDX IDs use "license.id".
-                    if any(op in lic_val for op in (" AND ", " OR ", " WITH ")):
-                        pkg_component["licenses"] = [{"expression": lic_val}]
-                    else:
-                        pkg_component["licenses"] = [{"license": {"id": lic_val}}]
-                hashes = cyclonedx_hashes(pkg.checksums)
-                if hashes:
-                    pkg_component["hashes"] = hashes
-                if pkg.supplier:
-                    pkg_component["supplier"] = {"name": pkg.supplier}
-                if pkg.author:
-                    pkg_component["author"] = pkg.author
-                if pkg.description:
-                    pkg_component["description"] = pkg.description
-                if pkg.copyright_text:
-                    pkg_component["copyright"] = pkg.copyright_text
-                ext_refs = []
-                if pkg.homepage:
-                    ext_refs.append({"type": "website", "url": pkg.homepage})
-                if pkg.repository_url:
-                    ext_refs.append({"type": "vcs", "url": pkg.repository_url})
-                if pkg.download_url:
-                    ext_refs.append({"type": "distribution", "url": pkg.download_url})
-                if ext_refs:
-                    pkg_component["externalReferences"] = ext_refs
-                components.append(pkg_component)
 
-            dependencies.append({"ref": server_ref, "dependsOn": server_deps})
-        dependencies.append({"ref": agent_ref, "dependsOn": agent_deps})
-
-    # ── ML BOM extensions: model provenance ──────────────────────────────
-    for prov in report.model_provenance:
-        comp, ref = _build_model_component(prov, comp_id)
-        comp_id += 1
-        components.append(comp)
-        ml_component_refs.append(ref)
-
-    # ── ML BOM extensions: model files ───────────────────────────────────
-    for mf in report.model_files:
-        comp, ref = _build_model_file_component(mf, comp_id)
-        comp_id += 1
-        components.append(comp)
-        ml_component_refs.append(ref)
-
-    # ── ML BOM extensions: dataset cards ─────────────────────────────────
-    if report.dataset_cards and isinstance(report.dataset_cards, dict):
-        for ds in report.dataset_cards.get("datasets", []):
-            comp, ref = _build_dataset_component(ds, comp_id)
-            comp_id += 1
-            components.append(comp)
-            ml_component_refs.append(ref)
-
-    # ── ML BOM extensions: training pipelines ────────────────────────────
-    if report.training_pipelines and isinstance(report.training_pipelines, dict):
-        for run in report.training_pipelines.get("runs", []):
-            comp, ref = _build_training_component(run, comp_id)
-            comp_id += 1
-            components.append(comp)
-            ml_component_refs.append(ref)
-
-    # Discovery paths overlap by design. Normalize the document-level arrays
-    # once after all builders have contributed so uniqueness applies globally,
-    # not only to package components.
-    components = _merge_bom_ref_items(components)
-    services = _merge_bom_ref_items(services)
-    dependencies = _merge_dependencies(dependencies)
-    vulnerabilities_cdx = [collapse_vulnerability_sla(vulnerabilities_by_id[key]) for key in sorted(vulnerabilities_by_id)]
-    vulnerabilities_cdx += undecided_cdx(report, _sanitize_bom_ref)
-
-    cdx = {
+def _cyclonedx_document(report: AIBOMReport, spec_version: str, scan_run: Any, components: list[dict], dependencies: list[dict]) -> dict:
+    tool = {
+        "type": "application",
+        "name": "agent-bom",
+        "version": report.tool_version,
+        "description": "Security scanner for AI infrastructure — from agent to runtime",
+    }
+    return {
         "bomFormat": "CycloneDX",
         "specVersion": spec_version,
         "serialNumber": f"urn:uuid:{report.scan_id}" if report.scan_id else f"urn:uuid:{uuid4()}",
         "version": 1,
         "metadata": {
             "timestamp": report.generated_at.isoformat(),
-            "tools": {
-                "components": [
-                    {
-                        "type": "application",
-                        "name": "agent-bom",
-                        "version": report.tool_version,
-                        "description": "Security scanner for AI infrastructure — from agent to runtime",
-                    }
-                ]
-            },
+            "tools": {"components": [tool]},
             "properties": [
                 {"name": "agent-bom:total-agents", "value": str(report.total_agents)},
                 {"name": "agent-bom:canonical-id-schema-version", "value": CANONICAL_ID_SCHEMA_VERSION},
@@ -829,36 +849,8 @@ def to_cyclonedx(report: AIBOMReport, *, spec_version: str = "1.7") -> dict:
         "dependencies": dependencies,
         # CDX 1.7 defines `formulation` as a top-level BOM array, not a metadata
         # field — placing it under metadata fails strict 1.7 schema validation.
-        "formulation": [
-            {
-                "components": [
-                    {
-                        "type": "application",
-                        "name": "agent-bom",
-                        "version": __version__,
-                    }
-                ]
-            }
-        ],
+        "formulation": [{"components": [{"type": "application", "name": "agent-bom", "version": __version__}]}],
     }
-
-    if services:
-        cdx["services"] = services
-
-    if vulnerabilities_cdx:
-        cdx["vulnerabilities"] = vulnerabilities_cdx
-
-    compositions = cyclonedx_compositions(
-        components,
-        incomplete=bool(unresolved_parents) or scan_run.outcome is not ScanOutcome.COMPLETE or imported_bom_incomplete(report.agents),
-        unknown=imported_bom_unknown(report.agents),
-    )
-    if compositions:
-        cdx["compositions"] = compositions
-
-    from agent_bom.output.interop_security import sanitize_linked_document
-
-    return attach_cloud_context(sanitize_linked_document(cdx), report, "cyclonedx")
 
 
 def export_cyclonedx(report: AIBOMReport, output_path: str, *, spec_version: str = "1.7") -> None:
