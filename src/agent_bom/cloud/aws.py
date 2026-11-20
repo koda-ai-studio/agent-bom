@@ -43,8 +43,10 @@ from agent_bom.discovery_envelope import DiscoveryEnvelope, RedactionStatus, Sca
 from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, ServerSurface, TransportType
 from agent_bom.security import sanitize_text
 
+from .aws_errors import aws_read_status, aws_read_warning
 from .aws_workloads import build_aws_workload_metadata
 from .base import CloudDiscoveryError
+from .collection_errors import CollectionStatus
 from .normalization import (
     build_cloud_origin,
     build_cloud_principal,
@@ -81,15 +83,6 @@ _AWS_ACCESS_DENIED_WARNINGS = {
     "eks": "Access denied for EKS APIs. Attach AmazonEKSReadOnlyAccess policy.",
     "step-functions": "Access denied for Step Functions APIs. Attach AWSStepFunctionsReadOnlyAccess policy.",
     "ec2": "Access denied for EC2 APIs. Attach AmazonEC2ReadOnlyAccess policy.",
-}
-_AWS_API_ERROR_LABELS = {
-    "bedrock": "AWS Bedrock API error",
-    "ecs": "AWS ECS API error",
-    "sagemaker": "AWS SageMaker API error",
-    "lambda": "AWS Lambda API error",
-    "eks": "AWS EKS API error",
-    "step-functions": "AWS Step Functions API error",
-    "ec2": "AWS EC2 API error",
 }
 
 
@@ -243,11 +236,10 @@ def _collect_aws_discovery_jobs(
                     return False
                 raise
             except client_error as exc:
-                code = exc.response["Error"]["Code"]
-                if code in ("AccessDeniedException", "UnauthorizedAccess"):
-                    warnings.append(_AWS_ACCESS_DENIED_WARNINGS[service])
-                else:
-                    warnings.append(f"{_AWS_API_ERROR_LABELS[service]}: {exc}")
+                warning = aws_read_warning(service, exc)
+                if aws_read_status(exc) == CollectionStatus.DENIED:
+                    warning = f"{warning} {_AWS_ACCESS_DENIED_WARNINGS[service]}"
+                warnings.append(warning)
                 continue
 
             agents.extend(service_agents)
@@ -460,8 +452,8 @@ def _discover_bedrock(session: Any, region: str, *, account_id: str | None = Non
 
             try:
                 detail = client.get_agent(agentId=agent_id)["agent"]
-            except Exception as exc:
-                warnings.append(f"Could not get details for Bedrock agent {agent_id}: {exc}")
+            except Exception as exc:  # noqa: BLE001 - one agent's read must not end the listing
+                warnings.append(aws_read_warning("bedrock-agents", exc))
                 continue
 
             agent_arn = detail.get("agentArn") or f"arn:aws:bedrock:{region}:{account_id or ''}:agent/{agent_id}"
@@ -543,7 +535,8 @@ def _get_action_group_servers(
                         agentVersion="DRAFT",
                         actionGroupId=ag_id,
                     )["agentActionGroup"]
-                except Exception:
+                except Exception as exc:  # noqa: BLE001 - tools and Lambda packages of this group are unknown
+                    warnings.append(aws_read_warning("bedrock-action-groups", exc))
                     continue
 
                 executor = detail.get("actionGroupExecutor", {})
@@ -568,8 +561,8 @@ def _get_action_group_servers(
                 )
                 servers.append(server)
 
-    except Exception as exc:
-        warnings.append(f"Could not list action groups for agent {agent_id}: {exc}")
+    except Exception as exc:  # noqa: BLE001 - classified, fixed-text coverage gap
+        warnings.append(aws_read_warning("bedrock-action-groups", exc))
 
     return servers
 
@@ -729,8 +722,8 @@ def _discover_eks_images(
         paginator = eks_client.get_paginator("list_clusters")
         for page in paginator.paginate():
             cluster_names.extend(page.get("clusters", []))
-    except Exception as exc:
-        return [], [f"Could not list EKS clusters: {exc}"]
+    except Exception as exc:  # noqa: BLE001 - classified, fixed-text coverage gap
+        return [], [aws_read_warning("eks-clusters", exc)]
 
     for cluster_name in cluster_names:
         try:
@@ -781,7 +774,7 @@ def _discover_eks_images(
 
         except K8sDiscoveryError as exc:
             warnings.append(
-                f"Could not discover images in EKS cluster '{cluster_name}': {exc}. "
+                f"{aws_read_warning('eks-pods', exc)} "
                 f"Ensure kubectl context is configured (aws eks update-kubeconfig --name {cluster_name})"
             )
 
@@ -820,8 +813,8 @@ def _discover_step_functions(
                 definition_str = detail.get("definition", "{}")
                 definition = json.loads(definition_str)
                 role_arn = detail.get("roleArn", "")
-            except Exception as exc:
-                warnings.append(f"Could not describe Step Function {sm_name}: {exc}")
+            except Exception as exc:  # noqa: BLE001 - one state machine must not end the listing
+                warnings.append(aws_read_warning("step-functions", exc))
                 continue
 
             resource_arns = _extract_sfn_task_resources(definition)
