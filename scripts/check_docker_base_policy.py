@@ -65,7 +65,7 @@ class BasePolicy:
 POLICY: dict[str, BasePolicy] = {
     "Dockerfile": BasePolicy(
         image="python",
-        expected_tags=("3.14.8-alpine3.23",),
+        expected_tags=("3.14.10-alpine3.23",),
         rationale="Stable Alpine runtime for the packaged CLI/API image; digest pin keeps Dependabot bumps reviewable.",
     ),
     "ui/Dockerfile": BasePolicy(
@@ -75,42 +75,42 @@ POLICY: dict[str, BasePolicy] = {
     ),
     "integrations/glama/Dockerfile": BasePolicy(
         image="python",
-        expected_tags=("3.12.15-slim",),
+        expected_tags=("3.12.16-slim",),
         rationale="Debian slim avoids Alpine musl-incompatibility for cryptography/lxml wheels.",
     ),
     "deploy/docker/Dockerfile.mcp": BasePolicy(
         image="python",
-        expected_tags=("3.12.15-slim",),
+        expected_tags=("3.12.16-slim",),
         rationale="MCP-over-stdio runtime; Debian slim matches glama base for parity.",
     ),
     "deploy/docker/Dockerfile.runtime": BasePolicy(
         image="python",
-        expected_tags=("3.12.15-slim",),
+        expected_tags=("3.12.16-slim",),
         rationale="Generic runtime image; Debian slim chosen for wheel compatibility.",
     ),
     "deploy/docker/Dockerfile.sse": BasePolicy(
         image="python",
-        expected_tags=("3.12.15-slim",),
+        expected_tags=("3.12.16-slim",),
         rationale="MCP-over-SSE runtime; Debian slim matches the rest of deploy/docker/.",
     ),
     "deploy/docker/Dockerfile.public-mcp": BasePolicy(
         image="python",
-        expected_tags=("3.12.15-slim",),
+        expected_tags=("3.12.16-slim",),
         rationale="Public lookup MCP server; same Debian slim base as Dockerfile.sse.",
     ),
     "deploy/docker/Dockerfile.snowpark": BasePolicy(
         image="python",
-        expected_tags=("3.11.17-slim",),
+        expected_tags=("3.11.18-slim",),
         rationale="Snowpark requires Python 3.11; held back from 3.12 for snowflake-snowpark-python compatibility.",
     ),
     "deploy/docker/Dockerfile.native-app": BasePolicy(
         image="python",
-        expected_tags=("3.11.17-slim",),
+        expected_tags=("3.11.18-slim",),
         rationale="Native App keeps the Snowpark Python 3.11 base; only its volume initializer runs before privilege reduction.",
     ),
     "deploy/docker/Dockerfile.collector": BasePolicy(
         image="python",
-        expected_tags=("3.12.15-slim",),
+        expected_tags=("3.12.16-slim",),
         rationale="Cloud-SDK collector; Debian slim for boto3/azure/google wheel compatibility (grpcio, cryptography).",
     ),
     "deploy/keycloak/Dockerfile": BasePolicy(

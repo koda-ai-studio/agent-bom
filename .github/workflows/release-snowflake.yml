@@ -223,6 +223,7 @@ jobs:
           SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
           SNOWFLAKE_ROLE: ${{ vars.SNOWFLAKE_ROLE }}
           SNOWFLAKE_WAREHOUSE: ${{ vars.SNOWFLAKE_WAREHOUSE }}
+          RELEASE_CHANNEL: ${{ inputs.release_channel }}
         run: |
           key="$RUNNER_TEMP/snowflake-release-key.p8"
           common=(--temporary-connection --account "$SNOWFLAKE_ACCOUNT" --user "$SNOWFLAKE_USER" --private-key-file "$key" --role "$SNOWFLAKE_ROLE" --warehouse "$SNOWFLAKE_WAREHOUSE")
@@ -230,7 +231,7 @@ jobs:
             --prune --recursive --validate "${common[@]}"
           snow app publish --project deploy/snowflake/native-app \
             --version "$PACKAGE_VERSION" --create-version \
-            --channel "${{ inputs.release_channel }}" "${common[@]}"
+            --channel "$RELEASE_CHANNEL" "${common[@]}"
 
       - name: Remove publisher credential
         if: always()

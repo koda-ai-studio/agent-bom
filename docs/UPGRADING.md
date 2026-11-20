@@ -1,6 +1,6 @@
-# Upgrade to 0.115.3
+# Upgrade to 0.115.4
 
-These instructions target 0.115.3 once its artifacts are published.
+These instructions target 0.115.4 once its artifacts are published.
 The source version alone does not establish package or image availability.
 
 ## Preserve configuration and evidence
@@ -26,7 +26,7 @@ agent-bom --version
 ```
 
 These commands select the latest published package. Confirm the reported
-version is 0.115.3 or a later release whose upgrade notes you have reviewed;
+version is 0.115.4 or a later release whose upgrade notes you have reviewed;
 if it remains 0.114.0 or older, this upgrade has not been applied.
 
 For a uv-managed CLI installation, use `uv tool upgrade agent-bom` after
@@ -40,6 +40,12 @@ MCP stdio and MCP HTTP images have different entrypoints and dependency sets;
 keep the image role aligned with your deployment manifest. Follow the
 [deployment guide](../site-docs/deployment/overview.md) for your selected
 profile and its migration procedure. Do not reuse the unpublished v0.112.0 tag.
+
+## Changes in 0.115.4
+
+- **OpenAI discovery.** Discovery no longer calls the retired Assistants API.
+  It inventories completed fine-tuning jobs and reports application inventory
+  as not collected.
 
 ## Changes from 0.114.0
 

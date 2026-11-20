@@ -92,7 +92,6 @@ jobs:
           git checkout "${{ steps.release.outputs.main_sha }}" -- \
             Dockerfile \
             .dockerignore \
-            deploy/docker/vendor/cpython-3.14.8 \
             deploy/docker/runtime-security-requirements.txt \
             deploy/docker/tornado-security-requirements.txt \
             .image-scan-ignore \

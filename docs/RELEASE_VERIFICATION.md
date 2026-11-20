@@ -213,11 +213,17 @@ gh attestation verify "agent_bom-${VERSION}-py3-none-any.whl" \
 ## Inspect the self-SBOM
 
 Release CI also publishes a CycloneDX SBOM for the Python environment used to
-build the release:
+build the release. Its root component is the release itself:
 
 ```bash
-jq -r '.metadata.component.name, .metadata.component.version' agent-bom-sbom.cdx.json
+jq -r '.metadata.component.name, .metadata.component.version, .metadata.component.purl' agent-bom-sbom.cdx.json
+# agent-bom
+# <version>
+# pkg:pypi/agent-bom@<version>
 ```
+
+SBOMs attached to releases up to and including 0.115.4 have no root
+component, so this prints `null` for them.
 
 You can also run `agent-bom` against that SBOM directly:
 

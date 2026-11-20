@@ -1,8 +1,8 @@
 # Agent lifecycle and retained BOM history
 
-**Availability: unreleased source preview.** The API and client methods below
-require a source checkout containing this implementation. They are not included
-in the published 0.106.1 package.
+**Availability: published since 0.107.0.** The API routes and Python client
+methods below ship in the published `agent-bom` package; the BOM profile they
+produce remains experimental.
 
 The lifecycle API retains exact per-agent scan BOMs and records operator-supplied
 logical agent → deployment → instance → run references. It is an additive

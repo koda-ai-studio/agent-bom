@@ -103,11 +103,17 @@ jobs:
         run: uv run python scripts/run_postgres_scale_evidence.py --dry-run --output /tmp/dry.json
 
       - name: Run clustered Postgres scale evidence
+        # Dispatch inputs stay data: they reach the shell through env, never
+        # pasted into the script. Scheduled runs leave them empty.
+        env:
+          INPUT_SIZES: ${{ inputs.sizes }}
+          INPUT_REPLICAS: ${{ inputs.replicas }}
+          INPUT_KINDS: ${{ inputs.kinds }}
         run: |
           set -euo pipefail
-          SIZES="${{ inputs.sizes || '1000,5000,10000' }}"
-          REPLICAS="${{ inputs.replicas || '2' }}"
-          KINDS="${{ inputs.kinds || 'audit,job_put,job_get' }}"
+          SIZES="${INPUT_SIZES:-1000,5000,10000}"
+          REPLICAS="${INPUT_REPLICAS:-2}"
+          KINDS="${INPUT_KINDS:-audit,job_put,job_get}"
           OUTPUT="docs/perf/results/postgres-scale-evidence-$(date -u +%Y-%m-%d).json"
           mkdir -p docs/perf/results
           uv run python scripts/run_postgres_scale_evidence.py \

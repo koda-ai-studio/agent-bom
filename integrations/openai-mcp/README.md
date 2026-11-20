@@ -3,6 +3,10 @@
 Two read-only lookups from [agent-bom](https://github.com/koda-ai-studio/agent-bom), on a
 public MCP server with no account or sign-in.
 
+**Status:** the server at `agent-bom-lookup.up.railway.app` is not yet deployed, so this
+plugin cannot connect yet. The authenticated hosted MCP server is a separate service and
+is not a substitute: it requires sign-in and exposes a different tool set.
+
 | Tool | Input | Returns |
 |---|---|---|
 | `check` | One package name, ecosystem and optional version | Known vulnerabilities, malicious-package advisories and fixed versions |

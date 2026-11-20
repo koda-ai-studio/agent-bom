@@ -69,7 +69,7 @@ cloaking, SVG payloads and invisible characters (`response_inspector`), plus
 cache poisoning on vector/RAG tools (`vector_db_injection`). Two profiles
 decide what happens on a detection.
 
-| | `alert` (default in 0.111.0) | `enforce` |
+| | `alert` (default) | `enforce` |
 |---|---|---|
 | Poisoned tool description | forwarded; alert | tool removed from `tools/list`; alert `action: stripped` |
 | Later call to a removed tool | forwarded | proxy and gateway reject it before the server sees it; alert `action: blocked` |
@@ -150,7 +150,7 @@ enforced ones also carry the typed result event (`data_action`
 redaction; enforcement adds no upstream text. A detector error records only the
 exception class name.
 
-The default stays `alert` in 0.111.0 so an upgrade changes no traffic. It is
+The default stays `alert` so an upgrade changes no traffic. It is
 planned to become `enforce` once detector false-positive rates have been
 measured on real catalogs and results. Pin `--injection-mode alert` now if you
 need today's behaviour after that change.

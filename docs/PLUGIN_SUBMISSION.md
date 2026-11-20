@@ -209,6 +209,12 @@ GitHub part of `check` degrades to partial coverage, which `check` reports.
    curl -s -o /dev/null -w '%{http_code}\n' $HOST/.well-known/oauth-protected-resource   # 404
    ```
 
+   Once these pass, remove the "not yet deployed" status notes from
+   `site-docs/privacy.md`, `site-docs/terms.md` and `integrations/openai-mcp/README.md`,
+   and drop `test_lookup_service_is_not_described_as_live_before_it_is_deployed` from
+   `tests/test_directory_legal_pages.py` in the same change. Until then the pages must
+   not describe the service as running.
+
 6. Verify the client address. From one machine, send 31 `tools/call` requests for
    `intel_lookup`, each with a different made-up `X-Forwarded-For` value: the 31st must
    return a rate-limit error. If it does not, set the hops to `0` and repeat. Then confirm

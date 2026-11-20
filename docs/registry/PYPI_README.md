@@ -4,9 +4,11 @@
 
 **AI supply-chain BOM: supported agents, MCP servers and AI packages, and what each one can reach.**
 
-For AppSec teams and developers who run Claude Code, Cursor, Codex or any MCP
-client: see which agents, MCP servers, tools and packages are installed, which
-are vulnerable, and what each one can reach. Local scans need no account.
+agent-bom maps the chain your AI tools create, **agent → MCP server → tool →
+package → credential**, and what each link can reach in code, cloud and data.
+For AppSec, platform and AI teams who run Claude Code, Cursor, Codex or any MCP
+client: findings are ranked by that reach on one graph that runs on your
+machine or your own infrastructure. Local scans need no account.
 [Try it in your browser](https://koda-ai-studio.github.io/agent-bom/demo/) first,
 no install.
 

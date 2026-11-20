@@ -25,7 +25,11 @@ README = ROOT / "README.md"
 # `examples/` was outside this guard, so its README taught `--no-update-db` — a
 # flag that has never existed (the real one is `--no-auto-update-db`) — and the
 # documented first-run command died at argument parsing.
-FIRST_RUN_DOCS: tuple[Path, ...] = (README, *sorted((ROOT / "examples").rglob("*.md")))
+FIRST_RUN_DOCS: tuple[Path, ...] = (
+    README,
+    ROOT / "site-docs" / "getting-started" / "start-by-role.md",
+    *sorted((ROOT / "examples").rglob("*.md")),
+)
 
 # Documentation placeholders, not literal paths.
 _PLACEHOLDER = re.compile(r"^[<$]|[<>{}*]|^\.\.\.$")

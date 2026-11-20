@@ -15,6 +15,7 @@ from rich.markup import escape
 from agent_bom.models import AIBOMReport
 from agent_bom.output.console_remediation import build_remediation_plan
 from agent_bom.output.finding_views import cve_findings
+from agent_bom.output.next_steps import graph_dashboard_command
 from agent_bom.security import sanitize_sensitive_payload
 
 TOP_FIX_LIMIT = 3
@@ -67,5 +68,9 @@ def print_top_fixes(con: Any, report: AIBOMReport, *, report_path: str, scan_tar
     con.print(
         f"  [green]→[/green] Next: open {escape(report_path)} for the full report, or run "
         f"[bold]agent-bom scan {escape(scan_target)} --remediate remediation.md[/bold] for every fix.",
+        soft_wrap=True,
+    )
+    con.print(
+        f"  [green]→[/green] See the security graph in the local dashboard: [bold]{escape(graph_dashboard_command(scan_target))}[/bold]",
         soft_wrap=True,
     )

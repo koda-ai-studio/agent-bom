@@ -1,12 +1,15 @@
 # Terms of service
 
-Last updated: 2026-11-12.
+Last updated: 2026-11-19.
 
 These terms cover the agent-bom software, its directory plugins, and the public lookup
 service at `https://agent-bom-lookup.up.railway.app` (the "lookup service"), which is
 operated by Mohamed Wagdy Saad, operating as Koda AI ("we"). Apart from the lookup service, the
 agent-bom project offers no public hosted service. Anyone else who runs agent-bom as a
 service for others is its operator and sets their own terms for that service.
+
+**Status:** the lookup service is not yet deployed; that address does not answer
+yet. The sections about it apply once it is live.
 
 ## Software and service scope
 

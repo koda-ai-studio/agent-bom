@@ -22,7 +22,9 @@ from agent_bom.output.brand_tokens import lane_title
 from agent_bom.output.cis_posture import finding_free_posture
 from agent_bom.output.compact_rows import console_group_key as _console_group_key
 from agent_bom.output.compact_rows import package_display as _package_display
+from agent_bom.output.compact_rows import print_ranking_note as _print_ranking_note
 from agent_bom.output.compact_rows import scorecard_grade_line as _scorecard_grade_line
+from agent_bom.output.compact_rows import unique_package_cves as _unique_package_cves
 from agent_bom.output.compact_text import GRADE_ECHO as _GRADE_ECHO
 from agent_bom.output.compact_text import clip as _clip
 from agent_bom.output.compact_text import compact_detail as _compact_detail
@@ -452,6 +454,7 @@ def print_compact_blast_radius(report: AIBOMReport, limit: int = 10, fixable_onl
     else:
         title = f"Findings ({shown_n})"
     print_findings_heading(title, kernel_groups)
+    _print_ranking_note(report, console)
 
     # Context-aware table layout. The vulnerability ID column has no ratio so
     # it sizes to content and never truncates — the ID is the one cell that
@@ -868,17 +871,18 @@ def print_compact_export_hint(report: AIBOMReport) -> None:
     """Single-line summary with key metrics."""
     from agent_bom.output import console
 
-    vuln_color = "red" if report.total_vulnerabilities > 0 else "green"
-    # Label this per-package CVE-instance total with an explicit scope so it
-    # never reads as the same number as the scan-lane finding count or the
-    # severity breakdown (they legitimately differ — see honest-counts). The
-    # same CVE counts once per package copy here, so "instance(s)" keeps it
-    # distinct from the deduped "package CVEs" finding total on the scan line.
+    instances = report.total_vulnerabilities
+    vuln_color = "red" if instances > 0 else "green"
+    # The same CVE counts once per package copy here; naming the unique count
+    # beside it reconciles this total with the deduplicated scan headline.
+    unique = _unique_package_cves(report)
+    noun = "instance" if instances == 1 else "instances"
+    unique_note = f" ({unique} unique)" if unique != instances else ""
     console.print(
         f"\n  {inventory_subjects(report)} · "
         f"[bold]{report.total_servers} servers[/bold] · "
         f"[bold]{report.total_packages} packages[/bold] · "
-        f"[bold {vuln_color}]{report.total_vulnerabilities} package CVE instance(s)[/bold {vuln_color}]"
+        f"[bold {vuln_color}]{instances} package CVE {noun}{unique_note}[/bold {vuln_color}]"
     )
 
 
