@@ -22,7 +22,9 @@ from agent_bom.output.brand_tokens import lane_title
 from agent_bom.output.cis_posture import finding_free_posture
 from agent_bom.output.compact_rows import console_group_key as _console_group_key
 from agent_bom.output.compact_rows import package_display as _package_display
+from agent_bom.output.compact_rows import print_ranking_note as _print_ranking_note
 from agent_bom.output.compact_rows import scorecard_grade_line as _scorecard_grade_line
+from agent_bom.output.compact_rows import unique_package_cves as _unique_package_cves
 from agent_bom.output.compact_text import GRADE_ECHO as _GRADE_ECHO
 from agent_bom.output.compact_text import clip as _clip
 from agent_bom.output.compact_text import compact_detail as _compact_detail
@@ -452,11 +454,7 @@ def print_compact_blast_radius(report: AIBOMReport, limit: int = 10, fixable_onl
     else:
         title = f"Findings ({shown_n})"
     print_findings_heading(title, kernel_groups)
-    if report.blast_radii:
-        console.print(
-            "  [dim]Ranked by contextual risk: severity, known or likely exploitation, and reach to agents, "
-            "credentials and tools, so a reachable MEDIUM can outrank an isolated HIGH.[/dim]"
-        )
+    _print_ranking_note(report, console)
 
     # Context-aware table layout. The vulnerability ID column has no ratio so
     # it sizes to content and never truncates — the ID is the one cell that
@@ -885,20 +883,6 @@ def print_compact_export_hint(report: AIBOMReport) -> None:
         f"[bold]{report.total_servers} servers[/bold] · "
         f"[bold]{report.total_packages} packages[/bold] · "
         f"[bold {vuln_color}]{instances} package CVE {noun}{unique_note}[/bold {vuln_color}]"
-    )
-
-
-def _unique_package_cves(report: AIBOMReport) -> int:
-    """Distinct advisory × package-version pairs over the copies ``total_vulnerabilities`` counts."""
-    return len(
-        {
-            (vuln.id, pkg.ecosystem, pkg.name, pkg.version)
-            for agent in report.agents
-            for server in agent.mcp_servers
-            if not server.package_binding_of
-            for pkg in server.packages
-            for vuln in pkg.vulnerabilities
-        }
     )
 
 

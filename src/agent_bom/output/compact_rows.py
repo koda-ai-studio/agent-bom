@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from agent_bom.models import AIBOMReport
 
 
 def posture_grade_line(posture_grade_badge: Any, posture_headline: Any, grade: str, score: float, summary: str, *, label: str = "") -> str:
@@ -43,3 +46,26 @@ def console_group_key(finding: Any) -> tuple[str, ...] | None:
         rule = str(evidence.get("mcp_tool_rule") or evidence.get("rule_id") or "")
         return ("mcp_schema", str(evidence.get("server_name") or ""), rule.split(":")[0], str(finding.severity))
     return None
+
+
+def unique_package_cves(report: AIBOMReport) -> int:
+    """Distinct advisory × package-version pairs over the copies ``total_vulnerabilities`` counts."""
+    return len(
+        {
+            (vuln.id, pkg.ecosystem, pkg.name, pkg.version)
+            for agent in report.agents
+            for server in agent.mcp_servers
+            if not server.package_binding_of
+            for pkg in server.packages
+            for vuln in pkg.vulnerabilities
+        }
+    )
+
+
+def print_ranking_note(report: AIBOMReport, console: Any) -> None:
+    """Explain why a reachable MEDIUM can sit above an isolated HIGH."""
+    if report.blast_radii:
+        console.print(
+            "  [dim]Ranked by contextual risk: severity, known or likely exploitation, and reach to agents, "
+            "credentials and tools, so a reachable MEDIUM can outrank an isolated HIGH.[/dim]"
+        )
