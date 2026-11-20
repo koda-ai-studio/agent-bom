@@ -79,8 +79,8 @@ def enqueue_scan_job(
         # increments and reflects queued + running work from the store.
         try:
             reconcile_scan_jobs_active(store)
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as gauge_exc:  # noqa: BLE001
+            _logger.debug("Active scan gauge reconcile failed (%s)", type(gauge_exc).__name__)
 
     if not dispatch:
         return job
@@ -184,12 +184,12 @@ def _persist_batch(store: Any, parent: ScanJob, child_jobs: list[ScanJob], tenan
             _jobs_put(child.job_id, child)
         try:
             refresh_batch_parent(parent.job_id, tenant_id=tenant_id)
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as refresh_exc:  # noqa: BLE001
+            _logger.warning("Batch parent status refresh failed job=%s (%s)", parent.job_id, type(refresh_exc).__name__)
         try:
             reconcile_scan_jobs_active(store)
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as gauge_exc:  # noqa: BLE001
+            _logger.debug("Active scan gauge reconcile failed (%s)", type(gauge_exc).__name__)
 
 
 def _dispatch_admitted_job(job: ScanJob, store: Any) -> None:
@@ -215,8 +215,8 @@ def _dispatch_admitted_job(job: ScanJob, store: Any) -> None:
         _jobs_put(job.job_id, job, compact_terminal=True)
         try:
             reconcile_scan_jobs_active(store)
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as gauge_exc:  # noqa: BLE001
+            _logger.debug("Active scan gauge reconcile failed (%s)", type(gauge_exc).__name__)
         _logger.error(
             "Scan dispatch failed job=%s: %s",
             job.job_id,

@@ -11,13 +11,12 @@ from __future__ import annotations
 
 import json
 import logging
-import sys
 from pathlib import Path
 from typing import Any, cast
 
 import click
 
-from agent_bom.cli._common import read_json_file_for_cli
+from agent_bom.cli import _gateway_serve as _serve
 from agent_bom.cli._gateway_upstream import upstream_options
 from agent_bom.cli._grouped_help import SuggestingGroup
 from agent_bom.cli._runtime_status import emit_runtime_status_strip
@@ -493,170 +492,38 @@ def serve_cmd(
     """
     logging.basicConfig(level=log_level.upper(), format="%(asctime)s %(levelname)s %(name)s %(message)s")
 
-    if enable_oauth_as:
-        raise click.ClickException(
-            "Embedded OAuth AS is unavailable until trusted client authorization is implemented. "
-            "Remove --enable-oauth-as / AGENT_BOM_GATEWAY_ENABLE_OAUTH_AS and configure bearer or API-key authentication."
-        )
-
-    if upstreams_path is None and control_plane_url is None:
-        click.echo("error: pass --upstreams or --from-control-plane (or both). See `agent-bom gateway serve --help`.", err=True)
-        sys.exit(2)
-
-    try:
-        import uvicorn
-    except ImportError:
-        click.echo(
-            "The gateway requires the 'api' extra — install with `pip install 'agent-bom[api]'`",
-            err=True,
-        )
-        sys.exit(2)
+    uvicorn = _serve.require_serve_prerequisites(enable_oauth_as, upstreams_path, control_plane_url)
 
     host, port_num = _parse_bind(bind)
-
-    if profile_enforcement != "off" and not profile_environment.strip():
-        raise click.ClickException("--profile-enforcement warn/enforce requires --profile-environment")
-    if profile_enforcement != "off" and not profile_issuer.strip():
-        raise click.ClickException("--profile-enforcement warn/enforce requires --profile-issuer")
-    if allow_profile_dev_bypass and not _is_loopback_host(host):
-        raise click.ClickException("--allow-profile-dev-bypass is permitted only with a loopback --bind")
-    if graph_reachability_bundle_poll_seconds < 0:
-        raise click.ClickException("--graph-reachability-bundle-poll-seconds must be >= 0")
-    if graph_reachability_bundle_url and graph_reachability_bundle_signing_key_file is None:
-        raise click.ClickException("--graph-reachability-bundle-url requires --graph-reachability-bundle-signing-key-file")
-    if graph_reachability_bundle_url and not graph_reachability_bundle_tenant.strip():
-        raise click.ClickException("--graph-reachability-bundle-url requires a non-empty bundle tenant")
-    graph_reachability_bundle_signing_key: bytes | None = None
-    if graph_reachability_bundle_signing_key_file is not None:
-        try:
-            graph_reachability_bundle_signing_key = graph_reachability_bundle_signing_key_file.read_bytes().strip()
-        except OSError as exc:
-            raise click.ClickException("unable to read graph reachability bundle signing key") from exc
-        if len(graph_reachability_bundle_signing_key) < 32:
-            raise click.ClickException("graph reachability bundle signing key must contain at least 32 bytes")
+    graph_reachability_bundle_signing_key = _serve.validate_profile_and_graph_options(
+        host,
+        profile_enforcement=profile_enforcement,
+        profile_environment=profile_environment,
+        profile_issuer=profile_issuer,
+        allow_profile_dev_bypass=allow_profile_dev_bypass,
+        bundle_poll_seconds=graph_reachability_bundle_poll_seconds,
+        bundle_url=graph_reachability_bundle_url,
+        bundle_tenant=graph_reachability_bundle_tenant,
+        bundle_signing_key_file=graph_reachability_bundle_signing_key_file,
+    )
 
     from agent_bom.gateway_server import GatewaySettings, build_control_plane_audit_sink, create_gateway_app
 
-    if bearer_token:
-        from agent_bom.gateway_server import _parse_gateway_token_expiry
-
-        try:
-            _parse_gateway_token_expiry(bearer_token_expires_at)
-        except ValueError as exc:
-            raise click.ClickException(
-                "--bearer-token-expires-at / AGENT_BOM_GATEWAY_BEARER_TOKEN_EXPIRES_AT must be a timezone-aware "
-                "ISO-8601 expiry in the next hour"
-            ) from exc
-    from agent_bom.gateway_upstreams import (
-        UpstreamConfigError,
-        UpstreamRegistry,
-        fetch_discovered_upstreams,
-    )
-    from agent_bom.proxy_policy import summarize_policy_bundle
-
-    registry: UpstreamRegistry | None = None
-
-    if control_plane_url is not None:
-        try:
-            payload = fetch_discovered_upstreams(control_plane_url, token=control_plane_token)
-            discovered = UpstreamRegistry.from_discovery_response(payload)
-            click.echo(f"discovered {len(discovered)} upstream(s) from {control_plane_url}: {', '.join(discovered.names()) or '(none)'}")
-            registry = discovered
-        except Exception as exc:  # noqa: BLE001 — network/DNS/permission all surface here
-            click.echo(f"control-plane discovery failed: {exc}", err=True)
-            if upstreams_path is None:
-                sys.exit(2)
-            click.echo("continuing with local --upstreams only", err=True)
-
-    if upstreams_path is not None:
-        try:
-            local = UpstreamRegistry.from_yaml(upstreams_path)
-        except UpstreamConfigError as exc:
-            click.echo(f"upstreams config error: {exc}", err=True)
-            sys.exit(2)
-        registry = local if registry is None else registry.merged_with(local)
-
-    assert registry is not None  # guarded above
-
-    policy: dict = {}
-    if policy_path is not None:
-        policy = read_json_file_for_cli(policy_path, label="policy file")
-    if policy_reload_seconds < 0:
-        raise click.ClickException("--policy-reload-seconds must be >= 0")
-    if policy_reload_seconds > 0 and policy_path is None:
-        raise click.ClickException("--policy-reload-seconds requires --policy")
-
-    if firewall_policy_reload_seconds < 0:
-        raise click.ClickException("--firewall-policy-reload-seconds must be >= 0")
-    if firewall_policy_reload_seconds > 0 and firewall_policy_path is None:
-        raise click.ClickException("--firewall-policy-reload-seconds requires --firewall-policy")
-    # Fail fast on a malformed firewall policy at startup so operators see the
-    # error immediately instead of after the gateway is up. The same loader
-    # runs on every hot reload.
-    if firewall_policy_path is not None:
-        from agent_bom.firewall import FirewallPolicyError, load_firewall_policy_file
-
-        try:
-            load_firewall_policy_file(firewall_policy_path)
-        except FirewallPolicyError as exc:
-            raise click.ClickException(f"firewall policy invalid: {exc}") from exc
+    _serve.validate_bearer_token_expiry(bearer_token, bearer_token_expires_at)
+    registry = _serve.load_upstream_registry(control_plane_url, control_plane_token, upstreams_path)
+    policy = _serve.load_runtime_policies(policy_path, policy_reload_seconds, firewall_policy_path, firewall_policy_reload_seconds)
 
     _enforce_gateway_auth_defaults(host, bearer_token, allow_insecure_no_auth)
-    if detect_visual_leaks and not allow_visual_leak_best_effort:
-        try:
-            from agent_bom.runtime.visual_leak_detector import require_visual_leak_runtime
+    _serve.require_visual_leak_runtime(detect_visual_leaks, allow_visual_leak_best_effort)
 
-            require_visual_leak_runtime()
-        except RuntimeError as exc:
-            raise click.ClickException(str(exc)) from exc
-
-    audit_sink = (
-        build_control_plane_audit_sink(
-            control_plane_url,
-            control_plane_token,
-            tenant_id=resolve_cli_tenant_id_strict(),
-            source_id="gateway",
+    audit_sink = None
+    if control_plane_url:
+        audit_sink = build_control_plane_audit_sink(
+            control_plane_url, control_plane_token, tenant_id=resolve_cli_tenant_id_strict(), source_id="gateway"
         )
-        if control_plane_url
-        else None
-    )
-
-    control_plane_policies: list[dict] = []
-    if policy_bundle_path is not None:
-        import json as _json
-
-        raw_bundle = _json.loads(policy_bundle_path.read_text(encoding="utf-8"))
-        bundle_list = raw_bundle.get("policies", []) if isinstance(raw_bundle, dict) else raw_bundle
-        if not isinstance(bundle_list, list):
-            raise click.ClickException("--policy-bundle must be a JSON list of policies or {'policies': [...]}")
-        control_plane_policies = [p for p in bundle_list if isinstance(p, dict)]
-        click.echo(f"loaded {len(control_plane_policies)} control-plane policy/policies from {policy_bundle_path}")
-
-    oauth_as = None
-
-    oidc_discovery_shim = None
-    try:
-        from agent_bom.api.oidc_discovery_shim import OIDCDiscoveryShimConfig, OIDCDiscoveryShimError
-
-        oidc_discovery_shim = OIDCDiscoveryShimConfig.from_env()
-    except OIDCDiscoveryShimError as exc:
-        raise click.ClickException(f"OIDC discovery shim config invalid: {exc}") from exc
-    if oidc_discovery_shim is not None:
-        click.echo(f"OIDC discovery shim enabled (issuer={oidc_discovery_shim.issuer})")
-
-    tool_scope_mapping: dict[str, list[str]] = {}
-    if tool_scope_map is not None:
-        raw_map = read_json_file_for_cli(tool_scope_map, label="tool scope map")
-        if not isinstance(raw_map, dict):
-            raise click.ClickException("--tool-scope-map must be a JSON object of {tool_name: [scope, ...]}")
-        for tool, scopes in raw_map.items():
-            if isinstance(scopes, str):
-                tool_scope_mapping[str(tool)] = [scopes]
-            elif isinstance(scopes, list):
-                tool_scope_mapping[str(tool)] = [str(s) for s in scopes if str(s).strip()]
-            else:
-                raise click.ClickException(f"--tool-scope-map value for {tool!r} must be a string or list of strings")
-        click.echo(f"loaded OAuth scope requirements for {len(tool_scope_mapping)} tool(s)")
+    control_plane_policies = _serve.load_policy_bundle(policy_bundle_path)
+    oidc_discovery_shim = _serve.load_oidc_discovery_shim()
+    tool_scope_mapping = _serve.load_tool_scope_map(tool_scope_map)
 
     settings = GatewaySettings(
         **upstream_options,
@@ -692,7 +559,7 @@ def serve_cmd(
         graph_reachability_bundle_signing_key=graph_reachability_bundle_signing_key,
         graph_reachability_bundle_bearer_token=control_plane_token or "",
         graph_reachability_bundle_poll_interval_seconds=graph_reachability_bundle_poll_seconds,
-        oauth_as=oauth_as,
+        oauth_as=None,
         oidc_discovery_shim=oidc_discovery_shim,
         a2a_mutual_auth_enforcement_mode=a2a_mutual_auth_enforcement,
         tool_scope_map=tool_scope_mapping,
@@ -702,62 +569,23 @@ def serve_cmd(
         injection_mode=injection_mode or "alert",
     )
     app = create_gateway_app(settings)
-    policy_summary = summarize_policy_bundle(policy)
 
-    from agent_bom.output.brand_tokens import emit_cli_runtime_summary
-
-    rows = [
-        ("Bind", f"http://{host}:{port_num}"),
-        ("Upstreams", f"{len(registry)} configured: {', '.join(registry.names()) or '(none)'}"),
-        (
-            "Auth",
-            "Bearer/API-key token required for incoming gateway clients"
-            if bearer_token
-            else (
-                "Disabled by explicit override (--allow-insecure-no-auth)"
-                if allow_insecure_no_auth
-                else "Loopback-only without transport auth; add --bearer-token before exposing remotely"
-            ),
-        ),
-        (
-            "Policy",
-            (
-                f"{policy_summary['summary']} "
-                f"Rules={policy_summary['total_rules']} "
-                f"(block={policy_summary['blocking_rules']}, warn={policy_summary['advisory_rules']})"
-            ),
-        ),
-        (
-            "Client profiles",
-            f"{profile_enforcement}"
-            + (f" ({profile_issuer.strip()} / {profile_environment.strip()})" if profile_enforcement != "off" else ""),
-        ),
-    ]
-    if detect_visual_leaks:
-        mode = "best-effort" if allow_visual_leak_best_effort else "required"
-        rows.append(("Visual leaks", f"Enabled ({mode})"))
-    if policy_path and policy_reload_seconds > 0:
-        rows.append(("Policy reload", f"Policy hot reload: enabled every {policy_reload_seconds}s from {policy_path}"))
-    if firewall_policy_path is not None:
-        from agent_bom.firewall import load_firewall_policy_file
-
-        firewall_policy = load_firewall_policy_file(firewall_policy_path)
-        rows.append(
-            (
-                "Firewall",
-                f"{len(firewall_policy.rules)} rule(s) "
-                f"(default={firewall_policy.default_decision.value}, mode={firewall_policy.enforcement_mode.value}) "
-                f"from {firewall_policy_path}",
-            )
-        )
-    if firewall_policy_path and firewall_policy_reload_seconds > 0:
-        rows.append(
-            (
-                "Firewall reload",
-                f"Firewall hot reload: enabled every {firewall_policy_reload_seconds}s from {firewall_policy_path}",
-            )
-        )
-    emit_cli_runtime_summary("agent-bom gateway", rows)
+    _serve.emit_startup_summary(
+        bind_url=f"http://{host}:{port_num}",
+        registry=registry,
+        policy=policy,
+        bearer_token=bearer_token,
+        allow_insecure_no_auth=allow_insecure_no_auth,
+        profile_enforcement=profile_enforcement,
+        profile_environment=profile_environment,
+        profile_issuer=profile_issuer,
+        detect_visual_leaks=detect_visual_leaks,
+        allow_visual_leak_best_effort=allow_visual_leak_best_effort,
+        policy_path=policy_path,
+        policy_reload_seconds=policy_reload_seconds,
+        firewall_policy_path=firewall_policy_path,
+        firewall_policy_reload_seconds=firewall_policy_reload_seconds,
+    )
     emit_runtime_status_strip("gateway", calls=0, blocked=0, last_decision="listening")
     uvicorn.run(app, host=host, port=port_num, log_level=log_level.lower(), proxy_headers=False)
 

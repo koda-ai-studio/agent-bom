@@ -791,8 +791,8 @@ async def _cleanup_tick() -> None:
         await asyncio.to_thread(_fail_stuck_running_jobs, store, now)
         await asyncio.to_thread(fail_stale_active_scan_jobs, store, timeout_seconds=_STUCK_JOB_TIMEOUT, now=now)
         await asyncio.to_thread(reconcile_scan_jobs_active, store)
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as exc:  # noqa: BLE001
+        _logger.warning("Stuck scan job reconciliation failed; will retry next sweep (%s)", type(exc).__name__)
 
 
 def _fail_stuck_running_jobs(store: Any, now: _datetime.datetime) -> None:

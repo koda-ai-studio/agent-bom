@@ -23,6 +23,8 @@ from importlib import import_module
 from pathlib import Path
 from typing import Any, Mapping, Optional
 
+import httpx
+
 from agent_bom import proxy_audit as _proxy_audit
 from agent_bom import proxy_policy as _proxy_policy
 from agent_bom.agent_identity import check_identity
@@ -314,6 +316,291 @@ def _build_firewall_client(
     return firewall_client
 
 
+@dataclass(frozen=True)
+class _SseCall:
+    """One policy-gated JSON-RPC request read from the SSE proxy's client."""
+
+    msg: dict
+    tool_name: str
+    arguments: dict
+    is_tool_call: bool
+    trace_meta: dict
+    msg_id: Any
+    payload_sha256: str
+    agent_id: Any
+
+
+def _load_sse_policy(policy_path: Optional[str]) -> Optional[dict]:
+    """Return the runtime policy (empty when unset), or None when it cannot be loaded."""
+    if not policy_path:
+        return {}
+    try:
+        from agent_bom.security import SecurityError, validate_json_file
+
+        return validate_json_file(Path(policy_path))
+    except (json.JSONDecodeError, OSError, SecurityError) as exc:
+        logger.error("Failed to load policy from %s: %s", policy_path, sanitize_text(exc))
+        return None
+
+
+def _write_stdout_message(payload: dict) -> None:
+    sys.stdout.buffer.write((json.dumps(payload) + "\n").encode())
+    sys.stdout.buffer.flush()
+
+
+class _SseProxySession:
+    """Gate client JSON-RPC from stdin, forward allowed requests, inspect responses."""
+
+    def __init__(self, url: str, policy: dict, log_file: Any, *, block_undeclared: bool, alert_webhook: Optional[str]) -> None:
+        from agent_bom.runtime.detectors import ArgumentAnalyzer, SequenceAnalyzer
+
+        self.url = url
+        self.base_url = url.rstrip("/")
+        self.policy = policy
+        self.log_file = log_file
+        self.block_undeclared = block_undeclared
+        self.alert_webhook = alert_webhook
+        self.arg_analyzer = ArgumentAnalyzer()
+        self.seq_analyzer = SequenceAnalyzer()
+        self.replay_detector = ReplayDetector()
+        self.scan_config = load_scan_config(policy) if policy else ScanConfig()
+        self.tenant_id = (os.environ.get("AGENT_BOM_TENANT_ID") or "default").strip() or "default"
+        self.declared_tools: set[str] = set()
+        self.call_counter = 0
+        self.client: Any = None
+
+    def _handle_alerts(self, alerts) -> None:  # noqa: ANN001
+        for alert in alerts:
+            alert_dict = alert.to_dict()
+            logger.warning("Runtime alert: %s", sanitize_text(alert_dict.get("message", "runtime alert")))
+            if self.log_file:
+                write_audit_record(self.log_file, alert_dict)
+                self.log_file.flush()
+            if self.alert_webhook:
+                _fire_webhook(self.alert_webhook, alert_dict)
+
+    def _scan_response(self, response: dict, subject: str) -> dict:
+        safe_response, findings = scan_jsonrpc_response(response, self.scan_config)
+        self._handle_alerts(_response_scan_alerts(findings, subject))
+        return safe_response
+
+    def _reject(self, call: _SseCall, reason: str) -> None:
+        _reject_tool_call(
+            self.log_file,
+            call.tool_name,
+            call.arguments,
+            reason,
+            payload_sha256=call.payload_sha256,
+            message_id=call.msg_id,
+            agent_id=call.agent_id,
+            tenant_id=self.tenant_id,
+        )
+
+    async def run(self, client: Any) -> None:
+        self.client = client
+        await self._discover_tools()
+        reader = await create_async_stdin_reader()
+        while True:
+            try:
+                line = await asyncio.wait_for(read_async_stdin_line(reader), timeout=120.0)
+            except asyncio.TimeoutError:
+                logger.debug("SSE proxy: client readline timed out")
+                break
+            if not line:
+                break
+            await self._handle_line(line)
+
+    async def _discover_tools(self) -> None:
+        try:
+            with proxy_span("proxy.sse_tools_list") as span:
+                if span is not None:
+                    span.set_attribute("agent_bom.proxy.upstream_url", self.base_url)
+                catalog = await fetch_http_tool_catalog(self.client, self.base_url + "/tools/list", _proxy_request_headers())
+                self.declared_tools = set(catalog.names)
+                if span is not None:
+                    span.set_attribute("agent_bom.proxy.declared_tool_count", len(self.declared_tools))
+            if not catalog.complete:
+                logger.warning("SSE proxy: tools/list pagination incomplete; %d tools declared so far", len(self.declared_tools))
+            logger.info("SSE proxy: discovered %d declared tools", len(self.declared_tools))
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("SSE proxy: could not fetch tools/list from %s: %s", self.url, sanitize_text(exc))
+
+    async def _handle_line(self, line: bytes) -> None:
+        if len(line) > _MAX_MESSAGE_BYTES:
+            logger.warning("SSE proxy: oversized message from client (%d bytes) — dropped", len(line))
+            return
+        line_str = line.decode("utf-8", errors="replace")
+        msg = parse_jsonrpc(line_str)
+        policy_subject = policy_subject_from_message(msg) if msg else None
+        if not msg or not policy_subject:
+            await self._pass_through(msg, line_str)
+            return
+        tool_name, arguments = policy_subject
+        is_tool_call = is_tools_call(msg)
+        trace_meta = _extract_jsonrpc_trace_meta(msg)
+        msg_id = msg.get("id")
+        p_hash = compute_payload_hash(msg)
+        agent_id, identity_block_reason = check_identity(msg, self.policy)
+        call = _SseCall(msg, tool_name, arguments, is_tool_call, trace_meta, msg_id, p_hash, agent_id)
+        await self._gate_and_forward(call, identity_block_reason)
+
+    async def _pass_through(self, msg: Optional[dict], line_str: str) -> None:
+        """Forward non-gated messages (initialize, notifications, ...) unchanged."""
+        try:
+            fwd = await self.client.post(
+                self.base_url + "/message",
+                json=msg or json.loads(line_str),
+                timeout=30,
+                headers=_proxy_request_headers(),
+            )
+            _write_stdout_message(self._scan_response(fwd.json(), str((msg or {}).get("method", "unknown"))))
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("SSE proxy: pass-through failed: %s", sanitize_text(exc))
+
+    async def _gate_and_forward(self, call: _SseCall, identity_block_reason: Any) -> None:
+        reason = self._admission_block_reason(call, identity_block_reason)
+        if reason is not None:
+            self._reject(call, reason)
+            return
+        if await self._firewall_blocked(call):
+            return
+        reason = self._analysis_block_reason(call)
+        if reason is not None:
+            self._reject(call, reason)
+            return
+        if self.log_file:
+            log_tool_call(
+                self.log_file,
+                call.tool_name,
+                call.arguments,
+                "allowed",
+                payload_sha256=call.payload_sha256,
+                message_id=call.msg_id,
+                agent_id=call.agent_id,
+                tenant_id=self.tenant_id,
+            )  # type: ignore[arg-type]
+        self.call_counter += 1
+        response_data = await self._forward(call)
+        if response_data is not None:
+            self._emit_inspected_response(call, response_data)
+
+    def _admission_block_reason(self, call: _SseCall, identity_block_reason: Any) -> Optional[str]:
+        """Identity, replay, undeclared-tool and policy gates, in that order; None when admitted."""
+        if identity_block_reason:
+            return identity_block_reason
+        if self.replay_detector.check(call.msg):
+            return "Replayed payload detected"
+        undeclared_reason = undeclared_tool_block_reason(self.block_undeclared and call.is_tool_call, self.declared_tools, call.tool_name)
+        if undeclared_reason:
+            return undeclared_reason
+        if self.policy:
+            allowed, reason = check_policy(self.policy, call.tool_name, call.arguments)
+            if not allowed:
+                return reason
+        return None
+
+    async def _firewall_blocked(self, call: _SseCall) -> bool:
+        # Same inter-agent firewall hook as the stdio path; the SSE proxy carries no ProxyMetrics.
+        fw_target_id = _firewall_target_for_proxy()
+        if _firewall_evaluator is None or not fw_target_id:
+            return False
+        fw_outcome = await _maybe_block_on_firewall(
+            source_agent=call.agent_id or "unknown",
+            target_agent=fw_target_id,
+            tool_name=call.tool_name,
+            arguments=call.arguments,
+            log_file=self.log_file,
+            payload_sha256=call.payload_sha256,
+            message_id=call.msg_id,
+            tenant_id=self.tenant_id,
+        )
+        if fw_outcome is None:
+            return False
+        _write_stdout_message(make_error_response(call.msg_id, -32600, fw_outcome))
+        return True
+
+    def _analysis_block_reason(self, call: _SseCall) -> Optional[str]:
+        """Argument, sequence and inline-content analysis; a reason only when the scanner enforces a block."""
+        self._handle_alerts(self.arg_analyzer.check(call.tool_name, call.arguments))
+        self._handle_alerts(self.seq_analyzer.record(call.tool_name))
+        if not self.scan_config.enabled:
+            return None
+        from agent_bom.runtime.detectors import Alert, AlertSeverity
+
+        s_results = scan_tool_call(call.tool_name, call.arguments, self.scan_config)
+        for sr in s_results:
+            alert = Alert(
+                detector=f"scanner:{sr.scanner}",
+                severity=AlertSeverity.CRITICAL
+                if sr.severity == "critical"
+                else (AlertSeverity.HIGH if sr.severity == "high" else AlertSeverity.MEDIUM),
+                message=f"Inline scan: {sr.scanner}/{sr.rule_id} in tool '{call.tool_name}'",
+                details={"rule_id": sr.rule_id, "excerpt": sr.excerpt, "confidence": sr.confidence},
+            )
+            self._handle_alerts([alert])
+        if self.scan_config.mode == "enforce" and any(sr.blocked for sr in s_results):
+            first = next(sr for sr in s_results if sr.blocked)
+            return f"Blocked by inline scanner: {first.scanner}/{first.rule_id}"
+        return None
+
+    async def _forward(self, call: _SseCall) -> Optional[dict]:
+        """POST the gated request upstream; tool calls use /tools/call, other methods keep /message."""
+        meta = call.trace_meta
+        try:
+            span_name = "proxy.sse_tools_call" if call.is_tool_call else "proxy.sse_gated_message"
+            with proxy_span(span_name) as span:
+                if span is not None:
+                    self._annotate_forward_span(span, call)
+                forwarded_message = _inject_jsonrpc_trace_meta(
+                    call.msg, traceparent=meta.get("traceparent"), tracestate=meta.get("tracestate"), baggage=meta.get("baggage")
+                )
+                forward_path = "/tools/call" if call.is_tool_call else "/message"
+                resp = await self.client.post(
+                    self.base_url + forward_path,
+                    json=forwarded_message,
+                    timeout=30,
+                    headers=_proxy_request_headers(
+                        traceparent=meta.get("traceparent"), tracestate=meta.get("tracestate"), baggage=meta.get("baggage")
+                    ),
+                )
+            resp.raise_for_status()
+            return resp.json()
+        except httpx.HTTPStatusError as exc:
+            status = exc.response.status_code
+            logger.warning("SSE proxy: server returned %d for %s: %s", status, call.tool_name, sanitize_text(exc))
+            _write_stdout_message(make_error_response(call.msg_id, -32603, f"Upstream server error: {status}"))
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("SSE proxy: connection error for %s: %s", call.tool_name, sanitize_text(exc))
+            _write_stdout_message(make_error_response(call.msg_id, -32603, "Upstream connection error"))
+        return None
+
+    def _annotate_forward_span(self, span: Any, call: _SseCall) -> None:
+        method = call.msg.get("method", "unknown")
+        span.set_attribute("agent_bom.proxy.subject", call.tool_name)
+        span.set_attribute("agent_bom.proxy.method", method)
+        span.set_attribute("agent_bom.proxy.call_counter", self.call_counter)
+        set_langfuse_runtime_attributes(
+            span,
+            surface="proxy",
+            tenant_id=self.tenant_id,
+            method=str(method),
+            tool_name=call.tool_name,
+            decision="allowed",
+            agent_id=call.agent_id,
+            trace_id=str(call.trace_meta.get("trace_id") or ""),
+            arguments=call.arguments,
+        )
+
+    def _emit_inspected_response(self, call: _SseCall, response_data: dict) -> None:
+        resp_text = json.dumps(response_data.get("result", response_data))
+        from agent_bom.runtime.detectors import CredentialLeakDetector, ResponseInspector
+
+        self._handle_alerts(CredentialLeakDetector().check(call.tool_name, resp_text))
+        self._handle_alerts(ResponseInspector().check(call.tool_name, resp_text))
+        response_data = self._scan_response(response_data, call.tool_name)
+        _write_stdout_message(_stitch_jsonrpc_trace_meta(response_data, call.trace_meta))
+
+
 async def _proxy_sse_server(
     url: str,
     policy_path: Optional[str] = None,
@@ -338,314 +625,17 @@ async def _proxy_sse_server(
     Returns:
         0 on clean shutdown, 1 on connection or policy load error.
     """
-    import httpx
-
-    from agent_bom.runtime.detectors import ArgumentAnalyzer, SequenceAnalyzer
-
-    # Load policy
-    policy: dict = {}
-    if policy_path:
-        try:
-            from agent_bom.security import SecurityError, validate_json_file
-
-            policy = validate_json_file(Path(policy_path))
-        except (json.JSONDecodeError, OSError, SecurityError) as exc:
-            logger.error("Failed to load policy from %s: %s", policy_path, sanitize_text(exc))
-            return 1
-    if not _injection_protection.sse_policy_supported(policy, logger):
+    policy = _load_sse_policy(policy_path)
+    if policy is None or not _injection_protection.sse_policy_supported(policy, logger):
         return 1
-
-    # Open audit log
-    log_file = None
-    if log_path:
-        log_file = RotatingAuditLog(log_path)
-
-    arg_analyzer = ArgumentAnalyzer()
-    seq_analyzer = SequenceAnalyzer()
-    replay_detector = ReplayDetector()
-    scan_config = load_scan_config(policy) if policy else ScanConfig()
-    control_plane_tenant_id = (os.environ.get("AGENT_BOM_TENANT_ID") or "default").strip() or "default"
-
-    def _handle_alerts_sse(alerts, log_f=None):
-        for alert in alerts:
-            alert_dict = alert.to_dict()
-            logger.warning("Runtime alert: %s", sanitize_text(alert_dict.get("message", "runtime alert")))
-            if log_f:
-                write_audit_record(log_f, alert_dict)
-                log_f.flush()
-            if alert_webhook:
-                _fire_webhook(alert_webhook, alert_dict)
-
-    def _scan_response_sse(response: dict, subject: str) -> dict:
-        safe_response, findings = scan_jsonrpc_response(response, scan_config)
-        _handle_alerts_sse(_response_scan_alerts(findings, subject), log_file)
-        return safe_response
-
-    declared_tools: set[str] = set()
-
+    log_file = RotatingAuditLog(log_path) if log_path else None
+    session = _SseProxySession(url, policy, log_file, block_undeclared=block_undeclared, alert_webhook=alert_webhook)
     try:
         async with httpx.AsyncClient(timeout=30) as client:
-            # Fetch tool list from the remote server
-            try:
-                span_cm = proxy_span("proxy.sse_tools_list")
-                with span_cm as span:
-                    if span is not None:
-                        span.set_attribute("agent_bom.proxy.upstream_url", url.rstrip("/"))
-
-                    catalog = await fetch_http_tool_catalog(client, url.rstrip("/") + "/tools/list", _proxy_request_headers())
-                    declared_tools = set(catalog.names)
-                    if span is not None:
-                        span.set_attribute("agent_bom.proxy.declared_tool_count", len(declared_tools))
-                if not catalog.complete:
-                    logger.warning("SSE proxy: tools/list pagination incomplete; %d tools declared so far", len(declared_tools))
-                logger.info("SSE proxy: discovered %d declared tools", len(declared_tools))
-            except Exception as exc:  # noqa: BLE001
-                logger.warning("SSE proxy: could not fetch tools/list from %s: %s", url, sanitize_text(exc))
-
-            # Read JSON-RPC from stdin and forward through protection engine
-            reader = await create_async_stdin_reader()
-
-            call_counter = 0
-            while True:
-                try:
-                    line = await asyncio.wait_for(read_async_stdin_line(reader), timeout=120.0)
-                except asyncio.TimeoutError:
-                    logger.debug("SSE proxy: client readline timed out")
-                    break
-                if not line:
-                    break
-
-                if len(line) > _MAX_MESSAGE_BYTES:
-                    logger.warning("SSE proxy: oversized message from client (%d bytes) — dropped", len(line))
-                    continue
-
-                line_str = line.decode("utf-8", errors="replace")
-                msg = parse_jsonrpc(line_str)
-
-                policy_subject = policy_subject_from_message(msg) if msg else None
-                if not msg or not policy_subject:
-                    # Non-tool-call messages (initialize, notifications, etc.) — pass through
-                    try:
-                        fwd = await client.post(
-                            url.rstrip("/") + "/message",
-                            json=msg or json.loads(line_str),
-                            timeout=30,
-                            headers=_proxy_request_headers(),
-                        )
-                        response_data = _scan_response_sse(fwd.json(), str((msg or {}).get("method", "unknown")))
-                        sys.stdout.buffer.write((json.dumps(response_data) + "\n").encode())
-                        sys.stdout.buffer.flush()
-                    except Exception as exc:  # noqa: BLE001
-                        logger.debug("SSE proxy: pass-through failed: %s", sanitize_text(exc))
-                    continue
-
-                tool_name, arguments = policy_subject
-                is_tool_call = is_tools_call(msg)
-                request_trace_meta = _extract_jsonrpc_trace_meta(msg)
-                msg_id = msg.get("id")
-                p_hash = compute_payload_hash(msg)
-                agent_id, identity_block_reason = check_identity(msg, policy)
-
-                if identity_block_reason:
-                    _reject_tool_call(
-                        log_file,
-                        tool_name,
-                        arguments,
-                        identity_block_reason,
-                        payload_sha256=p_hash,
-                        message_id=msg_id,
-                        agent_id=agent_id,
-                        tenant_id=control_plane_tenant_id,
-                    )
-                    continue
-
-                if replay_detector.check(msg):
-                    reason = "Replayed payload detected"
-                    _reject_tool_call(
-                        log_file,
-                        tool_name,
-                        arguments,
-                        reason,
-                        payload_sha256=p_hash,
-                        message_id=msg_id,
-                        agent_id=agent_id,
-                        tenant_id=control_plane_tenant_id,
-                    )
-                    continue
-
-                undeclared_reason = undeclared_tool_block_reason(block_undeclared and is_tool_call, declared_tools, tool_name)
-                if undeclared_reason:
-                    _reject_tool_call(
-                        log_file,
-                        tool_name,
-                        arguments,
-                        undeclared_reason,
-                        payload_sha256=p_hash,
-                        message_id=msg_id,
-                        agent_id=agent_id,
-                        tenant_id=control_plane_tenant_id,
-                    )
-                    continue
-
-                if policy:
-                    allowed, reason = check_policy(policy, tool_name, arguments)
-                    if not allowed:
-                        _reject_tool_call(
-                            log_file,
-                            tool_name,
-                            arguments,
-                            reason,
-                            payload_sha256=p_hash,
-                            message_id=msg_id,
-                            agent_id=agent_id,
-                            tenant_id=control_plane_tenant_id,
-                        )
-                        continue
-
-                # Inter-agent firewall (#982 PR 3) — same hook as the stdio path.
-                # SSE proxy doesn't carry a ProxyMetrics object so metrics arg is omitted.
-                fw_target_id = _firewall_target_for_proxy()
-                if _firewall_evaluator is not None and fw_target_id:
-                    fw_outcome = await _maybe_block_on_firewall(
-                        source_agent=agent_id or "unknown",
-                        target_agent=fw_target_id,
-                        tool_name=tool_name,
-                        arguments=arguments,
-                        log_file=log_file,
-                        payload_sha256=p_hash,
-                        message_id=msg_id,
-                        tenant_id=control_plane_tenant_id,
-                    )
-                    if fw_outcome is not None:
-                        error_resp = make_error_response(msg_id, -32600, fw_outcome)
-                        sys.stdout.buffer.write((json.dumps(error_resp) + "\n").encode())
-                        sys.stdout.buffer.flush()
-                        continue
-
-                # Argument analysis
-                arg_alerts = arg_analyzer.check(tool_name, arguments)
-                _handle_alerts_sse(arg_alerts, log_file)
-
-                # Sequence analysis
-                seq_alerts = seq_analyzer.record(tool_name)
-                _handle_alerts_sse(seq_alerts, log_file)
-
-                # Inline content scanning
-                if scan_config.enabled:
-                    from agent_bom.runtime.detectors import Alert, AlertSeverity
-
-                    s_results = scan_tool_call(tool_name, arguments, scan_config)
-                    for sr in s_results:
-                        alert = Alert(
-                            detector=f"scanner:{sr.scanner}",
-                            severity=AlertSeverity.CRITICAL
-                            if sr.severity == "critical"
-                            else (AlertSeverity.HIGH if sr.severity == "high" else AlertSeverity.MEDIUM),
-                            message=f"Inline scan: {sr.scanner}/{sr.rule_id} in tool '{tool_name}'",
-                            details={"rule_id": sr.rule_id, "excerpt": sr.excerpt, "confidence": sr.confidence},
-                        )
-                        _handle_alerts_sse([alert], log_file)
-                    if scan_config.mode == "enforce" and any(sr.blocked for sr in s_results):
-                        first = next(sr for sr in s_results if sr.blocked)
-                        reason = f"Blocked by inline scanner: {first.scanner}/{first.rule_id}"
-                        _reject_tool_call(
-                            log_file,
-                            tool_name,
-                            arguments,
-                            reason,
-                            payload_sha256=p_hash,
-                            message_id=msg_id,
-                            agent_id=agent_id,
-                            tenant_id=control_plane_tenant_id,
-                        )
-                        continue
-
-                if log_file:
-                    log_tool_call(
-                        log_file,
-                        tool_name,
-                        arguments,
-                        "allowed",
-                        payload_sha256=p_hash,
-                        message_id=msg_id,
-                        agent_id=agent_id,
-                        tenant_id=control_plane_tenant_id,
-                    )  # type: ignore[arg-type]
-
-                # Forward the gated JSON-RPC request to the remote SSE/HTTP
-                # server. Tool calls use the compatibility /tools/call path;
-                # resources/prompts/sampling/extension methods retain their
-                # original method and go through the generic /message path.
-                call_counter += 1
-                try:
-                    span_name = "proxy.sse_tools_call" if is_tool_call else "proxy.sse_gated_message"
-                    span_cm = proxy_span(span_name)
-                    with span_cm as span:
-                        if span is not None:
-                            span.set_attribute("agent_bom.proxy.subject", tool_name)
-                            span.set_attribute("agent_bom.proxy.method", msg.get("method", "unknown"))
-                            span.set_attribute("agent_bom.proxy.call_counter", call_counter)
-                            set_langfuse_runtime_attributes(
-                                span,
-                                surface="proxy",
-                                tenant_id=control_plane_tenant_id,
-                                method=str(msg.get("method", "unknown")),
-                                tool_name=tool_name,
-                                decision="allowed",
-                                agent_id=agent_id,
-                                trace_id=str(request_trace_meta.get("trace_id") or ""),
-                                arguments=arguments,
-                            )
-                        forwarded_message = _inject_jsonrpc_trace_meta(
-                            msg,
-                            traceparent=request_trace_meta.get("traceparent"),
-                            tracestate=request_trace_meta.get("tracestate"),
-                            baggage=request_trace_meta.get("baggage"),
-                        )
-                        forward_path = "/tools/call" if is_tool_call else "/message"
-                        resp = await client.post(
-                            url.rstrip("/") + forward_path,
-                            json=forwarded_message,
-                            timeout=30,
-                            headers=_proxy_request_headers(
-                                traceparent=request_trace_meta.get("traceparent"),
-                                tracestate=request_trace_meta.get("tracestate"),
-                                baggage=request_trace_meta.get("baggage"),
-                            ),
-                        )
-                    resp.raise_for_status()
-                    response_data = resp.json()
-                except httpx.HTTPStatusError as exc:
-                    logger.warning("SSE proxy: server returned %d for %s: %s", exc.response.status_code, tool_name, sanitize_text(exc))
-                    error_resp = make_error_response(msg_id, -32603, f"Upstream server error: {exc.response.status_code}")
-                    sys.stdout.buffer.write((json.dumps(error_resp) + "\n").encode())
-                    sys.stdout.buffer.flush()
-                    continue
-                except Exception as exc:  # noqa: BLE001
-                    logger.warning("SSE proxy: connection error for %s: %s", tool_name, sanitize_text(exc))
-                    error_resp = make_error_response(msg_id, -32603, "Upstream connection error")
-                    sys.stdout.buffer.write((json.dumps(error_resp) + "\n").encode())
-                    sys.stdout.buffer.flush()
-                    continue
-
-                # Process response through protection engine
-                resp_text = json.dumps(response_data.get("result", response_data))
-                from agent_bom.runtime.detectors import CredentialLeakDetector, ResponseInspector
-
-                cred_alerts = CredentialLeakDetector().check(tool_name, resp_text)
-                _handle_alerts_sse(cred_alerts, log_file)
-                ri_alerts = ResponseInspector().check(tool_name, resp_text)
-                _handle_alerts_sse(ri_alerts, log_file)
-
-                response_data = _scan_response_sse(response_data, tool_name)
-                response_data = _stitch_jsonrpc_trace_meta(response_data, request_trace_meta)
-                sys.stdout.buffer.write((json.dumps(response_data) + "\n").encode())
-                sys.stdout.buffer.flush()
-
+            await session.run(client)
     finally:
         if log_file:
             log_file.close()
-
     return 0
 
 

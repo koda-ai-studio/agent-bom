@@ -339,8 +339,8 @@ def _begin_job(job: ScanJob, lock: threading.Lock) -> bool:
         return True
     try:
         _get_store().put(job)
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as exc:  # noqa: BLE001
+        _logger.warning("Failed to persist cancelled scan job=%s (%s)", job.job_id, type(exc).__name__)
     _jobs_put(job.job_id, job, compact_terminal=True)
     return False
 
@@ -725,8 +725,8 @@ def _record_completion_metrics(store: Any, terminal_status: JobStatus) -> None:
 
         reconcile_scan_jobs_active(store)
         _api_metrics.record_scan_completion(str(terminal_status))
-    except Exception:  # noqa: BLE001  - metrics must never break the scan path
-        pass
+    except Exception as exc:  # noqa: BLE001  - metrics must never break the scan path
+        _logger.debug("Scan completion metrics update failed (%s)", type(exc).__name__)
 
 
 def _record_adoption(job: ScanJob, terminal_status: JobStatus) -> None:

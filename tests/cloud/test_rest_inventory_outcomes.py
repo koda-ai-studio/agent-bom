@@ -3,6 +3,7 @@
 import httpx
 import pytest
 
+from agent_bom import http_client
 from agent_bom.cloud import crusoe, lambda_labs, vastai
 
 PROVIDERS = [(lambda_labs, "lambda", {"data": []}), (vastai, "vastai", {"instances": []}), (crusoe, "crusoe", {"items": []})]
@@ -14,7 +15,7 @@ def test_http_failure_has_fixed_typed_warning(monkeypatch, module, provider, emp
     response = httpx.Response(
         status, json={"error": "private-diagnostic-marker"}, request=httpx.Request("GET", "https://example.test/private-diagnostic-marker")
     )
-    monkeypatch.setattr(module.http_client, "sync_get", lambda *a, **kw: response)
+    monkeypatch.setattr(http_client, "sync_get", lambda *a, **kw: response)
     agents, warnings = module.discover(api_key="fixture")
     assert agents == []
     assert len(warnings) == 1
@@ -26,7 +27,7 @@ def test_http_failure_has_fixed_typed_warning(monkeypatch, module, provider, emp
 @pytest.mark.parametrize("module,provider,empty", PROVIDERS)
 def test_authorized_empty_inventory_has_no_warning(monkeypatch, module, provider, empty):
     response = httpx.Response(200, json=empty, request=httpx.Request("GET", "https://example.test"))
-    monkeypatch.setattr(module.http_client, "sync_get", lambda *a, **kw: response)
+    monkeypatch.setattr(http_client, "sync_get", lambda *a, **kw: response)
     assert module.discover(api_key="fixture") == ([], [])
 
 
@@ -34,7 +35,7 @@ def test_authorized_empty_inventory_has_no_warning(monkeypatch, module, provider
 @pytest.mark.parametrize("payload", [{}, {"error": "private-diagnostic-marker"}, None, {"data": None, "instances": None, "items": None}])
 def test_invalid_inventory_is_incomplete(monkeypatch, module, provider, empty, payload):
     response = httpx.Response(200, json=payload, request=httpx.Request("GET", "https://example.test"))
-    monkeypatch.setattr(module.http_client, "sync_get", lambda *a, **kw: response)
+    monkeypatch.setattr(http_client, "sync_get", lambda *a, **kw: response)
     agents, warnings = module.discover(api_key="fixture")
     assert agents == []
     assert len(warnings) == 1
@@ -44,7 +45,7 @@ def test_invalid_inventory_is_incomplete(monkeypatch, module, provider, empty, p
 
 @pytest.mark.parametrize("module,provider,empty", PROVIDERS)
 def test_exhausted_transport_is_incomplete(monkeypatch, module, provider, empty):
-    monkeypatch.setattr(module.http_client, "sync_get", lambda *a, **kw: None)
+    monkeypatch.setattr(http_client, "sync_get", lambda *a, **kw: None)
     agents, warnings = module.discover(api_key="fixture")
     assert agents == []
     assert warnings[0].startswith(f"{provider}:instances:unavailable:")
@@ -55,7 +56,7 @@ def test_valid_inventory_survives_later_malformed_record(monkeypatch, module, pr
     key = next(iter(empty))
     payload = {key: [{"id": "fixture-id", "name": "fixture-instance"}, None]}
     response = httpx.Response(200, json=payload, request=httpx.Request("GET", "https://example.test"))
-    monkeypatch.setattr(module.http_client, "sync_get", lambda *a, **kw: response)
+    monkeypatch.setattr(http_client, "sync_get", lambda *a, **kw: response)
     agents, warnings = module.discover(api_key="fixture")
     assert len(agents) == 1
     assert "fixture-id" in agents[0].config_path
@@ -70,7 +71,7 @@ def test_offline_inventory_stays_warning_bearing(monkeypatch, module, provider, 
     def request(*args, **kwargs):
         raise OfflineModeError("fixture offline")
 
-    monkeypatch.setattr(module.http_client, "sync_get", request)
+    monkeypatch.setattr(http_client, "sync_get", request)
     agents, warnings = module.discover(api_key="fixture")
     assert agents == []
     assert warnings[0].startswith(f"{provider}:instances:unavailable:")

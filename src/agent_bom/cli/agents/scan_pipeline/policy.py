@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import time as _time
 from pathlib import Path
 
@@ -9,6 +10,8 @@ import click
 
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.state import ScanState
+
+logger = logging.getLogger(__name__)
 
 
 def _run_ai_enrichment(opts: ScanOptions, st: ScanState) -> None:
@@ -242,9 +245,9 @@ def _stamp_reachability(opts: ScanOptions, st: ScanState) -> None:
         # stamped rows onto them so the JSON `findings[]` view agrees with
         # `blast_radius[]`, CSV, Parquet, and SARIF.
         resync_cve_findings_from_blast_radii(st.report.findings, st.blast_radii)
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
         # Reachability is best-effort enrichment — don't let it fail the scan.
-        pass
+        logger.warning("Reachability enrichment skipped; findings keep unassessed reachability (%s)", type(exc).__name__)
 
 
 def _generate_vex(opts: ScanOptions, st: ScanState) -> None:

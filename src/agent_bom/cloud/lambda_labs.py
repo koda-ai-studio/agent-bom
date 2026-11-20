@@ -11,12 +11,11 @@ from __future__ import annotations
 import logging
 import os
 
-from agent_bom import http_client
 from agent_bom.discovery_envelope import RedactionStatus, ScanMode, attach_envelope_to_agents
 from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, TransportType
 
-from .base import CloudDiscoveryError
-from .collection_errors import COLLECTION_ERRORS, collection_warning, inventory_list
+from .collection_errors import inventory_list
+from .gpu_api import bearer_json_get, collect_gpu_inventory, missing_api_key_warning
 from .normalization import build_cloud_origin, build_package_purl
 
 logger = logging.getLogger(__name__)
@@ -39,15 +38,7 @@ _GPU_FAMILIES: dict[str, str] = {
 
 
 def _lambda_get(path: str, api_key: str) -> dict | list:
-    resp = http_client.sync_get(
-        f"{_API_BASE}{path}",
-        timeout=_API_TIMEOUT,
-        headers={"Authorization": f"Bearer {api_key}"},
-    )
-    if resp is None:
-        raise CloudDiscoveryError("Lambda Labs: request failed after retries")
-    resp.raise_for_status()
-    return resp.json()
+    return bearer_json_get(_API_BASE, path, api_key, label="Lambda Labs", timeout=_API_TIMEOUT)
 
 
 def _instance_agent(inst: dict) -> Agent:
@@ -116,20 +107,13 @@ def discover(
     """
     resolved_key = api_key or os.environ.get("LAMBDA_API_KEY", "")
     if not resolved_key:
-        return [], ["LAMBDA_API_KEY not set. Provide --lambda-api-key or set the LAMBDA_API_KEY env var."]
+        return [], [missing_api_key_warning("LAMBDA_API_KEY", "--lambda-api-key")]
 
-    agents: list[Agent] = []
-    warnings: list[str] = []
-
-    try:
-        instances = _lambda_get("/instances", resolved_key)
-        instances = inventory_list(instances, "data")
-
-        for inst in instances:
-            agents.append(_instance_agent(inst))
-
-    except COLLECTION_ERRORS as exc:
-        warnings.append(collection_warning("lambda", "instances", exc))
+    agents, warnings = collect_gpu_inventory(
+        "lambda",
+        lambda: inventory_list(_lambda_get("/instances", resolved_key), "data"),
+        _instance_agent,
+    )
 
     scope = tuple(f"lambda:region/{r}" for r in {a.metadata.get("region", "") for a in agents} if r)
     attach_envelope_to_agents(
