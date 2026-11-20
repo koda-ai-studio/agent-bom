@@ -64,6 +64,7 @@ jobs:
       alpine_pr: ${{ steps.classify.outputs.alpine_pr }}
       native_image: ${{ steps.classify.outputs.native_image }}
       mcp_images: ${{ steps.classify.outputs.mcp_images }}
+      api_image: ${{ steps.classify.outputs.api_image }}
       compose: ${{ steps.classify.outputs.compose }}
       docs: ${{ steps.classify.outputs.docs }}
       docs_only: ${{ steps.classify.outputs.docs_only }}
@@ -165,6 +166,13 @@ jobs:
           if printf '%s\n' "$dependency_changed" | grep -E '^(deploy/docker/Dockerfile\.(mcp|sse|public-mcp)$|src/agent_bom/(mcp_|mcp_tools/|cli/_server)|scripts/smoke_mcp_image\.py$|pyproject\.toml$|uv\.lock$|\.github/workflows/(ci|publish-mcp)\.yml$)' > /dev/null; then
             mcp_images=true
           fi
+          # The released API image: its Dockerfile and dependency inputs. The
+          # multi-arch build runs only after merge, so a package pin that no
+          # longer resolves must fail here first.
+          api_image=false
+          if printf '%s\n' "$dependency_changed" | grep -E '^(Dockerfile|\.dockerignore|pyproject\.toml|uv\.lock|\.github/workflows/ci\.yml)$' > /dev/null; then
+            api_image=true
+          fi
           # The measured graph heap/scale assertion takes about six minutes by
           # itself. Keep it out of the general correctness suite, but require it
           # for graph implementation/tests and for changes to its CI contract.
@@ -238,6 +246,7 @@ jobs:
             echo "alpine_pr=${alpine_pr}"
             echo "native_image=${native_image}"
             echo "mcp_images=${mcp_images}"
+            echo "api_image=${api_image}"
             echo "compose=${compose}"
             echo "docs=${docs}"
             echo "endpoint=${endpoint}"
@@ -2480,6 +2489,41 @@ jobs:
           read -r -a smoke_args <<< "$SMOKE_ARGS"
           python3 scripts/smoke_mcp_image.py "$IMAGE" "${smoke_args[@]}" --wait 300
 
+  api-image:
+    name: API image build (amd64)
+    needs: [changes]
+    if: >-
+      !cancelled() && needs.changes.outputs.queue_proven != 'true' &&
+      github.event_name != 'push' && github.event_name != 'schedule' && (
+        needs.changes.result != 'success' ||
+        needs.changes.outputs.api_image == 'true'
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Authenticate Docker Hub pulls
+        if: >-
+          env.DOCKERHUB_PULL_AUTH == 'true' &&
+          github.actor != 'dependabot[bot]' &&
+          (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_READ_TOKEN }}
+      - name: Build the image
+        run: docker build -t agent-bom-api:ci .
+      - name: Start the image as its non-root user
+        run: |
+          set -euo pipefail
+          docker run --rm agent-bom-api:ci --version
+          test "$(docker run --rm --entrypoint id agent-bom-api:ci -u)" != "0"
+
   # 5. Docker Build + Scan (multi-arch)
   # Post-merge only: the emulated arm64 build takes ~6 minutes. A Dockerfile or
   # lockfile change still cannot reach a tag-triggered release without it,
@@ -2609,7 +2653,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
-    needs: [changes, test-core, docker, test-alpine, ui-e2e, mcp-images]
+    needs: [changes, test-core, docker, test-alpine, ui-e2e, mcp-images, api-image]
     if: ${{ !cancelled() }}
     steps:
       - name: Require correctness and applicable release-image proof
@@ -2618,6 +2662,7 @@ jobs:
           ALPINE_RESULT: ${{ needs.test-alpine.result }}
           UI_E2E_RESULT: ${{ needs.ui-e2e.result }}
           MCP_IMAGES_RESULT: ${{ needs.mcp-images.result }}
+          API_IMAGE_RESULT: ${{ needs.api-image.result }}
           # Each *_REQUIRED mirrors its job's condition without !cancelled().
           MCP_IMAGES_REQUIRED: >-
             ${{
@@ -2625,6 +2670,13 @@ jobs:
               github.event_name == 'schedule' ||
               needs.changes.result != 'success' ||
               needs.changes.outputs.mcp_images == 'true')
+            }}
+          API_IMAGE_REQUIRED: >-
+            ${{
+              needs.changes.outputs.queue_proven != 'true' &&
+              github.event_name != 'push' && github.event_name != 'schedule' && (
+              needs.changes.result != 'success' ||
+              needs.changes.outputs.api_image == 'true')
             }}
           ALPINE_REQUIRED: >-
             ${{
@@ -2660,7 +2712,7 @@ jobs:
             success|skipped) ;;
             *) echo "Release-image lane ended with: $DOCKER_RESULT" >&2; exit 1 ;;
           esac
-          for lane in ALPINE UI_E2E MCP_IMAGES; do
+          for lane in ALPINE UI_E2E MCP_IMAGES API_IMAGE; do
             result_var="${lane}_RESULT"
             required_var="${lane}_REQUIRED"
             result="${!result_var}"
