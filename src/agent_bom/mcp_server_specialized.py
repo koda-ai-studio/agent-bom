@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import contextlib
+from dataclasses import dataclass
+from types import ModuleType
 from typing import Annotated, Any, Awaitable, Callable
 
 from pydantic import Field
@@ -15,6 +17,16 @@ from agent_bom.security import sanitize_error  # noqa: F401 — kept for downstr
 __all__ = ["register_specialized_ai_tools", "sanitize_error"]
 
 
+@dataclass(frozen=True)
+class _ToolDeps:
+    mcp: Any
+    read_only: Any
+    write_action: Any
+    execute_tool_async: Callable[..., Awaitable[Any]]
+    safe_path: Callable[[str], Any]
+    truncate_response: Callable[[str], str]
+
+
 def register_specialized_ai_tools(
     mcp: Any,
     *,
@@ -24,19 +36,29 @@ def register_specialized_ai_tools(
     safe_path: Callable[[str], Any],
     truncate_response: Callable[[str], str],
 ) -> None:
-    """Register specialized AI, model, and external-ingest MCP tools."""
-    from agent_bom.mcp_tools.cloud import gpu_infra_scan_impl, registry_sweep_scan_impl, vector_db_scan_impl
-    from agent_bom.mcp_tools.compliance import aisvs_benchmark_impl, license_compliance_scan_impl
-    from agent_bom.mcp_tools.runtime_evidence import runtime_evidence_ingest_impl
-    from agent_bom.mcp_tools.specialized import (
-        ai_inventory_scan_impl,
-        browser_extension_scan_impl,
-        dataset_card_scan_impl,
-        model_file_scan_impl,
-        model_provenance_scan_impl,
-        prompt_scan_impl,
-        training_pipeline_scan_impl,
-    )
+    """Register specialized AI, model, and external-ingest MCP tools.
+
+    Impl functions are looked up on their modules here, at registration time,
+    so a server built while an impl is patched serves the patched impl.
+    """
+    from agent_bom.mcp_tools import cloud, compliance, runtime_evidence, specialized
+
+    deps = _ToolDeps(mcp, read_only, write_action, execute_tool_async, safe_path, truncate_response)
+    _register_posture_tools(deps, cloud, compliance)
+    _register_registry_and_dataset_tools(deps, cloud, specialized)
+    _register_pipeline_and_provenance_tools(deps, specialized)
+    _register_prompt_and_model_tools(deps, specialized)
+    _register_license_tool(deps, compliance)
+    _register_runtime_evidence_tool(deps, runtime_evidence)
+    _register_external_ingest_tool(deps)
+
+
+def _register_posture_tools(deps: _ToolDeps, cloud: ModuleType, compliance: ModuleType) -> None:
+    """Vector DB, AISVS and GPU infrastructure posture tools."""
+    mcp, read_only, execute_tool_async, truncate_response = deps.mcp, deps.read_only, deps.execute_tool_async, deps.truncate_response
+    vector_db_scan_impl = cloud.vector_db_scan_impl
+    gpu_infra_scan_impl = cloud.gpu_infra_scan_impl
+    aisvs_benchmark_impl = compliance.aisvs_benchmark_impl
 
     @mcp.tool(annotations=read_only, title="Vector DB Scan")
     async def vector_db_scan(
@@ -87,6 +109,19 @@ def register_specialized_ai_tools(
             probe_dcgm=probe_dcgm,
             _truncate_response=truncate_response,
         )
+
+
+def _register_registry_and_dataset_tools(deps: _ToolDeps, cloud: ModuleType, specialized: ModuleType) -> None:
+    """Registry sweep and dataset card tools."""
+    mcp, read_only, execute_tool_async, truncate_response, safe_path = (
+        deps.mcp,
+        deps.read_only,
+        deps.execute_tool_async,
+        deps.truncate_response,
+        deps.safe_path,
+    )
+    registry_sweep_scan_impl = cloud.registry_sweep_scan_impl
+    dataset_card_scan_impl = specialized.dataset_card_scan_impl
 
     @mcp.tool(annotations=read_only, title="Registry Image Sweep")
     async def registry_sweep_scan(
@@ -142,6 +177,20 @@ def register_specialized_ai_tools(
             _truncate_response=truncate_response,
         )
 
+
+def _register_pipeline_and_provenance_tools(deps: _ToolDeps, specialized: ModuleType) -> None:
+    """Training pipeline, browser extension and model provenance tools."""
+    mcp, read_only, execute_tool_async, truncate_response, safe_path = (
+        deps.mcp,
+        deps.read_only,
+        deps.execute_tool_async,
+        deps.truncate_response,
+        deps.safe_path,
+    )
+    training_pipeline_scan_impl = specialized.training_pipeline_scan_impl
+    browser_extension_scan_impl = specialized.browser_extension_scan_impl
+    model_provenance_scan_impl = specialized.model_provenance_scan_impl
+
     @mcp.tool(annotations=read_only, title="Training Pipeline Scan")
     async def training_pipeline_scan(
         directory: Annotated[
@@ -191,6 +240,20 @@ def register_specialized_ai_tools(
             source=source,
             _truncate_response=truncate_response,
         )
+
+
+def _register_prompt_and_model_tools(deps: _ToolDeps, specialized: ModuleType) -> None:
+    """Prompt template, model file and AI inventory tools."""
+    mcp, read_only, execute_tool_async, truncate_response, safe_path = (
+        deps.mcp,
+        deps.read_only,
+        deps.execute_tool_async,
+        deps.truncate_response,
+        deps.safe_path,
+    )
+    prompt_scan_impl = specialized.prompt_scan_impl
+    model_file_scan_impl = specialized.model_file_scan_impl
+    ai_inventory_scan_impl = specialized.ai_inventory_scan_impl
 
     @mcp.tool(annotations=LOCAL_READ_ONLY, title="Prompt Template Scan")
     async def prompt_scan(
@@ -254,6 +317,12 @@ def register_specialized_ai_tools(
             _truncate_response=truncate_response,
         )
 
+
+def _register_license_tool(deps: _ToolDeps, compliance: ModuleType) -> None:
+    """License compliance policy tool."""
+    mcp, read_only, execute_tool_async, truncate_response = deps.mcp, deps.read_only, deps.execute_tool_async, deps.truncate_response
+    license_compliance_scan_impl = compliance.license_compliance_scan_impl
+
     @mcp.tool(annotations=read_only, title="License Compliance Scan")
     async def license_compliance_scan(
         scan_json: Annotated[
@@ -307,6 +376,12 @@ def register_specialized_ai_tools(
             _truncate_response=truncate_response,
         )
 
+
+def _register_runtime_evidence_tool(deps: _ToolDeps, runtime_evidence: ModuleType) -> None:
+    """CWPP runtime evidence ingest tool (write action)."""
+    mcp, write_action, execute_tool_async, truncate_response = deps.mcp, deps.write_action, deps.execute_tool_async, deps.truncate_response
+    runtime_evidence_ingest_impl = runtime_evidence.runtime_evidence_ingest_impl
+
     @mcp.tool(annotations=write_action, title="Ingest CWPP Runtime Evidence")
     async def runtime_evidence_ingest(
         source_id: Annotated[str, Field(description="Pre-registered runtime evidence source id.")],
@@ -351,6 +426,11 @@ def register_specialized_ai_tools(
             _truncate_response=truncate_response,
         )
 
+
+def _register_external_ingest_tool(deps: _ToolDeps) -> None:
+    """External SARIF/SBOM/scanner report ingest tool (write action)."""
+    mcp, write_action, execute_tool_async, truncate_response = deps.mcp, deps.write_action, deps.execute_tool_async, deps.truncate_response
+
     @mcp.tool(annotations=write_action, title="Ingest External Scanner Report")
     async def ingest_external_scan(
         scan_json: Annotated[
@@ -383,54 +463,7 @@ def register_specialized_ai_tools(
         """
 
         async def _impl(**_operator_context: object) -> str:
-            import json as _json
-            import os
-
-            from agent_bom.client import AgentBomClient
-            from agent_bom.findings_push import parse_push_report
-
-            try:
-                data = _json.loads(scan_json)
-                packages, findings = parse_push_report(data, source=source)
-                result: dict[str, object] = {
-                    "packages": len(packages),
-                    "findings": len(findings),
-                    "ingested": [
-                        {
-                            "name": p.name,
-                            "version": p.version,
-                            "ecosystem": p.ecosystem,
-                            "vulnerabilities": len(p.vulnerabilities),
-                        }
-                        for p in packages[:50]
-                    ],
-                }
-                if not parse_only:
-                    base_url = os.getenv("AGENT_BOM_API_URL")
-                    api_key = os.getenv("AGENT_BOM_API_KEY")
-                    bearer_token = os.getenv("AGENT_BOM_API_TOKEN")
-                    if base_url and (api_key or bearer_token):
-                        with contextlib.closing(
-                            AgentBomClient(
-                                base_url=base_url,
-                                api_key=api_key,
-                                bearer_token=bearer_token,
-                                tenant_id=os.getenv("AGENT_BOM_TENANT_ID"),
-                            )
-                        ) as client:
-                            result["control_plane"] = client.ingest_findings(
-                                findings,
-                                source=source,
-                                reconcile_absent=reconcile_absent,
-                            )
-                    elif findings:
-                        result["control_plane"] = {
-                            "skipped": True,
-                            "reason": "Set AGENT_BOM_API_URL and AGENT_BOM_API_KEY or AGENT_BOM_API_TOKEN to bulk-ingest findings",
-                        }
-                return _json.dumps(result)
-            except Exception as exc:  # noqa: BLE001
-                return truncate_response(mcp_error_json(CODE_INTERNAL_UNEXPECTED, exc))
+            return await _ingest_external_report(scan_json, parse_only, source, reconcile_absent, truncate_response)
 
         return await execute_tool_async(
             "ingest_external_scan",
@@ -438,3 +471,57 @@ def register_specialized_ai_tools(
             destructive=not parse_only,
             required_scope="findings:write",
         )
+
+
+async def _ingest_external_report(
+    scan_json: str, parse_only: bool, source: str, reconcile_absent: bool, truncate_response: Callable[[str], str]
+) -> str:
+    """Parse an external report and, unless ``parse_only``, bulk-ingest its findings."""
+    import json as _json
+    import os
+
+    from agent_bom.client import AgentBomClient
+    from agent_bom.findings_push import parse_push_report
+
+    try:
+        data = _json.loads(scan_json)
+        packages, findings = parse_push_report(data, source=source)
+        result: dict[str, object] = {
+            "packages": len(packages),
+            "findings": len(findings),
+            "ingested": [
+                {
+                    "name": p.name,
+                    "version": p.version,
+                    "ecosystem": p.ecosystem,
+                    "vulnerabilities": len(p.vulnerabilities),
+                }
+                for p in packages[:50]
+            ],
+        }
+        if not parse_only:
+            base_url = os.getenv("AGENT_BOM_API_URL")
+            api_key = os.getenv("AGENT_BOM_API_KEY")
+            bearer_token = os.getenv("AGENT_BOM_API_TOKEN")
+            if base_url and (api_key or bearer_token):
+                with contextlib.closing(
+                    AgentBomClient(
+                        base_url=base_url,
+                        api_key=api_key,
+                        bearer_token=bearer_token,
+                        tenant_id=os.getenv("AGENT_BOM_TENANT_ID"),
+                    )
+                ) as client:
+                    result["control_plane"] = client.ingest_findings(
+                        findings,
+                        source=source,
+                        reconcile_absent=reconcile_absent,
+                    )
+            elif findings:
+                result["control_plane"] = {
+                    "skipped": True,
+                    "reason": "Set AGENT_BOM_API_URL and AGENT_BOM_API_KEY or AGENT_BOM_API_TOKEN to bulk-ingest findings",
+                }
+        return _json.dumps(result)
+    except Exception as exc:  # noqa: BLE001
+        return truncate_response(mcp_error_json(CODE_INTERNAL_UNEXPECTED, exc))
