@@ -516,3 +516,36 @@ def test_stats_populated():
     assert data["by_state"]["quarantined"] == 1
     assert data["low_trust_count"] == 2  # 40 and 20 are < 50
     assert data["avg_trust_score"] == 50.0
+
+
+def test_sync_counts_shared_packages_credentials_and_advisories_once():
+    client, store = _fresh_client()
+    shared = {"name": "express", "version": "4.18.2", "ecosystem": "npm", "vulnerabilities": [{"id": "CVE-2024-0001"}]}
+    resp = client.post(
+        "/v1/fleet/sync",
+        json={
+            "source_id": "laptop-b",
+            "agents": [
+                {
+                    "name": "cursor",
+                    "canonical_id": "fixture-cursor-shared",
+                    "agent_type": "cursor",
+                    "mcp_servers": [
+                        {"name": "a", "packages": [shared], "credential_names": ["OPENAI_API_KEY"], "total_vulnerabilities": 1},
+                        {"name": "b", "packages": [shared], "credential_names": ["OPENAI_API_KEY"], "total_vulnerabilities": 1},
+                        {
+                            "name": "c",
+                            "packages": [{"name": "lodash", "version": "4.17.15", "ecosystem": "npm"}],
+                            "total_vulnerabilities": 3,
+                        },
+                    ],
+                }
+            ],
+        },
+    )
+    assert resp.status_code == 200
+    agent = store.list_all()[0]
+    assert agent.server_count == 3
+    assert agent.package_count == 2
+    assert agent.credential_count == 1
+    assert agent.vuln_count == 1 + 3
