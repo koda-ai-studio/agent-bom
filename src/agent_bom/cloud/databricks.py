@@ -27,10 +27,10 @@ from typing import Any, Optional
 
 from agent_bom.discovery_envelope import RedactionStatus, ScanMode, attach_envelope_to_agents
 from agent_bom.models import Agent, AgentType, MCPServer, Package, ServerSurface, TransportType
-from agent_bom.security import sanitize_error
 
 from .base import CloudDiscoveryError
-from .databricks_connection import discovery_error_hint, resolved_workspace_host, sdk_value
+from .collection_errors import COLLECTION_ERRORS
+from .databricks_connection import databricks_read_warning, discovery_error_hint, resolved_workspace_host, sdk_value
 from .gpu_managed_compute import databricks_gpu_profile, databricks_node_gpu_counts
 from .normalization import build_cloud_origin, build_cloud_state, build_package_purl, normalize_cloud_lifecycle_state
 
@@ -72,7 +72,7 @@ def discover(
     try:
         ws = workspace_client if workspace_client is not None else WorkspaceClient(**ws_kwargs)
     except Exception as exc:
-        warnings.append(f"Could not connect to Databricks: {discovery_error_hint(exc)}")
+        warnings.append(f"Could not connect to Databricks. {databricks_read_warning('workspace', exc)} {discovery_error_hint(exc)}")
         return agents, warnings
 
     resolved_host = resolved_workspace_host(ws, host or os.environ.get("DATABRICKS_HOST", ""))
@@ -114,14 +114,16 @@ def _discover_cluster_agents(
     try:
         for cluster in ws.clusters.list():
             clusters.append(cluster)
-    except permission_denied:
-        warnings.append("Access denied for Databricks clusters API. Check workspace permissions.")
-    except Exception as exc:
-        warnings.append(f"Could not list Databricks clusters: {discovery_error_hint(exc)}")
+    except Exception as exc:  # noqa: BLE001 - classified, fixed-text coverage gap; earlier pages kept
+        warnings.append(f"{databricks_read_warning('clusters', exc)} {discovery_error_hint(exc)}")
 
     node_gpus = databricks_node_gpu_counts(ws) if clusters else {}
     for cluster in clusters:
-        agent = _cluster_agent(ws, cluster, resolved_host, warnings, node_gpus)
+        try:
+            agent = _cluster_agent(ws, cluster, resolved_host, warnings, node_gpus)
+        except COLLECTION_ERRORS as exc:
+            warnings.append(databricks_read_warning("clusters", exc))
+            continue
         if agent is not None:
             agents.append(agent)
     return agents
@@ -205,14 +207,16 @@ def _discover_serving_agents(
     # ── Model Serving Endpoints ───────────────────────────────────────────
     try:
         for ep in ws.serving_endpoints.list():
-            agent = _serving_endpoint_agent(ep, resolved_host)
+            try:
+                agent = _serving_endpoint_agent(ep, resolved_host)
+            except COLLECTION_ERRORS as exc:
+                warnings.append(databricks_read_warning("serving-endpoints", exc))
+                continue
             if agent is not None:
                 agents.append(agent)
 
-    except permission_denied:
-        warnings.append("Access denied for Databricks model serving API.")
-    except Exception as exc:
-        warnings.append(f"Could not list Databricks serving endpoints: {discovery_error_hint(exc)}")
+    except Exception as exc:  # noqa: BLE001 - classified, fixed-text coverage gap; earlier pages kept
+        warnings.append(f"{databricks_read_warning('serving-endpoints', exc)} {discovery_error_hint(exc)}")
     return agents
 
 
@@ -311,7 +315,7 @@ def _get_cluster_packages(
                     packages.append(pkg)
 
     except Exception as exc:
-        warnings.append(f"Could not get library status for cluster {cluster_id}: {sanitize_error(exc, generic=True)}")
+        warnings.append(databricks_read_warning("cluster-libraries", exc))
 
     return packages
 

@@ -19,7 +19,7 @@ ENV HTTP_PROXY=${HTTP_PROXY} \
 
 # Build-time deps for wheel compilation when musllinux wheels are unavailable.
 # Pins track the base-image digest above; refresh both together.
-RUN apk add --no-cache build-base~=0.5 ca-certificates~=20260909 git~=2.52 libffi-dev~=3.5 linux-headers~=6.16 \
+RUN apk add --no-cache build-base~=0.5 ca-certificates~=20261020 git~=2.52 libffi-dev~=3.5 linux-headers~=6.16 \
     && apk upgrade --no-cache --available \
     && update-ca-certificates
 
@@ -91,7 +91,7 @@ COPY --from=builder /app/LICENSE /app/LICENSE
 COPY --from=builder /app/deploy/supabase/postgres /opt/agent-bom/deploy/supabase/postgres
 
 # Repository URL scans shallow-clone with git at runtime as the non-root user.
-RUN apk add --no-cache ca-certificates~=20260909 git~=2.52 libffi~=3.5 libgcc~=15.2 libstdc++~=15.2 \
+RUN apk add --no-cache ca-certificates~=20261020 git~=2.52 libffi~=3.5 libgcc~=15.2 libstdc++~=15.2 \
     && apk upgrade --no-cache --available \
     && update-ca-certificates
 # The runtime never installs packages. Remove packaging tools and pip's vendored

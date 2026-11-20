@@ -39,7 +39,7 @@ def test_invalid_reads_are_incomplete_in_every_pass(kubectl, payload):
     assert agents == []
     assert len(warnings) == 4
     assert all("Assessment incomplete" in warning for warning in warnings)
-    assert kubectl.call_count == 4
+    assert kubectl.call_count == 3  # GPU and InfiniBand passes share one pod read
 
 
 def test_valid_empty_lists_are_complete(kubectl):

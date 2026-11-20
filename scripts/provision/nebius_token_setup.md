@@ -41,6 +41,7 @@ Docs: https://docs.nebius.com/iam/service-accounts/access-keys
 ```bash
 export NEBIUS_API_KEY=<api-key>
 export NEBIUS_PROJECT_ID=<project-id>
+export NEBIUS_KUBE_CONTEXT=<kube-context>   # optional: pin Kubernetes discovery
 agent-bom scan --nebius
 
 # With explicit project

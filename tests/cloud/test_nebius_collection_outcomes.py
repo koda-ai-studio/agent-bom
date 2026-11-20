@@ -41,7 +41,7 @@ def test_rest_status_is_explicit(monkeypatch, stage, resource, status, expected)
 )
 def test_kubectl_failure_is_classified_without_stderr(monkeypatch, stage, resource, stderr, expected):
     monkeypatch.setattr(nebius.shutil, "which", lambda *a: "/fixture/kubectl")
-    monkeypatch.setattr(nebius, "_kubectl_get_all_pods", lambda: SimpleNamespace(returncode=1, stderr=stderr))
+    monkeypatch.setattr(nebius, "_kubectl_get_all_pods", lambda *a: SimpleNamespace(returncode=1, stderr=stderr))
     agents, warnings = stage("fixture", "fixture-project")
     assert agents == []
     assert len(warnings) == 1
@@ -53,7 +53,7 @@ def test_kubectl_failure_is_classified_without_stderr(monkeypatch, stage, resour
 @pytest.mark.parametrize("payload", [{}, {"items": None}, {"items": "bad"}, {"items": [None]}, {"error": "private-marker"}])
 def test_kubectl_malformed_success_is_incomplete(monkeypatch, stage, resource, payload):
     monkeypatch.setattr(nebius.shutil, "which", lambda *a: "/fixture/kubectl")
-    monkeypatch.setattr(nebius, "_kubectl_get_all_pods", lambda: SimpleNamespace(returncode=0, stdout=json.dumps(payload)))
+    monkeypatch.setattr(nebius, "_kubectl_get_all_pods", lambda *a: SimpleNamespace(returncode=0, stdout=json.dumps(payload)))
     agents, warnings = stage("fixture", "fixture-project")
     assert agents == []
     assert len(warnings) == 1
@@ -63,7 +63,7 @@ def test_kubectl_malformed_success_is_incomplete(monkeypatch, stage, resource, p
 @pytest.mark.parametrize("stage,resource", K8S_STAGES)
 def test_kubectl_explicit_empty_is_complete(monkeypatch, stage, resource):
     monkeypatch.setattr(nebius.shutil, "which", lambda *a: "/fixture/kubectl")
-    monkeypatch.setattr(nebius, "_kubectl_get_all_pods", lambda: SimpleNamespace(returncode=0, stdout='{"items": []}'))
+    monkeypatch.setattr(nebius, "_kubectl_get_all_pods", lambda *a: SimpleNamespace(returncode=0, stdout='{"items": []}'))
     assert stage("fixture", "fixture-project") == ([], [])
 
 
@@ -77,7 +77,7 @@ def test_failed_rest_stage_retains_other_inventory(monkeypatch):
 
     monkeypatch.setattr(nebius.http_client, "sync_request_with_retry", request)
     monkeypatch.setattr(nebius.shutil, "which", lambda *a: "/fixture/kubectl")
-    monkeypatch.setattr(nebius, "_kubectl_get_all_pods", lambda: SimpleNamespace(returncode=0, stdout='{"items": []}'))
+    monkeypatch.setattr(nebius, "_kubectl_get_all_pods", lambda *a: SimpleNamespace(returncode=0, stdout='{"items": []}'))
     agents, warnings = nebius.discover(api_key="fixture", project_id="fixture-project")
     assert [a.name for a in agents] == ["nebius-ai-studio:fixture-model"]
     assert len(warnings) == 1
@@ -90,7 +90,7 @@ def test_unexpected_stage_failure_is_fixed_and_scoped(monkeypatch):
 
     monkeypatch.setattr(nebius, "_discover_ai_studio", fail)
     for name in ("_discover_gpu_instances", "_discover_container_services", "_discover_k8s_gpu_pods", "_discover_infiniband_jobs"):
-        monkeypatch.setattr(nebius, name, lambda *a: ([], []))
+        monkeypatch.setattr(nebius, name, lambda *a, **k: ([], []))
     agents, warnings = nebius.discover(api_key="fixture", project_id="fixture-project")
     assert agents == []
     assert len(warnings) == 1
