@@ -28,6 +28,7 @@ from agent_bom.security import sanitize_text
 
 from .aws_cis_benchmark import CheckStatus, CISCheckResult, not_applicable_if_empty
 from .base import CloudDiscoveryError
+from .cis_read_errors import read_error_label
 from .normalization import coerce_truthy as _sf_truthy
 from .snowflake_cis_report import SnowflakeCISReport
 
@@ -815,5 +816,5 @@ def _run_check(cursor: Any, check_id: str, check_fn: Callable[..., CISCheckResul
             title=error_metadata[0] if error_metadata else f"Check {check_id} could not be evaluated",
             status=CheckStatus.ERROR,
             severity="unknown",
-            evidence=f"Query error: {exc}",
+            evidence=f"Query error: {read_error_label(exc)}",
         )

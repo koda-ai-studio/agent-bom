@@ -29,6 +29,7 @@ _CIS_FILES = sorted(
         _CLOUD / "aws_cis_benchmark.py",
         _CLOUD / "azure_cis_benchmark.py",
         _CLOUD / "gcp_cis_benchmark.py",
+        _CLOUD / "snowflake_cis_benchmark.py",
     ]
 )
 _SECRET = "acct 123456789012 token=abc rate exceeded"
