@@ -123,7 +123,7 @@ def print_scan_next_steps(con: Console, report: AIBOMReport, *, quiet: bool = Fa
     if quiet:
         return
 
-    scan = f"agent-bom scan {target or '.'}"
+    scan = f"agent-bom scan {target}".rstrip()
     steps: list[str] = []
     if getattr(report, "total_agents", 0):
         steps.append(f"{scan} -f graph-html -o agent-bom-graph.html")
@@ -141,7 +141,7 @@ def print_scan_next_steps(con: Console, report: AIBOMReport, *, quiet: bool = Fa
     print_section_divider(con, "Next")
     con.print(f"  [cyan]→[/cyan] [bold]See the security graph in the local dashboard:[/bold] {escape(graph_dashboard_command(target))}")
     for step in steps:
-        con.print(f"  [cyan]→[/cyan] {step}")
+        con.print(f"  [cyan]→[/cyan] {escape(step)}")
 
 
 def render_connect_card(con: Console, *, title: str, role_summary: str, body: str, next_command: str) -> None:

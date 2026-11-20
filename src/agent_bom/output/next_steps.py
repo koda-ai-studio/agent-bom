@@ -5,6 +5,7 @@ Plain text and links only: nothing here contacts a service or records usage.
 
 from __future__ import annotations
 
+import shlex
 from html import escape
 from importlib.util import find_spec
 from typing import Any, NamedTuple
@@ -25,17 +26,28 @@ def dashboard_installed() -> bool:
     return all(find_spec(module) is not None for module in ("fastapi", "uvicorn"))
 
 
+def _scanned_project(tokens: list[str]) -> str:
+    """The project a scan's arguments name: the positional path, else ``--project``/``-p``, else ``.``."""
+    if tokens and not tokens[0].startswith("-"):
+        return tokens[0]
+    for flag, value in zip(tokens, tokens[1:]):
+        if flag in {"-p", "--project"}:
+            return value
+    return "."
+
+
 def graph_dashboard_command(target: str = ".") -> str:
     """Command that persists a scan and serves its security graph in the local dashboard.
 
     The demo has no project to activate, so it opens the bundled sample graph;
     any other target is activated as a project and prints the server command.
     """
-    if target.startswith("--demo"):
-        offline = " --offline" if "--offline" in target.split() else ""
+    tokens = shlex.split(target)
+    offline = " --offline" if "--offline" in tokens else ""
+    if "--demo" in tokens:
         command = f"agent-bom quickstart --run{offline} --open"
     else:
-        command = f"agent-bom quickstart --project {target or '.'} --run"
+        command = f"agent-bom quickstart --project {shlex.quote(_scanned_project(tokens))} --run{offline}"
     return command if dashboard_installed() else f"uvx --from 'agent-bom[ui]' {command}"
 
 

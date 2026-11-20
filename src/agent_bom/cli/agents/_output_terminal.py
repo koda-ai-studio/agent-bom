@@ -13,6 +13,7 @@ from agent_bom.cli._agent_mode import dumps_envelope, success_envelope
 from agent_bom.cli._terminal_sections import print_scan_next_steps, print_section_divider
 from agent_bom.cli.agents._cloud import render_cis_findings_from_context
 from agent_bom.cli.agents._context import ScanContext
+from agent_bom.cli.agents.scan_pipeline.rerun_args import typed_scan_arguments
 from agent_bom.cli.scan_hints import hints_enabled, print_hints
 from agent_bom.evidence.scan_run import ScanOutcome, effective_scan_run
 from agent_bom.output import (
@@ -192,7 +193,10 @@ def _emit_console_report(
         print_compact_cis_posture(report)
         print_compact_compliance_section(report, compliance_enabled=bool(kwargs.get("compliance_enabled")))
         print_compact_export_hint(report)
-    target = str(kwargs.get("next_steps_target") or ".")
+    target = kwargs.get("next_steps_target")
+    if target is None:
+        target = typed_scan_arguments()
+    target = "." if target is None else str(target)
     print_scan_next_steps(con, report, quiet=quiet, target=target)
     if hints_enabled(con, quiet=bool(quiet)):
         print_hints(
