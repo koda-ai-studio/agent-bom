@@ -16,6 +16,7 @@ from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.quiet_summary import SEVERITY_ORDER, severity_counts
 from agent_bom.cli.agents.scan_pipeline.report_format_notice import notice_report_schema_default
 from agent_bom.cli.agents.scan_pipeline.report_source_ids import endpoint_scoped_report
+from agent_bom.cli.agents.scan_pipeline.rerun_args import typed_scan_arguments
 from agent_bom.cli.agents.scan_pipeline.scan_memory import remember_and_report
 from agent_bom.cli.agents.scan_pipeline.state import ScanState, StopScan
 from agent_bom.cli.agents.scan_pipeline.top_fixes import print_top_fixes
@@ -141,7 +142,8 @@ def _next_steps_target(opts: ScanOptions) -> str:
     """The scan target the footer's follow-up commands rerun: the demo stays the demo."""
     if opts.demo:
         return "--demo --offline" if opts.offline else "--demo"
-    return "."
+    typed = typed_scan_arguments()
+    return "." if typed is None else typed
 
 
 def _render(opts: ScanOptions, st: ScanState) -> None:

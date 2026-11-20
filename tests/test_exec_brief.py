@@ -183,3 +183,38 @@ def test_markdown_uses_exposure_endpoints_and_readable_coverage(empty_estate_cli
     assert "Collection coverage: unknown" in rendered
     assert "Paths returned: 1 of 50 · Completeness: truncated" in rendered
     assert "Source collection not established." in rendered
+
+
+def test_markdown_stays_readable_while_inert(empty_estate_client):
+    from agent_bom.cli._brief import render_markdown
+
+    body = empty_estate_client.get("/v1/brief", headers=proxy_headers()).json()
+    body["remediation_priorities"] = [
+        {"vulnerability_id": "CVE-2024-0001", "package": "pkg_name@1.0", "sla_due_at": "2026-11-27T17:02:42.432730+00:00"},
+        {"vulnerability_id": "x", "title": "1. ~~struck~~ _emph_ `code`", "owner": "- team"},
+    ]
+    body["exposure_paths"] = {
+        "scan_id": "current-estate:abc123",
+        "snapshot_generation": "abc123",
+        "paths": [
+            {"source": {"label": f"agent-{n}"}, "target": {"label": "CVE-2024-0001"}, "severity": "high", "reachability": "likely"}
+            for n in range(5)
+        ],
+        "completeness": {"status": "truncated", "returned": 5, "total": 9, "reason": "path_page_limit"},
+    }
+    rendered = render_markdown(body)
+    assert "| pkg_name@1.0 |" in rendered
+    assert "2026-11-27 17:02 UTC" in rendered and "\\+" not in rendered and "\\(" not in rendered
+    assert "1\\. \\~\\~struck\\~\\~ \\_emph\\_ \\`code\\`" in rendered
+    assert "| \\- team |" in rendered
+    assert rendered.count("→ CVE-2024-0001") == 1
+    assert "- agent-0, agent-1, agent-2 +2 more → CVE-2024-0001" in rendered
+    assert "Generation:" not in rendered
+
+
+def test_comparable_history_has_no_placeholder_reason(demo_estate_client):
+    from agent_bom.cli._brief import render_markdown
+
+    rendered = render_markdown(demo_estate_client.get("/v1/brief").json())
+    history = rendered.split("## Scope-specific scan history", 1)[1]
+    assert "Not recorded" not in history

@@ -65,9 +65,9 @@ def print_top_fixes(con: Any, report: AIBOMReport, *, report_path: str, scan_tar
     con.print(f"  [bold]{escape(lines[0])}[/bold]")
     for line in lines[1:]:
         con.print(f"    {escape(line)}", soft_wrap=True)
+    remediate = " ".join(part for part in ("agent-bom scan", scan_target, "--remediate remediation.md") if part)
     con.print(
-        f"  [green]→[/green] Next: open {escape(report_path)} for the full report, or run "
-        f"[bold]agent-bom scan {escape(scan_target)} --remediate remediation.md[/bold] for every fix.",
+        f"  [green]→[/green] Next: open {escape(report_path)} for the full report, or run [bold]{escape(remediate)}[/bold] for every fix.",
         soft_wrap=True,
     )
     con.print(
