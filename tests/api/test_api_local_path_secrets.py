@@ -92,7 +92,7 @@ def test_multiple_roots_keep_findings_distinguishable(monkeypatch, tmp_path):
 def test_pii_only_warning_does_not_claim_credentials(monkeypatch, tmp_path, field):
     store = InMemoryJobStore()
     _patch(monkeypatch, store)
-    (tmp_path / "config.yaml").write_text("customer_email: alice@example.com\n")
+    (tmp_path / "config.yaml").write_text("customer_email: alice@acme-widgets.net\n")
     job = _run(store, ScanRequest(**{field: [str(tmp_path)]}, offline=True, enrich=False))
     assert job.status == JobStatus.DONE
     assert job.result["ai_inventory"]["secrets"]["by_category"] == {"pii": 1}
