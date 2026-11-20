@@ -174,6 +174,208 @@ def _configured_endpoint_identity(server: dict) -> str | None:
     return hashlib.sha256(endpoint.strip().encode()).hexdigest()
 
 
+def _add_cloud_principal(graph: ContextGraph, agent_id: str, agent_dict: dict) -> None:
+    """Wire the IAM role / cloud principal a cloud provider recorded as the agent's workload identity."""
+    cloud_principal = (agent_dict.get("metadata") or {}).get("cloud_principal")
+    if not (cloud_principal and isinstance(cloud_principal, dict)):
+        return
+    principal_id = cloud_principal.get("principal_id") or cloud_principal.get("principal_name", "")
+    if not principal_id:
+        return
+    role_id = f"iam_role:{principal_id}"
+    if role_id not in graph.nodes:
+        metadata = {key: cloud_principal.get(key, "") for key in ("principal_type", "provider", "service")}
+        graph.add_node(GraphNode(id=role_id, kind=NodeKind.IAM_ROLE, label=principal_id, metadata=metadata))
+    graph.add_edge(
+        GraphEdge(
+            source=role_id,
+            target=agent_id,
+            kind=EdgeKind.ATTACHED_TO,
+            weight=2.0,
+            metadata={"principal_type": cloud_principal.get("principal_type", "")},
+        )
+    )
+
+
+def _add_server_credentials(graph: ContextGraph, srv_id: str, srv_dict: dict) -> None:
+    # Serialized scans preserve credential names, never values. Include
+    # embedded launch/header slots and legacy inline environment keys.
+    cred_keys = list(srv_dict.get("credential_env_vars", []))
+    embedded = srv_dict.get("embedded_credential_names", [])
+    cred_keys += [key for key in embedded if isinstance(key, str) and key.strip()] if isinstance(embedded, list) else []
+    cred_keys += [k for k, v in srv_dict.get("env", {}).items() if _is_credential_key(k) and not is_blank_env_value(v)]
+    for env_key in dict.fromkeys(cred_keys):
+        # The report carries only a credential env-var name, not proof
+        # that two servers resolve it to the same secret.  Keep each
+        # credential slot server-scoped and fail closed on correlation.
+        cred_id = f"cred:{srv_id}:{env_key}"
+        graph.add_node(GraphNode(id=cred_id, kind=NodeKind.CREDENTIAL, label=env_key, metadata={"server": srv_id, "servers": [srv_id]}))
+        graph.add_edge(GraphEdge(source=srv_id, target=cred_id, kind=EdgeKind.EXPOSES, weight=2.0))
+
+
+def _add_server_tools(graph: ContextGraph, srv_id: str, srv_dict: dict, agent_name: str) -> None:
+    for tool_dict in srv_dict.get("tools", []):
+        tool_name = tool_dict.get("name", "unknown")
+        tool_desc = tool_dict.get("description", "")
+        tool_id = f"tool:{srv_id}:{tool_name}"
+        capabilities = _classify_tool(tool_name, tool_desc, tool_dict.get("capabilities"))
+        graph.add_node(
+            GraphNode(
+                id=tool_id,
+                kind=NodeKind.TOOL,
+                label=tool_name,
+                metadata={
+                    "description": _untrusted_metadata_text(tool_desc),
+                    "description_trust": "untrusted_external_mcp_metadata",
+                    "capabilities": capabilities,
+                    "server": srv_id,
+                    "agent": agent_name,
+                },
+            )
+        )
+        weight = 3.0 if "execute" in capabilities else 1.0
+        graph.add_edge(GraphEdge(source=srv_id, target=tool_id, kind=EdgeKind.PROVIDES, weight=weight))
+
+
+class _ServerIndex:
+    """Configured-endpoint sharing and per-server package inventory gathered while adding agents."""
+
+    def __init__(self) -> None:
+        self.server_to_agents: dict[str, list[str]] = defaultdict(list)
+        self.shared_server_labels: dict[str, str] = {}
+        self.server_inventory: dict[str, tuple[str, str, list]] = {}
+
+
+def _add_agent(graph: ContextGraph, agent_dict: dict, index: _ServerIndex) -> None:
+    """Agent → server → credential / tool nodes and edges."""
+    agent_name = agent_dict.get("name", "unknown")
+    agent_id = str(agent_dict.get("graph_id") or f"agent:{agent_name}")
+    graph.add_node(
+        GraphNode(
+            id=agent_id,
+            kind=NodeKind.AGENT,
+            label=agent_name,
+            metadata={
+                **({"canonical_id": agent_dict.get("canonical_id", "")} if agent_dict.get("graph_id") else {}),
+                "agent_type": agent_dict.get("type", ""),
+                "status": agent_dict.get("status", ""),
+                "server_count": len(agent_dict.get("mcp_servers", [])),
+            },
+        )
+    )
+    _add_cloud_principal(graph, agent_id, agent_dict)
+    for srv_dict in agent_dict.get("mcp_servers", []):
+        srv_name = srv_dict.get("name", "unknown")
+        srv_id = f"server:{agent_id.removeprefix('agent:')}:{srv_name}"
+        index.server_inventory[srv_id] = (agent_id, srv_name, srv_dict.get("packages") or [])
+        metadata = {
+            "command": srv_dict.get("command", ""),
+            "transport": srv_dict.get("transport", ""),
+            "package_count": len(srv_dict.get("packages", [])),
+            "agent": agent_name,
+        }
+        graph.add_node(GraphNode(id=srv_id, kind=NodeKind.SERVER, label=srv_name, metadata=metadata))
+        graph.add_edge(GraphEdge(source=agent_id, target=srv_id, kind=EdgeKind.USES))
+        # Equal labels/commands do not prove common runtime ownership.
+        shared_identity = _configured_endpoint_identity(srv_dict)
+        if shared_identity:
+            index.server_to_agents[shared_identity].append(agent_id)
+            index.shared_server_labels.setdefault(shared_identity, srv_name)
+            graph.nodes[srv_id].metadata["shared_identity_key"] = shared_identity
+            graph.nodes[srv_id].metadata["identity_basis"] = "configured_endpoint"
+        _add_server_credentials(graph, srv_id, srv_dict)
+        _add_server_tools(graph, srv_id, srv_dict, agent_name)
+
+
+def _merge_package(metadata: dict, list_key: str, single_key: str, package_ref: str, evidence: dict) -> None:
+    metadata[list_key] = sorted(set(metadata[list_key]) | ({package_ref} if package_ref else set()))
+    metadata[single_key] = metadata[list_key][0] if len(metadata[list_key]) == 1 else ""
+    if evidence not in metadata["package_evidence"]:
+        metadata["package_evidence"].append(evidence)
+
+
+def _vulnerability_node(vuln_id: str, severity: str, br_dict: dict) -> GraphNode:
+    metadata = {
+        "severity": severity,
+        "cvss_score": br_dict.get("cvss_score"),
+        "epss_score": br_dict.get("epss_score"),
+        "is_kev": br_dict.get("is_kev", False),
+        "risk_score": br_dict.get("risk_score", 0),
+        "package": br_dict.get("package", ""),
+        "affected_packages": [],
+        "package_evidence": [],
+    }
+    return GraphNode(id=f"vuln:{vuln_id}", kind=NodeKind.VULNERABILITY, label=vuln_id, metadata=metadata)
+
+
+def _add_vulnerability(
+    graph: ContextGraph, br_dict: dict, hosts: list[str], seen_vulns: set[str], edges: dict[tuple[str, str], GraphEdge]
+) -> None:
+    """One blast-radius record: the vuln node, its package evidence, and VULNERABLE_TO edges from hosting servers."""
+    vuln_id = br_dict["vulnerability_id"]
+    severity = br_dict.get("severity", "").lower()
+    if vuln_id not in seen_vulns:
+        seen_vulns.add(vuln_id)
+        graph.add_node(_vulnerability_node(vuln_id, severity, br_dict))
+    ecosystem, package_name, package_version = _finding_package_identity(br_dict)
+    package_ref = f"{package_name}@{package_version}" if package_version else package_name
+    evidence = {
+        "package": package_ref,
+        "ecosystem": ecosystem,
+        "affected_server_ids": hosts,
+        "association_status": "linked" if hosts else "unresolved",
+        "symbol_reachability": br_dict.get("symbol_reachability"),
+        "symbol_reachability_reason": br_dict.get("symbol_reachability_reason"),
+        "runtime_dependency_chain": list(br_dict.get("runtime_dependency_chain") or []),
+    }
+    _merge_package(graph.nodes[f"vuln:{vuln_id}"].metadata, "affected_packages", "package", package_ref, evidence)
+    for srv_id in hosts:
+        edge = edges.get((srv_id, vuln_id))
+        if edge is None:
+            weight = _SEVERITY_SCORES.get(severity, 1.0)
+            edge = GraphEdge(srv_id, f"vuln:{vuln_id}", EdgeKind.VULNERABLE_TO, weight, {"package_evidence": [], "packages": []})
+            edges[(srv_id, vuln_id)] = edge
+            graph.add_edge(edge)
+        _merge_package(edge.metadata, "packages", "package", package_ref, evidence)
+
+
+def _add_shared_server_edges(graph: ContextGraph, index: _ServerIndex) -> None:
+    """Pairwise SHARES_SERVER edges for small groups, one bounded hub node beyond the pairwise threshold.
+
+    Pairwise edges become O(N²) for a common shared MCP server; the hub stays
+    traversable by the lateral-path BFS and carries the full group in metadata.
+    """
+    for identity_key, agent_names in index.server_to_agents.items():
+        srv_name = index.shared_server_labels[identity_key]
+        unique = sorted(set(agent_names))
+        if len(unique) < 2:
+            continue
+        shared = {"server": srv_name, "identity_basis": "configured_endpoint", "shared_identity_key": identity_key}
+        if len(unique) <= _MAX_PAIRWISE_SHARED_AGENTS:
+            for i, a1 in enumerate(unique):
+                for a2 in unique[i + 1 :]:
+                    graph.add_edge(GraphEdge(source=a1, target=a2, kind=EdgeKind.SHARES_SERVER, weight=3.0, metadata=dict(shared)))
+            continue
+        hub_id = f"shared-server:{identity_key}"
+        hub_metadata = {
+            "shared_group": True,
+            "identity_basis": "configured_endpoint",
+            "shared_identity_key": identity_key,
+            "shared_agent_count": len(unique),
+            "shared_agents": [graph.nodes[member].label for member in unique],
+        }
+        graph.add_node(GraphNode(id=hub_id, kind=NodeKind.SERVER, label=srv_name, metadata=hub_metadata))
+        for agent_name in unique:
+            metadata = {
+                "server": srv_name,
+                "shared_group": True,
+                "identity_basis": "configured_endpoint",
+                "shared_identity_key": identity_key,
+                "shared_agent_count": len(unique),
+            }
+            graph.add_edge(GraphEdge(source=agent_name, target=hub_id, kind=EdgeKind.SHARES_SERVER, weight=3.0, metadata=metadata))
+
+
 def build_context_graph(
     agents_data: list[dict],
     blast_data: list[dict],
@@ -200,148 +402,15 @@ def build_context_graph(
         for server_index, server in enumerate(agent.get("mcp_servers", []))
     }
 
-    # Track which agents use which server names.
-    server_to_agents: dict[str, list[str]] = defaultdict(list)
-    shared_server_labels: dict[str, str] = {}
-    server_inventory: dict[str, tuple[str, str, list]] = {}
-
-    # ── Build agent → server → credential / tool nodes & edges ────────
+    index = _ServerIndex()
     for agent_dict in agents_data:
-        agent_name = agent_dict.get("name", "unknown")
-        agent_id = str(agent_dict.get("graph_id") or f"agent:{agent_name}")
-        graph.add_node(
-            GraphNode(
-                id=agent_id,
-                kind=NodeKind.AGENT,
-                label=agent_name,
-                metadata={
-                    **({"canonical_id": agent_dict.get("canonical_id", "")} if agent_dict.get("graph_id") else {}),
-                    "agent_type": agent_dict.get("type", ""),
-                    "status": agent_dict.get("status", ""),
-                    "server_count": len(agent_dict.get("mcp_servers", [])),
-                },
-            )
-        )
+        _add_agent(graph, agent_dict, index)
 
-        # Wire IAM role / cloud principal → agent edge when cloud providers
-        # have recorded workload identity in agent metadata.
-        cloud_principal = (agent_dict.get("metadata") or {}).get("cloud_principal")
-        if cloud_principal and isinstance(cloud_principal, dict):
-            principal_id = cloud_principal.get("principal_id") or cloud_principal.get("principal_name", "")
-            if principal_id:
-                role_id = f"iam_role:{principal_id}"
-                if role_id not in graph.nodes:
-                    graph.add_node(
-                        GraphNode(
-                            id=role_id,
-                            kind=NodeKind.IAM_ROLE,
-                            label=principal_id,
-                            metadata={
-                                "principal_type": cloud_principal.get("principal_type", ""),
-                                "provider": cloud_principal.get("provider", ""),
-                                "service": cloud_principal.get("service", ""),
-                            },
-                        )
-                    )
-                graph.add_edge(
-                    GraphEdge(
-                        source=role_id,
-                        target=agent_id,
-                        kind=EdgeKind.ATTACHED_TO,
-                        weight=2.0,
-                        metadata={"principal_type": cloud_principal.get("principal_type", "")},
-                    )
-                )
-
-        for srv_dict in agent_dict.get("mcp_servers", []):
-            srv_name = srv_dict.get("name", "unknown")
-            srv_id = f"server:{agent_id.removeprefix('agent:')}:{srv_name}"
-            server_inventory[srv_id] = (agent_id, srv_name, srv_dict.get("packages") or [])
-            graph.add_node(
-                GraphNode(
-                    id=srv_id,
-                    kind=NodeKind.SERVER,
-                    label=srv_name,
-                    metadata={
-                        "command": srv_dict.get("command", ""),
-                        "transport": srv_dict.get("transport", ""),
-                        "package_count": len(srv_dict.get("packages", [])),
-                        "agent": agent_name,
-                    },
-                )
-            )
-            graph.add_edge(GraphEdge(source=agent_id, target=srv_id, kind=EdgeKind.USES))
-
-            # Equal labels/commands do not prove common runtime ownership.
-            shared_identity = _configured_endpoint_identity(srv_dict)
-            if shared_identity:
-                server_to_agents[shared_identity].append(agent_id)
-                shared_server_labels.setdefault(shared_identity, srv_name)
-                graph.nodes[srv_id].metadata["shared_identity_key"] = shared_identity
-                graph.nodes[srv_id].metadata["identity_basis"] = "configured_endpoint"
-
-            # Serialized scans preserve credential names, never values. Include
-            # embedded launch/header slots and legacy inline environment keys.
-            cred_keys = list(srv_dict.get("credential_env_vars", []))
-            embedded = srv_dict.get("embedded_credential_names", [])
-            cred_keys += [key for key in embedded if isinstance(key, str) and key.strip()] if isinstance(embedded, list) else []
-            cred_keys += [k for k, v in srv_dict.get("env", {}).items() if _is_credential_key(k) and not is_blank_env_value(v)]
-            for env_key in dict.fromkeys(cred_keys):
-                # The report carries only a credential env-var name, not proof
-                # that two servers resolve it to the same secret.  Keep each
-                # credential slot server-scoped and fail closed on correlation.
-                cred_id = f"cred:{srv_id}:{env_key}"
-                graph.add_node(
-                    GraphNode(
-                        id=cred_id,
-                        kind=NodeKind.CREDENTIAL,
-                        label=env_key,
-                        metadata={"server": srv_id, "servers": [srv_id]},
-                    )
-                )
-                graph.add_edge(
-                    GraphEdge(
-                        source=srv_id,
-                        target=cred_id,
-                        kind=EdgeKind.EXPOSES,
-                        weight=2.0,
-                    )
-                )
-
-            # Tools
-            for tool_dict in srv_dict.get("tools", []):
-                tool_name = tool_dict.get("name", "unknown")
-                tool_desc = tool_dict.get("description", "")
-                tool_id = f"tool:{srv_id}:{tool_name}"
-                capabilities = _classify_tool(tool_name, tool_desc, tool_dict.get("capabilities"))
-                graph.add_node(
-                    GraphNode(
-                        id=tool_id,
-                        kind=NodeKind.TOOL,
-                        label=tool_name,
-                        metadata={
-                            "description": _untrusted_metadata_text(tool_desc),
-                            "description_trust": "untrusted_external_mcp_metadata",
-                            "capabilities": capabilities,
-                            "server": srv_id,
-                            "agent": agent_name,
-                        },
-                    )
-                )
-                weight = 3.0 if "execute" in capabilities else 1.0
-                graph.add_edge(
-                    GraphEdge(
-                        source=srv_id,
-                        target=tool_id,
-                        kind=EdgeKind.PROVIDES,
-                        weight=weight,
-                    )
-                )
-
-    # ── Vulnerability nodes from blast radius ─────────────────────────
+    # Vulnerabilities from the blast radius; records that only touch static
+    # (SBOM / repository) inventory never enter the runtime graph.
     seen_vulns: set[str] = set()
     vulnerability_edges: dict[tuple[str, str], GraphEdge] = {}
-    server_hosts, static_hosts = InventoryHosts(server_inventory), InventoryHosts(static_inventory)
+    server_hosts, static_hosts = InventoryHosts(index.server_inventory), InventoryHosts(static_inventory)
     for br_dict in blast_data:
         affected_agents = set(br_dict.get("affected_agents") or [])
         if affected_agents and affected_agents <= static_names and not affected_agents & runtime_names:
@@ -349,130 +418,14 @@ def build_context_graph(
         hosts = server_hosts.hosts(br_dict)
         if not hosts and static_inventory and static_hosts.hosts(br_dict):
             continue
-        vuln_id = br_dict.get("vulnerability_id", "")
-        if not vuln_id:
-            continue
-        severity = br_dict.get("severity", "").lower()
+        if br_dict.get("vulnerability_id", ""):
+            _add_vulnerability(graph, br_dict, hosts, seen_vulns, vulnerability_edges)
 
-        if vuln_id not in seen_vulns:
-            seen_vulns.add(vuln_id)
-            graph.add_node(
-                GraphNode(
-                    id=f"vuln:{vuln_id}",
-                    kind=NodeKind.VULNERABILITY,
-                    label=vuln_id,
-                    metadata={
-                        "severity": severity,
-                        "cvss_score": br_dict.get("cvss_score"),
-                        "epss_score": br_dict.get("epss_score"),
-                        "is_kev": br_dict.get("is_kev", False),
-                        "risk_score": br_dict.get("risk_score", 0),
-                        "package": br_dict.get("package", ""),
-                        "affected_packages": [],
-                        "package_evidence": [],
-                    },
-                )
-            )
+    _add_shared_server_edges(graph, index)
 
-        ecosystem, package_name, package_version = _finding_package_identity(br_dict)
-        package_ref = f"{package_name}@{package_version}" if package_version else package_name
-        evidence = {
-            "package": package_ref,
-            "ecosystem": ecosystem,
-            "affected_server_ids": hosts,
-            "association_status": "linked" if hosts else "unresolved",
-            "symbol_reachability": br_dict.get("symbol_reachability"),
-            "symbol_reachability_reason": br_dict.get("symbol_reachability_reason"),
-            "runtime_dependency_chain": list(br_dict.get("runtime_dependency_chain") or []),
-        }
-        metadata = graph.nodes[f"vuln:{vuln_id}"].metadata
-        metadata["affected_packages"] = sorted(set(metadata["affected_packages"]) | ({package_ref} if package_ref else set()))
-        metadata["package"] = metadata["affected_packages"][0] if len(metadata["affected_packages"]) == 1 else ""
-        if evidence not in metadata["package_evidence"]:
-            metadata["package_evidence"].append(evidence)
-        for srv_id in hosts:
-            key = (srv_id, vuln_id)
-            edge = vulnerability_edges.get(key)
-            if edge is None:
-                edge = GraphEdge(
-                    source=srv_id,
-                    target=f"vuln:{vuln_id}",
-                    kind=EdgeKind.VULNERABLE_TO,
-                    weight=_SEVERITY_SCORES.get(severity, 1.0),
-                    metadata={"package_evidence": [], "packages": []},
-                )
-                vulnerability_edges[key] = edge
-                graph.add_edge(edge)
-            edge.metadata["packages"] = sorted(set(edge.metadata["packages"]) | ({package_ref} if package_ref else set()))
-            edge.metadata["package"] = edge.metadata["packages"][0] if len(edge.metadata["packages"]) == 1 else ""
-            if evidence not in edge.metadata["package_evidence"]:
-                edge.metadata["package_evidence"].append(evidence)
-
-    # ── Shared server edges ───────────────────────────────────────────
-    # Pairwise edges are useful for small groups, but become O(N²) for a
-    # common shared MCP server.  Keep the readable direct form up to a fixed
-    # threshold and use one bounded hub node for larger groups.  The hub is
-    # still traversable by the lateral-path BFS and carries the full group in
-    # metadata for risk/reporting consumers.
-    for identity_key, agent_names in server_to_agents.items():
-        _srv_name = shared_server_labels[identity_key]
-        unique = sorted(set(agent_names))
-        if len(unique) >= 2:
-            if len(unique) > _MAX_PAIRWISE_SHARED_AGENTS:
-                hub_id = f"shared-server:{identity_key}"
-                graph.add_node(
-                    GraphNode(
-                        id=hub_id,
-                        kind=NodeKind.SERVER,
-                        label=_srv_name,
-                        metadata={
-                            "shared_group": True,
-                            "identity_basis": "configured_endpoint",
-                            "shared_identity_key": identity_key,
-                            "shared_agent_count": len(unique),
-                            "shared_agents": [graph.nodes[member].label for member in unique],
-                        },
-                    )
-                )
-                for agent_name in unique:
-                    graph.add_edge(
-                        GraphEdge(
-                            source=agent_name,
-                            target=hub_id,
-                            kind=EdgeKind.SHARES_SERVER,
-                            weight=3.0,
-                            metadata={
-                                "server": _srv_name,
-                                "shared_group": True,
-                                "identity_basis": "configured_endpoint",
-                                "shared_identity_key": identity_key,
-                                "shared_agent_count": len(unique),
-                            },
-                        )
-                    )
-            else:
-                for i, a1 in enumerate(unique):
-                    for a2 in unique[i + 1 :]:
-                        graph.add_edge(
-                            GraphEdge(
-                                source=a1,
-                                target=a2,
-                                kind=EdgeKind.SHARES_SERVER,
-                                weight=3.0,
-                                metadata={
-                                    "server": _srv_name,
-                                    "identity_basis": "configured_endpoint",
-                                    "shared_identity_key": identity_key,
-                                },
-                            )
-                        )
-
-    # ── Effective-reach scoring (issue #2262) ─────────────────────────
-    # Annotate every vulnerability node with a deterministic 0..100
-    # composite that combines CVSS/EPSS/KEV with reachable tool
-    # capability + credential visibility + agent breadth.  Edges
-    # adjacent to scored nodes inherit the higher endpoint score for
-    # the dashboard's edge-thickness signal.
+    # Effective-reach scoring (issue #2262): a deterministic 0..100 composite
+    # on every vulnerability node; adjacent edges inherit the higher endpoint
+    # score for the dashboard's edge-thickness signal.
     try:
         from agent_bom.effective_reach import annotate_graph
 
