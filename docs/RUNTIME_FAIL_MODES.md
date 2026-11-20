@@ -958,7 +958,8 @@ trip, then continues in that transaction. `SET LOCAL` keeps the bounds working
 behind a transaction-mode connection pooler. SQLite processes share it when they use the
 same `AGENT_BOM_DB` path: authentication state lives in the owner-only
 `<database>.auth-limits.db` sidecar so a scan-ingest write transaction cannot
-lock its budget. Without a persistent database it is process-local.
+lock its budget. Receipt budgets live in a further `.receipts.db` sidecar, so a
+background receipt write cannot hold up the failure count an answer waits on. Without a persistent database it is process-local.
 Eight dedicated threads separate auth state from background work. At most 64
 operations may be running or queued for them per application, at most four of them
 failure writes and at most two from one source, so a burst of distinct callers waits
