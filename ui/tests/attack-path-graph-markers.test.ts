@@ -52,3 +52,13 @@ describe("node context markers from the stored risk context", () => {
       evidence: { binding: "ClusterRoleBinding/ops" } })).toBe("Privilege: bound to ClusterRole/cluster-admin by ClusterRoleBinding/ops");
   });
 });
+
+it("reads folded privilege and data sensitivity without recomputing them from raw flags", () => {
+  expect(kinds(context({ is_admin: true, privilege_level: "admin", data_sensitivity: "phi" }))).toEqual(["sensitive", "privileged"]);
+  expect(kinds({ ...context({ is_admin: false, privilege_level: "read", data_sensitivity: "public" }), admin_equivalent: true,
+    privilege_level: "admin", data_classification: "restricted" })).toEqual([]);
+  expect(nodeContextMarkers(context({ is_admin: false, privilege_level: "escalates_to_admin" }))).toEqual([
+    { kind: "privileged", label: "Privileged: can assume an admin role (recorded)" },
+  ]);
+  expect(kinds({ is_admin: true, data_sensitivity: "phi" })).toEqual([]);
+});
