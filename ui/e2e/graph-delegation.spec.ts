@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { createRequire } from "node:module";
+import { withSemanticLayer } from "./helpers/graph-rollup-mocks";
 const resolveModule = createRequire(`${__dirname}/../package.json`);
 test.use({ bypassCSP: true });
 
@@ -7,7 +8,7 @@ const source = "agent:aws:production:planner";
 const target = "agent:ingested:worker";
 const snapshot = "correlated-estate";
 const generation = "b".repeat(32);
-const node = (id: string, label: string, data_sources: string[]) => ({ id, entity_type: "agent", label, attributes: {}, severity: "unknown", risk_score: 0, status: "active", data_sources, dimensions: {}, compliance_tags: [] });
+const node = (id: string, label: string, data_sources: string[]) => withSemanticLayer({ id, entity_type: "agent", label, attributes: {}, severity: "unknown", risk_score: 0, status: "active", data_sources, dimensions: {}, compliance_tags: [] });
 const planner = node(source, "Cloud planner", ["aws"]);
 const worker = node(target, "Ingested worker", ["ci-ingest"]);
 

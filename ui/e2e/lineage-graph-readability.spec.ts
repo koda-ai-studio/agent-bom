@@ -1,6 +1,7 @@
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { openGraphView } from "./fixtures/graph-view";
+import { withSemanticLayer } from "./helpers/graph-rollup-mocks";
 
 const scanId = "scan-dense-graph";
 const previousScanId = "scan-dense-graph-prev";
@@ -206,7 +207,7 @@ function node(
   attributes: Record<string, unknown> = {},
 ): GraphNode {
   const severityRank: Record<string, number> = { none: 0, low: 1, medium: 2, high: 3, critical: 4 };
-  return {
+  return withSemanticLayer({
     id,
     entity_type: entityType,
     label,
@@ -223,7 +224,7 @@ function node(
     compliance_tags: [],
     data_sources: ["e2e"],
     dimensions: {},
-  };
+  });
 }
 
 function edge(source: string, target: string, relationship: string, weight = 1): GraphEdge {

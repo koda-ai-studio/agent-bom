@@ -1,8 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
+import { withSemanticLayer } from "./helpers/graph-rollup-mocks";
 
 const stamp = "2026-10-15T00:00:00Z";
 const estate = "current-estate:0123456789abcdef0123456789abcdef";
-const node = (id: string, label: string, entity_type: string) => ({
+const node = (id: string, label: string, entity_type: string) => withSemanticLayer({
   id, label, entity_type, severity: "high", status: "active", risk_score: 0, attributes: {}, dimensions: {}, data_sources: ["fixture"], compliance_tags: [],
 });
 const nodes = [

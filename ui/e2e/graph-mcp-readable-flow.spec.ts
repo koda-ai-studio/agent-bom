@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
+import { withSemanticLayer } from "./helpers/graph-rollup-mocks";
 const stamp = "2026-10-15T00:00:00Z";
-const node = (id: string, entity_type: string, label = id) => ({ id, entity_type, label, severity: "none", status: "active", risk_score: 0, attributes: {}, dimensions: {}, data_sources: ["synthetic-fixture"], compliance_tags: [] });
+const node = (id: string, entity_type: string, label = id) => withSemanticLayer({ id, entity_type, label, severity: "none", status: "active", risk_score: 0, attributes: {}, dimensions: {}, data_sources: ["synthetic-fixture"], compliance_tags: [] });
 const edge = (source: string, target: string, relationship: string) => ({ id: `${source}:${relationship}:${target}`, source, target, relationship, direction: "directed", traversable: true, weight: 1, evidence: { tier: "static_scan", source: "synthetic-fixture" }, first_seen: stamp, last_seen: stamp });
 async function fixture(page: Page, nodes: ReturnType<typeof node>[], edges: ReturnType<typeof edge>[], correlation = false) {
   const graph = { scan_id: "snapshot", tenant_id: "fixture", created_at: stamp, nodes, edges, attack_paths: [], interaction_risks: [], stats: { total_nodes: nodes.length, total_edges: edges.length, severity_counts: {} } };

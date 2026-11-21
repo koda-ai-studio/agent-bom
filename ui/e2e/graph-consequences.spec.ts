@@ -1,9 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
+import { withSemanticLayer } from "./helpers/graph-rollup-mocks";
 
 const scan = "assessment-fixture";
 const revision = "a".repeat(32);
-const node = (id: string, entity_type: string, label: string) => ({
+const node = (id: string, entity_type: string, label: string) => withSemanticLayer({
   id, entity_type, label, status: "active", risk_score: 0, severity: "none", severity_id: 0,
   attributes: {}, compliance_tags: [], data_sources: ["fixture"], dimensions: {},
 });

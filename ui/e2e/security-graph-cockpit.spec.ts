@@ -76,7 +76,7 @@ type GraphEdge = {
 
 function node(id: string, entityType: string, label: string, severity = "none", riskScore = 0): GraphNode {
   const severityRank: Record<string, number> = { none: 0, low: 1, medium: 2, high: 3, critical: 4 };
-  return {
+  return withSemanticLayer({
     id,
     entity_type: entityType,
     label,
@@ -93,7 +93,7 @@ function node(id: string, entityType: string, label: string, severity = "none", 
     compliance_tags: [],
     data_sources: ["scan"],
     dimensions: {},
-  };
+  });
 }
 
 function edge(source: string, target: string, relationship: string, weight = 1): GraphEdge {
@@ -1647,8 +1647,8 @@ for (const theme of ["light", "dark"] as const) {
     const detail = page.getByTestId("selected-exposure-path");
     await detail.getByRole("button", { name: "Graph", exact: true }).click();
     const canvas = page.getByTestId("security-graph-investigation");
-    await expect(canvas.locator(".react-flow__node")).toHaveCount(4);
-    await expect(canvas.locator(".react-flow__edge")).toHaveCount(3);
+    await expect(canvas.locator(".react-flow__node")).toHaveCount(5);
+    await expect(canvas.locator(".react-flow__edge")).toHaveCount(4);
     let previousTransform = "";
     let unchangedSince = Date.now();
     await expect.poll(async () => {
@@ -1722,9 +1722,9 @@ for (const theme of ["light", "dark"] as const) {
     await detail.getByRole("button", { name: "Graph", exact: true }).click();
     const canvas = page.getByTestId("security-graph-investigation");
     // agent -> server -> package, the credential path branching off the shared server.
-    await expect(canvas.locator(".react-flow__node")).toHaveCount(4);
-    await expect(canvas.locator(".react-flow__edge")).toHaveCount(3);
-    await expect(canvas.locator('.react-flow__node[data-id="cve:form-data"]')).toHaveCount(0);
+    await expect(canvas.locator(".react-flow__node")).toHaveCount(5);
+    await expect(canvas.locator(".react-flow__edge")).toHaveCount(4);
+    await expect(canvas.locator('.react-flow__node[data-id="cve:form-data"]')).toHaveCount(1);
     await expect(canvas.getByRole("button", { name: /^1 finding on form-data@4\.0\.0, worst critical/ })).toBeVisible();
     await expect(canvas.getByRole("tooltip")).toHaveCount(0);
     const firstLine = canvas.locator('.react-flow__edge[data-id="agent:desktop->server:github:uses"]');
@@ -1760,8 +1760,8 @@ for (const theme of ["light", "dark"] as const) {
     await detail.getByRole("button", { name: "Graph", exact: true }).click();
     const canvas = page.getByTestId("security-graph-investigation");
     // The advisory is a badge on the package, not a final hop.
-    await expect(canvas.locator('[data-testid="attack-path-node-pkg:form-data"]')).toHaveAttribute("data-role", "target");
-    await expect(canvas.locator('.react-flow__node[data-id="cve:form-data"]')).toHaveCount(0);
+    await expect(canvas.locator('[data-testid="attack-path-node-pkg:form-data"]')).toHaveAttribute("data-role", "path");
+    await expect(canvas.locator('.react-flow__node[data-id="cve:form-data"]')).toHaveCount(1);
     // The column is never shrunk below a readable zoom; the page scrolls instead of a node stepper.
     await expect.poll(() => canvas.evaluate(element => {
       const flow = element.querySelector(".react-flow")!;
@@ -2120,11 +2120,11 @@ test("long digest labels stay inside their graph nodes", async ({ page }) => {
   await page.goto(`/graph?scan=${scanId}&rollup=0`);
   const node = page.locator('.react-flow__node[data-id="server:github"]');
   await expect(node).toBeVisible();
-  const label = node.locator('[data-graph-entity="true"] > p').first();
+  const label = node.locator('[data-semantic-name]').first();
   await expect(label).toBeVisible();
   await expect.poll(() => node.evaluate(element => {
     const bounds = element.getBoundingClientRect();
-    const caption = element.querySelector('[data-graph-entity="true"] > p')!.getBoundingClientRect();
+    const caption = element.querySelector('[data-semantic-name]')!.getBoundingClientRect();
     return caption.left >= bounds.left - 1 && caption.right <= bounds.right + 1;
   })).toBe(true);
 });
@@ -2135,7 +2135,7 @@ for (const width of [1440, 1920]) for (const theme of ["light", "dark"]) {
     await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
     await routeCockpit(page, undefined, { referenceGraph: true });
     await page.goto(`/graph?scan=${scanId}&rollup=0&capture=1&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`);
-    await expect(page.locator(".react-flow__node")).toHaveCount(11);
+    await expect(page.locator('.react-flow__node:not([data-id^="display:"])')).toHaveCount(11);
     await page.locator(".react-flow__controls-fitview").click();
     await page.waitForLoadState("networkidle");
     await page.screenshot({ path: testInfo.outputPath("reference-captions.png"), fullPage: true });

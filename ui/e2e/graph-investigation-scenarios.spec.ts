@@ -1,9 +1,10 @@
 import { test, expect, type Page } from "@playwright/test";
+import { withSemanticLayer } from "./helpers/graph-rollup-mocks";
 
 const stamp = "2026-11-05T00:00:00Z";
-const node = (id: string, entity_type: string, attributes = {}) => ({ id, entity_type, label: id, attributes, status: "active", severity: "none", risk_score: 0, dimensions: {}, data_sources: ["synthetic-fixture"], compliance_tags: [] });
+const node = (id: string, entity_type: string, attributes = {}) => withSemanticLayer({ id, entity_type, label: id, attributes, status: "active", severity: "none", risk_score: 0, dimensions: {}, data_sources: ["synthetic-fixture"], compliance_tags: [] });
 const nodes = [node("account", "account"), node("cluster", "cluster"), node("deployment", "container", { kubernetes_kind: "Deployment", container_kind: "workload" }),
-  node("pod", "container", { kubernetes_kind: "Pod", container_kind: "pod" }), node("endpoint", "api_gateway", { resource_id: "api-1", network_reachability_assessment: { complete: true, source_scope: "internet", decision: "allow", target_id: "api-1", evidence_refs: ["fixture-receipt"] } }),
+  node("pod", "container", { kubernetes_kind: "Pod", container_kind: "pod" }), node("endpoint", "api_gateway", { resource_id: "api-1", internet_exposed: true, network_reachability_assessment: { complete: true, source_scope: "internet", decision: "allow", target_id: "api-1", evidence_refs: ["fixture-receipt"] } }),
   node("role", "role"), node("bucket", "data_store"), { ...node("CVE-2099-0001", "vulnerability"), severity: "high" }];
 const edge = (source: string, target: string, relationship: string) => ({ id: `${source}:${relationship}:${target}`, source, target, relationship, traversable: false, direction: "directed", weight: 1, evidence: { tier: "static_scan", source: "synthetic-fixture" }, first_seen: stamp, last_seen: stamp });
 const edges = [edge("account", "cluster", "contains"), edge("cluster", "deployment", "contains"), edge("deployment", "pod", "contains"), edge("endpoint", "pod", "exposed_to"), edge("pod", "role", "assumes"), edge("role", "bucket", "has_permission"), edge("pod", "CVE-2099-0001", "vulnerable_to")];

@@ -2,9 +2,10 @@ import { expect, test, type Page } from "@playwright/test";
 import os from "node:os";
 import { installGraphPaintMeasurement } from "./helpers/graph-paint-measurement";
 import { readFileSync, writeFileSync } from "node:fs";
+import { withSemanticLayer } from "./helpers/graph-rollup-mocks";
 
 const stamp = "2026-10-15T00:00:00Z";
-const node = (id:string, entity_type:string) => ({id,label:id,entity_type,severity:"none",status:"active",risk_score:0,
+const node = (id:string, entity_type:string) => withSemanticLayer({id,label:id,entity_type,severity:"none",status:"active",risk_score:0,
   attributes:{},dimensions:{},data_sources:["synthetic-paint-budget"],compliance_tags:[]});
 
 async function fixture(page:Page, agents:number) {

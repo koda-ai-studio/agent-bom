@@ -1,8 +1,10 @@
 import { readFile } from "node:fs/promises";
 import { test, expect, type Page } from "@playwright/test";
+import { withSemanticLayer } from "./helpers/graph-rollup-mocks";
 
 const stamp = "2026-10-15T00:00:00Z";
-const node = (id: string, entity_type: string, label = id) => ({
+// Nodes as the API serves them: each carries the backend legend layer for its kind.
+const node = (id: string, entity_type: string, label = id) => withSemanticLayer({
   id, entity_type, label, severity: "none", status: "active", risk_score: 0, attributes: {},
   dimensions: { environment: "prod" }, data_sources: ["synthetic-fixture"], compliance_tags: [],
 });
