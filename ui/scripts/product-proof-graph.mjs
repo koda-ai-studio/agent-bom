@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { CREATED_AT } from "./product-proof-fixtures.mjs";
+import layerByEntityType from "../tests/fixtures/product-proof-layers.json" with { type: "json" };
 
 const UI_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 
@@ -40,6 +41,8 @@ export function node(id, entityType, label, severity = "none", riskScore = 0, at
     first_seen: CREATED_AT,
     last_seen: CREATED_AT,
     attributes,
+    // The layer the API stamps on every node: a recorded layer, else the backend legend's layer for the kind.
+    semantic_layer: attributes.semantic_layer ?? layerByEntityType[entityType] ?? "asset",
     compliance_tags: attributes.compliance_tags ?? [],
     data_sources: attributes.data_sources ?? ["demo-scan", "gateway-runtime", "fleet-sync"],
     dimensions: {

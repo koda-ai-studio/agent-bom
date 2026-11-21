@@ -31,3 +31,13 @@ def test_every_node_has_an_aggregate_and_every_entry_a_layer() -> None:
     fixture = generator.build_fixture(data)
     assert set(fixture["node_aggregates"]) == {node["id"] for node in data["nodes"]}
     assert all(entry["semantic_layer"] for entry in fixture["rollup"]["top_level"])
+
+
+def test_demo_nodes_carry_the_layer_the_api_serves() -> None:
+    from agent_bom.graph.node import UnifiedNode
+    from agent_bom.graph.semantic_layer import semantic_layer
+
+    generator = _generator()
+    data = generator.demo_graph()
+    for node in data["nodes"]:
+        assert node["semantic_layer"] == semantic_layer(UnifiedNode.from_dict(node)), node["id"]

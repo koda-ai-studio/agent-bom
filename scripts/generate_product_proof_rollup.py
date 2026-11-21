@@ -21,11 +21,13 @@ from typing import Any
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.rollup import rollup_view
 from agent_bom.graph.rollup_node import node_aggregate
-from agent_bom.graph.semantic_layer import semantic_layer
+from agent_bom.graph.semantic_layer import LAYER_BY_ENTITY_TYPE, semantic_layer
 
 ROOT = Path(__file__).resolve().parents[1]
 UI = ROOT / "ui"
 OUTPUT = UI / "tests" / "fixtures" / "product-proof-rollup.json"
+# The backend legend layer per kind; the demo graph stamps nodes from it, so it is written first.
+LAYERS = UI / "tests" / "fixtures" / "product-proof-layers.json"
 _EXPORT = 'import("./scripts/product-proof-graph.mjs").then((m) => process.stdout.write(JSON.stringify(m.buildGraph())))'
 
 
@@ -55,14 +57,17 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true", help="fail when the committed fixture is stale")
     args = parser.parse_args(argv)
+    layers = render(dict(sorted(LAYER_BY_ENTITY_TYPE.items())))
+    if not args.check:
+        LAYERS.write_text(layers)
     text = render(build_fixture(demo_graph()))
     if args.check:
-        if not OUTPUT.exists() or OUTPUT.read_text() != text:
-            print(f"{OUTPUT.relative_to(ROOT)} is stale; run python scripts/generate_product_proof_rollup.py", file=sys.stderr)
-            return 1
-        return 0
+        stale = [path for path, body in ((LAYERS, layers), (OUTPUT, text)) if not path.exists() or path.read_text() != body]
+        for path in stale:
+            print(f"{path.relative_to(ROOT)} is stale; run python scripts/generate_product_proof_rollup.py", file=sys.stderr)
+        return 1 if stale else 0
     OUTPUT.write_text(text)
-    print(f"wrote {OUTPUT.relative_to(ROOT)}")
+    print(f"wrote {LAYERS.relative_to(ROOT)} and {OUTPUT.relative_to(ROOT)}")
     return 0
 
 

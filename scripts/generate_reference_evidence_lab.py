@@ -28,6 +28,7 @@ from agent_bom.gateway_upstreams import UpstreamConfig, UpstreamRegistry  # noqa
 from agent_bom.graph import EntityType, RelationshipType, UnifiedEdge, UnifiedGraph, UnifiedNode  # noqa: E402
 from agent_bom.graph.correlation_service import CorrelationRequest, GraphCorrelationService  # noqa: E402
 from agent_bom.graph.edge_evidence import edge_evidence  # noqa: E402
+from agent_bom.graph.semantic_layer import node_payload  # noqa: E402
 from agent_bom.iac import scan_iac_with_context  # noqa: E402
 from agent_bom.parsers import scan_project_directory  # noqa: E402
 from agent_bom.sbom import load_sbom  # noqa: E402
@@ -52,6 +53,13 @@ TOOL_ID = "mcp-tool:reference-lab:render-untrusted-image"
 SERVER_ID = "mcp-server:reference-lab:document-review"
 TOOL_NAME = "render_untrusted_image"
 _RUNTIME_FACTS_KEY = b"reference-lab-runtime-facts-key-32-bytes"
+
+
+def _served_graph(graph: Any) -> dict[str, Any]:
+    """The graph as the API serves it: every node carries its semantic layer."""
+    body = graph.to_dict()
+    body["nodes"] = [node_payload(graph.nodes[item["id"]]) for item in body["nodes"]]
+    return body
 
 
 def _timestamp(index: int) -> str:
@@ -457,6 +465,7 @@ def _snapshots(
                 "canonical_id": f"kubernetes-uid:{kubernetes['service_uid']}",
                 "internet_exposed": bool(kubernetes["internet_exposed"]),
                 "modeled": True,
+                "semantic_layer": "api_gateway",
             },
             index=2,
             severity="high",
@@ -779,7 +788,7 @@ async def _build_payload() -> dict[str, Any]:
                 "exploitability": {"status": "not_established"},
             },
             "capture_fixture": {
-                "graph": output.to_dict(),
+                "graph": _served_graph(output),
                 "fix_first": fix_first,
                 "snapshots": [
                     {

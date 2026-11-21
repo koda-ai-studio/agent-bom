@@ -27,3 +27,16 @@ export async function routeNodeAggregates(page: Page, aggregates: Record<string,
   });
   return requests;
 }
+
+type GraphNode = { entity_type: string; semantic_layer?: string; attributes?: Record<string, unknown> };
+
+/** Stamp every node the way the API serves it: a recorded ``attributes.semantic_layer``, else the legend layer for its kind. */
+export function withNodeLayers<T extends { nodes: GraphNode[] }>(graph: T): T {
+  return {
+    ...graph,
+    nodes: graph.nodes.map(node => {
+      const recorded = node.attributes?.semantic_layer;
+      return typeof recorded === "string" ? { ...node, semantic_layer: node.semantic_layer ?? recorded } : withSemanticLayer(node);
+    }),
+  };
+}
