@@ -1,0 +1,882 @@
+{
+  "agent_bom_version": "0.115.4",
+  "measured_at": "2026-11-21T02:50:42+00:00",
+  "ground_truth": "OSV API (api.osv.dev) queried per name@version from independently parsed lockfiles",
+  "totals": {
+    "expected": 115,
+    "matched": 115,
+    "missed": 0,
+    "extra": 0,
+    "unexplained_missed": 0,
+    "false_positive_candidates": 0,
+    "packages_expected": 3457,
+    "packages_found": 3457
+  },
+  "unexplained_differences": [],
+  "repositories": [
+    {
+      "name": "temporalio/temporal",
+      "url": "https://github.com/temporalio/temporal",
+      "commit": "32ef011fbd1e38ecddf656fc3f5026f6641cfeab",
+      "scan": {
+        "exit_code": 1,
+        "outcome": "partial",
+        "issues": [
+          {
+            "code": "scope_exclusion",
+            "affects_coverage": false,
+            "message": "filesystem-discovery:5ed459e04bfe51e6:directory_policy: Paths were excluded by scanner policy, linked-worktree or symlink rules; contents were not inspected."
+          },
+          {
+            "code": "scope_exclusion",
+            "affects_coverage": false,
+            "message": "filesystem-discovery:5ed459e04bfe51e6:symlink_within_root: Paths were excluded by scanner policy, linked-worktree or symlink rules; contents were not inspected."
+          },
+          {
+            "code": "scope_exclusion",
+            "affects_coverage": false,
+            "message": "filesystem-discovery:5ed459e04bfe51e6:repository_ignore: Directory subtrees were excluded by repository ignore rules."
+          },
+          {
+            "code": "scanner_coverage_gap",
+            "affects_coverage": true,
+            "message": "ast-go:api/historyservice/v1/request_response.pb.go: Source file exceeds the 524,288-character AST analysis limit."
+          }
+        ],
+        "coverage_warnings": [
+          {
+            "kind": "scope_exclusion",
+            "ecosystem": "filesystem-discovery",
+            "reason": "directory_policy",
+            "detail": "Paths were excluded by scanner policy, linked-worktree or symlink rules; contents were not inspected.",
+            "package_count": 0
+          },
+          {
+            "kind": "scope_exclusion",
+            "ecosystem": "filesystem-discovery",
+            "reason": "symlink_within_root",
+            "detail": "Paths were excluded by scanner policy, linked-worktree or symlink rules; contents were not inspected.",
+            "package_count": 0
+          },
+          {
+            "kind": "scope_exclusion",
+            "ecosystem": "filesystem-discovery",
+            "reason": "repository_ignore",
+            "detail": "Directory subtrees were excluded by repository ignore rules.",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "ast-go",
+            "reason": "source_size_limit",
+            "detail": "Source file exceeds the 524,288-character AST analysis limit.",
+            "package_count": 0
+          }
+        ]
+      },
+      "advisory_db_synced_at": "2026-11-21T02:25:14.979726+00:00",
+      "ecosystems": [
+        {
+          "ecosystem": "Go",
+          "lockfiles": [
+            "go.mod",
+            "common/testx/go.mod",
+            "tests/mixedbrain/go.mod"
+          ],
+          "verified": true,
+          "packages": {
+            "expected": 217,
+            "found": 217,
+            "missing": [],
+            "unexpected": [],
+            "skipped_non_registry": [
+              "go.mod: go.temporal.io/testx@v0.0.0-20261119195350-4d3f3f0b973d (replaced by local path ./common/testx)",
+              "tests/mixedbrain/go.mod: go.temporal.io/server@v0.0.0-00010101000000-000000000000 (replaced by local path ../..)"
+            ]
+          },
+          "advisories": {
+            "expected": 2,
+            "matched": 2,
+            "missed": 0,
+            "extra": 0,
+            "unexplained_missed": 0,
+            "false_positive_candidates": 0
+          },
+          "missed": [],
+          "extra": []
+        }
+      ],
+      "unverified": []
+    },
+    {
+      "name": "temporalio/sdk-typescript",
+      "url": "https://github.com/temporalio/sdk-typescript",
+      "commit": "f5107ac96256c217cccf98cff278175bfa35b21e",
+      "scan": {
+        "exit_code": 1,
+        "outcome": "partial",
+        "issues": [
+          {
+            "code": "scanner_warning",
+            "affects_coverage": true,
+            "message": "Some local advisories list aliases for several distinct CVEs (a stale upstream alias group); they were matched by their own IDs only. Run `agent-bom db update` to refresh them."
+          },
+          {
+            "code": "metadata_enrichment_capped",
+            "affects_coverage": false,
+            "message": "Auto-discovered risk metadata lookup attempted for 30 of 2564 candidate package(s); 30 enriched, 2534 skipped by the cap. AGENT_BOM_AUTODISCOVER_MAX_CANDIDATES and the time budget bound lookups. Advisory only: vulnerability coverage is unaffected."
+          },
+          {
+            "code": "scope_exclusion",
+            "affects_coverage": false,
+            "message": "filesystem-discovery:77c4b737335763f2:directory_policy: Paths were excluded by scanner policy, linked-worktree or symlink rules; contents were not inspected."
+          },
+          {
+            "code": "scanner_coverage_gap",
+            "affects_coverage": true,
+            "message": "ast-js-ts:packages/client/src/nexus-types.ts: Structured JS/TS analysis did not complete; regex fallback coverage is partial."
+          }
+        ],
+        "coverage_warnings": [
+          {
+            "kind": "scope_exclusion",
+            "ecosystem": "filesystem-discovery",
+            "reason": "directory_policy",
+            "detail": "Paths were excluded by scanner policy, linked-worktree or symlink rules; contents were not inspected.",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "ast-js-ts",
+            "reason": "ast_engine_unavailable",
+            "detail": "Structured JS/TS analysis did not complete; regex fallback coverage is partial.",
+            "package_count": 0
+          }
+        ]
+      },
+      "advisory_db_synced_at": "2026-11-21T02:25:14.979726+00:00",
+      "ecosystems": [
+        {
+          "ecosystem": "npm",
+          "lockfiles": [
+            "pnpm-lock.yaml",
+            "packages/docs/pnpm-lock.yaml"
+          ],
+          "verified": true,
+          "packages": {
+            "expected": 2253,
+            "found": 2253,
+            "missing": [],
+            "unexpected": [],
+            "skipped_non_registry": []
+          },
+          "advisories": {
+            "expected": 67,
+            "matched": 67,
+            "missed": 0,
+            "extra": 0,
+            "unexplained_missed": 0,
+            "false_positive_candidates": 0
+          },
+          "missed": [],
+          "extra": []
+        },
+        {
+          "ecosystem": "crates.io",
+          "lockfiles": [
+            "packages/core-bridge/Cargo.lock"
+          ],
+          "verified": true,
+          "packages": {
+            "expected": 395,
+            "found": 395,
+            "missing": [],
+            "unexpected": [],
+            "skipped_non_registry": [
+              "packages/core-bridge/Cargo.lock: bridge-macros@0.1.0 (workspace)",
+              "packages/core-bridge/Cargo.lock: temporal-sdk-typescript-bridge@0.1.0 (workspace)",
+              "packages/core-bridge/Cargo.lock: temporalio-client@1.2.0 (workspace)",
+              "packages/core-bridge/Cargo.lock: temporalio-common@1.2.0 (workspace)",
+              "packages/core-bridge/Cargo.lock: temporalio-common-wasm@1.2.0 (workspace)",
+              "packages/core-bridge/Cargo.lock: temporalio-macros@1.2.0 (workspace)",
+              "packages/core-bridge/Cargo.lock: temporalio-protos@0.11.0 (workspace)",
+              "packages/core-bridge/Cargo.lock: temporalio-sdk-core@0.11.0 (workspace)"
+            ]
+          },
+          "advisories": {
+            "expected": 9,
+            "matched": 9,
+            "missed": 0,
+            "extra": 0,
+            "unexplained_missed": 0,
+            "false_positive_candidates": 0
+          },
+          "missed": [],
+          "extra": []
+        }
+      ],
+      "unverified": []
+    },
+    {
+      "name": "temporalio/sdk-python",
+      "url": "https://github.com/temporalio/sdk-python",
+      "commit": "5c925a41b36b34d9ce32d03f1d1f07faa35b348a",
+      "scan": {
+        "exit_code": 1,
+        "outcome": "complete",
+        "issues": [
+          {
+            "code": "metadata_enrichment_capped",
+            "affects_coverage": false,
+            "message": "Auto-discovered risk metadata lookup attempted for 30 of 228 candidate package(s); 30 enriched, 198 skipped by the cap. AGENT_BOM_AUTODISCOVER_MAX_CANDIDATES and the time budget bound lookups. Advisory only: vulnerability coverage is unaffected."
+          },
+          {
+            "code": "scope_exclusion",
+            "affects_coverage": false,
+            "message": "filesystem-discovery:087d56ca2143638b:directory_policy: Paths were excluded by scanner policy, linked-worktree or symlink rules; contents were not inspected."
+          }
+        ],
+        "coverage_warnings": [
+          {
+            "kind": "scope_exclusion",
+            "ecosystem": "filesystem-discovery",
+            "reason": "directory_policy",
+            "detail": "Paths were excluded by scanner policy, linked-worktree or symlink rules; contents were not inspected.",
+            "package_count": 0
+          }
+        ]
+      },
+      "advisory_db_synced_at": "2026-11-21T02:25:14.979726+00:00",
+      "ecosystems": [
+        {
+          "ecosystem": "PyPI",
+          "lockfiles": [
+            "uv.lock"
+          ],
+          "verified": true,
+          "packages": {
+            "expected": 228,
+            "found": 228,
+            "missing": [],
+            "unexpected": [],
+            "skipped_non_registry": [
+              "uv.lock: temporalio@1.36.1 (virtual)"
+            ]
+          },
+          "advisories": {
+            "expected": 36,
+            "matched": 36,
+            "missed": 0,
+            "extra": 0,
+            "unexplained_missed": 0,
+            "false_positive_candidates": 0
+          },
+          "missed": [],
+          "extra": []
+        },
+        {
+          "ecosystem": "crates.io",
+          "lockfiles": [
+            "temporalio/bridge/Cargo.lock"
+          ],
+          "verified": true,
+          "packages": {
+            "expected": 364,
+            "found": 364,
+            "missing": [],
+            "unexpected": [],
+            "skipped_non_registry": [
+              "temporalio/bridge/Cargo.lock: temporal-sdk-bridge@0.1.0 (workspace)",
+              "temporalio/bridge/Cargo.lock: temporalio-client@1.2.0 (workspace)",
+              "temporalio/bridge/Cargo.lock: temporalio-common@1.2.0 (workspace)",
+              "temporalio/bridge/Cargo.lock: temporalio-common-wasm@1.2.0 (workspace)",
+              "temporalio/bridge/Cargo.lock: temporalio-macros@1.2.0 (workspace)",
+              "temporalio/bridge/Cargo.lock: temporalio-protos@0.11.0 (workspace)",
+              "temporalio/bridge/Cargo.lock: temporalio-sdk-core@0.11.0 (workspace)"
+            ]
+          },
+          "advisories": {
+            "expected": 1,
+            "matched": 1,
+            "missed": 0,
+            "extra": 0,
+            "unexplained_missed": 0,
+            "false_positive_candidates": 0
+          },
+          "missed": [],
+          "extra": []
+        }
+      ],
+      "unverified": []
+    },
+    {
+      "name": "temporalio/sdk-java",
+      "url": "https://github.com/temporalio/sdk-java",
+      "commit": "f5c8e4e1c135de05eacf014fd49a612c50f93b9e",
+      "scan": {
+        "exit_code": 1,
+        "outcome": "partial",
+        "issues": [
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "maven:<repo>/build.gradle: build.gradle: no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial"
+          },
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "maven:<repo>/contrib/temporal-aws-lambda/build.gradle: build.gradle: 2 dependency version(s) could not be resolved statically: io.opentelemetry:opentelemetry-api, io.opentelemetry:opentelemetry-sdk; no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial"
+          },
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "maven:<repo>/contrib/temporal-gcp-cloud-run-id/build.gradle: build.gradle: no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial"
+          },
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "maven:<repo>/contrib/temporal-gcp-cloud-run-opentelemetry/build.gradle: build.gradle: no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial"
+          },
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "maven:<repo>/contrib/temporal-opentelemetry/build.gradle: build.gradle: 5 dependency version(s) could not be resolved statically: io.opentelemetry:opentelemetry-api, io.opentelemetry:opentelemetry-exporter-otlp, io.opentelemetry:opentelemetry-opentracing-shim:$otShimVersion, io.opentelemetry:opentelemetry-sdk, io.opentelemetry:opentelemetry-sdk-trace; no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial"
+          },
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "maven:<repo>/contrib/temporal-opentracing/build.gradle: build.gradle: no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial"
+          },
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "maven:<repo>/contrib/temporal-payload-storage-s3driver/build.gradle: build.gradle: no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial"
+          },
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "maven:<repo>/contrib/temporal-payload-storage-s3driver-awssdkv2/build.gradle: build.gradle: 1 dependency version(s) could not be resolved statically: software.amazon.awssdk:s3; no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial"
+          },
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "maven:<repo>/contrib/temporal-spring-ai/build.gradle: build.gradle: no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial"
+          },
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "maven:<repo>/contrib/temporal-workflowstreams/build.gradle: build.gradle: no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial"
+          },
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "maven:<repo>/temporal-bom/build.gradle: build.gradle: no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial"
+          },
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "maven:<repo>/temporal-envconfig/build.gradle: build.gradle: no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial"
+          },
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "maven:<repo>/temporal-kotlin/build.gradle: build.gradle: 4 dependency version(s) could not be resolved statically: com.fasterxml.jackson.datatype:jackson-datatype-jdk8, com.fasterxml.jackson.datatype:jackson-datatype-jsr310, com.fasterxml.jackson.module:jackson-module-kotlin, org.jetbrains.kotlin:kotlin-reflect; no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial"
+          },
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "maven:<repo>/temporal-remote-data-encoder/build.gradle: build.gradle: 2 dependency version(s) could not be resolved statically: org.eclipse.jetty:jetty-server, org.eclipse.jetty:jetty-servlet; no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial"
+          },
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "maven:<repo>/temporal-sdk/build.gradle: build.gradle: 4 dependency version(s) could not be resolved statically: com.fasterxml.jackson.core:jackson-databind, com.fasterxml.jackson.datatype:jackson-datatype-jdk8, com.fasterxml.jackson.datatype:jackson-datatype-jsr310, io.micrometer:micrometer-core; no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial"
+          },
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "maven:<repo>/temporal-serviceclient/build.gradle: build.gradle: 6 dependency version(s) could not be resolved statically: io.grpc:grpc-api, io.grpc:grpc-inprocess, io.grpc:grpc-netty-shaded, io.grpc:grpc-protobuf, io.grpc:grpc-services (+1 more); no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial"
+          },
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "maven:<repo>/temporal-shaded/build.gradle: build.gradle: 4 dependency version(s) could not be resolved statically: com.fasterxml.jackson.core:jackson-databind, com.fasterxml.jackson.datatype:jackson-datatype-jdk8, com.fasterxml.jackson.datatype:jackson-datatype-jsr310, io.micrometer:micrometer-core; no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial"
+          },
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "maven:<repo>/temporal-spring-boot-autoconfigure/build.gradle: build.gradle: 8 dependency version(s) could not be resolved statically: io.opentelemetry:opentelemetry-api, io.opentelemetry:opentelemetry-opentracing-shim:$otShimVersion, io.opentelemetry:opentelemetry-sdk, org.junit.platform:junit-platform-launcher, org.springframework.boot:spring-boot-autoconfigure (+3 more); no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial"
+          },
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "maven:<repo>/temporal-spring-boot-starter/build.gradle: build.gradle: 1 dependency version(s) could not be resolved statically: org.springframework.boot:spring-boot-starter; no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial"
+          },
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "maven:<repo>/temporal-test-server/build.gradle: build.gradle: no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial"
+          },
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "maven:<repo>/temporal-testing/build.gradle: build.gradle: 1 dependency version(s) could not be resolved statically: org.junit.jupiter:junit-jupiter; no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial"
+          },
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "maven:<repo>/temporal-workflowcheck/build.gradle: build.gradle: no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial"
+          },
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "maven:<repo>/temporal-workflowcheck/samples/gradle/build.gradle: build.gradle: no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial"
+          },
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "maven:<repo>/temporal-workflowcheck/samples/gradle-multi-project/build.gradle: build.gradle: no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial"
+          },
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "maven:<repo>/temporal-workflowcheck/samples/gradle-multi-project/project-app/build.gradle: build.gradle: no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial"
+          },
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "maven:<repo>/temporal-workflowcheck/samples/gradle-multi-project/project-workflows/build.gradle: build.gradle: no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial"
+          },
+          {
+            "code": "scan_note",
+            "affects_coverage": false,
+            "message": "maven-note:./pom.xml: Maven inventory for ./pom.xml lists 1 direct (declared) dependencies; transitive dependencies are resolved by Maven at build time and were not inventoried, so vulnerabilities in them are not reported. Scan a CycloneDX/SPDX SBOM from the build (for example the CycloneDX Maven plugin) for full coverage."
+          },
+          {
+            "code": "scope_exclusion",
+            "affects_coverage": false,
+            "message": "filesystem-discovery:c7d6cbe7240a9768:directory_policy: Paths were excluded by scanner policy, linked-worktree or symlink rules; contents were not inspected."
+          }
+        ],
+        "coverage_warnings": [
+          {
+            "kind": null,
+            "ecosystem": "maven",
+            "reason": "manifest_parse_error",
+            "detail": "build.gradle: no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "maven",
+            "reason": "manifest_parse_error",
+            "detail": "build.gradle: 2 dependency version(s) could not be resolved statically: io.opentelemetry:opentelemetry-api, io.opentelemetry:opentelemetry-sdk; no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "maven",
+            "reason": "manifest_parse_error",
+            "detail": "build.gradle: no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "maven",
+            "reason": "manifest_parse_error",
+            "detail": "build.gradle: no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "maven",
+            "reason": "manifest_parse_error",
+            "detail": "build.gradle: 5 dependency version(s) could not be resolved statically: io.opentelemetry:opentelemetry-api, io.opentelemetry:opentelemetry-exporter-otlp, io.opentelemetry:opentelemetry-opentracing-shim:$otShimVersion, io.opentelemetry:opentelemetry-sdk, io.opentelemetry:opentelemetry-sdk-trace; no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "maven",
+            "reason": "manifest_parse_error",
+            "detail": "build.gradle: no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "maven",
+            "reason": "manifest_parse_error",
+            "detail": "build.gradle: no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "maven",
+            "reason": "manifest_parse_error",
+            "detail": "build.gradle: 1 dependency version(s) could not be resolved statically: software.amazon.awssdk:s3; no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "maven",
+            "reason": "manifest_parse_error",
+            "detail": "build.gradle: no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "maven",
+            "reason": "manifest_parse_error",
+            "detail": "build.gradle: no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "maven",
+            "reason": "manifest_parse_error",
+            "detail": "build.gradle: no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "maven",
+            "reason": "manifest_parse_error",
+            "detail": "build.gradle: no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "maven",
+            "reason": "manifest_parse_error",
+            "detail": "build.gradle: 4 dependency version(s) could not be resolved statically: com.fasterxml.jackson.datatype:jackson-datatype-jdk8, com.fasterxml.jackson.datatype:jackson-datatype-jsr310, com.fasterxml.jackson.module:jackson-module-kotlin, org.jetbrains.kotlin:kotlin-reflect; no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "maven",
+            "reason": "manifest_parse_error",
+            "detail": "build.gradle: 2 dependency version(s) could not be resolved statically: org.eclipse.jetty:jetty-server, org.eclipse.jetty:jetty-servlet; no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "maven",
+            "reason": "manifest_parse_error",
+            "detail": "build.gradle: 4 dependency version(s) could not be resolved statically: com.fasterxml.jackson.core:jackson-databind, com.fasterxml.jackson.datatype:jackson-datatype-jdk8, com.fasterxml.jackson.datatype:jackson-datatype-jsr310, io.micrometer:micrometer-core; no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "maven",
+            "reason": "manifest_parse_error",
+            "detail": "build.gradle: 6 dependency version(s) could not be resolved statically: io.grpc:grpc-api, io.grpc:grpc-inprocess, io.grpc:grpc-netty-shaded, io.grpc:grpc-protobuf, io.grpc:grpc-services (+1 more); no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "maven",
+            "reason": "manifest_parse_error",
+            "detail": "build.gradle: 4 dependency version(s) could not be resolved statically: com.fasterxml.jackson.core:jackson-databind, com.fasterxml.jackson.datatype:jackson-datatype-jdk8, com.fasterxml.jackson.datatype:jackson-datatype-jsr310, io.micrometer:micrometer-core; no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "maven",
+            "reason": "manifest_parse_error",
+            "detail": "build.gradle: 8 dependency version(s) could not be resolved statically: io.opentelemetry:opentelemetry-api, io.opentelemetry:opentelemetry-opentracing-shim:$otShimVersion, io.opentelemetry:opentelemetry-sdk, org.junit.platform:junit-platform-launcher, org.springframework.boot:spring-boot-autoconfigure (+3 more); no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "maven",
+            "reason": "manifest_parse_error",
+            "detail": "build.gradle: 1 dependency version(s) could not be resolved statically: org.springframework.boot:spring-boot-starter; no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "maven",
+            "reason": "manifest_parse_error",
+            "detail": "build.gradle: no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "maven",
+            "reason": "manifest_parse_error",
+            "detail": "build.gradle: 1 dependency version(s) could not be resolved statically: org.junit.jupiter:junit-jupiter; no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "maven",
+            "reason": "manifest_parse_error",
+            "detail": "build.gradle: no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "maven",
+            "reason": "manifest_parse_error",
+            "detail": "build.gradle: no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "maven",
+            "reason": "manifest_parse_error",
+            "detail": "build.gradle: no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "maven",
+            "reason": "manifest_parse_error",
+            "detail": "build.gradle: no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "maven",
+            "reason": "manifest_parse_error",
+            "detail": "build.gradle: no gradle.lockfile, so transitive dependencies were not resolved; Gradle dependency coverage is partial",
+            "package_count": 0
+          },
+          {
+            "kind": "scan_note",
+            "ecosystem": "maven",
+            "reason": "maven_transitive_unresolved",
+            "detail": "Maven inventory for ./pom.xml lists 1 direct (declared) dependencies; transitive dependencies are resolved by Maven at build time and were not inventoried, so vulnerabilities in them are not reported. Scan a CycloneDX/SPDX SBOM from the build (for example the CycloneDX Maven plugin) for full coverage.",
+            "package_count": 0
+          },
+          {
+            "kind": "scope_exclusion",
+            "ecosystem": "filesystem-discovery",
+            "reason": "directory_policy",
+            "detail": "Paths were excluded by scanner policy, linked-worktree or symlink rules; contents were not inspected.",
+            "package_count": 0
+          }
+        ]
+      },
+      "advisory_db_synced_at": "2026-11-21T02:25:14.979726+00:00",
+      "ecosystems": [],
+      "unverified": [
+        {
+          "ecosystem": "Maven",
+          "manifests": [
+            "build.gradle",
+            "*/build.gradle"
+          ],
+          "verified": false,
+          "reason": "Gradle build without gradle.lockfile: resolved versions, including transitive dependencies, exist only after running Gradle.",
+          "packages_found": 47,
+          "advisories_reported": 28,
+          "possibly_affected_reported": 0
+        }
+      ]
+    },
+    {
+      "name": "snowflakedb/snowflake-connector-python",
+      "url": "https://github.com/snowflakedb/snowflake-connector-python",
+      "commit": "0397b47a90044a697810c58804b1f0b691244165",
+      "scan": {
+        "exit_code": 1,
+        "outcome": "partial",
+        "issues": [
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "Advisories matched an unlocked version range; pin or lock dependencies to confirm applicability."
+          },
+          {
+            "code": "scan_note",
+            "affects_coverage": false,
+            "message": "pypi-note:<repo>/setup.cfg: setup.cfg: resolved at scan time from declared ranges; versions may differ from your install \u2014 add a lockfile for exact results (environment markers evaluated for CPython 3.12 on Linux x86_64)"
+          },
+          {
+            "code": "scan_note",
+            "affects_coverage": false,
+            "message": "pypi-note:<repo>/prober/setup.py: setup.py: resolved at scan time from declared ranges; versions may differ from your install \u2014 add a lockfile for exact results (environment markers evaluated for CPython 3.12 on Linux x86_64)"
+          },
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "pypi:<repo>/setup.cfg: setup.cfg: transitive dependencies not resolved for argon2-cffi-bindings: time budget exhausted; blinker: time budget exhausted; botocore: time budget exhausted; certifi: time budget exhausted; click: time budget exhausted; cryptography: time budget exhausted; h11: time budget exhausted; hpack: time budget exhausted; hyperframe: time budget exhausted; itsdangerous: time budget exhausted; jeepney: time budget exhausted; jinja2: time budget exhausted; markupsafe: time budget exhausted; mitmproxy-linux: time budget exhausted; more-itertools: time budget exhausted; msal: time budget exhausted; pyasn1: time budget exhausted; pycparser: time budget exhausted; pyjwt: <redacted> budget exhausted; pylsqpack: time budget exhausted; pyopenssl: time budget exhausted; requests: time budget exhausted; service-identit"
+          },
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "pypi:<repo>/prober/setup.py: setup.py: transitive dependencies not resolved for faker: time budget exhausted; requests: time budget exhausted; snowflake-connector-python: time budget exhausted; add a lockfile or scan inside the project's virtualenv; Python dependency coverage is partial"
+          },
+          {
+            "code": "scope_exclusion",
+            "affects_coverage": false,
+            "message": "filesystem-discovery:cd633954e6845b19:directory_policy: Paths were excluded by scanner policy, linked-worktree or symlink rules; contents were not inspected."
+          },
+          {
+            "code": "scope_exclusion",
+            "affects_coverage": false,
+            "message": "filesystem-discovery:cd633954e6845b19:repository_ignore: Files were excluded by repository ignore rules."
+          }
+        ],
+        "coverage_warnings": [
+          {
+            "kind": "scan_note",
+            "ecosystem": "pypi",
+            "reason": "resolved_at_scan",
+            "detail": "setup.cfg: resolved at scan time from declared ranges; versions may differ from your install \u2014 add a lockfile for exact results (environment markers evaluated for CPython 3.12 on Linux x86_64)",
+            "package_count": 0
+          },
+          {
+            "kind": "scan_note",
+            "ecosystem": "pypi",
+            "reason": "resolved_at_scan",
+            "detail": "setup.py: resolved at scan time from declared ranges; versions may differ from your install \u2014 add a lockfile for exact results (environment markers evaluated for CPython 3.12 on Linux x86_64)",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "pypi",
+            "reason": "manifest_parse_error",
+            "detail": "setup.cfg: transitive dependencies not resolved for argon2-cffi-bindings: time budget exhausted; blinker: time budget exhausted; botocore: time budget exhausted; certifi: time budget exhausted; click: time budget exhausted; cryptography: time budget exhausted; h11: time budget exhausted; hpack: time budget exhausted; hyperframe: time budget exhausted; itsdangerous: time budget exhausted; jeepney: time budget exhausted; jinja2: time budget exhausted; markupsafe: time budget exhausted; mitmproxy-linux: time budget exhausted; more-itertools: time budget exhausted; msal: time budget exhausted; pyasn1: time budget exhausted; pycparser: time budget exhausted; pyjwt: <redacted> budget exhausted; pylsqpack: time budget exhausted; pyopenssl: time budget exhausted; requests: time budget exhausted; service-identity: time budget exhausted; six: time budget exhausted; typing-extensions: time budget exhausted; wcwidth: time budget exhausted; werkzeug: time budget exhausted; add a lockfile or scan in",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "pypi",
+            "reason": "manifest_parse_error",
+            "detail": "setup.py: transitive dependencies not resolved for faker: time budget exhausted; requests: time budget exhausted; snowflake-connector-python: time budget exhausted; add a lockfile or scan inside the project's virtualenv; Python dependency coverage is partial",
+            "package_count": 0
+          },
+          {
+            "kind": "scope_exclusion",
+            "ecosystem": "filesystem-discovery",
+            "reason": "directory_policy",
+            "detail": "Paths were excluded by scanner policy, linked-worktree or symlink rules; contents were not inspected.",
+            "package_count": 0
+          },
+          {
+            "kind": "scope_exclusion",
+            "ecosystem": "filesystem-discovery",
+            "reason": "repository_ignore",
+            "detail": "Files were excluded by repository ignore rules.",
+            "package_count": 0
+          }
+        ]
+      },
+      "advisory_db_synced_at": "2026-11-21T02:25:14.979726+00:00",
+      "ecosystems": [],
+      "unverified": [
+        {
+          "ecosystem": "PyPI",
+          "manifests": [
+            "setup.cfg"
+          ],
+          "verified": false,
+          "reason": "setup.cfg declares version ranges, not resolved versions, and no lockfile is committed.",
+          "packages_found": 95,
+          "advisories_reported": 0,
+          "possibly_affected_reported": 5
+        }
+      ]
+    },
+    {
+      "name": "snowflakedb/snowflake-jdbc",
+      "url": "https://github.com/snowflakedb/snowflake-jdbc",
+      "commit": "ee32e7dfec6ebdd3c1bb954a66205255ffadb0ae",
+      "scan": {
+        "exit_code": 1,
+        "outcome": "partial",
+        "issues": [
+          {
+            "code": "scanner_coverage_gap",
+            "affects_coverage": true,
+            "message": "Secret scan incomplete: codecov/codecov: not scanned, 43,981,817 bytes exceeds the 10,485,760-byte ceiling"
+          },
+          {
+            "code": "scanner_coverage_gap",
+            "affects_coverage": true,
+            "message": "Secret scan incomplete: codecov/codecov_aarch64: not scanned, 40,513,313 bytes exceeds the 10,485,760-byte ceiling"
+          },
+          {
+            "code": "scope_exclusion",
+            "affects_coverage": false,
+            "message": "filesystem-discovery:c0aa97d237f29589:directory_policy: Paths were excluded by scanner policy, linked-worktree or symlink rules; contents were not inspected."
+          },
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "maven:<repo>/pom.xml: pom.xml dependency version is unresolved; Maven dependency coverage is partial"
+          },
+          {
+            "code": "scan_note",
+            "affects_coverage": false,
+            "message": "maven-note:./pom.xml: Maven inventory for ./pom.xml lists 67 direct (declared) dependencies; transitive dependencies are resolved by Maven at build time and were not inventoried, so vulnerabilities in them are not reported. Scan a CycloneDX/SPDX SBOM from the build (for example the CycloneDX Maven plugin) for full coverage."
+          },
+          {
+            "code": "vulnerability_coverage_gap",
+            "affects_coverage": true,
+            "message": "maven:<repo>/FIPS/pom.xml: pom.xml dependency version is unresolved; Maven dependency coverage is partial"
+          },
+          {
+            "code": "scope_exclusion",
+            "affects_coverage": false,
+            "message": "filesystem-discovery:c0aa97d237f29589:repository_ignore: Files were excluded by repository ignore rules."
+          }
+        ],
+        "coverage_warnings": [
+          {
+            "kind": "scope_exclusion",
+            "ecosystem": "filesystem-discovery",
+            "reason": "directory_policy",
+            "detail": "Paths were excluded by scanner policy, linked-worktree or symlink rules; contents were not inspected.",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "maven",
+            "reason": "manifest_parse_error",
+            "detail": "pom.xml dependency version is unresolved; Maven dependency coverage is partial",
+            "package_count": 0
+          },
+          {
+            "kind": "scan_note",
+            "ecosystem": "maven",
+            "reason": "maven_transitive_unresolved",
+            "detail": "Maven inventory for ./pom.xml lists 67 direct (declared) dependencies; transitive dependencies are resolved by Maven at build time and were not inventoried, so vulnerabilities in them are not reported. Scan a CycloneDX/SPDX SBOM from the build (for example the CycloneDX Maven plugin) for full coverage.",
+            "package_count": 0
+          },
+          {
+            "kind": null,
+            "ecosystem": "maven",
+            "reason": "manifest_parse_error",
+            "detail": "pom.xml dependency version is unresolved; Maven dependency coverage is partial",
+            "package_count": 0
+          },
+          {
+            "kind": "scope_exclusion",
+            "ecosystem": "filesystem-discovery",
+            "reason": "repository_ignore",
+            "detail": "Files were excluded by repository ignore rules.",
+            "package_count": 0
+          }
+        ]
+      },
+      "advisory_db_synced_at": "2026-11-21T02:25:14.979726+00:00",
+      "ecosystems": [],
+      "unverified": [
+        {
+          "ecosystem": "Maven",
+          "manifests": [
+            "pom.xml",
+            "*/pom.xml"
+          ],
+          "verified": false,
+          "reason": "Maven POMs with a parent POM and BOM imports: managed versions are resolved only by running Maven.",
+          "packages_found": 87,
+          "advisories_reported": 24,
+          "possibly_affected_reported": 0
+        }
+      ]
+    }
+  ]
+}

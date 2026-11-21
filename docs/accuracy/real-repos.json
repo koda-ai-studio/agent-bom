@@ -1,0 +1,93 @@
+{
+  "description": "Public repositories, pinned commits and the lockfiles judged by scripts/measure_real_repo_accuracy.py. 'verified' lockfiles get an independent OSV ground truth; 'unverified' manifests cannot be resolved without running the build, so only the scan's own numbers are reported for them.",
+  "pinned_on": "2026-11-20",
+  "repositories": [
+    {
+      "name": "temporalio/temporal",
+      "url": "https://github.com/temporalio/temporal",
+      "commit": "32ef011fbd1e38ecddf656fc3f5026f6641cfeab",
+      "verified": [
+        {
+          "ecosystem": "Go",
+          "lockfiles": [
+            {"path": "go.mod", "format": "go.mod"},
+            {"path": "common/testx/go.mod", "format": "go.mod"},
+            {"path": "tests/mixedbrain/go.mod", "format": "go.mod"}
+          ]
+        }
+      ],
+      "unverified": []
+    },
+    {
+      "name": "temporalio/sdk-typescript",
+      "url": "https://github.com/temporalio/sdk-typescript",
+      "commit": "f5107ac96256c217cccf98cff278175bfa35b21e",
+      "verified": [
+        {
+          "ecosystem": "npm",
+          "lockfiles": [
+            {"path": "pnpm-lock.yaml", "format": "pnpm-lock.yaml"},
+            {"path": "packages/docs/pnpm-lock.yaml", "format": "pnpm-lock.yaml"}
+          ]
+        },
+        {
+          "ecosystem": "crates.io",
+          "lockfiles": [{"path": "packages/core-bridge/Cargo.lock", "format": "Cargo.lock"}]
+        }
+      ],
+      "unverified": []
+    },
+    {
+      "name": "temporalio/sdk-python",
+      "url": "https://github.com/temporalio/sdk-python",
+      "commit": "5c925a41b36b34d9ce32d03f1d1f07faa35b348a",
+      "verified": [
+        {"ecosystem": "PyPI", "lockfiles": [{"path": "uv.lock", "format": "uv.lock"}]},
+        {
+          "ecosystem": "crates.io",
+          "lockfiles": [{"path": "temporalio/bridge/Cargo.lock", "format": "Cargo.lock"}]
+        }
+      ],
+      "unverified": []
+    },
+    {
+      "name": "temporalio/sdk-java",
+      "url": "https://github.com/temporalio/sdk-java",
+      "commit": "f5c8e4e1c135de05eacf014fd49a612c50f93b9e",
+      "verified": [],
+      "unverified": [
+        {
+          "ecosystem": "Maven",
+          "manifests": ["build.gradle", "*/build.gradle"],
+          "reason": "Gradle build without gradle.lockfile: resolved versions, including transitive dependencies, exist only after running Gradle."
+        }
+      ]
+    },
+    {
+      "name": "snowflakedb/snowflake-connector-python",
+      "url": "https://github.com/snowflakedb/snowflake-connector-python",
+      "commit": "0397b47a90044a697810c58804b1f0b691244165",
+      "verified": [],
+      "unverified": [
+        {
+          "ecosystem": "PyPI",
+          "manifests": ["setup.cfg"],
+          "reason": "setup.cfg declares version ranges, not resolved versions, and no lockfile is committed."
+        }
+      ]
+    },
+    {
+      "name": "snowflakedb/snowflake-jdbc",
+      "url": "https://github.com/snowflakedb/snowflake-jdbc",
+      "commit": "ee32e7dfec6ebdd3c1bb954a66205255ffadb0ae",
+      "verified": [],
+      "unverified": [
+        {
+          "ecosystem": "Maven",
+          "manifests": ["pom.xml", "*/pom.xml"],
+          "reason": "Maven POMs with a parent POM and BOM imports: managed versions are resolved only by running Maven."
+        }
+      ]
+    }
+  ]
+}
