@@ -20,6 +20,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - The scan footer states unique package CVEs beside per-copy instances, the demo advisory line says its count is the catalog size, and the findings table says it is ranked by contextual risk, so a reachable medium can sit above an isolated high.
 
 ### Fixed
+- The suggested follow-up commands after `scan --push-url ... --push-api-key ...` now repeat the key as `"$AGENT_BOM_PUSH_API_KEY"` instead of dropping it, so running them no longer pushes without authentication. The key itself is still never printed.
 - The API image pins the CA certificate bundle that Alpine 3.23 ships, and pull requests that change the image or its dependencies now build it before merge.
 - On SQLite, a slow authentication-failure receipt write no longer delays the failure count an authentication answer waits on, which could refuse a request with 503. Receipt budgets now live in their own sidecar file.
 - Distinguish Azure AI discovery read failures from empty listings and retain observed inventory when later pages or child-resource reads fail.
