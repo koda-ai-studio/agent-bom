@@ -99,3 +99,9 @@ def test_partial_refresh_replaces_measured_modules_and_retains_others(tmp_path, 
     monkeypatch.setattr(sys, "argv", ["refresh", "--junit", str(report), "--output", str(out), "--merge-existing"])
     assert main() == 0
     assert json.loads(out.read_text())["files"] == {"tests/test_a.py": 2.0, "tests/api/test_b.py": 2.0, "tests/test_untouched.py": 4.2}
+
+
+def test_serial_collection_progress_is_recognized(tmp_path: Path) -> None:
+    log = tmp_path / "serial.log"
+    log.write_text(SERIAL_LOG.replace("Z collected", "Z collecting ... collected"))
+    assert seconds_from_log(log) == pytest.approx({"tests/test_a.py": 3.5, "tests/api/test_b.py": 4.5})

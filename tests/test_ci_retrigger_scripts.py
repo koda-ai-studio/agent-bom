@@ -281,3 +281,34 @@ esac
         assert "required check(s) failed" in result.stdout
     else:
         assert "No fallback dispatch needed" in result.stdout or "No retrigger needed" in result.stdout
+
+
+@pytest.mark.parametrize("event", ["workflow_dispatch", "push", "schedule", "pull_request", "merge_group"])
+def test_retrigger_cancels_only_queue_and_pr_events(tmp_path: Path, event: str) -> None:
+    import json
+
+    runs = json.dumps(
+        {"workflow_runs": [{"id": 12345, "name": "CI/CD Pipeline", "status": "in_progress", "head_sha": "old", "event": event}]}
+    )
+    stub = """#!/usr/bin/env bash
+case "$*" in
+  *'/pulls/1 '*) echo head ;;
+  *'/commits/head/check-runs'*) echo '[]' ;;
+  *'actions/runs?head_sha='*) echo 1 ;;
+  *'actions/runs'*) echo 'RUNS_JSON' ;;
+  'run cancel '*) echo cancelled ;;
+  'run view '*) echo completed ;;
+  *) echo "unexpected invocation: $*" >&2; exit 70 ;;
+esac
+""".replace("RUNS_JSON", runs)
+    bin_dir = _gh_stub(tmp_path, stub)
+    env = {**os.environ, "GH_REPO": "owner/repo", "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}"}
+    result = subprocess.run(
+        ["bash", str(ROOT / "scripts/retrigger_stranded_pr.sh"), "1"],
+        capture_output=True,
+        text=True,
+        env=env,
+        timeout=15,
+    )
+    assert result.returncode == 0, result.stderr
+    assert ("cancelling superseded" in result.stdout) == (event in {"pull_request", "merge_group"})

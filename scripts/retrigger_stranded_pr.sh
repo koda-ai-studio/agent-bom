@@ -50,7 +50,8 @@ fi
 # concurrency slot. GitHub then queues the current run before creating any
 # check-runs, which appears in branch protection as "Expected — Waiting for
 # status to be reported". Cancel only superseded required workflows on this
-# exact branch; unrelated workflows and current-head runs are left alone.
+# exact branch and PR/queue event; manual runs, unrelated workflows and
+# current-head runs are left alone.
 BRANCH_RUNS="$(
   gh api --method GET "repos/${REPO}/actions/runs" \
     -f branch="${HEAD_REF}" -f per_page=100 2>/dev/null || printf '{"workflow_runs":[]}'
@@ -64,6 +65,7 @@ done < <(
     '.workflow_runs[]
      | select(.status != "completed")
      | select(.head_sha != $current_sha)
+     | select(.event == "pull_request" or .event == "merge_group")
      | select(.name == "CI/CD Pipeline" or .name == "PR Security Gate" or .name == "CodeQL")
      | .id' <<< "${BRANCH_RUNS}"
 )

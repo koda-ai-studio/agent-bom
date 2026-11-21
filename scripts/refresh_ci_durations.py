@@ -29,7 +29,7 @@ from pathlib import Path
 
 DEFAULT_OUTPUT = Path(__file__).resolve().parent.parent / "tests" / ".ci-durations.json"
 _TIMESTAMP = r"(?P<ts>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?)Z"
-_SESSION_START = re.compile(_TIMESTAMP + r" (?:\d+ workers \[\d+ items?\]|collected \d+ items?)")
+_SESSION_START = re.compile(_TIMESTAMP + r" (?:\d+ workers \[\d+ items?\]|(?:collecting \.\.\. )?collected \d+ items?)")
 _ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 _RESULT = re.compile(
     _TIMESTAMP + r" \[(?P<worker>gw\d+)\] \[\s*\d+%\] (?:PASSED|FAILED|SKIPPED|XFAIL|XPASS|ERROR) (?P<module>[^\s:]+\.py)::"
