@@ -149,6 +149,7 @@ def test_governance_findings_returns_canonical_envelope(monkeypatch):
         warnings = ["snowflake sample"]
 
     monkeypatch.setenv("SNOWFLAKE_ACCOUNT", "acct-test")
+    monkeypatch.setenv("AGENT_BOM_SNOWFLAKE_GOVERNANCE", "1")
     import agent_bom.cloud as cloud_mod
 
     monkeypatch.setattr(cloud_mod, "discover_governance", lambda **_: _Report())

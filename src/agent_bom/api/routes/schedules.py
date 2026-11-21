@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Request
 
+from agent_bom.api.ambient_access import caller_may_use_ambient, require_ambient_scan_targets
 from agent_bom.api.models import ScheduleCreate
 from agent_bom.api.read_models import admin as m
 from agent_bom.api.read_models import documented
@@ -26,7 +27,7 @@ from agent_bom.api.tenant_quota import enforce_schedule_quota, tenant_quota_guar
 router = APIRouter()
 
 
-def _validate_enabled_source_schedule(tenant_id: str, scan_config: dict) -> None:
+def _validate_enabled_source_schedule(tenant_id: str, scan_config: dict, *, ambient_caller: bool) -> None:
     """Require an enabled source-backed schedule to reference a runnable source."""
     source_id = str(scan_config.get("source_id") or "").strip()
     raw_source_ids = scan_config.get("source_ids")
@@ -51,7 +52,7 @@ def _validate_enabled_source_schedule(tenant_id: str, scan_config: dict) -> None
             if source is None or source.tenant_id != tenant_id or not source.enabled:
                 raise HTTPException(status_code=409, detail="Scheduled source is not available in this tenant")
             _validate_credential_ref_for_tenant(tenant_id, source)
-            request = _request_for_source(source)
+            request = _request_for_source(source, ambient_caller=ambient_caller)
             if len(scan_request_targets(request)) != 1:
                 raise HTTPException(
                     status_code=422,
@@ -59,6 +60,7 @@ def _validate_enabled_source_schedule(tenant_id: str, scan_config: dict) -> None
                 )
         return
     if not source_id:
+        require_ambient_scan_targets(scan_config, tenant_id=tenant_id, ambient_caller=ambient_caller)
         if "discover_host" in scan_config:
             from pydantic import ValidationError
 
@@ -69,7 +71,7 @@ def _validate_enabled_source_schedule(tenant_id: str, scan_config: dict) -> None
                 host_request = ScanRequest(discover_host=scan_config["discover_host"])
             except ValidationError as exc:
                 raise HTTPException(status_code=422, detail="Invalid host discovery setting") from exc
-            _sanitize_scan_request_paths(host_request, tenant_id=tenant_id)
+            _sanitize_scan_request_paths(host_request, tenant_id=tenant_id, ambient_caller=ambient_caller)
         return
     source = _get_source_store().get(source_id, tenant_id=tenant_id)
     if source is None or source.tenant_id != tenant_id or not source.enabled:
@@ -80,7 +82,7 @@ def _validate_enabled_source_schedule(tenant_id: str, scan_config: dict) -> None
     from agent_bom.api.routes.sources import _request_for_source, _validate_credential_ref_for_tenant
 
     _validate_credential_ref_for_tenant(tenant_id, source)
-    _request_for_source(source)
+    _request_for_source(source, ambient_caller=ambient_caller)
 
 
 @router.post("/schedules", tags=["schedules"], status_code=201)
@@ -116,7 +118,7 @@ def create_schedule(request: Request, body: ScheduleCreate) -> dict:
     # Per-tenant quota lock keeps (check + insert) atomic (audit-4 P1).
     with tenant_quota_guard(tenant_id, lambda: enforce_schedule_quota(tenant_id)):
         if schedule.enabled:
-            _validate_enabled_source_schedule(tenant_id, schedule.scan_config)
+            _validate_enabled_source_schedule(tenant_id, schedule.scan_config, ambient_caller=caller_may_use_ambient(request))
         _get_schedule_store().put(schedule, tenant_id=tenant_id)
     log_action(
         "schedule.create",
@@ -174,7 +176,7 @@ def toggle_schedule(request: Request, schedule_id: str) -> dict:
             raise HTTPException(status_code=404, detail=f"Schedule {schedule_id} not found")
         enabling = not s.enabled
         if enabling:
-            _validate_enabled_source_schedule(tenant_id, s.scan_config)
+            _validate_enabled_source_schedule(tenant_id, s.scan_config, ambient_caller=caller_may_use_ambient(request))
         s.enabled = enabling
         s.updated_at = datetime.now(timezone.utc).isoformat()
         _get_schedule_store().put(s, tenant_id=tenant_id)

@@ -31,6 +31,12 @@ AGENT_BOM_ANALYTICS_BACKEND
 AGENT_BOM_API_HOST
 # Rechecked at API admission and worker execution so queued host discovery honors revocation.
 AGENT_BOM_API_HOST_DISCOVERY_TENANT
+# Opt-ins (default OFF, read live) for API surfaces that use the server's own credentials; admins only. Read in cloud/ambient_credentials.py.
+AGENT_BOM_API_K8S_SCANS
+AGENT_BOM_API_K8S_CONTEXTS
+AGENT_BOM_API_CONNECTOR_SCANS
+AGENT_BOM_API_MODEL_HUB_CREDENTIALS
+AGENT_BOM_AMBIENT_CREDENTIALS_TENANT
 # Suppression approval policy, re-read on every create/approve so operator changes apply without restart.
 AGENT_BOM_EXCEPTION_ALLOW_SELF_APPROVAL
 AGENT_BOM_EXCEPTION_MAX_EXPIRY_DAYS
@@ -542,6 +548,7 @@ AGENT_BOM_SIEM_URL
 AGENT_BOM_SKILLS_CI
 AGENT_BOM_SKILLS_FAIL_ON_VERDICT
 AGENT_BOM_SKILLS_SCAN_CONCURRENCY
+AGENT_BOM_SNOWFLAKE_GOVERNANCE  # opt-in flag (default OFF, read live) allowing admins to read governance and Cortex telemetry from the API process's own Snowflake account; read in cloud/ambient_credentials.py
 AGENT_BOM_SNOWFLAKE_INVENTORY  # opt-in flag (default OFF) gating read-only estate-wide Snowflake inventory enrichment; read in cloud/snowflake.py
 AGENT_BOM_SNOWFLAKE_MAX_ROLES  # max roles enumerated by live SHOW-based identity discovery before the scan warns + caps (default 2000); read in cloud/snowflake.py
 AGENT_BOM_SNOWFLAKE_ORG  # opt-in flag (default OFF) gating read-only Snowflake organization→accounts roll-up discovery (requires ORGADMIN; no-ops gracefully without it); read in cloud/snowflake.py

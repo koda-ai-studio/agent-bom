@@ -565,12 +565,16 @@ def test_create_scan_rejects_local_paths_by_default(monkeypatch, payload):
 
 
 def test_create_scan_non_path_targets_allowed_by_default(monkeypatch):
-    """Image / connector / k8s / repo scans do not require the path gate."""
+    """Image / repo scans do not require the path gate; k8s needs its own operator opt-in."""
     monkeypatch.delenv("AGENT_BOM_API_LOCAL_PATH_SCANS", raising=False)
+    monkeypatch.delenv("AGENT_BOM_API_K8S_SCANS", raising=False)
     client, _ = _fresh_client()
-    for payload in ({"images": ["redis:7"]}, {"k8s": True}, {}, {"repo_url": "https://github.com/org/repo"}):
+    for payload in ({"images": ["redis:7"]}, {}, {"repo_url": "https://github.com/org/repo"}):
         resp = client.post("/v1/scan", json=payload)
         assert resp.status_code == 202, payload
+    assert client.post("/v1/scan", json={"k8s": True}).status_code == 403
+    monkeypatch.setenv("AGENT_BOM_API_K8S_SCANS", "1")
+    assert client.post("/v1/scan", json={"k8s": True}).status_code == 202
 
 
 def test_create_scan_allows_valid_path_when_gate_enabled(monkeypatch, tmp_path):

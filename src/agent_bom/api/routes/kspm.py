@@ -32,13 +32,23 @@ from agent_bom.api.read_models import documented
 from agent_bom.api.read_models import runtime_estate_a as rt
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.backpressure import BackpressureRejectedError, adaptive_backpressure
+from agent_bom.cloud.ambient_credentials import (
+    API_K8S_CONTEXTS_ENV,
+    API_K8S_SCANS_ENV,
+    allowed_k8s_contexts,
+    ambient_disabled_note,
+    ambient_tenant_permitted,
+    api_k8s_scans_enabled,
+)
 from agent_bom.k8s import K8sPostureResult, scan_live_cluster_posture_with_evidence
 from agent_bom.rbac import require_authenticated_permission
 
 router = APIRouter(tags=["kspm"])
 _logger = logging.getLogger(__name__)
 
-_SCAN_DEP = require_authenticated_permission("scan")
+# Live posture reads the cluster with the API server's own service account or
+# kubeconfig, so it is admin-only and operator opt-in, like other ambient reads.
+_AMBIENT_DEP = require_authenticated_permission("cloud_ambient")
 _READ_DEP = require_authenticated_permission("read")
 
 _SCHEMA_VERSION = "kspm.cluster.posture.v1"
@@ -113,11 +123,25 @@ def _empty_payload() -> dict[str, Any]:
     }
 
 
+def _require_live_posture_allowed(tenant_id: str, scope: ClusterPostureRequest) -> None:
+    if not ambient_tenant_permitted(tenant_id):
+        raise HTTPException(status_code=403, detail="This tenant may not use the control plane's own credentials.")
+    if not api_k8s_scans_enabled():
+        raise HTTPException(
+            status_code=404,
+            detail=ambient_disabled_note(API_K8S_SCANS_ENV, "Live cluster posture with the API server's service account or kubeconfig"),
+        )
+    # Choosing a kubeconfig context selects which cluster credential is spent;
+    # only contexts the operator lists may be requested.
+    if scope.context and scope.context not in allowed_k8s_contexts():
+        raise HTTPException(status_code=400, detail=f"Kubernetes context is not listed in {API_K8S_CONTEXTS_ENV}.")
+
+
 @router.post("/kspm/clusters/posture")
 async def run_cluster_posture(
     request: Request,
     body: ClusterPostureRequest | None = None,
-    _role: Any = _SCAN_DEP,
+    _role: Any = _AMBIENT_DEP,
 ) -> dict[str, Any]:
     """Run a live Kubernetes cluster-posture scan, persist it, and return the envelope.
 
@@ -130,6 +154,7 @@ async def run_cluster_posture(
 
     tenant_id = require_request_tenant_id(request)
     scope = body or ClusterPostureRequest()
+    _require_live_posture_allowed(tenant_id, scope)
     run_id = uuid.uuid4().hex
     created_at = datetime.now(timezone.utc).isoformat()
 

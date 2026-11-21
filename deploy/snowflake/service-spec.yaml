@@ -7,6 +7,9 @@ spec:
         SNOWFLAKE_ACCOUNT: "{{ snowflake_account }}"
         SNOWFLAKE_DATABASE: "{{ database }}"
         SNOWFLAKE_SCHEMA: "{{ schema }}"
+        # Single-account install: let admins read this account's governance
+        # and Cortex telemetry with the service's own identity.
+        AGENT_BOM_SNOWFLAKE_GOVERNANCE: "1"
         AGENT_BOM_MCP_MODE: "0"
         AGENT_BOM_LOG_LEVEL: "INFO"
       volumeMounts:

@@ -9,6 +9,13 @@ Endpoints:
     GET  /v1/cortex/health         Cortex agent health status
     GET  /v1/siem/formats          supported SIEM event formats
 
+Governance and Cortex reads connect with the API process's own ``SNOWFLAKE_*``
+identity, not a tenant's stored connection. They are therefore off unless an
+operator sets ``AGENT_BOM_SNOWFLAKE_GOVERNANCE``, admin-only
+(``cloud_ambient``), hidden on the public demo, and answer failures with fixed
+text. ``/v1/activity`` stays a viewer read of runtime events and includes the
+operator's Snowflake query history only under the same opt-in and permission.
+
 Every handler here mines Snowflake ACCESS_HISTORY / QUERY_HISTORY / usage
 history synchronously. Those blocking calls run off the event loop via
 ``anyio.to_thread.run_sync`` under an adaptive-backpressure guard (mirroring the
@@ -19,12 +26,14 @@ any unrelated request; a burst sheds with a 429 + ``Retry-After`` instead.
 from __future__ import annotations
 
 import logging
+import os
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Any, Callable, TypeVar, cast
 
 import anyio.to_thread
 from fastapi import APIRouter, HTTPException, Query, Request
 
+from agent_bom.api.ambient_access import caller_may_use_ambient
 from agent_bom.api.read_models import ActivityTimelineResponse, SiemFormatsResponse, documented
 from agent_bom.api.read_models.governance_a import (
     CortexHealthResponse,
@@ -34,12 +43,22 @@ from agent_bom.api.read_models.governance_a import (
 )
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.backpressure import BackpressureRejectedError, adaptive_backpressure
+from agent_bom.cloud.ambient_credentials import (
+    AMBIENT_SNOWFLAKE_GOVERNANCE_ENV,
+    SNOWFLAKE_GOVERNANCE_DISABLED_NOTE,
+    ambient_snowflake_governance_enabled,
+)
+from agent_bom.rbac import require_authenticated_permission
 from agent_bom.security import sanitize_error, sanitize_text
 
 router = APIRouter()
 _logger = logging.getLogger(__name__)
 
 _T = TypeVar("_T")
+
+_AMBIENT_DEP = require_authenticated_permission("cloud_ambient")
+_SNOWFLAKE_ACCOUNT_MISSING = "SNOWFLAKE_ACCOUNT env var not set. Governance requires Snowflake."
+_SNOWFLAKE_READ_FAILED = "Snowflake governance read failed; see server logs."
 
 
 def _reject_public_demo_operator_surface() -> None:
@@ -51,6 +70,31 @@ def _reject_public_demo_operator_surface() -> None:
             status_code=404,
             detail="This operator integration is not exposed on the public demo.",
         )
+
+
+def _require_snowflake_governance() -> None:
+    """Gate every read that spends the control plane's own Snowflake identity."""
+    _reject_public_demo_operator_surface()
+    if not ambient_snowflake_governance_enabled():
+        raise HTTPException(status_code=404, detail=SNOWFLAKE_GOVERNANCE_DISABLED_NOTE)
+    if not os.environ.get("SNOWFLAKE_ACCOUNT"):
+        raise HTTPException(status_code=400, detail=_SNOWFLAKE_ACCOUNT_MISSING)
+
+
+def _caller_may_read_operator_snowflake(request: Request) -> bool:
+    """Opt-in plus ``cloud_ambient`` (and the tenant binding) for reads embedded in a viewer route."""
+    return ambient_snowflake_governance_enabled() and caller_may_use_ambient(request)
+
+
+async def _snowflake_read(build: Callable[[], _T]) -> _T:
+    """Offload a Snowflake read; failures carry fixed text, never SDK messages."""
+    try:
+        return await _offload(build)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        _logger.error("Snowflake governance read failed: %s", sanitize_text(exc))
+        raise HTTPException(status_code=500, detail=_SNOWFLAKE_READ_FAILED) from exc
 
 
 async def _offload(build: Callable[[], _T]) -> _T:
@@ -72,22 +116,15 @@ async def _offload(build: Callable[[], _T]) -> _T:
 
 
 @router.get("/governance", **documented(GovernanceReportResponse), tags=["governance"])
-async def governance_report(days: int = 30) -> dict[str, Any]:
+async def governance_report(days: int = 30, _role: Any = _AMBIENT_DEP) -> dict[str, Any]:
     """Run Snowflake governance discovery and return findings.
 
     Mines ACCESS_HISTORY, GRANTS_TO_ROLES, TAG_REFERENCES, and
-    CORTEX_AGENT_USAGE_HISTORY. Requires SNOWFLAKE_ACCOUNT env var.
+    CORTEX_AGENT_USAGE_HISTORY. Requires AGENT_BOM_SNOWFLAKE_GOVERNANCE,
+    SNOWFLAKE_ACCOUNT and an admin caller.
     """
-    import os
-
     days = max(1, min(days, 365))
-    _reject_public_demo_operator_surface()
-
-    if not os.environ.get("SNOWFLAKE_ACCOUNT"):
-        raise HTTPException(
-            status_code=400,
-            detail="SNOWFLAKE_ACCOUNT env var not set. Governance requires Snowflake.",
-        )
+    _require_snowflake_governance()
 
     def _run() -> dict[str, Any]:
         from agent_bom.cloud import discover_governance
@@ -95,13 +132,7 @@ async def governance_report(days: int = 30) -> dict[str, Any]:
         report = discover_governance(provider="snowflake", days=days)
         return cast(dict[str, Any], report.to_dict())
 
-    try:
-        return await _offload(_run)
-    except HTTPException:
-        raise
-    except Exception as exc:
-        _logger.error("Request failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(exc))
+    return await _snowflake_read(_run)
 
 
 @router.get("/governance/findings", **documented(GovernanceFindingsResponse), tags=["governance"])
@@ -111,6 +142,7 @@ async def governance_findings(
     category: str | None = None,
     limit: Annotated[int, Query(ge=1, le=1000)] = 500,
     offset: int = 0,
+    _role: Any = _AMBIENT_DEP,
 ) -> dict[str, Any]:
     """Return only governance findings, optionally filtered.
 
@@ -121,18 +153,10 @@ async def governance_findings(
     ``offset`` over the materialized list; ``cursor`` / ``next_cursor`` stay
     empty for this surface.
     """
-    import os
-
     days = max(1, min(days, 365))
-    _reject_public_demo_operator_surface()
     safe_limit = max(1, min(limit, 1000))
     safe_offset = max(0, offset)
-
-    if not os.environ.get("SNOWFLAKE_ACCOUNT"):
-        raise HTTPException(
-            status_code=400,
-            detail="SNOWFLAKE_ACCOUNT env var not set.",
-        )
+    _require_snowflake_governance()
 
     def _run() -> dict[str, Any]:
         from agent_bom.api.finding_list_envelope import finding_list_envelope
@@ -160,13 +184,7 @@ async def governance_findings(
             window={"days": days},
         )
 
-    try:
-        return await _offload(_run)
-    except HTTPException:
-        raise
-    except Exception as exc:
-        _logger.error("Request failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(exc))
+    return await _snowflake_read(_run)
 
 
 _ACTIVITY_EVENT_LIMIT = 500
@@ -214,9 +232,24 @@ def _runtime_activity_events(tenant_id: str, *, days: int, sources: list[dict[st
     return events
 
 
-def _snowflake_activity_events(*, days: int, sources: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Snowflake QUERY_HISTORY activity — optional, and reported as such."""
-    import os
+def _snowflake_activity_events(*, days: int, sources: list[dict[str, Any]], allowed: bool) -> list[dict[str, Any]]:
+    """Snowflake QUERY_HISTORY activity — optional, and reported as such.
+
+    The history belongs to the operator's own Snowflake account, so it is only
+    read for an admin caller once an operator has opted in.
+    """
+    if not (allowed and ambient_snowflake_governance_enabled()):
+        sources.append(
+            {
+                "source": "snowflake",
+                "status": "not_configured",
+                "event_count": 0,
+                "detail": (
+                    f"Snowflake query history is included only for admins when {AMBIENT_SNOWFLAKE_GOVERNANCE_ENV}=1 is set on the API"
+                ),
+            }
+        )
+        return []
 
     if not os.environ.get("SNOWFLAKE_ACCOUNT"):
         sources.append(
@@ -235,7 +268,7 @@ def _snowflake_activity_events(*, days: int, sources: list[dict[str, Any]]) -> l
         timeline = cast(dict[str, Any], discover_activity(provider="snowflake", days=days).to_dict())
     except Exception as exc:  # one provider failing must not fail the request
         _logger.warning("Snowflake activity source unavailable: %s", sanitize_text(exc))
-        sources.append({"source": "snowflake", "status": "unavailable", "event_count": 0, "detail": sanitize_error(exc)})
+        sources.append({"source": "snowflake", "status": "unavailable", "event_count": 0, "detail": "Snowflake query history read failed"})
         return []
 
     raw = timeline.get("events") or timeline.get("activity") or timeline.get("query_history") or []
@@ -279,13 +312,14 @@ async def activity_timeline(request: Request, days: int = 30) -> dict[str, Any]:
     """
     days = max(1, min(days, 365))
     tenant_id = require_request_tenant_id(request)
+    snowflake_allowed = _caller_may_read_operator_snowflake(request)
 
     def _run() -> dict[str, Any]:
         sources: list[dict[str, Any]] = []
         events: list[dict[str, Any]] = []
 
         events.extend(_runtime_activity_events(tenant_id, days=days, sources=sources))
-        events.extend(_snowflake_activity_events(days=days, sources=sources))
+        events.extend(_snowflake_activity_events(days=days, sources=sources, allowed=snowflake_allowed))
 
         events.sort(key=lambda event: str(event.get("observed_at") or ""), reverse=True)
         active = [s for s in sources if s["status"] == "active"]
@@ -307,12 +341,12 @@ async def activity_timeline(request: Request, days: int = 30) -> dict[str, Any]:
     except HTTPException:
         raise
     except Exception as exc:
-        _logger.error("Request failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(exc))
+        _logger.error("Activity timeline failed: %s", sanitize_text(exc))
+        raise HTTPException(status_code=500, detail="Activity timeline failed; see server logs.") from exc
 
 
 @router.get("/cortex/telemetry", **documented(CortexTelemetryResponse), tags=["governance"], deprecated=True)
-async def cortex_telemetry(hours: int = 24) -> dict[str, Any]:
+async def cortex_telemetry(hours: int = 24, _role: Any = _AMBIENT_DEP) -> dict[str, Any]:
     """Aggregated Cortex agent telemetry with health assessments.
 
     Combines CORTEX_AGENT_USAGE_HISTORY and AI_OBSERVABILITY_EVENTS
@@ -321,15 +355,8 @@ async def cortex_telemetry(hours: int = 24) -> dict[str, Any]:
 
     Soft-deprecated: no UI/CLI/MCP product consumer (#3666 Phase 2).
     """
-    import os
-
     hours = max(1, min(hours, 8760))
-
-    if not os.environ.get("SNOWFLAKE_ACCOUNT"):
-        raise HTTPException(
-            status_code=400,
-            detail="SNOWFLAKE_ACCOUNT env var not set.",
-        )
+    _require_snowflake_governance()
 
     def _run() -> dict[str, Any]:
         from agent_bom.cloud.snowflake import _get_connection
@@ -341,25 +368,14 @@ async def cortex_telemetry(hours: int = 24) -> dict[str, Any]:
         finally:
             conn.close()
 
-    try:
-        return await _offload(_run)
-    except HTTPException:
-        raise
-    except Exception as exc:
-        _logger.error("Request failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(exc))
+    return await _snowflake_read(_run)
 
 
 @router.get("/cortex/agents/{name}/telemetry", **documented(CortexTelemetryResponse), tags=["governance"])
-async def cortex_agent_telemetry(name: str, hours: int = 24) -> dict[str, Any]:
+async def cortex_agent_telemetry(name: str, hours: int = 24, _role: Any = _AMBIENT_DEP) -> dict[str, Any]:
     """Telemetry for a specific Cortex agent."""
-    import os
-
-    if not os.environ.get("SNOWFLAKE_ACCOUNT"):
-        raise HTTPException(
-            status_code=400,
-            detail="SNOWFLAKE_ACCOUNT env var not set.",
-        )
+    hours = max(1, min(hours, 8760))
+    _require_snowflake_governance()
 
     def _run() -> dict[str, Any]:
         from agent_bom.cloud.snowflake import _get_connection
@@ -371,25 +387,13 @@ async def cortex_agent_telemetry(name: str, hours: int = 24) -> dict[str, Any]:
         finally:
             conn.close()
 
-    try:
-        return await _offload(_run)
-    except HTTPException:
-        raise
-    except Exception as exc:
-        _logger.error("Request failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(exc))
+    return await _snowflake_read(_run)
 
 
 @router.get("/cortex/health", **documented(CortexHealthResponse), tags=["governance"])
-async def cortex_health() -> dict[str, Any]:
+async def cortex_health(_role: Any = _AMBIENT_DEP) -> dict[str, Any]:
     """Health status for all Cortex agents."""
-    import os
-
-    if not os.environ.get("SNOWFLAKE_ACCOUNT"):
-        raise HTTPException(
-            status_code=400,
-            detail="SNOWFLAKE_ACCOUNT env var not set.",
-        )
+    _require_snowflake_governance()
 
     def _run() -> dict[str, Any]:
         from agent_bom.cloud.snowflake import _get_connection, _mine_cortex_agent_usage
@@ -419,13 +423,7 @@ async def cortex_health() -> dict[str, Any]:
             "warnings": warnings,
         }
 
-    try:
-        return await _offload(_run)
-    except HTTPException:
-        raise
-    except Exception as exc:
-        _logger.error("Request failed")
-        raise HTTPException(status_code=500, detail=sanitize_error(exc))
+    return await _snowflake_read(_run)
 
 
 @router.get("/siem/formats", **documented(SiemFormatsResponse), tags=["siem"])

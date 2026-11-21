@@ -208,14 +208,15 @@ def test_demo_estate_operator_surfaces_answer_with_documented_errors(demo_estate
         )
     }
     assert statuses == {
-        # The public demo hides operator integrations and self-posture.
-        "/v1/governance": 404,
-        "/v1/governance/findings": 404,
+        # Governance and Cortex reads spend the operator's own Snowflake
+        # identity: admin-only, and the demo's anonymous principal is a viewer.
+        "/v1/governance": 403,
+        "/v1/governance/findings": 403,
+        "/v1/cortex/telemetry": 403,
+        "/v1/cortex/health": 403,
+        "/v1/cortex/agents/demo/telemetry": 403,
+        # The public demo hides self-posture.
         "/v1/self-posture": 404,
-        # Cortex telemetry needs a Snowflake account the demo does not configure.
-        "/v1/cortex/telemetry": 400,
-        "/v1/cortex/health": 400,
-        "/v1/cortex/agents/demo/telemetry": 400,
         # The outbox is analyst-only; the demo's anonymous principal is a viewer.
         "/v1/posture/webhooks/outbox": 403,
         "/v1/posture/webhooks/outbox/stats": 403,
@@ -432,6 +433,10 @@ def test_snowflake_governance_bodies_match_documented_models(
     from agent_bom.governance import AgentUsageRecord, ObservabilityEvent
 
     headers = _admin()
+    monkeypatch.delenv("AGENT_BOM_SNOWFLAKE_GOVERNANCE", raising=False)
+    assert empty_estate_client.get("/v1/governance", headers=headers).status_code == 404
+    assert empty_estate_client.get("/v1/cortex/health", headers=headers).status_code == 404
+    monkeypatch.setenv("AGENT_BOM_SNOWFLAKE_GOVERNANCE", "1")
     assert empty_estate_client.get("/v1/governance", headers=headers).status_code == 400
     assert empty_estate_client.get("/v1/cortex/health", headers=headers).status_code == 400
 

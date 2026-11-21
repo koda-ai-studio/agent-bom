@@ -638,10 +638,6 @@ export function ConnectionsHub() {
     () => connectorHealth.map((connector) => connector.connector).sort((l, r) => l.localeCompare(r)),
     [connectorHealth],
   );
-  const healthyConnectors = useMemo(
-    () => connectorHealth.filter((connector) => connector.state === "healthy").length,
-    [connectorHealth],
-  );
   const providerSummary = useMemo(() => summarizeProviders(providerContracts), [providerContracts]);
 
   const selectedSource = selectedSourceId ? sourceById.get(selectedSourceId) ?? null : null;
@@ -795,7 +791,6 @@ export function ConnectionsHub() {
           connectorHealth={connectorHealth}
           connectorHealthUnavailable={connectorHealthUnavailable}
           connectorNames={connectorNames}
-          healthyConnectors={healthyConnectors}
           providerContracts={providerContracts}
           providerSummary={providerSummary}
           schedulesCount={schedules.length}

@@ -12,6 +12,7 @@ import anyio.to_thread
 from fastapi import APIRouter, Header, HTTPException, Query, Request
 from pydantic import ValidationError
 
+from agent_bom.api.ambient_access import caller_may_use_ambient, require_connector_health_caller
 from agent_bom.api.audit_log import log_action
 from agent_bom.api.correlation_cohort_receipts import CorrelationCohortReceiptError, issue_correlation_cohort_child_receipt
 from agent_bom.api.idempotency_store import (
@@ -217,7 +218,7 @@ def _validate_source_repo_url(request: ScanRequest) -> ScanRequest:
     return request.model_copy(update={"repo_url": repo_url})
 
 
-def _request_for_source(source: SourceRecord) -> ScanRequest:
+def _request_for_source(source: SourceRecord, *, ambient_caller: bool) -> ScanRequest:
     config = dict(source.config or {})
     if "scan_request" in config and isinstance(config["scan_request"], dict):
         config = dict(config["scan_request"])
@@ -248,7 +249,7 @@ def _request_for_source(source: SourceRecord) -> ScanRequest:
     # Source runs enqueue directly rather than entering POST /v1/scan. Apply
     # the identical local-path jail before either Test or Run can accept the
     # source configuration.
-    return _sanitize_scan_request_paths(request, tenant_id=source.tenant_id)
+    return _sanitize_scan_request_paths(request, tenant_id=source.tenant_id, ambient_caller=ambient_caller)
 
 
 @router.post("/sources", tags=["sources"], status_code=201)
@@ -276,7 +277,7 @@ def create_source(request: Request, body: SourceCreate) -> dict:
     with tenant_quota_guard(tenant_id):
         _validate_credential_ref_for_tenant(tenant_id, source)
         if source.kind in _RUNNABLE_SOURCE_KINDS:
-            _request_for_source(source)
+            _request_for_source(source, ambient_caller=caller_may_use_ambient(request))
         _get_source_store().put(source, tenant_id=tenant_id)
     log_action(
         "source.create",
@@ -324,7 +325,7 @@ def update_source(request: Request, source_id: str, body: SourceUpdate) -> dict:
         source = _apply_update(_source_for_request(request, source_id), body)
         _validate_credential_ref_for_tenant(tenant_id, source)
         if source.kind in _RUNNABLE_SOURCE_KINDS:
-            _request_for_source(source)
+            _request_for_source(source, ambient_caller=caller_may_use_ambient(request))
         _get_source_store().put(source, tenant_id=tenant_id)
     log_action(
         "source.update",
@@ -386,6 +387,7 @@ async def test_source(request: Request, source_id: str) -> dict:
     ):
         from agent_bom.connectors import check_connector_health
 
+        require_connector_health_caller(request)
         connector_status = await anyio.to_thread.run_sync(check_connector_health, source.connector_name)
         status = SourceStatus.HEALTHY if connector_status.state.value == "healthy" else SourceStatus.DEGRADED
         message = sanitize_text(connector_status.message)
@@ -396,7 +398,7 @@ async def test_source(request: Request, source_id: str) -> dict:
         message = "Push-driven source is configured. Evidence arrives through authenticated ingest routes."
         status = SourceStatus.CONFIGURED
     else:
-        _request_for_source(source)
+        _request_for_source(source, ambient_caller=caller_may_use_ambient(request))
         message = "Direct scan source is valid and can be launched from the control plane."
         status = SourceStatus.CONFIGURED
 
@@ -435,7 +437,7 @@ def run_source(request: Request, source_id: str) -> dict:
     if not source.enabled:
         raise HTTPException(status_code=409, detail="Source is disabled")
     _validate_credential_ref(request, source)
-    _request_for_source(source)
+    _request_for_source(source, ambient_caller=caller_may_use_ambient(request))
     with tenant_quota_guard(tenant_id):
         current = _source_for_request(request, source_id)
         if current != source:
@@ -443,7 +445,7 @@ def run_source(request: Request, source_id: str) -> dict:
         if not current.enabled:
             raise HTTPException(status_code=409, detail="Source is disabled")
         _validate_credential_ref_for_tenant(tenant_id, current)
-        request_body = _request_for_source(current)
+        request_body = _request_for_source(current, ambient_caller=caller_may_use_ambient(request))
         target_count = len(scan_request_targets(request_body))
         attempted_jobs = target_count + 1 if target_count > 1 else 1
         enforce_active_scan_quota(tenant_id, attempted=attempted_jobs)
@@ -561,7 +563,7 @@ async def run_source_cohort(
         if source.kind in _COHORT_EXTERNAL_SOURCE_KINDS:
             external_sources.append((source_id, source.kind.value))
         else:
-            source_request = _request_for_source(source)
+            source_request = _request_for_source(source, ambient_caller=caller_may_use_ambient(request))
             if len(scan_request_targets(source_request)) != 1:
                 raise HTTPException(
                     status_code=422,

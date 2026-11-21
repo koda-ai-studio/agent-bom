@@ -427,6 +427,15 @@ describe("ScanForm", () => {
     await user.click(screen.getByRole("checkbox", { name: /Scan pods in current kube context/i }));
     expect(screen.getByLabelText("Namespace filter")).toBeInTheDocument();
   });
+
+  it("says kubernetes scans use the server's identity and need an operator opt-in", async () => {
+    const user = userEvent.setup();
+    render(<ScanForm />);
+
+    await user.click(screen.getByRole("tab", { name: "Ad-hoc" }));
+    await user.click(screen.getByRole("tab", { name: /Kubernetes/i }));
+    expect(screen.getByTestId("k8s-ambient-note")).toHaveTextContent("AGENT_BOM_API_K8S_SCANS");
+  });
 });
 
 it("leads the scan rail with selected evidence scope before generic boundary prose", async () => {

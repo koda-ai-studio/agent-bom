@@ -219,6 +219,8 @@ def test_custom_connector_scan_saves_reusable_tenant_graph(tmp_path, monkeypatch
 
     monkeypatch.setenv(ENTRYPOINTS_ENABLED_ENV, "true")
     monkeypatch.setenv("AGENT_BOM_GRAPH_STORE_BACKED_BUILD", "false")
+    # Connector discovery runs with the API process's own environment, so API jobs need the operator opt-in.
+    monkeypatch.setenv("AGENT_BOM_API_CONNECTOR_SCANS", "1")
     module_name = "agent_bom.tests.customer_inventory_connector"
     source = types.ModuleType(module_name)
     calls = []

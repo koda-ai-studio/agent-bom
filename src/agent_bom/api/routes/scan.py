@@ -15,6 +15,7 @@ from fastapi.responses import Response, StreamingResponse
 
 from agent_bom.api import job_status_count_cache
 from agent_bom.api.ai_assessment_read import attach_ai_assessments
+from agent_bom.api.ambient_access import caller_may_use_ambient
 from agent_bom.api.bulk_findings_ingest import BulkFindingsRequest, PackageCheckRequest, _normalized_bulk_finding, reconcile_plan
 from agent_bom.api.current_graph import refuse_unpinned_read_while_seeding
 from agent_bom.api.estate_agents import graph_agent_payloads
@@ -151,7 +152,7 @@ async def create_scan(request: Request, body: ScanRequest) -> ScanJob:
     """
     tenant_id = _tenant_id(request)
     # Validate local targets against the API scan jail before queueing or idempotency, using the shared endpoint guard.
-    body = _sanitize_scan_request_paths(body, tenant_id=tenant_id)
+    body = _sanitize_scan_request_paths(body, tenant_id=tenant_id, ambient_caller=caller_may_use_ambient(request))
     idem_key = _request_header(request, "Idempotency-Key")
     idem_source = _request_header(request, "X-Agent-Bom-Source-Id") or "scan"
     request_hash = idempotency_request_fingerprint(body)

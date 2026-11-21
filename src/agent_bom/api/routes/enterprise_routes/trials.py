@@ -23,6 +23,7 @@ from agent_bom.api.read_models.enterprise import (
 )
 from agent_bom.api.routes.enterprise_routes._models import ManagedTrialInvitationRequest, _request_actor
 from agent_bom.api.tenancy import require_request_tenant_id
+from agent_bom.cloud.ambient_credentials import ambient_tenant_permitted
 from agent_bom.core.settings import env_raw
 from agent_bom.security import sanitize_error
 
@@ -61,7 +62,7 @@ def auth_secret_rotation_plan() -> dict:
 
 
 @router.get("/auth/secrets/credential-expiry", **documented(CredentialExpiryResponse), tags=["enterprise"])
-def auth_secret_credential_expiry() -> dict:
+def auth_secret_credential_expiry(request: Request) -> dict:
     """Return non-secret credential expiry/rotation governance.
 
     Folds in any discovered non-human-identity (NHI) credentials so an
@@ -72,7 +73,8 @@ def auth_secret_credential_expiry() -> dict:
     """
     from agent_bom.api.credential_expiry import describe_credential_expiry_posture
 
-    discovered = _discover_nhi_credentials()
+    # Okta/Entra discovery spends the server's own IdP tokens; other tenants get control-plane posture only.
+    discovered = _discover_nhi_credentials() if ambient_tenant_permitted(require_request_tenant_id(request)) else []
     return describe_credential_expiry_posture(discovered or None)
 
 

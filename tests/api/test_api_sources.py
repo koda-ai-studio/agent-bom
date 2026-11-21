@@ -79,6 +79,8 @@ def source_client(monkeypatch: pytest.MonkeyPatch):
 
     monkeypatch.setenv("AGENT_BOM_TRUST_PROXY_AUTH", "1")
     monkeypatch.setenv("AGENT_BOM_TRUST_PROXY_AUTH_SECRET", PROXY_SECRET)
+    # Connector sources use the server's own tokens; the operator opts in and admins manage them.
+    monkeypatch.setenv("AGENT_BOM_API_CONNECTOR_SCANS", "1")
     configure_api(api_key=None)
     _stores.set_source_store(InMemorySourceStore())
     _stores.set_credential_ref_store(InMemoryCredentialRefStore())
@@ -100,9 +102,15 @@ def source_client(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_source_crud_and_role_enforcement(source_client: TestClient) -> None:
-    create = source_client.post(
+    analyst_create = source_client.post(
         "/v1/sources",
         headers=ANALYST_HEADERS,
+        json={"display_name": "Jira", "kind": "connector.cloud_read_only", "connector_name": "jira", "credential_mode": "none"},
+    )
+    assert analyst_create.status_code == 403, "connector sources spend the server's own tokens"
+    create = source_client.post(
+        "/v1/sources",
+        headers=ADMIN_HEADERS,
         json={
             "display_name": "AWS production account",
             "kind": "connector.cloud_read_only",
@@ -126,7 +134,7 @@ def test_source_crud_and_role_enforcement(source_client: TestClient) -> None:
 
     updated = source_client.put(
         f"/v1/sources/{source_id}",
-        headers=ANALYST_HEADERS,
+        headers=ADMIN_HEADERS,
         json={"description": "Updated source description", "owner": "security-engineering"},
     )
     assert updated.status_code == 200
@@ -544,10 +552,10 @@ def test_host_discovery_source_requires_operator_bound_tenant(source_client, mon
         config={"scan_request": {"discover_host": True}},
     )
     if bound_tenant == source.tenant_id:
-        assert _request_for_source(source).discover_host is True
+        assert _request_for_source(source, ambient_caller=False).discover_host is True
     else:
         with pytest.raises(HTTPException) as rejected:
-            _request_for_source(source)
+            _request_for_source(source, ambient_caller=False)
         assert rejected.value.status_code == 403
         assert rejected.value.detail == "Host discovery is not enabled for this tenant"
 
@@ -558,7 +566,7 @@ def test_generic_schedule_host_discovery_rejects_before_admission(monkeypatch):
     monkeypatch.setenv("AGENT_BOM_API_LOCAL_PATH_SCANS", "enabled")
     monkeypatch.delenv("AGENT_BOM_API_HOST_DISCOVERY_TENANT", raising=False)
     with pytest.raises(HTTPException) as rejected:
-        _validate_enabled_source_schedule("tenant-alpha", {"discover_host": True})
+        _validate_enabled_source_schedule("tenant-alpha", {"discover_host": True}, ambient_caller=False)
     assert rejected.value.status_code == 403
 
 
@@ -1330,7 +1338,7 @@ def test_legacy_runnable_source_can_clear_reference_before_test_and_run(
 ) -> None:
     credential = source_client.post(
         "/v1/credentials",
-        headers=ANALYST_HEADERS,
+        headers=ADMIN_HEADERS,
         json={
             "display_name": "Legacy Jira credential",
             "provider": "jira",
@@ -1349,14 +1357,14 @@ def test_legacy_runnable_source_can_clear_reference_before_test_and_run(
     )
     _stores._source_store.put(legacy, tenant_id=legacy.tenant_id)
 
-    blocked_test = source_client.post(f"/v1/sources/{legacy.source_id}/test", headers=ANALYST_HEADERS)
-    blocked_run = source_client.post(f"/v1/sources/{legacy.source_id}/run", headers=ANALYST_HEADERS)
+    blocked_test = source_client.post(f"/v1/sources/{legacy.source_id}/test", headers=ADMIN_HEADERS)
+    blocked_run = source_client.post(f"/v1/sources/{legacy.source_id}/run", headers=ADMIN_HEADERS)
     assert blocked_test.status_code == 409
     assert blocked_run.status_code == 409
 
     cleared = source_client.put(
         f"/v1/sources/{legacy.source_id}",
-        headers=ANALYST_HEADERS,
+        headers=ADMIN_HEADERS,
         json={"credential_mode": "none", "credential_ref": None, "description": None},
     )
     assert cleared.status_code == 200
@@ -1372,7 +1380,7 @@ def test_legacy_runnable_source_can_clear_reference_before_test_and_run(
             api_version=None,
         ),
     )
-    assert source_client.post(f"/v1/sources/{legacy.source_id}/test", headers=ANALYST_HEADERS).status_code == 200
+    assert source_client.post(f"/v1/sources/{legacy.source_id}/test", headers=ADMIN_HEADERS).status_code == 200
     monkeypatch.setattr(
         "agent_bom.api.routes.sources.enqueue_scan_job",
         lambda **kwargs: ScanJob(
@@ -1384,7 +1392,7 @@ def test_legacy_runnable_source_can_clear_reference_before_test_and_run(
             request=kwargs["request_body"],
         ),
     )
-    assert source_client.post(f"/v1/sources/{legacy.source_id}/run", headers=ANALYST_HEADERS).status_code == 202
+    assert source_client.post(f"/v1/sources/{legacy.source_id}/run", headers=ADMIN_HEADERS).status_code == 202
 
 
 def test_connector_source_test_updates_health(source_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1400,7 +1408,7 @@ def test_connector_source_test_updates_health(source_client: TestClient, monkeyp
 
     create = source_client.post(
         "/v1/sources",
-        headers=ANALYST_HEADERS,
+        headers=ADMIN_HEADERS,
         json={
             "display_name": "Snowflake lake",
             "kind": "connector.warehouse",
@@ -1410,7 +1418,7 @@ def test_connector_source_test_updates_health(source_client: TestClient, monkeyp
     )
     source_id = create.json()["source_id"]
 
-    tested = source_client.post(f"/v1/sources/{source_id}/test", headers=ANALYST_HEADERS)
+    tested = source_client.post(f"/v1/sources/{source_id}/test", headers=ADMIN_HEADERS)
     assert tested.status_code == 200
     tested_body = tested.json()
     assert tested_body["status"] == "healthy"
@@ -1430,7 +1438,7 @@ def test_connector_source_health_runs_outside_the_api_event_loop(
     """Sync connector adapters may call asyncio.run and must therefore be off-loop."""
     created = source_client.post(
         "/v1/sources",
-        headers=ANALYST_HEADERS,
+        headers=ADMIN_HEADERS,
         json={
             "display_name": "Jira async bridge",
             "kind": "connector.registry",
@@ -1444,7 +1452,7 @@ def test_connector_source_health_runs_outside_the_api_event_loop(
         return ConnectorStatus(connector=connector_name, state=ConnectorHealthState.HEALTHY, message="Connected")
 
     monkeypatch.setattr("agent_bom.connectors.check_connector_health", _health)
-    tested = source_client.post(f"/v1/sources/{source_id}/test", headers=ANALYST_HEADERS)
+    tested = source_client.post(f"/v1/sources/{source_id}/test", headers=ADMIN_HEADERS)
 
     assert tested.status_code == 200
     assert tested.json()["status"] == "healthy"
@@ -1456,7 +1464,7 @@ def test_connector_source_test_sanitizes_health_message_before_response_and_pers
 ) -> None:
     created = source_client.post(
         "/v1/sources",
-        headers=ANALYST_HEADERS,
+        headers=ADMIN_HEADERS,
         json={
             "display_name": "Jira source",
             "kind": "connector.cloud_read_only",
@@ -1476,7 +1484,7 @@ def test_connector_source_test_sanitizes_health_message_before_response_and_pers
         ),
     )
 
-    tested = source_client.post(f"/v1/sources/{source_id}/test", headers=ANALYST_HEADERS)
+    tested = source_client.post(f"/v1/sources/{source_id}/test", headers=ADMIN_HEADERS)
     fetched = source_client.get(f"/v1/sources/{source_id}", headers=VIEWER_HEADERS)
 
     assert tested.status_code == 200
@@ -1492,7 +1500,7 @@ def test_source_test_cannot_resurrect_source_deleted_during_health_probe(
 ) -> None:
     created = source_client.post(
         "/v1/sources",
-        headers=ANALYST_HEADERS,
+        headers=ADMIN_HEADERS,
         json={
             "display_name": "Jira health race",
             "kind": "connector.registry",
@@ -1505,7 +1513,7 @@ def test_source_test_cannot_resurrect_source_deleted_during_health_probe(
     outcomes: dict[str, Any] = {}
     from agent_bom.api.routes import sources as source_routes
 
-    request = SimpleNamespace(state=SimpleNamespace(tenant_id="tenant-alpha", api_key_name="replica"))
+    request = SimpleNamespace(state=SimpleNamespace(tenant_id="tenant-alpha", api_key_name="replica", api_key_role="admin"))
 
     def _blocking_health(connector_name):
         health_started.set()
@@ -1558,9 +1566,9 @@ def test_source_run_cannot_enqueue_or_resurrect_after_concurrent_delete(
     original_request = source_routes._request_for_source
     first_call = True
 
-    def _blocking_request(source):
+    def _blocking_request(source, *, ambient_caller):
         nonlocal first_call
-        request_body = original_request(source)
+        request_body = original_request(source, ambient_caller=ambient_caller)
         if first_call:
             first_call = False
             request_started.set()

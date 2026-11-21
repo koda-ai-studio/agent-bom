@@ -36,6 +36,7 @@ import {
   ShieldCheck,
   Trash2
 } from "lucide-react";
+import { connectorHealthSummary } from "@/lib/connector-health-summary";
 import Link from "next/link";
 
 
@@ -77,7 +78,6 @@ export interface SourcesSegmentProps {
   connectorHealth: ConnectorHealthResponse[];
   connectorHealthUnavailable: boolean;
   connectorNames: string[];
-  healthyConnectors: number;
   providerContracts: DiscoveryProvidersResponse | null;
   providerSummary: ReturnType<typeof summarizeProviders>;
   schedulesCount: number;
@@ -131,7 +131,6 @@ export function SourcesSegment(props: SourcesSegmentProps) {
     connectorHealth,
     connectorHealthUnavailable,
     connectorNames,
-    healthyConnectors,
     providerContracts,
     providerSummary,
     schedulesCount,
@@ -149,6 +148,7 @@ export function SourcesSegment(props: SourcesSegmentProps) {
 
   const selectedKind = kindOption(formState.kind) ?? SOURCE_KIND_OPTIONS[0]!;
   const targetSpec = sourceTargetSpec(formState.kind);
+  const connectorSummary = connectorHealthSummary(connectorHealth);
 
   return (
     <div className="space-y-5">
@@ -254,11 +254,9 @@ export function SourcesSegment(props: SourcesSegmentProps) {
           { label: "Registered", value: loading ? "…" : totalRows },
           {
             label: "Connector health",
-            value: loading ? "…" : connectorHealthUnavailable ? "Unavailable" : connectorHealth.length ? `${healthyConnectors}/${connectorHealth.length}` : "Not reported",
-            accent:
-              connectorHealth.length > 0 && healthyConnectors === connectorHealth.length
-                ? "success"
-                : "neutral",
+            value: loading ? "…" : connectorHealthUnavailable ? "Unavailable" : connectorSummary.value,
+            hint: loading || connectorHealthUnavailable ? undefined : connectorSummary.hint,
+            accent: connectorSummary.allHealthy ? "success" : "neutral",
           },
           {
             label: "Schedules",

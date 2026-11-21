@@ -114,6 +114,17 @@ tables; and **14 CIS checks**.
 Discoveries that need a grant you didn't give degrade to empty rather than error
 — so apply the full grant block above for complete coverage.
 
+### Governance and Cortex telemetry API
+
+`GET /v1/governance`, `GET /v1/governance/findings` and `GET /v1/cortex/*`
+read ACCESS_HISTORY, grants, tags and Cortex usage with the API process's own
+`SNOWFLAKE_*` identity rather than a tenant's stored connection. They are off
+unless the operator sets `AGENT_BOM_SNOWFLAKE_GOVERNANCE=1` on the API, and
+then answer only admin callers. While disabled they return `404` with a fixed
+message; the public demo never exposes them. `GET /v1/activity` includes
+Snowflake query history under the same opt-in and admin check, and otherwise
+reports the Snowflake source as `not_configured`.
+
 ---
 
 ## ❄️ Snowflake Integration

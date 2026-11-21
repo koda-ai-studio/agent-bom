@@ -569,6 +569,10 @@ export function ScanForm({ initialConnectionId, initialPreset }: ScanFormProps) 
                       />
                       <span className="text-sm text-[color:var(--foreground)]">Scan pods in current kube context</span>
                     </label>
+                    <p className="text-xs text-[color:var(--text-tertiary)]" data-testid="k8s-ambient-note">
+                      Uses the API server&apos;s own service account or kubeconfig, so it needs an admin and an operator
+                      setting AGENT_BOM_API_K8S_SCANS=1.
+                    </p>
                     {form.k8s ? (
                       <input
                         id="k8s-namespace-filter"

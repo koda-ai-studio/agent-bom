@@ -9,6 +9,7 @@ from typing import Any, cast
 import anyio.to_thread
 from fastapi import HTTPException, Request
 
+from agent_bom.api.ambient_access import require_ambient_scan_targets
 from agent_bom.api.hub_ingest import hub_ingest_store_writes, hub_store_call
 from agent_bom.api.models import ScanJob, ScanRequest
 from agent_bom.api.scan_batches import refresh_batch_parent
@@ -54,7 +55,7 @@ def _reject_unsafe_repo_url(repo_url: str | None) -> None:
         raise HTTPException(status_code=422, detail=reason) from None
 
 
-def _sanitize_scan_request_paths(body: ScanRequest, *, tenant_id: str = "") -> ScanRequest:
+def _sanitize_scan_request_paths(body: ScanRequest, *, tenant_id: str, ambient_caller: bool) -> ScanRequest:
     """Confine every local-path field on a scan request to the API scan jail.
 
     The primary ``POST /v1/scan`` flow historically ran only
@@ -66,7 +67,12 @@ def _sanitize_scan_request_paths(body: ScanRequest, *, tenant_id: str = "") -> S
     gate the dedicated scan endpoints use, so the default posture rejects
     local-path scans consistently on the primary endpoint too. ``external_scan``
     and ``vex`` are included here even though they were opened unvalidated.
+
+    ``ambient_caller`` says whether the caller may spend the server's own
+    Kubernetes or connector credentials (see :mod:`agent_bom.api.ambient_access`);
+    every entry point must decide it explicitly.
     """
+    require_ambient_scan_targets(body, tenant_id=tenant_id, ambient_caller=ambient_caller)
     if body.discover_host:
         from agent_bom.api.scan_boundary import require_host_discovery_for_tenant
         from agent_bom.security import SecurityError

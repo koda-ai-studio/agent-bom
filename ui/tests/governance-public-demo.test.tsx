@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import GovernancePage from "@/app/governance/page";
+import { ApiError } from "@/lib/api-errors";
 
 const { apiMock, demoMode } = vi.hoisted(() => ({
   apiMock: { getGovernance: vi.fn() },
@@ -53,4 +54,27 @@ it("does not misdiagnose an unavailable service as a missing integration or disp
   expect(screen.queryByText("Governance integration is not configured")).not.toBeInTheDocument();
   expect(screen.queryByText("private-connection-details")).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+});
+
+function apiError(status: number): ApiError {
+  return new ApiError("operator-account-detail", { status, statusText: "", url: "/v1/governance", method: "GET" });
+}
+
+it("shows an honest not-enabled state when the operator has not opted in", async () => {
+  demoMode.isDemoMode = false;
+  apiMock.getGovernance.mockRejectedValue(apiError(404));
+  render(<GovernancePage />);
+  const state = await screen.findByTestId("governance-not-enabled");
+  expect(state).toHaveTextContent("AGENT_BOM_SNOWFLAKE_GOVERNANCE");
+  expect(screen.queryByText("Governance evidence unavailable")).not.toBeInTheDocument();
+  expect(screen.queryByText("operator-account-detail")).not.toBeInTheDocument();
+});
+
+it("tells non-admins the read is admin-only instead of reporting an outage", async () => {
+  demoMode.isDemoMode = false;
+  apiMock.getGovernance.mockRejectedValue(apiError(403));
+  render(<GovernancePage />);
+  const state = await screen.findByTestId("governance-admin-only");
+  expect(state).toHaveTextContent(/admin/i);
+  expect(screen.queryByText("Governance evidence unavailable")).not.toBeInTheDocument();
 });

@@ -26,6 +26,7 @@ from typing import Callable
 from fastapi import HTTPException, Request
 
 from agent_bom.api.tenancy import require_request_tenant_id
+from agent_bom.cloud.ambient_credentials import ambient_tenant_permitted
 
 logger = logging.getLogger(__name__)
 
@@ -474,7 +475,7 @@ def require_authenticated_permission(action: str) -> Callable:
             except ValueError as exc:
                 raise HTTPException(status_code=403, detail=f"Invalid authenticated role '{state_role}'") from exc
             request.state.tenant_id = require_request_tenant_id(request)
-            return _authorize(role, action)
+            return _authorize_request(request, role, action)
 
         auth_runtime = get_auth_runtime_status()
         from agent_bom.api.secret_source import secret_is_configured
@@ -498,7 +499,7 @@ def require_authenticated_permission(action: str) -> Callable:
             request.state.api_key_role = _no_auth_role().value
             request.state.tenant_id = getattr(request.state, "tenant_id", None) or "default"
             request.state.auth_method = "no_auth"
-            return _authorize(_no_auth_role(), action)
+            return _authorize_request(request, _no_auth_role(), action)
 
         trusted_proxy_enabled = os.environ.get("AGENT_BOM_TRUST_PROXY_AUTH", "").strip().lower() in {
             "1",
@@ -524,7 +525,7 @@ def require_authenticated_permission(action: str) -> Callable:
             request.state.api_key_name = getattr(request.state, "api_key_name", None) or "proxy-header"
             request.state.auth_method = getattr(request.state, "auth_method", None) or "proxy_header"
             request.state.proxy_auth_attested = True
-            return _authorize(role, action)
+            return _authorize_request(request, role, action)
 
         raise HTTPException(
             status_code=401,
@@ -535,6 +536,15 @@ def require_authenticated_permission(action: str) -> Callable:
         )
 
     return Depends(_check)
+
+
+def _authorize_request(request: Request, role: Role, action: str) -> Role:
+    """``_authorize`` plus the operator's tenant binding for ambient credentials."""
+    authorized = _authorize(role, action)
+    if action == "cloud_ambient":
+        if not ambient_tenant_permitted(str(getattr(request.state, "tenant_id", "") or "")):
+            raise HTTPException(status_code=403, detail="This tenant may not use the control plane's own credentials.")
+    return authorized
 
 
 def _authorize(role: Role, action: str) -> Role:

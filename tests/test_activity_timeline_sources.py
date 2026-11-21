@@ -26,6 +26,8 @@ _HEADERS: dict[str, str] = {}
 def client(monkeypatch: pytest.MonkeyPatch):
     """An open API client, so these tests exercise the timeline and not auth."""
     monkeypatch.delenv("SNOWFLAKE_ACCOUNT", raising=False)
+    # Opted in, so the Snowflake source reports the missing account itself.
+    monkeypatch.setenv("AGENT_BOM_SNOWFLAKE_GOVERNANCE", "1")
     from fastapi.testclient import TestClient
 
     from agent_bom.api.server import app, configure_api

@@ -208,6 +208,23 @@ route policies. Cookie sessions also require CSRF/origin checks for unsafe
 methods. Host allowlists constrain browser-to-localhost/DNS-rebinding exposure;
 non-loopback deployments should explicitly set their permitted hostnames.
 
+Credentials held by the API process itself, rather than a tenant's stored
+connection, are a separate trust level: a cloud role or profile, `SNOWFLAKE_*`,
+a Kubernetes service account or kubeconfig, SaaS connector tokens, Okta/Entra
+tokens, `HF_TOKEN` and the Ollama host. Each surface that spends them is off by
+default behind its own operator flag (`AGENT_BOM_CLOUD_CIS_BENCHMARK`,
+`AGENT_BOM_SNOWFLAKE_GOVERNANCE`, `AGENT_BOM_API_K8S_SCANS`,
+`AGENT_BOM_API_CONNECTOR_SCANS`, `AGENT_BOM_API_MODEL_HUB_CREDENTIALS`, the
+per-provider inventory and IdP discovery flags) and requires the admin-only
+`cloud_ambient` permission, an admin-only route, or an explicit caller check.
+Callers may choose only operator-listed kubeconfig contexts
+(`AGENT_BOM_API_K8S_CONTEXTS`). `AGENT_BOM_AMBIENT_CREDENTIALS_TENANT` binds
+all of them to one tenant on a multi-tenant control plane. Queued and
+scheduled scans recheck the flags before discovery. Server-side image scans
+never use ambient registry credentials. Failures return fixed text. A guard
+test keeps new route and scan code that reaches such credentials behind these
+checks.
+
 Swagger UI and ReDoc use version-pinned external assets with subresource
 integrity and fresh script nonces. Inline styles remain permitted for rendering.
 `AGENT_BOM_DISABLE_DOCS=1` removes `/docs`, `/redoc`, and `/openapi.json`.
