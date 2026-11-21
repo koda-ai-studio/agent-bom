@@ -9,6 +9,59 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.115.5] - 2026-11-20
+
+### Upgrade notes
+- API routes that act with the server's own credentials are now off until an operator enables them, and then answer admins only (`cloud_ambient`). Set the flag for each surface you use: `AGENT_BOM_SNOWFLAKE_GOVERNANCE` (`/v1/governance`, `/v1/governance/findings`, `/v1/cortex/*`, Snowflake history in `/v1/activity`), `AGENT_BOM_API_K8S_SCANS` (`k8s: true` scans, KSPM live posture), `AGENT_BOM_API_CONNECTOR_SCANS` (connector scans and health checks), `AGENT_BOM_API_MODEL_HUB_CREDENTIALS` (`HF_TOKEN` and the Ollama host for model provenance). On a multi-tenant control plane, bind them to one tenant with `AGENT_BOM_AMBIENT_CREDENTIALS_TENANT`. The single-account Snowflake service spec already opts in.
+
+### Changed
+- Split gateway application composition into lifecycle, audit, health and firewall builders while preserving route schemas and fail-mode behavior.
+- The end of a scan leads with the command that opens its security graph in the local dashboard, adding the `[ui]` extra through `uvx` when the API server is not installed.
+- The scan footer states unique package CVEs beside per-copy instances, the demo advisory line says its count is the catalog size, and the findings table says it is ranked by contextual risk, so a reachable medium can sit above an isolated high.
+
+### Fixed
+- The suggested follow-up commands after `scan --push-url ... --push-api-key ...` now repeat the key as `"$AGENT_BOM_PUSH_API_KEY"` instead of dropping it, so running them no longer pushes without authentication. The key itself is still never printed.
+- The API image pins the CA certificate bundle that Alpine 3.23 ships, and pull requests that change the image or its dependencies now build it before merge.
+- On SQLite, a slow authentication-failure receipt write no longer delays the failure count an authentication answer waits on, which could refuse a request with 503. Receipt budgets now live in their own sidecar file.
+- Distinguish Azure AI discovery read failures from empty listings and retain observed inventory when later pages or child-resource reads fail.
+- AWS, Azure and GCP CIS checks now report ERROR instead of PASS when a resource read fails for a reason other than a permission denial, such as throttling or a provider outage, and CIS evidence names only the error type and provider code instead of the raw provider message.
+- Azure multi-subscription inventory now logs a sanitized warning when no credential can be created instead of returning an empty result silently.
+- Follow-up commands printed after a scan repeat the scan that was run (its path, project and flags, never a secret option) instead of always suggesting `agent-bom scan .`.
+- `report brief` Markdown reads cleanly: timestamps to the minute in UTC, exposure paths grouped by the target they reach, no repeated snapshot id, and escaping limited to characters that could form Markdown or HTML.
+- Retain independent CoreWeave GPU pods and already-read containers after malformed pod metadata or GPU quantities, with explicit incomplete-coverage warnings.
+- Treat malformed CoreWeave kubectl list responses as incomplete discovery instead of empty inventory, while allowing independent discovery passes to continue.
+- Preserve valid CoreWeave InferenceServices when a neighboring record has malformed metadata, reporting incomplete coverage for skipped records.
+- Retain independent CoreWeave InfiniBand training jobs after malformed pod records or GPU quantities, while preserving per-pod deduplication and incomplete-coverage warnings.
+- Retain valid CoreWeave GPU VirtualServers after malformed neighboring records, with explicit incomplete-coverage warnings and preserved cluster-scoped identities.
+- Fleet agent package, credential and vulnerability counts count each package, credential variable and (package, advisory) pair once, instead of once per MCP server that shares it.
+- Distinguish denied, throttled and unavailable GCP AI discovery reads from successful empty inventory, retaining earlier results and fixed diagnostics on partial failures.
+- Provide the stdio MCP container with a writable non-root home for scan caches and advisory state; image smoke checks now verify cache writes before testing the transport.
+- Retain independent MLflow models and experiments after malformed records or failed metadata reads, and reject invalid experiment IDs before querying runs.
+- Preserve valid Nebius GPU pod inventory and previously parsed containers when another pod or container is malformed, with explicit incomplete-coverage warnings.
+- Continue Nebius GPU instance discovery after malformed records, preserving valid inventory and reporting incomplete coverage without provider error details.
+- Isolate malformed Nebius AI Studio model records, retaining valid neighboring models and reporting incomplete coverage.
+- Preserve Nebius model, GPU instance, and container inventory collected before a later pagination failure, with classified incomplete-coverage warnings.
+- Retain valid Nebius InfiniBand training jobs after malformed pod records and report incomplete coverage. Failed records no longer suppress later valid observations of the same workload.
+- The release self-SBOM (`agent-bom-sbom.cdx.json`) declares agent-bom as its root `metadata.component` with name, version and `pkg:pypi` purl, and the release fails if it does not; the documented `jq` inspection no longer prints `null`.
+- Record incomplete Snowflake MCP tool-specification coverage for missing or malformed data, retaining independent valid tools and SQL-execution risk labels.
+- Preserve denied and throttled statuses from W&B SDK transport wrappers and continue collecting subsequent records after failed lazy metadata reads.
+
+### Security
+- Container images move to CPython releases that include the `ssl` compromised-intermediate denylist (CVE-2026-115557, critical) and the `tarfile` extraction-filter fix (CVE-2026-87910): 3.12.16 for the MCP stdio, MCP HTTP, runtime, collector, public lookup and Glama images, 3.11.18 for the Snowflake images, and 3.14.10 for the CLI/API image, which no longer needs its hand-applied `tarfile` overlay. The MCP publish gate failed on this finding, so `agent-bom-mcp` and `agent-bom-sse` were not published for 0.115.4.
+- Fixed GHSA-88hv-2458-fgx9: a viewer in any tenant could read the operator's Snowflake governance data, and reach other surfaces that use the API server's own credentials, when those credentials were configured. These surfaces now need an operator opt-in and admin access, and failures return fixed text instead of provider messages.
+
+### Docs
+- A "Start here by role" page gives AppSec, platform, AI/ML, GRC and leadership readers a five-minute path each, including the `report brief` export for leadership; it leads Getting Started and is linked from the README.
+- The README, PyPI page and docs home lead with the agent → MCP server → tool → package → credential chain and a short "why now". Runbook and specialized deployment pages move to an Operations section, and the authenticated deployment is named a self-hosted instance.
+- Stale release references are corrected: the Action pin example, the upgrade guide (0.115.4), agent lifecycle availability (published since 0.107.0), the runtime injection default, the dated real-repository accuracy measurement with reproduction steps, and the OpenAI review cases rerun on 0.115.4. The version checker now also manages a bare `` `@vX.Y.Z` `` Action ref in prose.
+- The privacy notice, terms and OpenAI plugin README state that the public lookup service (`agent-bom-lookup.up.railway.app`) is not yet deployed instead of describing it as running.
+
+### CI
+- The merge queue runs the full suite in 16 Python shards, four Postgres partitions and eight browser shards, sized to merge in about five minutes. Each Python shard collects the test root once and keeps only its modules, because passing hundreds of module paths made pytest re-collect the test package for every path (90-170 s a shard). The demo-estate bootstrap tests are split across four modules so their per-test seeds spread over runners; every test keeps its fixture and assertions.
+- The daily surface-freshness monitor now checks every published image family — the API image on GHCR and Docker Hub plus the MCP stdio (`agent-bom-mcp`) and HTTP (`agent-bom-sse`) images — so a stale MCP image is reported instead of hidden behind a fresh API image.
+- The reusable workflow (`agent-bom-reusable.yml`) and the GitLab, Azure Pipelines and Bitbucket examples pin the published release (0.115.4) instead of 0.110.0. The release pin sweep now covers them, and a commit-pinned Action ref must be the commit its `# vX.Y.Z` tag names; the post-release pin update rewrites both together.
+- Workflow and composite-action inputs reach shell steps through `env:` instead of being pasted into the script (Postgres scale evidence dispatch inputs, the Snowflake release channel and the UI npm version), and a test rejects any new `${{ inputs.* }}` inside `run:`.
+
 ## [0.115.4] - 2026-11-18
 
 ### Highlights
@@ -5067,7 +5120,8 @@ Two new product surfaces (inter-agent firewall + per-run discovery envelope) plu
 
 ---
 
-[Unreleased]: https://github.com/koda-ai-studio/agent-bom/compare/v0.115.4...HEAD
+[Unreleased]: https://github.com/koda-ai-studio/agent-bom/compare/v0.115.5...HEAD
+[0.115.5]: https://github.com/koda-ai-studio/agent-bom/compare/v0.115.4...v0.115.5
 [0.115.4]: https://github.com/koda-ai-studio/agent-bom/compare/v0.115.3...v0.115.4
 [0.115.3]: https://github.com/koda-ai-studio/agent-bom/compare/v0.114.0...v0.115.3
 [0.114.0]: https://github.com/koda-ai-studio/agent-bom/compare/v0.113.2...v0.114.0
