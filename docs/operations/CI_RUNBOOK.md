@@ -608,3 +608,18 @@ gh pr create --repo <owner>/<repo> --base main --head chore/mcp-registry-sync \
 Dated `chore/mcp-registry-YYYYMMDD` branches from runs before this fix are
 orphans of the refused PR creation: compare them against `main`, merge what is
 still wanted through a PR, then delete them.
+
+### Refresh queue shard measurements
+
+Download each completed merge-group job log, then run
+`uv run python scripts/refresh_ci_durations.py --log /tmp/job-*.log --output tests/.ci-postgres-durations.json`
+for the real Postgres contract jobs. Use the default output and `--merge-existing`
+for Python correctness jobs. Each module must occur in only one input log;
+retain the source run ID with the change. The measurements here were refreshed
+from CI run `44923307491`. They estimate shard work, not guaranteed queue latency.
+
+UI unit tests run in two independent shards and the required Python context
+checks their aggregate result. Browser tests use test-level sharding across
+eight runners. Docs, Compose and Helm checks share the lint runner and retain
+their original path conditions. Stranded-PR recovery only cancels superseded
+`pull_request` or `merge_group` runs, leaving manual and scheduled runs intact.

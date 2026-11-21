@@ -120,6 +120,11 @@ DOC_TEST_LOCATIONS: list[tuple[str, re.Pattern, str]] = [
     ("docs/PRODUCT_METRICS.md", re.compile(r"(- Version: `)\d+\.\d+\.\d+(`)"), r"\g<1>{v}\g<2>"),
     ("docs/PRODUCT_METRICS.json", re.compile(r'("version":\s*")\d+\.\d+\.\d+(")'), r"\g<1>{v}\g<2>"),
     (
+        "tests/fixtures/scan_pipeline_characterization.json",
+        re.compile(r'("ai_bom_version":\s*")\d+\.\d+\.\d+(")'),
+        r"\g<1>{v}\g<2>",
+    ),
+    (
         "docs/images/product-screenshots.json",
         re.compile(r'("release_version":\s*")\d+\.\d+\.\d+(")'),
         r"\g<1>{v}\g<2>",

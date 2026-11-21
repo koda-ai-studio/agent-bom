@@ -25,7 +25,7 @@ overrides = [
 
 [[package]]
 name = "agent-bom"
-version = "0.115.4"
+version = "0.115.5"
 source = { editable = "." }
 default-groups = []
 dependencies = [

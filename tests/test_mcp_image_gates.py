@@ -113,7 +113,7 @@ def test_required_test_context_includes_the_mcp_image_lane() -> None:
     step = job["steps"][0]
     assert step["env"]["MCP_IMAGES_RESULT"] == "${{ needs.mcp-images.result }}"
     assert "MCP_IMAGES_REQUIRED" in step["env"]
-    assert "for lane in ALPINE UI_E2E MCP_IMAGES API_IMAGE; do" in step["run"]
+    assert "for lane in ALPINE UI_E2E UI_UNIT MCP_IMAGES API_IMAGE; do" in step["run"]
 
 
 # ── publish ─────────────────────────────────────────────────────────────────
