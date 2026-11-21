@@ -3229,10 +3229,8 @@ async function main() {
           state: "visible",
           timeout: 30_000,
         });
-        const unconnected = canvasPage.getByRole("region", { name: "Unconnected proposal items" });
-        await expect(unconnected).toBeVisible();
-        await expect(unconnected.getByRole("button", { name: /next@15\.2\.3/ })).toBeVisible();
-        await expect(canvasPage.locator(`.react-flow [data-id="proposal:${SCENARIO_ID}:next-upgrade"]`)).toHaveCount(0);
+        // The proposal wires the fixed release in place of 15.2.2, so it is drawn, not listed as unconnected.
+        await expect(canvasPage.locator(`.react-flow [data-id="proposal:${SCENARIO_ID}:next-upgrade"]`)).toHaveCount(1);
         await expect.poll(() => canvasPage.locator(".react-flow__node").evaluateAll(nodes => nodes.flatMap(node => {
           const box = node.getBoundingClientRect();
           const frame = node.closest(".react-flow").getBoundingClientRect();
