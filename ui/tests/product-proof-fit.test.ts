@@ -2,7 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { fittedViewportHeight } from "../scripts/product-proof-fit.mjs";
+import { fittedViewportHeight, nextCaptureWidth, OFFSCREEN_NODES_TEXT } from "../scripts/product-proof-fit.mjs";
+import { architecturePages } from "./fixtures/agent-architecture-fixture";
 
 describe("fitting a short page's capture to its content", () => {
   it("ends the capture just below the content", () => {
@@ -27,5 +28,43 @@ describe("fitting a short page's capture to its content", () => {
     expect(source).toMatch(/if \(options\.fitContentHeight\) await fitViewportToContent\(page, options\.fitContentHeight\);/);
     // The next capture on the same page starts from the viewport it had.
     expect(source).toMatch(/if \(options\.fitContentHeight\) await page\.setViewportSize\(viewport\);/);
+  });
+
+  it("grows a capture to content longer than the viewport only up to an explicit ceiling", () => {
+    expect(fittedViewportHeight(1420, 980, { max: 1800 })).toBe(1452);
+    expect(fittedViewportHeight(2400, 980, { max: 1800 })).toBe(1800);
+    expect(fittedViewportHeight(1420, 980)).toBe(980);
+    expect(fittedViewportHeight(566, 980, { max: 1800 })).toBe(598);
+  });
+
+  it("widens a clipped graph step by step and stops at the ceiling", () => {
+    expect(nextCaptureWidth(1440, { step: 160, max: 2400 })).toBe(1600);
+    expect(nextCaptureWidth(2320, { step: 160, max: 2400 })).toBe(2400);
+    expect(nextCaptureWidth(2400, { step: 160, max: 2400 })).toBeNull();
+    expect(OFFSCREEN_NODES_TEXT.test("2 more nodes off screen · drag to pan")).toBe(true);
+    expect(OFFSCREEN_NODES_TEXT.test("1 more node off screen · drag to pan")).toBe(true);
+  });
+});
+
+describe("agent architecture capture", () => {
+  const source = fs.readFileSync(path.join(process.cwd(), "scripts", "product-proof-agent-architecture.mjs"), "utf8");
+
+  it("lets the layered capture grow past the 980px viewport instead of cutting the tree", () => {
+    expect(source).toMatch(/HARNESS_FIT = \{[^}]*max: 1800 \}/);
+    const layered = source.slice(source.indexOf('"agent-architecture-layered-dark-live.png", async'));
+    expect(layered.slice(0, layered.indexOf("darkPage.close()"))).not.toContain("widenUntilNoNodesOffscreen");
+    expect(source.match(/fitContentHeight: HARNESS_FIT/g)).toHaveLength(2);
+  });
+
+  it("widens the flow capture until no node is off screen and rejects a clipped frame", () => {
+    const flow = source.slice(source.indexOf('"agent-architecture-flow-light-live.png", async'));
+    expect(flow.slice(0, flow.indexOf("lightPage.close()"))).toContain("await widenUntilNoNodesOffscreen(target, FLOW_WIDTH);");
+    expect(source).toMatch(/rejectedText: \[[^\]]*OFFSCREEN_NODES_TEXT\]/);
+  });
+
+  it("gives every harness in the fixture a distinct label", () => {
+    const pages = architecturePages();
+    const labels = [...pages.first_page.harnesses, ...pages.second_page.harnesses].map(harness => harness.label);
+    expect(new Set(labels).size).toBe(labels.length);
   });
 });
