@@ -10,7 +10,7 @@
       ]
     }
   ],
-  "artifact_sha256": "sha256:fd26f9934222f1f82e946a790c7a033d021bdcfdedf2de57767c3463b83b23d9",
+  "artifact_sha256": "sha256:4ed99768a2e775d6f5b980ab7cbd676099afad135ab85f7bc16a7976291a2aef",
   "capture_fixture": {
     "fix_first": {
       "attack_campaigns": [
@@ -5832,7 +5832,7 @@
         ]
       }
     ],
-    "manifest_sha256": "sha256:bfd42dfb3c2898e0e6943003589717630f29fafc21ab1fc362d1172ae7671c21",
+    "manifest_sha256": "sha256:a234551802aaebff3ba90b7c7724692fb55602f1eeb220438123a2c15314011b",
     "max_age_hours": 168,
     "name": "Reference evidence lab",
     "output_scan_id": "reference-evidence-correlation-v1",
@@ -5892,6 +5892,15 @@
             "agents": 0,
             "edges": 0,
             "results": 0
+          },
+          "reason_codes": [],
+          "status": "complete"
+        },
+        "paths": {
+          "limits": {},
+          "observed": {
+            "count": 4,
+            "version": 7
           },
           "reason_codes": [],
           "status": "complete"

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Protocol
 
 from agent_bom.graph.analysis import GraphAnalysisStatus
@@ -14,6 +14,7 @@ from agent_bom.graph.types import RelationshipType
 
 if TYPE_CHECKING:
     from agent_bom.graph.delta_digest import PriorSnapshotDigest
+    from agent_bom.graph.snapshot_paths import SnapshotPath
 
 
 class GraphStoreProtocol(Protocol):
@@ -66,6 +67,7 @@ class GraphStoreProtocol(Protocol):
         manifest_sha256: str,
         completed_at: str = "",
         execution_owner: str = "",
+        snapshot_paths: Sequence[SnapshotPath] | None = None,
     ) -> GraphCorrelationRun: ...
 
     def create_correlation_run(self, run: GraphCorrelationRun) -> tuple[GraphCorrelationRun, bool]: ...

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any, Mapping
+from typing import TYPE_CHECKING, Any, Mapping, Sequence
 
 if TYPE_CHECKING:
     from agent_bom.graph import UnifiedGraph
@@ -12,7 +12,7 @@ from agent_bom.db.graph_store import (
     normalize_graph_tenant_id,
 )
 from agent_bom.graph.correlation import CorrelationRunStatus, GraphCorrelationRun, validate_correlation_update
-from agent_bom.graph.snapshot_paths import prepare_snapshot_paths
+from agent_bom.graph.snapshot_paths import SnapshotPath, prepare_snapshot_paths
 
 from .postgres_common import (
     _tenant_connection,
@@ -60,6 +60,7 @@ class PostgresGraphCorrelationMixin(PostgresGraphStoreBase):
         manifest_sha256: str,
         completed_at: str = "",
         execution_owner: str = "",
+        snapshot_paths: Sequence[SnapshotPath] | None = None,
     ) -> GraphCorrelationRun:
         from agent_bom.graph.correlation import validate_correlation_output_manifest
 
@@ -76,7 +77,7 @@ class PostgresGraphCorrelationMixin(PostgresGraphStoreBase):
             edges=graph.edges,
             attack_paths=graph.attack_paths,
             # Indexed like any scan snapshot, so the queue and node-page totals match the receipt.
-            snapshot_paths=prepare_snapshot_paths(graph),
+            snapshot_paths=prepare_snapshot_paths(graph) if snapshot_paths is None else snapshot_paths,
             interaction_risks=graph.interaction_risks,
             analysis_status=graph.analysis_status,
             snapshot_kind="correlation",

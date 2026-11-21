@@ -89,7 +89,17 @@ def client(tmp_path, monkeypatch):
         configure_api(api_key=None)
 
 
-def test_receipt_and_graph_report_the_same_retained_paths(client) -> None:
+def test_receipt_and_graph_report_the_same_retained_paths(client, monkeypatch) -> None:
+    from agent_bom.graph import snapshot_paths
+
+    derive = snapshot_paths.materialize_snapshot_paths
+    calls: list[str] = []
+
+    def counted(graph):
+        calls.append(graph.scan_id)
+        return derive(graph)
+
+    monkeypatch.setattr(snapshot_paths, "materialize_snapshot_paths", counted)
     created = client.post(
         "/v1/graph/correlations",
         headers={"Idempotency-Key": "idem-path-count"},
@@ -100,6 +110,8 @@ def test_receipt_and_graph_report_the_same_retained_paths(client) -> None:
         time.sleep(0.02)
         status = client.get(f"/v1/graph/correlations/{created['correlation_id']}").json()
     assert status["status"] == "complete", status
+    # Paths are derived once per run: the receipt counts the rows the store indexes.
+    assert calls == [created["correlation_id"]]
 
     output = status["result_manifest"]["output"]
     receipt = output["attack_paths"]
@@ -130,3 +142,22 @@ def test_summary_counts_fusion_and_derived_candidates() -> None:
     }
     # Nothing recorded: assessed is the retained set, never a guess.
     assert attack_paths_summary(retained_count=2, basis="persisted_graph_paths", analysis_status={})["assessed_count"] == 2
+
+
+def _ref(schema: dict) -> str:
+    options = schema.get("anyOf") or [schema]
+    return next(option["$ref"] for option in options if "$ref" in option).rsplit("/", 1)[-1]
+
+
+def test_openapi_types_the_count_on_both_payloads() -> None:
+    schemas = app.openapi()["components"]["schemas"]
+    counts = schemas["GraphAttackPathCounts"]
+    assert set(counts["required"]) == {"retained_count", "assessed_count", "basis"}
+    assert counts["properties"]["retained_count"]["type"] == counts["properties"]["assessed_count"]["type"] == "integer"
+    assert counts["properties"]["basis"]["enum"] == ["derived_graph_paths", "persisted_graph_paths", "served_graph_paths"]
+
+    stats = schemas[_ref(schemas["GraphPageResponse"]["properties"]["stats"])]
+    assert _ref(stats["properties"]["attack_paths"]) == "GraphAttackPathCounts"
+    manifest = schemas[_ref(schemas["GraphCorrelationRunResponse"]["properties"]["result_manifest"])]
+    output = schemas[_ref(manifest["properties"]["output"])]
+    assert _ref(output["properties"]["attack_paths"]) == "GraphAttackPathCounts"

@@ -16,6 +16,7 @@ from typing import Any
 
 from agent_bom.graph.analysis import GraphAnalysisStatus
 from agent_bom.graph.container import UnifiedGraph
+from agent_bom.graph.snapshot_paths import SnapshotPath, prepare_snapshot_paths, stored_paths_current
 
 PERSISTED = "persisted_graph_paths"
 DERIVED = "derived_graph_paths"
@@ -49,16 +50,23 @@ def attack_paths_summary(*, retained_count: int, basis: str, analysis_status: Ma
     }
 
 
-def snapshot_attack_paths_summary(graph: UnifiedGraph) -> dict[str, Any]:
-    """The summary the queue serves once this graph is saved with its path index.
+def index_attack_paths(graph: UnifiedGraph) -> tuple[dict[str, Any], list[SnapshotPath]]:
+    """Derive the snapshot's path index once: the receipt's summary and the rows the store persists.
 
-    Counts the same materialized rows the store indexes, over detached copies so
-    fusion rows stay as fusion wrote them; derivation stamps the candidates it assessed.
+    ``prepare_snapshot_paths`` stamps the index status the queue reads; when
+    derivation fails it disables the index and the queue serves persisted rows.
     """
-    from agent_bom.graph.snapshot_paths import materialize_snapshot_paths
+    rows = prepare_snapshot_paths(graph)
+    if stored_paths_current(graph.analysis_status):
+        summary = attack_paths_summary(retained_count=len(rows), basis=DERIVED, analysis_status=graph.analysis_status)
+    else:
+        summary = attack_paths_summary(retained_count=len(graph.attack_paths), basis=PERSISTED, analysis_status=graph.analysis_status)
+    return summary, rows
 
-    rows = materialize_snapshot_paths(graph)
-    return attack_paths_summary(retained_count=len(rows), basis=DERIVED, analysis_status=graph.analysis_status)
+
+def manifest_output_fields(summary: Mapping[str, Any]) -> dict[str, Any]:
+    """The receipt ``output`` fields: ``attack_path_count`` kept equal to ``retained_count``."""
+    return {"attack_path_count": summary["retained_count"], "attack_paths": dict(summary)}
 
 
-__all__ = ["DERIVED", "PERSISTED", "assessed_candidates", "attack_paths_summary", "snapshot_attack_paths_summary"]
+__all__ = ["DERIVED", "PERSISTED", "assessed_candidates", "attack_paths_summary", "index_attack_paths", "manifest_output_fields"]
