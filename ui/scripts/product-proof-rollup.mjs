@@ -1,8 +1,6 @@
 // Roll-up and node-aggregate responses for the product-proof graph, served from
 // the fixture the backend roll-up writes (scripts/generate_product_proof_rollup.py).
-import { readFileSync } from "node:fs";
-
-const fixture = JSON.parse(readFileSync(new URL("../tests/fixtures/product-proof-rollup.json", import.meta.url), "utf8"));
+import fixture from "../tests/fixtures/product-proof-rollup.json" with { type: "json" };
 
 export function rollupResponse() {
   return structuredClone(fixture.rollup);

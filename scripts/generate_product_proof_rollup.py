@@ -19,7 +19,8 @@ from pathlib import Path
 from typing import Any
 
 from agent_bom.graph.container import UnifiedGraph
-from agent_bom.graph.rollup import node_aggregate, rollup_view
+from agent_bom.graph.rollup import rollup_view
+from agent_bom.graph.rollup_node import node_aggregate
 from agent_bom.graph.semantic_layer import semantic_layer
 
 ROOT = Path(__file__).resolve().parents[1]

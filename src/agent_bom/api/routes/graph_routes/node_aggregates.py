@@ -19,7 +19,7 @@ from agent_bom.api.read_models.graph_node_aggregates import GraphNodeAggregatesR
 from agent_bom.api.routes.graph_routes import _runtime
 from agent_bom.api.routes.graph_routes._admission import _GraphAdmissionRoute
 from agent_bom.api.scan_finding_read import suppressed_finding_ids
-from agent_bom.graph.rollup import node_aggregate
+from agent_bom.graph.rollup_node import node_aggregate
 from agent_bom.graph.semantic_layer import semantic_layer
 
 MAX_NODE_AGGREGATES = 25

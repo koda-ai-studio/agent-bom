@@ -471,14 +471,6 @@ def _aggregate(
     return agg
 
 
-def node_aggregate(graph: UnifiedGraph, node_id: str, *, suppressed_finding_ids: frozenset[str] = frozenset()) -> RollupAggregate | None:
-    """The aggregate *node_id*'s own roll-up entry carries: its containment subtree, scoped to it."""
-    if node_id not in graph.nodes:
-        return None
-    facts = _node_facts(graph, suppressed_finding_ids)
-    return _aggregate(_descendants(node_id, _contains_children(graph)), graph, facts=facts, scope_root=node_id)
-
-
 def _container_for(node: UnifiedNode, child_map: dict[str, list[str]]) -> bool:
     return _node_type_value(node) in _CONTAINER_TYPES or bool(child_map.get(node.id))
 
@@ -860,6 +852,6 @@ def _filters_dict(filters: Optional[RollupFilters]) -> dict[str, Any]:
 
 
 # Re-exported for callers that want the OCSF display name of a rolled-up bucket.
-__all__ = ["node_aggregate", "ROLLUP_CONTAINMENT_RELATIONSHIPS", "ROLLUP_CONTAINMENT_RELATIONSHIP_TYPES", "ROLLUP_RELATIONSHIPS",
+__all__ = ["ROLLUP_CONTAINMENT_RELATIONSHIPS", "ROLLUP_CONTAINMENT_RELATIONSHIP_TYPES", "ROLLUP_RELATIONSHIPS",
     "RollupAggregate", "RollupContainer", "RollupFilters", "attack_path_view", "drill_down", "rollup_view",
     "OCSF_SEVERITY_NAMES", "ROLLUP_SUBTREE_RELATIONSHIP_TYPES"]  # fmt: skip
