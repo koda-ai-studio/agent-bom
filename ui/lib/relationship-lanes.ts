@@ -53,7 +53,8 @@ function portOffset(edge: LaneEdge, edges: LaneEdge[], side: "source" | "target"
   if (groups.size < 2) return 0;
   const mean = (ys: number[]) => ys.length ? ys.reduce((sum, y) => sum + y, 0) / ys.length : 0;
   const order = [...groups].sort(([a, ay], [b, by]) => mean(ay) - mean(by) || a.localeCompare(b)).map(([name]) => name);
-  const gap = Math.min(LANE_GAP, 56 / (order.length - 1));
+  // Keep ports inside the glyph, clear of the caption below its lower rim.
+  const gap = Math.min(LANE_GAP, 40 / (order.length - 1));
   return (order.indexOf(edge.id) - (order.length - 1) / 2) * gap;
 }
 

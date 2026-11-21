@@ -110,3 +110,18 @@ it("keeps a caption detour clear of an unrelated node in a skipped row", () => {
   expect(path).toMatch(/^M150,40/);
   expect(path).toMatch(/70,640$/);
 });
+
+it("keeps dense reverse fan-out ports and curves above the source caption", async () => {
+  const { relationshipLaneFor } = await import("@/lib/relationship-lanes");
+  const positions = new Map([
+    ["agent", { x: 200, y: 352 }], ["server", { x: 400, y: 352 }], ["package", { x: 800, y: 352 }],
+    ["finding", { x: 1000, y: 352 }], ...[520, 184, 688, 16, 856].map((y, i) => [`endpoint:${i}`, { x: 0, y }] as const),
+  ]);
+  const links = [{ id: "incoming", source: "agent", target: "server" }, { id: "package", source: "server", target: "package" },
+    ...Array.from({ length: 5 }, (_, i) => ({ id: `out:${i}`, source: "server", target: `endpoint:${i}`, sourceHandle: "context", targetHandle: "context" }))];
+  const lane = relationshipLaneFor("out:4", links, id => positions.get(id)?.y, id => positions.get(id)?.x);
+  const [path] = relationshipPath({ source: "server", target: "endpoint:4", sourceX: 446, sourceY: 386, targetX: 106, targetY: 890,
+    sourcePosition: Position.Left, targetPosition: Position.Right }, [...positions].map(([id, point]) => ({ id, ...point, width: 152, height: 136 })), lane);
+  expect(samples(path).some(p => p.x > 401 && p.x < 551 && p.y > 415 && p.y < 487)).toBe(false);
+  expect(Math.abs(lane.source)).toBeLessThanOrEqual(20);
+});
