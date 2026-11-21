@@ -615,8 +615,18 @@ Download each completed merge-group job log, then run
 `uv run python scripts/refresh_ci_durations.py --log /tmp/job-*.log --output tests/.ci-postgres-durations.json`
 for the real Postgres contract jobs. Use the default output and `--merge-existing`
 for Python correctness jobs. Each module must occur in only one input log;
-retain the source run ID with the change. The measurements here were refreshed
-from CI run `44923307491`. They estimate shard work, not guaranteed queue latency.
+retain the source run ID with the change. For multiple independent runs, refresh
+from the first run, then use `--max-existing` with each later run's logs to keep
+the slower sample per module. Do not pass independent runs together to `--log`:
+that adds their times instead of comparing them. A max refresh retains modules
+not measured by the later run, and never changes which tests are selected.
+
+Python weights use the per-module maximum from merge-group runs `44926518668`
+and `44928011052`; Postgres weights use run `44923307491`. Refresh Python from
+only the main correctness step, excluding shard zero's later isolated timing
+gates. These weights estimate work, not guaranteed queue latency. The two
+samples prevent one unusually fast fixture setup from hiding an expensive
+module; a new real merge-group run is still required to qualify wall time.
 
 UI unit tests run in two independent shards and the required Python context
 checks their aggregate result. Browser tests use test-level sharding across
