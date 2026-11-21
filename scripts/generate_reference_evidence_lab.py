@@ -796,7 +796,9 @@ async def _build_payload() -> dict[str, Any]:
             "output_counts": {
                 "nodes": len(output.nodes),
                 "edges": len(output.edges),
-                "attack_paths": len(output.attack_paths),
+                # The receipt's retained count: what the queue and /v1/graph serve.
+                "attack_paths": completed.result_manifest["output"]["attack_paths"]["retained_count"],
+                "persisted_fusion_paths": len(output.attack_paths),
             },
         }
 

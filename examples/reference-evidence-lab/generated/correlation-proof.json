@@ -10,7 +10,7 @@
       ]
     }
   ],
-  "artifact_sha256": "sha256:a25727ec9ded5341544ac8d77e4616e3b1f005390d3df746e47806d1abb18358",
+  "artifact_sha256": "sha256:fd26f9934222f1f82e946a790c7a033d021bdcfdedf2de57767c3463b83b23d9",
   "capture_fixture": {
     "fix_first": {
       "attack_campaigns": [
@@ -3758,6 +3758,15 @@
           "reason_codes": [],
           "status": "complete"
         },
+        "paths": {
+          "limits": {},
+          "observed": {
+            "count": 4,
+            "version": 7
+          },
+          "reason_codes": [],
+          "status": "complete"
+        },
         "workload_pivot_paths": {
           "limits": {
             "max_paths": 500,
@@ -5591,6 +5600,15 @@
             "reason_codes": [],
             "status": "complete"
           },
+          "paths": {
+            "limits": {},
+            "observed": {
+              "count": 4,
+              "version": 7
+            },
+            "reason_codes": [],
+            "status": "complete"
+          },
           "workload_pivot_paths": {
             "limits": {
               "max_paths": 500,
@@ -5814,7 +5832,7 @@
         ]
       }
     ],
-    "manifest_sha256": "sha256:f8b8f7d9af4efe4ab89cda60ad1312e7f4d9a78cd7696fddce37903077c6237c",
+    "manifest_sha256": "sha256:bfd42dfb3c2898e0e6943003589717630f29fafc21ab1fc362d1172ae7671c21",
     "max_age_hours": 168,
     "name": "Reference evidence lab",
     "output_scan_id": "reference-evidence-correlation-v1",
@@ -5838,6 +5856,21 @@
           "reason_codes": [],
           "status": "complete"
         },
+        "component_paths": {
+          "limits": {
+            "chains_per_occurrence": 64,
+            "holder_depth": 8
+          },
+          "observed": {
+            "alternate_chains": 0,
+            "occurrences": 1,
+            "paths": 3,
+            "unlikely_excluded": 0,
+            "vex_excluded": 0
+          },
+          "reason_codes": [],
+          "status": "complete"
+        },
         "correlation_merge": {
           "edge_count": 12,
           "edge_limit": 500000,
@@ -5849,6 +5882,31 @@
           "node_limit": 100000,
           "status": "complete",
           "truncated": false
+        },
+        "credential_finding_paths": {
+          "limits": {
+            "agent_edges": 5000,
+            "depth": 6
+          },
+          "observed": {
+            "agents": 0,
+            "edges": 0,
+            "results": 0
+          },
+          "reason_codes": [],
+          "status": "complete"
+        },
+        "workload_pivot_paths": {
+          "limits": {
+            "max_paths": 500,
+            "max_targets_per_identity": 25
+          },
+          "observed": {
+            "paths": 0,
+            "vulnerable_workloads_with_identity": 0
+          },
+          "reason_codes": [],
+          "status": "complete"
         }
       },
       "correlation_id": "reference-evidence-correlation-v1",
@@ -5975,7 +6033,12 @@
         }
       ],
       "output": {
-        "attack_path_count": 1,
+        "attack_path_count": 4,
+        "attack_paths": {
+          "assessed_count": 4,
+          "basis": "derived_graph_paths",
+          "retained_count": 4
+        },
         "edge_count": 12,
         "graph_digest_sha256": "sha256:d312346948b55fd48cb18b7fe69de0b60b73fd55d49b41cd04e1182f92e845a5",
         "node_count": 11,
@@ -6041,9 +6104,10 @@
   ],
   "label": "Reference evidence lab — modeled local infrastructure",
   "output_counts": {
-    "attack_paths": 1,
+    "attack_paths": 4,
     "edges": 12,
-    "nodes": 11
+    "nodes": 11,
+    "persisted_fusion_paths": 1
   },
   "proof_path": {
     "analysis": {

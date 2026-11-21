@@ -12,6 +12,7 @@ from agent_bom.db.graph_store import (
     normalize_graph_tenant_id,
 )
 from agent_bom.graph.correlation import CorrelationRunStatus, GraphCorrelationRun, validate_correlation_update
+from agent_bom.graph.snapshot_paths import prepare_snapshot_paths
 
 from .postgres_common import (
     _tenant_connection,
@@ -74,6 +75,8 @@ class PostgresGraphCorrelationMixin(PostgresGraphStoreBase):
             nodes=graph.nodes.values(),
             edges=graph.edges,
             attack_paths=graph.attack_paths,
+            # Indexed like any scan snapshot, so the queue and node-page totals match the receipt.
+            snapshot_paths=prepare_snapshot_paths(graph),
             interaction_risks=graph.interaction_risks,
             analysis_status=graph.analysis_status,
             snapshot_kind="correlation",

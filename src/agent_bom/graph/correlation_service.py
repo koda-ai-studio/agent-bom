@@ -10,8 +10,6 @@ from datetime import datetime, timedelta, timezone
 from typing import Callable, Sequence
 
 from agent_bom.graph.analysis import analysis_status_map_to_dict
-from agent_bom.graph.attack_path_fusion import apply_attack_path_fusion
-from agent_bom.graph.attack_path_mitre import apply_attack_path_technique_mappings
 from agent_bom.graph.correlation import (
     CorrelationMergeResult,
     CorrelationRunStatus,
@@ -20,6 +18,7 @@ from agent_bom.graph.correlation import (
     correlation_graph_digest,
     correlation_manifest_digest,
 )
+from agent_bom.graph.correlation_finish import analyze_correlated_paths
 from agent_bom.graph.correlation_receipts import (
     CorrelationReceiptError,
     configured_receipt_signing_key,
@@ -393,8 +392,7 @@ class GraphCorrelationService:
                     "stale_allowed" if any(freshness_by_scan.get(scan_id) == "stale_allowed" for scan_id in source_ids) else "fresh"
                 )
 
-            await asyncio.to_thread(apply_attack_path_fusion, merged.graph)
-            await asyncio.to_thread(apply_attack_path_technique_mappings, merged.graph)
+            attack_paths = await asyncio.to_thread(analyze_correlated_paths, merged.graph)
             merge_output = merged.manifest.get("output", {})
             node_conflicts = int(merge_output.get("node_conflict_count") or 0)
             edge_conflicts = int(merge_output.get("edge_conflict_count") or 0)
@@ -432,7 +430,8 @@ class GraphCorrelationService:
                     "scan_id": correlation_id,
                     "node_count": len(merged.graph.nodes),
                     "edge_count": len(merged.graph.edges),
-                    "attack_path_count": len(merged.graph.attack_paths),
+                    "attack_path_count": attack_paths["retained_count"],
+                    "attack_paths": attack_paths,
                     "graph_digest_sha256": correlation_graph_digest(merged.graph),
                 },
             }

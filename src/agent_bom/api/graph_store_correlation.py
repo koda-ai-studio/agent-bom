@@ -17,6 +17,7 @@ from agent_bom.graph import (
 )
 from agent_bom.graph.correlation import CorrelationRunStatus, GraphCorrelationRun
 from agent_bom.graph.ports import GraphStoreProtocol as GraphStoreProtocol
+from agent_bom.graph.snapshot_paths import prepare_snapshot_paths
 
 
 class SQLiteGraphCorrelationMixin(SQLiteGraphSnapshotMixin):
@@ -49,6 +50,8 @@ class SQLiteGraphCorrelationMixin(SQLiteGraphSnapshotMixin):
                 nodes=graph.nodes.values(),
                 edges=graph.edges,
                 attack_paths=graph.attack_paths,
+                # Indexed like any scan snapshot, so the queue and node-page totals match the receipt.
+                snapshot_paths=prepare_snapshot_paths(graph),
                 interaction_risks=graph.interaction_risks,
                 analysis_status=graph.analysis_status,
                 snapshot_kind="correlation",

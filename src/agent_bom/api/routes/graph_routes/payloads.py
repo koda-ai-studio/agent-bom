@@ -21,6 +21,7 @@ from agent_bom.api.routes.graph_routes.params import (
     _boundary_edge_count,
     _joined_edges,
 )
+from agent_bom.api.routes.graph_routes.path_count import with_attack_paths_summary
 from agent_bom.graph import AttackPath, EntityType, UnifiedEdge, UnifiedGraph, UnifiedNode
 from agent_bom.graph.analysis import analysis_status_map_to_dict
 from agent_bom.graph.attack_path_queue import path_population
@@ -46,6 +47,7 @@ def _encoded_graph_response(payload: dict[str, Any], projection: GraphProjection
     payload = project_graph_payload(payload, projection)
     if str(payload.get("scan_id", "")).startswith("current-estate:"):
         payload = {**payload, "evidence_scope": "current_estate"}
+    payload = with_attack_paths_summary(payload)
     if isinstance(stats := payload.get("stats"), dict) and "severity_counts" in stats:
         # Node severities, not issue or occurrence counts; the label keeps clients from reading them as either.
         payload = {**payload, "stats": {"severity_basis": "graph_nodes", **stats}}
