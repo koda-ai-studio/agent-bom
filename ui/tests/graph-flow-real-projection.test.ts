@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { FLOW_READABLE_NODE_LIMIT, flowAvailability, flowPinnedIds, investigationFlow, type InvestigationFlow } from "@/lib/graph-investigation-flow";
-import { boundedGraphElements } from "@/lib/graph-neighbor-expansion";
+import { graphConnectionPreview } from "@/lib/graph-connection-preview";
 import { byLabel, k8sFlowGraph, type K8sScenario } from "./k8s-projection-fixture";
 
 const run = (scenario: K8sScenario, flow: InvestigationFlow, narrow = false) => {
@@ -8,17 +8,15 @@ const run = (scenario: K8sScenario, flow: InvestigationFlow, narrow = false) => 
   return investigationFlow(nodes, edges, flow, narrow);
 };
 const at = (result: ReturnType<typeof run>, label: string) => byLabel(result.nodes, label).position;
-const CHAIN = ["ingress: prod/web", "service: prod/web", "pod: prod/web-7c9f-1", "replicaset: prod/web-7c9f", "deployment: prod/web", "service account: prod/web-sa", "Role: web-sa-reader"];
 
 describe("exposure on real Kubernetes projection output", () => {
-  it("runs endpoint, workload, owning controllers, identity and role in reading order on one row", () => {
+  it("uses backend semantic columns without inventing a Kubernetes attack path", () => {
     const result = run("tokenMounted", "exposure");
     expect(result.applied).toBe(true);
-    const xs = CHAIN.map(label => at(result, label).x);
-    expect(xs).toEqual([...xs].sort((a, b) => a - b));
-    expect(new Set(xs).size).toBe(CHAIN.length);
-    expect(CHAIN.map(label => at(result, label).y)).toEqual(CHAIN.map(() => 0));
-    expect(CHAIN.map(label => byLabel(result.nodes, label).id).every(id => result.primaryPath.includes(id))).toBe(true);
+    expect(result.primaryPath).toEqual([]);
+    expect(result.nodes.every(node => typeof node.data.semanticLayer === "string")).toBe(true);
+    expect(at(result, "Role: web-sa-reader").x).toBeGreaterThan(at(result, "pod: prod/web-7c9f-1").x);
+    expect(at(result, "replicaset: prod/web-7c9f").x).toBe(at(result, "pod: prod/web-7c9f-1").x);
   });
 
   it("never invents or reverses an edge to do so", () => {
@@ -30,8 +28,8 @@ describe("exposure on real Kubernetes projection output", () => {
   it("does not read an unmounted token as a flow step, but keeps the identity in context with the reason", () => {
     const result = run("snapshot", "exposure");
     const account = byLabel(result.nodes, "service account: prod/web-sa");
-    expect(at(result, "secret: prod/db-pass").y).toBe(0);
-    expect(account.position.y).not.toBe(0);
+    expect(result.primaryPath).toEqual([]);
+    expect(result.nodes.some(node => node.data.label === "secret: prod/db-pass")).toBe(true);
     expect(result.primaryPath).not.toContain(account.id);
     const hop = result.edges.find(e => e.target === account.id && e.data?.relationship === "assumes")!;
     expect(hop.data?.flowStep).toBe(false);
@@ -41,19 +39,23 @@ describe("exposure on real Kubernetes projection output", () => {
     expect(byLabel(run("tokenMounted", "exposure").nodes, "service account: prod/web-sa").data.flowNote).toBeUndefined();
   });
 
-  it("keeps a mounted token's hop as a flow step without a caveat", () => {
+  it("keeps a mounted token relationship without promoting it to an assessed path", () => {
     const result = run("tokenMounted", "exposure");
     const hop = result.edges.find(e => e.data?.relationship === "assumes")!;
-    expect(hop.data?.flowStep).toBe(true);
+    expect(hop.data?.flowStep).toBe(false);
+    expect(result.primaryPath).toEqual([]);
     expect(hop.label).toBeUndefined();
   });
 
-  it("gives a second route's Service its own column before the pod", () => {
+  it("keeps same-layer Service nodes distinct without assigning topology-derived columns", () => {
     const result = run("twoServices", "exposure");
-    const pod = at(result, "pod: prod/web-7c9f-1").x;
-    expect(at(result, "ingress: prod/web").x).toBeLessThan(at(result, "service: prod/web").x);
-    expect(at(result, "service: prod/web").x).toBeLessThan(pod);
-    expect(at(result, "service: prod/web-public").x).toBeLessThan(pod);
+    const one = byLabel(result.nodes, "service: prod/web"), two = byLabel(result.nodes, "service: prod/web-public");
+    expect(one.data.semanticLayer).toBeDefined();
+    expect(two.data.semanticLayer).toBe(one.data.semanticLayer);
+    expect(one.position.x).toBe(two.position.x);
+    expect(one.position.y).not.toBe(two.position.y);
+    expect(result.edges.some(edge => edge.source === one.id)).toBe(true);
+    expect(result.edges.some(edge => edge.source === two.id)).toBe(true);
   });
 });
 
@@ -68,41 +70,43 @@ describe("internal Services", () => {
   it("never starts exposure at a ClusterIP Service but keeps it on the map and calls it internal", () => {
     const result = run("snapshot", "exposure");
     const internal = byLabel(result.nodes, "service: prod/internal-only");
-    expect(internal.position.y).not.toBe(0);
+    expect(result.nodes.some(node => node.id === internal.id)).toBe(true);
     expect(result.primaryPath).not.toContain(internal.id);
-    expect(result.nodes.filter(n => n.position.x === 0 && n.position.y === 0).map(n => n.data.label)).toEqual(["ingress: prod/web"]);
+    expect(result.primaryPath).toEqual([]);
     const route = result.edges.find(e => e.source === internal.id)!;
     expect(route.label).toBe("Routes in cluster to");
     expect(route.data?.relationship).toBe("exposed_to");
   });
 
-  it("keeps a ClusterIP Service in sequence when a recorded Ingress routes to it", () => {
+  it("preserves a recorded Ingress to ClusterIP link without inferring a ranked path", () => {
     const result = run("snapshot", "exposure");
-    expect(result.primaryPath).toContain(byLabel(result.nodes, "service: prod/web").id);
+    const ingress = byLabel(result.nodes, "ingress: prod/web"), service = byLabel(result.nodes, "service: prod/web");
+    expect(result.edges.find(edge => edge.source === ingress.id && edge.target === service.id)?.data?.relationship).toBe("exposed_to");
+    expect(result.primaryPath).toEqual([]);
   });
 
   it("treats a LoadBalancer as an entry", () => {
     const { nodes, edges } = k8sFlowGraph("twoServices");
     expect(flowAvailability(nodes, edges).exposure.available).toBe(true);
     const lb = byLabel(run("twoServices", "exposure").nodes, "service: prod/web-public");
-    expect(lb.position.x).toBe(0);
+    expect(lb.data.semanticLayer).toBeDefined();
+    expect(run("twoServices", "exposure").primaryPath).toEqual([]);
   });
 });
 
 describe("whether a flow applies", () => {
-  it("applies above the former 80-node limit at typical cluster size, with its entry on the canvas page", () => {
+  it("bounds a large Kubernetes estate to a readable preview while retaining every loaded node", () => {
     const { nodes, edges } = k8sFlowGraph("clusterEstate");
     expect(nodes.length).toBeGreaterThan(FLOW_READABLE_NODE_LIMIT);
-    const unpinned = boundedGraphElements(nodes, edges, [], 0);
-    expect(unpinned.nodes.some(n => n.data.attributes?.kubernetes_kind === "Ingress")).toBe(false);
-    const page = boundedGraphElements(nodes, edges, flowPinnedIds(nodes, edges, "exposure"), 0);
-    expect(page.nodes.length).toBeGreaterThan(80);
-    expect(page.nodes.filter(n => n.data.attributes?.kubernetes_kind === "Ingress")).toHaveLength(3);
-    const result = investigationFlow(page.nodes, page.edges, "exposure");
+    expect(flowPinnedIds(nodes, edges, "exposure")).toEqual([]);
+    const preview = graphConnectionPreview(nodes, edges)!;
+    expect(preview.nodes.length).toBeGreaterThanOrEqual(6);
+    expect(preview.nodes.length).toBeLessThanOrEqual(12);
+    expect(preview.allNodes).toHaveLength(nodes.length);
+    const result = investigationFlow(preview.nodes, preview.edges, "auto");
     expect(result.applied).toBe(true);
-    expect(byLabel(result.nodes, "ingress: prod/app-00").position).toEqual({ x: 0, y: 0 });
-    expect(new Set(result.nodes.map(n => `${n.position.x}:${n.position.y}`)).size).toBe(result.nodes.length);
-    expect(result.primaryPath.length).toBeGreaterThan(4);
+    expect(result.primaryPath).toEqual([]);
+    expect(new Set(result.nodes.map(node => `${node.position.x}:${node.position.y}`)).size).toBe(result.nodes.length);
   });
 
   it("declines beyond the readable limit, says so, and adds no display objects", () => {
@@ -128,11 +132,12 @@ describe("whether a flow applies", () => {
     expect(result.reason).toMatch(/no findings/i);
   });
 
-  it("reports an untouched layout truthfully under automatic", () => {
+  it("applies semantic layout consistently to an image-only automatic view", () => {
     const pkg = k8sFlowGraph("snapshot").nodes.filter(n => n.data.label.startsWith("image:"));
     const result = investigationFlow(pkg, [], "auto");
-    expect(result.applied).toBe(false);
-    expect(result.nodes).toBe(pkg);
+    expect(result.applied).toBe(true);
+    expect(result.nodes.map(node => node.id)).toEqual(pkg.map(node => node.id));
+    expect(result.nodes.every(node => node.data.semanticLayout)).toBe(true);
   });
 
   it("leaves a view Automatic will not rearrange on its existing canvas page", () => {
@@ -147,41 +152,42 @@ describe("whether a flow applies", () => {
 });
 
 describe("the reading of each flow", () => {
-  it("starts each flow at its own subject and places nothing on top of anything else", () => {
-    const origin = (flow: InvestigationFlow, scenario: K8sScenario) => {
-      const result = run(scenario, flow);
-      expect(new Set(result.nodes.map(n => `${n.position.x}:${n.position.y}`)).size).toBe(result.nodes.length);
-      return result.nodes.find(n => n.position.x === 0 && n.position.y === 0)?.data.label;
-    };
-    expect(origin("exposure", "withFindings")).toBe("ingress: prod/web");
-    expect(origin("identity", "withFindings")).toBe("service account: prod/web-sa");
-    expect(origin("inventory", "withFindings")).toBe("cluster: prod-eks");
-    expect(origin("vulnerability", "withFindings")).toBe("app");
-  });
-
-  it("leads the vulnerability flow through the image and package to the finding", () => {
-    const result = run("withFindings", "vulnerability");
-    const xs = ["app", "image: nginx:1.19.0", "openssl@1.1.1k", "CVE-2021-3711"].map(label => at(result, label));
-    expect(xs.map(p => p.y)).toEqual([0, 0, 0, 0]);
-    expect(xs.map(p => p.x)).toEqual([...xs.map(p => p.x)].sort((a, b) => a - b));
-    expect(new Set(xs.map(p => p.x)).size).toBe(4);
-  });
-
-  it("frames a primary path that starts at the origin and only moves forward", () => {
-    for (const flow of ["exposure", "identity", "inventory"] as const) {
-      const result = run("snapshot", flow);
-      const positions = result.primaryPath.map(id => result.nodes.find(n => n.id === id)!.position);
-      expect(positions[0]).toEqual({ x: 0, y: 0 });
-      expect(positions.every(p => p.y === 0)).toBe(true);
+  it("preserves the same semantic geometry for each investigation subject without node overlaps", () => {
+    const results = (["exposure", "identity", "inventory", "vulnerability"] as const).map(flow => run("withFindings", flow));
+    for (const result of results) {
+      expect(result.applied).toBe(true);
+      expect(new Set(result.nodes.map(node => `${node.position.x}:${node.position.y}`)).size).toBe(result.nodes.length);
+      expect(result.nodes.map(node => node.position)).toEqual(results[0]!.nodes.map(node => node.position));
     }
   });
 
-  it("keeps the real twenty-node map compact enough to frame legibly at 1440", () => {
+  it("keeps package and finding context below their recorded owners", () => {
+    const result = run("withFindings", "vulnerability");
+    const image = byLabel(result.nodes, "image: nginx:1.19.0"), pkg = byLabel(result.nodes, "openssl@1.1.1k"), finding = byLabel(result.nodes, "CVE-2021-3711");
+    expect(pkg.data.semanticOwner).toBe(image.id);
+    expect(finding.data.semanticOwner).toBe(pkg.id);
+    expect(pkg.position.x).toBe(image.position.x);
+    expect(finding.position.x).toBe(pkg.position.x);
+    expect(pkg.position.y).toBeGreaterThan(image.position.y);
+    expect(finding.position.y).toBeGreaterThan(pkg.position.y);
+  });
+
+  it("does not manufacture a primary path when the snapshot has none", () => {
+    for (const flow of ["exposure", "identity", "inventory"] as const) {
+      const result = run("snapshot", flow);
+      expect(result.primaryPath).toEqual([]);
+      expect(result.edges.every(edge => !edge.data?.pathEmphasis)).toBe(true);
+    }
+  });
+
+  it("opens a bounded connected window over the twenty-node map", () => {
     const result = run("snapshot", "exposure");
-    const xs = result.nodes.map(n => n.position.x), ys = result.nodes.map(n => n.position.y);
-    // A 1134px canvas at the 0.4 legibility floor shows about 2600 by 1250 world units.
-    expect(Math.max(...xs) - Math.min(...xs) + 300).toBeLessThanOrEqual(2600);
-    expect(Math.max(...ys) - Math.min(...ys) + 300).toBeLessThanOrEqual(1400);
+    const preview = graphConnectionPreview(result.nodes, result.edges)!;
+    expect(preview.nodes.length).toBeGreaterThanOrEqual(6);
+    expect(preview.nodes.length).toBeLessThanOrEqual(12);
+    expect(preview.allNodes).toHaveLength(result.nodes.length);
+    const ids = new Set(preview.nodes.map(node => node.id));
+    expect(preview.edges.every(edge => ids.has(edge.source) && ids.has(edge.target))).toBe(true);
   });
 
   it("does not let one long label change the spacing of the whole map", () => {
@@ -191,16 +197,20 @@ describe("the reading of each flow", () => {
     expect(positions(long)).toEqual(positions(nodes));
   });
 
-  it("connects a context edge to the side it faces", () => {
+  it("retains the controller-to-pod direction within their shared backend layer", () => {
     const result = run("tokenMounted", "exposure");
-    const owner = result.edges.find(e => e.source === byLabel(result.nodes, "replicaset: prod/web-7c9f").id && e.target === byLabel(result.nodes, "pod: prod/web-7c9f-1").id)!;
-    expect(owner.sourceHandle).toBe("context");
-    expect(owner.targetHandle).toBe("context");
+    const controller = byLabel(result.nodes, "replicaset: prod/web-7c9f"), pod = byLabel(result.nodes, "pod: prod/web-7c9f-1");
+    expect(controller.data.semanticLayer).toBeDefined();
+    expect(controller.position.x).toBe(pod.position.x);
+    const owner = result.edges.find(edge => edge.source === controller.id && edge.target === pod.id)!;
+    expect(owner).toBeDefined();
+    expect(owner.sourceHandle).toBeNull();
+    expect(owner.targetHandle).toBeNull();
   });
 
   it("treats drift incidents like other findings when one asset owns them", () => {
     const { nodes, edges } = k8sFlowGraph("snapshot");
-    const incident = { ...nodes[0]!, id: "drift-1", data: { label: "drift", nodeType: "driftIncident" as const } };
+    const incident = { ...nodes[0]!, id: "drift-1", data: { label: "drift", nodeType: "driftIncident" as const, semanticLayer: "finding" } };
     const link = { id: "d", source: nodes[0]!.id, target: "drift-1", data: { relationship: "exhibits_drift" } };
     const result = investigationFlow([...nodes, incident], [...edges, link], "exposure");
     expect(result.nodes.find(n => n.id === "drift-1")?.data.readingOwner).toBe(nodes[0]!.id);
@@ -211,7 +221,7 @@ describe("Internet boundary display context", () => {
   const assessed = () => {
     const { nodes, edges } = k8sFlowGraph("snapshot");
     const ingress = byLabel(nodes, "ingress: prod/web");
-    return { edges, ingress, nodes: nodes.map(n => n.id === ingress.id ? { ...n, data: { ...n.data, attributes: { ...n.data.attributes, resource_id: "ing-1",
+    return { edges, ingress, nodes: nodes.map(n => n.id === ingress.id ? { ...n, data: { ...n.data, attributes: { ...n.data.attributes, resource_id: "ing-1", risk_context: { internet_exposed: true },
       network_reachability_assessment: { complete: true, decision: "allow", source_scope: "internet", target_id: "ing-1", evidence_refs: ["receipt-1"] } } } } : n) };
   };
 
@@ -229,36 +239,36 @@ describe("Internet boundary display context", () => {
     const result = investigationFlow(nodes, edges, "exposure");
     const boundary = result.nodes.find(n => n.data.displayOnly)!;
     const link = result.edges.find(e => e.data?.displayOnly)!;
-    expect(boundary.ariaLabel).toBe("Internet, assessed ingress to ingress: prod/web");
-    expect(link.ariaLabel).toBe("Assessed ingress from Internet to ingress: prod/web");
+    expect(boundary.ariaLabel).toBe("Internet, recorded exposure context");
+    expect(link.ariaLabel).toBe("Recorded internet exposure for ingress: prod/web; display context, not a traversable relationship");
   });
 });
 
 describe("a large map with no specific flow", () => {
-  it("is read by its connections, ending the first row on its worst finding", () => {
+  it("keeps a large map connected without inferring an attack path from severity", () => {
     const { nodes, edges } = k8sFlowGraph("demoInventory");
     const result = investigationFlow(nodes, edges, "auto");
     expect(nodes.length).toBeGreaterThan(24);
-    expect(result).toMatchObject({ applied: true, scenario: "connections" });
-    const path = result.primaryPath.map(id => result.nodes.find(n => n.id === id)!);
-    expect(path.length).toBeGreaterThan(3);
-    expect(path.at(-1)!.data.nodeType).toBe("vulnerability");
-    expect(path.every(n => n.position.y === 0)).toBe(true);
-    expect(new Set(result.nodes.map(n => `${n.position.x}:${n.position.y}`)).size).toBe(result.nodes.length);
-    expect(result.edges.map(e => [e.source, e.target])).toEqual(edges.map(e => [e.source, e.target]));
+    expect(result.applied).toBe(true);
+    expect(result.primaryPath).toEqual([]);
+    expect(new Set(result.nodes.map(node => `${node.position.x}:${node.position.y}`)).size).toBe(result.nodes.length);
+    expect(result.edges.map(edge => [edge.source, edge.target])).toEqual(edges.map(edge => [edge.source, edge.target]));
   });
 
-  it("keeps the zoom band so an operator's zoom can still choose the summary renderer", () => {
+  it("keeps semantic nodes as full readable glyphs and captions", () => {
     const { nodes, edges } = k8sFlowGraph("projectScan");
     const banded = nodes.map(n => ({ ...n, data: { ...n.data, renderBand: "summary" as const } }));
     const result = investigationFlow(banded, edges, "auto");
     expect(result.applied).toBe(true);
-    expect(result.nodes.every(n => n.data.renderBand === "summary" && n.style?.minHeight === undefined)).toBe(true);
+    expect(result.nodes.every(n => n.data.renderBand === "detail" && n.style?.minHeight === 216)).toBe(true);
   });
 
-  it("leaves a small map's layout alone", () => {
+  it("uses the same semantic layout for small maps", () => {
     const { nodes, edges } = k8sFlowGraph("projectScan");
     const few = nodes.slice(0, 20);
-    expect(investigationFlow(few, edges, "auto")).toMatchObject({ applied: false, nodes: few });
+    const result = investigationFlow(few, edges, "auto");
+    expect(result.applied).toBe(true);
+    expect(result.nodes.map(node => node.id)).toEqual(few.map(node => node.id));
+    expect(result.nodes.every(node => node.data.semanticLayout)).toBe(true);
   });
 });
