@@ -158,3 +158,16 @@ describe("attack path edge routing", () => {
     }
   });
 });
+
+// Canvas framing must not change the relative geometry of route channels.
+it("translates every route channel with the occupied node columns", () => {
+  const { graph, selected } = demoFixture("runbook");
+  const model = buildAttackPathGraphModel(graph, selected);
+  const layout = layoutAttackPathGraph(model, "LR");
+  const routes = routeAttackPathEdges(model, layout);
+  const shifted = { ...layout, positions: new Map([...layout.positions].map(([id, point]) => [id, { ...point, x: point.x + 1234 }])) };
+  const actual = routeAttackPathEdges(model, shifted);
+  for (const [id, points] of routes) {
+    expect(actual.get(id), id).toEqual(points.map(point => ({ ...point, x: point.x + 1234 })));
+  }
+});
