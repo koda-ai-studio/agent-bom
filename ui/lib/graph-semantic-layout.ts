@@ -16,7 +16,7 @@ function contextOwners(nodes: Node<LineageNodeData>[], edges: Edge[], primary: R
     if (node.data.readingOwner && byId.has(node.data.readingOwner)) { owners.set(node.id, node.data.readingOwner); continue; }
     const candidates = new Set(edges.flatMap(edge => {
       const kind = String(edge.data?.relationship ?? "");
-      if (edge.target === node.id && ["contains", "vulnerable_to", "exhibits_drift"].includes(kind)) return [edge.source];
+      if (edge.target === node.id && (["contains", "vulnerable_to", "exhibits_drift"].includes(kind) || kind === "depends_on" && semanticLayer(node) === "package")) return [edge.source];
       if (edge.source === node.id && kind === "affects") return [edge.target];
       return [];
     }).filter(id => id !== node.id));

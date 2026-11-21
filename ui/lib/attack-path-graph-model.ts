@@ -273,6 +273,17 @@ export function buildAttackPathGraphModel(
     });
   }
 
+  // Off-path packages are sub-rows only when the graph records one owner.
+  // Keep shared dependencies independent and explicit selected hops on the spine.
+  for (const id of draft.nodes) {
+    if (selectedHops.has(id) || nodes.get(id)?.semantic_layer !== "package") continue;
+    const owners = new Set(graph.edges.filter(edge => edge.target === id
+      && ["contains", "depends_on"].includes(edge.relationship)).map(edge => edge.source));
+    const owner = [...owners][0];
+    if (owners.size === 1 && owner && draft.nodes.has(owner) && !hidden.has(owner)) contextOwners.set(id, owner);
+    else contextOwners.delete(id);
+  }
+
   const drawnFindings = new Set([...draft.nodes].filter(id => FINDING_ENTITY_TYPES.has(nodes.get(id)!.entity_type)));
   const lastIndex = pathNodeIds.length - 1;
   const entityNodes: PathGraphNode[] = [...draft.nodes].filter(id => !hidden.has(id)).map(id => {

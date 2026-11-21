@@ -174,3 +174,32 @@ it("frames the occupied selected-path columns without a blank leading canvas", (
   expect(Math.min(...xs)).toBe(0);
   expect(layout.width).toBe(Math.max(...xs) + layout.nodeWidth);
 });
+
+it("places a recorded package dependency below its single server owner", () => {
+  const input = [node("server", "server"), node("package", "package")];
+  const edge = { id: "dependency", source: "server", target: "package", data: { relationship: "depends_on" } };
+  const result = graphHierarchyLayout(input, [edge]);
+  expect(result.nodes[1]!.position.x).toBe(result.nodes[0]!.position.x);
+  expect(result.nodes[1]!.position.y).toBeGreaterThan(result.nodes[0]!.position.y);
+  expect(result.nodes[1]!.data.semanticOwner).toBe("server");
+  expect(result.edges[0]).toMatchObject({ source: "server", target: "package", data: { relationship: "depends_on" } });
+});
+
+it("keeps a shared dependency independent rather than assigning an arbitrary owner", () => {
+  const input = [node("one", "server"), node("two", "server"), node("package", "package")];
+  const edges = ["one", "two"].map(source => ({ id: source, source, target: "package", data: { relationship: "depends_on" } }));
+  const result = graphHierarchyLayout(input, edges);
+  expect(result.nodes[2]!.data.semanticOwner).toBeUndefined();
+  expect(result.nodes[2]!.position.x).toBeGreaterThan(result.nodes[0]!.position.x);
+  expect(result.edges).toHaveLength(2);
+});
+
+it("keeps off-path package dependencies below their recorded owner in the selected-path model", () => {
+  const { graph, selected } = branchingFixture();
+  graph.nodes = graph.nodes.map(node => node.id === "pkg:urllib3" ? { ...node, semantic_layer: "package" } : node);
+  const model = buildAttackPathGraphModel(graph, selected);
+  expect(model.nodes.find(node => node.id === "pkg:urllib3")?.semanticOwner).toBe("server:filesystem");
+  expect(model.nodes.find(node => node.id === "pkg:next")?.semanticOwner).toBeUndefined();
+  graph.edges.push({ ...graph.edges.find(edge => edge.target === "pkg:urllib3")!, id: "shared-dependency", source: "server:github" });
+  expect(buildAttackPathGraphModel(graph, selected).nodes.find(node => node.id === "pkg:urllib3")?.semanticOwner).toBeUndefined();
+});
