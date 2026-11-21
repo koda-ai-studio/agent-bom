@@ -1,68 +1,64 @@
+import { Position } from "@xyflow/react";
 import { describe, expect, it } from "vitest";
-
 import { buildAttackPathGraphModel, type AttackPathGraphModel } from "@/lib/attack-path-graph-model";
 import { layoutAttackPathGraph, type AttackPathDirection } from "@/lib/attack-path-graph-layout";
-import { routeAttackPathEdges, sampleRoute, type Point } from "@/lib/attack-path-graph-routes";
+import { GLYPH_CENTER_Y, glyphInsetX, routeAttackPathEdges, type Point } from "@/lib/attack-path-graph-routes";
+import { relationshipPath } from "@/lib/relationship-routing";
+import { relationshipLaneFor } from "@/lib/relationship-lanes";
 import { branchingFixture, demoFixture, fanOutFixture } from "./fixtures/attack-path-graph-fixture";
 
-type Segment = [Point, Point];
-
-function properlyIntersect([a, b]: Segment, [c, d]: Segment): boolean {
-  const orient = (p: Point, q: Point, r: Point) => Math.sign((q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x));
-  const o1 = orient(a, b, c), o2 = orient(a, b, d), o3 = orient(c, d, a), o4 = orient(c, d, b);
-  return o1 * o2 < 0 && o3 * o4 < 0;
+type Curve = [Point, Point, Point, Point];
+function curves(path: string): Curve[] {
+  const numbers = path.match(/-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi)!.map(Number);
+  const result: Curve[] = [];
+  for (let i = 0; i < numbers.length - 2; i += 6) {
+    result.push([0, 2, 4, 6].map(offset => ({ x: numbers[i + offset]!, y: numbers[i + offset + 1]! })) as Curve);
+  }
+  return result;
+}
+function samples(path: string): Point[] {
+  return curves(path).flatMap(curve => Array.from({ length: 201 }, (_, step) => {
+    const t = step / 200, u = 1 - t;
+    return { x: u ** 3 * curve[0].x + 3 * u ** 2 * t * curve[1].x + 3 * u * t ** 2 * curve[2].x + t ** 3 * curve[3].x,
+      y: u ** 3 * curve[0].y + 3 * u ** 2 * t * curve[1].y + 3 * u * t ** 2 * curve[2].y + t ** 3 * curve[3].y };
+  }));
 }
 
-/**
- * Crossings between different edges. Two lines that share a node may only
- * meet at the handle they share (within 2px); a crossing anywhere else, even
- * right beside the shared node, counts.
- */
-function crossings(model: AttackPathGraphModel, direction: AttackPathDirection): string[] {
+// Exercise the router used by AttackPathGraphEdge with the canvas's real glyph ports.
+function routesFor(model: AttackPathGraphModel, direction: AttackPathDirection) {
   const layout = layoutAttackPathGraph(model, direction);
-  const routes = routeAttackPathEdges(model, layout);
-  const sampled = model.edges.map(edge => ({ edge, points: sampleRoute(routes.get(edge.id)!) }));
-  const out: string[] = [];
-  for (let i = 0; i < sampled.length; i += 1) {
-    for (let j = i + 1; j < sampled.length; j += 1) {
-      const a = sampled[i]!, b = sampled[j]!;
-      const ends = (points: Point[]) => [points[0]!, points.at(-1)!];
-      const common = ends(a.points).filter(p => ends(b.points).some(q => Math.hypot(p.x - q.x, p.y - q.y) < 2));
-      const nearShared = (p: Point) => common.some(anchor => Math.hypot(anchor.x - p.x, anchor.y - p.y) < 2);
-      for (let s = 0; s < a.points.length - 1; s += 1) {
-        for (let t = 0; t < b.points.length - 1; t += 1) {
-          const sa: Segment = [a.points[s]!, a.points[s + 1]!], sb: Segment = [b.points[t]!, b.points[t + 1]!];
-          if (properlyIntersect(sa, sb) && !(nearShared(sa[0]) || nearShared(sa[1]))) out.push(`${a.edge.id} x ${b.edge.id} @${Math.round(sa[0].x)},${Math.round(sa[0].y)}`);
-        }
-      }
-      // Two lines running on top of each other and then splitting read as a crossing too. Lines fanning out of
-      // (or into) one handle may only touch on the leg at that handle; past their first turn they must be apart.
-      const isCommon = (p: Point) => common.some(anchor => Math.hypot(anchor.x - p.x, anchor.y - p.y) < 2);
-      const tail = (item: typeof a) => {
-        let route = routes.get(item.edge.id)!;
-        if (isCommon(route[0]!)) route = route.slice(1);
-        if (isCommon(route.at(-1)!)) route = route.slice(0, -1);
-        return route.length >= 2 ? sampleRoute(route) : [];
-      };
-      const bDense = densify(tail(b));
-      const merged = densify(tail(a)).find(p => !common.some(anchor => Math.hypot(anchor.x - p.x, anchor.y - p.y) < 2)
-        && bDense.some(q => Math.hypot(p.x - q.x, p.y - q.y) < 1.5));
-      if (merged) out.push(`${a.edge.id} merges ${b.edge.id} @${Math.round(merged.x)},${Math.round(merged.y)}`);
-    }
-  }
-  return [...new Set(out)];
+  const obstacles = [...layout.positions].map(([id, point]) => ({ id, ...point, width: layout.nodeWidth, height: layout.nodeHeight }));
+  const laneEdges = model.edges.map(edge => ({ ...edge,
+    sourceHandle: layout.positions.get(edge.source)!.x > layout.positions.get(edge.target)!.x ? "context" : null,
+    targetHandle: layout.positions.get(edge.source)!.x > layout.positions.get(edge.target)!.x ? "context" : null }));
+  const routes = new Map(model.edges.map(edge => {
+    const source = layout.positions.get(edge.source)!, target = layout.positions.get(edge.target)!;
+    const reverse = source.x > target.x, inset = glyphInsetX(layout.nodeWidth);
+    const endpoints = { source: edge.source, target: edge.target,
+      sourceX: source.x + (reverse ? inset : layout.nodeWidth - inset), sourceY: source.y + GLYPH_CENTER_Y,
+      targetX: target.x + (reverse ? layout.nodeWidth - inset : inset), targetY: target.y + GLYPH_CENTER_Y,
+      sourcePosition: reverse ? Position.Left : Position.Right, targetPosition: reverse ? Position.Right : Position.Left };
+    const lane = relationshipLaneFor(edge.id, laneEdges, id => layout.positions.get(id)?.y, id => layout.positions.get(id)?.x);
+    const [path] = relationshipPath(endpoints, obstacles, lane);
+    return [edge.id, { path, endpoints, lane }];
+  }));
+  return { layout, routes };
 }
 
-function densify(points: Point[], step = 2): Point[] {
-  const out: Point[] = [];
-  for (let index = 1; index < points.length; index += 1) {
-    const a = points[index - 1]!, b = points[index]!;
-    const count = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / step));
-    for (let k = 0; k <= count; k += 1) out.push({ x: a.x + ((b.x - a.x) * k) / count, y: a.y + ((b.y - a.y) * k) / count });
-  }
-  return out;
+// A crossing at a point is distinct from an overlapping straight trunk.
+function straightRuns(path: string): [Point, Point][] {
+  return curves(path).filter(curve => {
+    const dx = curve[3].x - curve[0].x, dy = curve[3].y - curve[0].y;
+    return curve.slice(1, 3).every(p => Math.abs((p.x - curve[0].x) * dy - (p.y - curve[0].y) * dx) < 0.01);
+  }).map(curve => [curve[0], curve[3]]);
 }
-
+function sharedLength([a, b]: [Point, Point], [c, d]: [Point, Point]): number {
+  const dx = b.x - a.x, dy = b.y - a.y, length = Math.hypot(dx, dy);
+  if (length < 1) return 0;
+  if ([c, d].some(p => Math.abs((p.x - a.x) * dy - (p.y - a.y) * dx) / length > 0.1)) return 0;
+  const at = (p: Point) => ((p.x - a.x) * dx + (p.y - a.y) * dy) / length;
+  return Math.max(0, Math.min(length, Math.max(at(c), at(d))) - Math.max(0, Math.min(at(c), at(d))));
+}
 const CASES = {
   "demo headline": () => demoFixture("headline"),
   "demo runbook (branched both ways)": () => demoFixture("runbook"),
@@ -70,92 +66,87 @@ const CASES = {
   "expanded fan-out": () => fanOutFixture(5),
 };
 
-describe("attack path edge routing", () => {
-  for (const [name, fixture] of Object.entries(CASES)) {
-    for (const direction of ["LR", "TB"] as const) {
-      it(`draws no crossing edges: ${name} ${direction}`, () => {
-        const { graph, selected } = fixture();
-        const model = buildAttackPathGraphModel(graph, selected, { expandedGroups: new Set(["group:server:s:cloud_resource"]) });
-        expect(crossings(model, direction)).toEqual([]);
-      });
-    }
+describe("selected path relationship curves", () => {
+  for (const [name, fixture] of Object.entries(CASES)) for (const direction of ["LR", "TB"] as const) {
+    it(`draws individual curves without shared trunks: ${name} ${direction}`, () => {
+      const { graph, selected } = fixture();
+      const model = buildAttackPathGraphModel(graph, selected, { expandedGroups: new Set(["group:server:s:cloud_resource"]) });
+      const { routes } = routesFor(model, direction);
+      expect(routes.size).toBe(model.edges.length);
+      const paths = [...routes.values()].map(route => route.path);
+      expect(new Set(paths).size).toBe(paths.length);
+      for (const path of paths) { expect(path).toContain("C"); expect(path).not.toMatch(/[LQ]/); }
+      const runs = paths.map(straightRuns);
+      for (let i = 0; i < runs.length; i++) for (let j = i + 1; j < runs.length; j++) {
+        for (const a of runs[i]!) for (const b of runs[j]!) expect(sharedLength(a, b)).toBeLessThan(20);
+      }
+    });
   }
 
-  it("enters every node from its leading side, so no arrow points back into the spine", () => {
+  it("connects every directed or bidirectional edge to its recorded source and target ports", () => {
     for (const fixture of Object.values(CASES)) {
       const { graph, selected } = fixture();
       const model = buildAttackPathGraphModel(graph, selected);
-      const layout = layoutAttackPathGraph(model, "LR");
-      const routes = routeAttackPathEdges(model, layout);
+      const { routes } = routesFor(model, "LR");
       for (const edge of model.edges) {
-        const points = sampleRoute(routes.get(edge.id)!);
-        const [before, end] = points.slice(-2) as [Point, Point];
-        const [start, after] = points.slice(0, 2) as [Point, Point];
-        // Arrives moving right into the target's left side; leaves moving right from the source's right side.
-        expect(end.x - before.x, edge.id).toBeGreaterThan(0);
-        expect(after.x - start.x, edge.id).toBeGreaterThan(0);
-        const target = layout.positions.get(edge.target)!;
-        expect(end.x, edge.id).toBeLessThan(target.x + layout.nodeWidth / 2);
+        const { path, endpoints, lane } = routes.get(edge.id)!;
+        const points = samples(path);
+        expect(points[0], edge.id).toEqual({ x: endpoints.sourceX, y: endpoints.sourceY + lane.source });
+        expect(points.at(-1), edge.id).toEqual({ x: endpoints.targetX, y: endpoints.targetY + lane.target });
+        const sourceDirection = endpoints.sourcePosition === Position.Right ? 1 : -1;
+        const targetDirection = endpoints.targetPosition === Position.Left ? 1 : -1;
+        expect((points[1]!.x - points[0]!.x) * sourceDirection, edge.id).toBeGreaterThan(0);
+        expect((points.at(-1)!.x - points.at(-2)!.x) * targetDirection, edge.id).toBeGreaterThan(0);
       }
     }
   });
 
-  it("routes a recorded edge that runs against the layer order around the outside of the rows", () => {
+  it("keeps reverse semantic-column edges directional and clear of intervening nodes", () => {
     const { graph, selected } = demoFixture("headline");
-    const backward = { ...graph, edges: [...graph.edges, { ...graph.edges[0]!, id: "back", source: "server:github", target: "sa:jit", relationship: "uses", direction: "directed" as const }] };
-    const model = buildAttackPathGraphModel(backward, selected);
+    // Reverse an existing selected edge, independently of the fixture's layer order.
+    const model = buildAttackPathGraphModel(graph, selected);
     const layout = layoutAttackPathGraph(model, "LR");
-    const route = routeAttackPathEdges(model, layout).get("back")!;
-    const lanesTop = Math.min(...[...layout.positions.values()].map(position => position.y));
-    const lanesBottom = Math.max(...[...layout.positions.values()].map(position => position.y + layout.nodeHeight));
-    // Past the turns out of the source's row and into the target's row, the line runs outside every row.
-    const runs = route.slice(1, -1).filter(point => point.y !== route[0]!.y && point.y !== route.at(-1)!.y);
-    expect(runs.length).toBeGreaterThan(0);
-    for (const point of runs) expect(point.y < lanesTop || point.y > lanesBottom).toBe(true);
+    const ordered = [...layout.positions].sort((a, b) => a[1].x - b[1].x);
+    const source = ordered.at(-1)![0], target = ordered[0]![0];
+    const back = { ...model.edges[0]!, id: "back", source, target, bidirectional: false };
+    const { routes } = routesFor({ ...model, edges: [...model.edges, back] }, "LR");
+    const route = routes.get("back")!;
+    expect(route.endpoints.sourcePosition).toBe(Position.Left);
+    expect(route.endpoints.targetPosition).toBe(Position.Right);
+    const points = samples(route.path);
+    for (const [id, point] of layout.positions) if (id !== source && id !== target) {
+      expect(points.some(p => p.x > point.x + 1 && p.x < point.x + layout.nodeWidth - 1
+        && p.y > point.y + 1 && p.y < point.y + layout.nodeHeight - 1), id).toBe(false);
+    }
   });
 
-  /** Where the glyph ends and the name begins inside a node box (6px top inset + 56px glyph). */
-  const NAME_TOP = 62;
-
-  for (const [name, fixture] of Object.entries(CASES)) {
-    for (const direction of ["LR", "TB"] as const) {
-      it(`keeps every line clear of node names and of nodes it does not connect: ${name} ${direction}`, () => {
-        const { graph, selected } = fixture();
-        const model = buildAttackPathGraphModel(graph, selected, { expandedGroups: new Set(["group:server:s:cloud_resource"]) });
-        const layout = layoutAttackPathGraph(model, direction);
-        const routes = routeAttackPathEdges(model, layout);
-        const problems: string[] = [];
-        for (const edge of model.edges) {
-          const points = densify(sampleRoute(routes.get(edge.id)!));
-          for (const [id, position] of layout.positions) {
-            const inside = (p: Point, top: number) => p.x > position.x + 1 && p.x < position.x + layout.nodeWidth - 1 && p.y > top + 1 && p.y < position.y + layout.nodeHeight - 1;
-            const own = id === edge.source || id === edge.target;
-            const hit = points.find(p => inside(p, own ? position.y + NAME_TOP : position.y));
-            if (hit) problems.push(`${edge.id} ${own ? "runs through the name of" : "crosses"} ${id} @${Math.round(hit.x)},${Math.round(hit.y)}`);
-          }
+  for (const [name, fixture] of Object.entries(CASES)) for (const direction of ["LR", "TB"] as const) {
+    it(`keeps curves clear of names and unrelated nodes: ${name} ${direction}`, () => {
+      const { graph, selected } = fixture();
+      const model = buildAttackPathGraphModel(graph, selected, { expandedGroups: new Set(["group:server:s:cloud_resource"]) });
+      const { layout, routes } = routesFor(model, direction);
+      const problems: string[] = [];
+      for (const edge of model.edges) {
+        const points = samples(routes.get(edge.id)!.path);
+        for (const [id, position] of layout.positions) {
+          const own = id === edge.source || id === edge.target;
+          const top = position.y + (own ? 62 : 0);
+          if (points.some(p => p.x > position.x + 1 && p.x < position.x + layout.nodeWidth - 1
+            && p.y > top + 1 && p.y < position.y + layout.nodeHeight - 1)) problems.push(`${edge.id} crosses ${id}`);
         }
-        expect(problems).toEqual([]);
-      });
-    }
+      }
+      expect(problems).toEqual([]);
+    });
   }
 
-  it("gives each line fanning out of one node its own turn instead of a shared trunk", () => {
+  it("gives fan-out links distinct ports and pair channels instead of a shared trunk", () => {
     const { graph, selected } = fanOutFixture(5);
     const model = buildAttackPathGraphModel(graph, selected, { collapseThreshold: 100 });
-    const layout = layoutAttackPathGraph(model, "LR");
-    const routes = routeAttackPathEdges(model, layout);
-    const bySource = new Map<string, number[]>();
-    for (const edge of model.edges) {
-      const route = routes.get(edge.id)!;
-      if (route.length < 3) continue;
-      bySource.set(edge.source, [...(bySource.get(edge.source) ?? []), route[1]!.x]);
-    }
-    const fanned = [...bySource.values()].filter(turns => turns.length > 1);
-    expect(fanned.length).toBeGreaterThan(0);
-    for (const turns of fanned) {
-      const sorted = [...turns].sort((a, b) => a - b);
-      for (let index = 1; index < sorted.length; index += 1) expect(sorted[index]! - sorted[index - 1]!).toBeGreaterThanOrEqual(6);
-    }
+    const { routes } = routesFor(model, "LR");
+    const outgoing = model.edges.filter(edge => edge.source === "server:s").map(edge => routes.get(edge.id)!);
+    expect(outgoing.length).toBeGreaterThan(1);
+    expect(new Set(outgoing.map(route => `${route.endpoints.sourceX}:${route.endpoints.sourceY + route.lane.source}`)).size).toBe(outgoing.length);
+    expect(new Set(outgoing.map(route => route.path)).size).toBe(outgoing.length);
   });
 });
 

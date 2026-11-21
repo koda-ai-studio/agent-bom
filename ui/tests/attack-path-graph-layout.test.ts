@@ -13,11 +13,12 @@ import { attackPathViewport } from "@/lib/attack-path-graph-viewport";
 import { branchingFixture, demoFixture, fanOutFixture } from "./fixtures/attack-path-graph-fixture";
 
 describe("attack path graph layout", () => {
-  it("lays the selected path out left to right in hop order", () => {
+  it("uses backend layer order even when a path visits identity before an agent", () => {
     const { graph, selected } = branchingFixture();
     const model = buildAttackPathGraphModel(graph, selected);
     const layout = layoutAttackPathGraph(model, "LR");
-    const x = model.pathNodeIds.map(id => layout.positions.get(id)!.x);
+    expect(model.nodes.find(node => node.id === "user:contractor")?.semanticLayer).toBe("user");
+    const x = ["user:contractor", "agent:copilot", "server:github", "sa:jit", "role:admin", "pkg:next", "cve:next"].map(id => layout.positions.get(id)!.x);
     expect(x).toEqual([...x].sort((a, b) => a - b));
     expect(new Set(x).size).toBe(x.length);
   });
@@ -61,7 +62,7 @@ describe("attack path graph layout", () => {
     const { graph, selected } = branchingFixture();
     const model = buildAttackPathGraphModel(graph, selected);
     const layout = layoutAttackPathGraph(model, "LR");
-    const x = model.pathNodeIds.map(id => layout.positions.get(id)!.x);
+    const x = model.pathNodeIds.map(id => layout.positions.get(id)!.x).sort((a, b) => a - b);
     for (let index = 1; index < x.length; index += 1) {
       expect(x[index]! - x[index - 1]!).toBeGreaterThanOrEqual(180);
 

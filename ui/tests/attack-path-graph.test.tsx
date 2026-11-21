@@ -40,8 +40,10 @@ describe("AttackPathGraph", () => {
     expect(screen.getByTestId("attack-path-node-cve:next")).toHaveAttribute("data-role", "target");
   });
 
-  it("never draws an Internet node; exposure is a marker on the recorded node", () => {
-    renderGraph();
+  it("does not promote intermediate exposure to the entry or infer privilege from legacy flags", () => {
+    const fixture = branchingFixture();
+    fixture.graph.nodes.find(node => node.id === "role:admin")!.attributes = { is_admin: true };
+    renderGraph(fixture);
     expect(screen.queryByText(/^internet$/i)).toBeNull();
     const exposed = screen.getByTestId("attack-path-node-server:github");
     expect(within(exposed).getByLabelText("Internet-exposed (recorded)")).toBeInTheDocument();
