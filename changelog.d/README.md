@@ -30,3 +30,10 @@ python scripts/assemble_changelog.py --version X.Y.Z
 which writes `## [X.Y.Z] - <date>` under `## [Unreleased]`, keeps anything
 already written under Unreleased first, advances the compare links and deletes
 the fragments. This README is never assembled.
+
+Fixes that merge after release prep but before the tag go into that same
+release with `--amend`, which only accepts the newest section:
+
+```bash
+python scripts/assemble_changelog.py --version X.Y.Z --amend
+```

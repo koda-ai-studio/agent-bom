@@ -153,6 +153,28 @@ def assemble(changelog: str, fragments: list[Sections], version: str, released_o
     return updated
 
 
+_VERSION_HEADING_RE = re.compile(r"^## \[(?P<version>[^\]]+)\] - (?P<date>\S+)\s*$", re.MULTILINE)
+
+
+def amend(changelog: str, fragments: list[Sections], version: str) -> str:
+    """Fold *fragments* into the newest release section, which must be *version*.
+
+    For fixes that merge after release prep but before the tag. Only the newest
+    section can be amended, so a published release's notes are never rewritten.
+    """
+    newest = _VERSION_HEADING_RE.search(changelog)
+    if newest is None or newest.group("version") != version:
+        found = newest.group("version") if newest else "none"
+        raise FragmentError(f"--amend only folds into the newest release section; '{version}' is not it (newest: {found})")
+    if not fragments:
+        raise FragmentError("nothing to amend: no pending fragments")
+    following = _RELEASE_RE.search(changelog, newest.end())
+    body_end = following.start() if following else len(changelog)
+    existing = parse_entries(changelog[newest.end() : body_end], f"CHANGELOG [{version}]")
+    section = render_section(version, newest.group("date"), [existing, *fragments])
+    return changelog[: newest.start()] + section + changelog[body_end:]
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--version", help="release version to assemble, e.g. 1.2.3")
@@ -161,6 +183,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--fragments-dir", type=Path, default=ROOT / "changelog.d")
     parser.add_argument("--check", action="store_true", help="validate fragments only; write nothing")
     parser.add_argument("--expect-empty", action="store_true", help="with --check, fail while any fragment is pending")
+    parser.add_argument("--amend", action="store_true", help="fold pending fragments into the newest, not yet tagged, --version section")
     parser.add_argument("--dry-run", action="store_true", help="print the assembled CHANGELOG instead of writing it")
     args = parser.parse_args(argv)
 
@@ -182,7 +205,8 @@ def main(argv: list[str] | None = None) -> int:
     if not args.version:
         parser.error("--version is required unless --check is given")
     try:
-        updated = assemble(args.changelog.read_text(encoding="utf-8"), fragments, args.version, args.date)
+        current = args.changelog.read_text(encoding="utf-8")
+        updated = amend(current, fragments, args.version) if args.amend else assemble(current, fragments, args.version, args.date)
     except FragmentError as exc:
         print(f"Cannot assemble: {exc}")
         return 1
@@ -193,7 +217,7 @@ def main(argv: list[str] | None = None) -> int:
     args.changelog.write_text(updated, encoding="utf-8")
     for path in paths:
         path.unlink()
-    print(f"Assembled {len(paths)} fragment(s) into '## [{args.version}] - {args.date}'.")
+    print(f"Assembled {len(paths)} fragment(s) into '## [{args.version}]'.")
     return 0
 
 

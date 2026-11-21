@@ -45,6 +45,15 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - The release self-SBOM (`agent-bom-sbom.cdx.json`) declares agent-bom as its root `metadata.component` with name, version and `pkg:pypi` purl, and the release fails if it does not; the documented `jq` inspection no longer prints `null`.
 - Record incomplete Snowflake MCP tool-specification coverage for missing or malformed data, retaining independent valid tools and SQL-execution risk labels.
 - Preserve denied and throttled statuses from W&B SDK transport wrappers and continue collecting subsequent records after failed lazy metadata reads.
+- `agent-bom connect aws|azure|gcp|snowflake` no longer points a pip install at repository paths it does not have: recipes link to the installed release's source, and the Terraform path is one `terraform init -from-module=...` command that works in an empty directory.
+- `agent-bom connect` now recognises a normal CLI login (`~/.aws/credentials` or `~/.aws/config`, `az login`, `gcloud auth application-default login`) instead of reporting "No credentials detected" when only environment variables are unset.
+- Detect model API keys in plain ECS, Azure Container Apps, and Cloud Run environment values, including placeholders, without exposing values.
+- Flag broad GCP project roles and Azure Owner/Contributor assignments at resource-group or subscription scope.
+- Retire the missing-S3-encryption finding because AWS automatically applies SSE-S3 to new uploads; coalesce explicitly linked Azure account/public-container exposure findings.
+- Show possibly affected advisory/package review counts separately from confirmed vulnerabilities in scan summaries, API ingest, dashboard results, and report exports.
+- Do not downgrade scan coverage while inspecting unrelated stale advisory alias metadata; retain warnings on matched advisories and real coverage gaps.
+- Balance merge-queue Python and Postgres shards using measured job logs, run UI unit tests independently, distribute browser tests across shards, and share short validation jobs without removing checks.
+- Keep manual, scheduled, and push workflow runs out of stranded-PR cancellation.
 
 ### Security
 - Container images move to CPython releases that include the `ssl` compromised-intermediate denylist (CVE-2026-115557, critical) and the `tarfile` extraction-filter fix (CVE-2026-87910): 3.12.16 for the MCP stdio, MCP HTTP, runtime, collector, public lookup and Glama images, 3.11.18 for the Snowflake images, and 3.14.10 for the CLI/API image, which no longer needs its hand-applied `tarfile` overlay. The MCP publish gate failed on this finding, so `agent-bom-mcp` and `agent-bom-sse` were not published for 0.115.4.
@@ -55,12 +64,14 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - The README, PyPI page and docs home lead with the agent → MCP server → tool → package → credential chain and a short "why now". Runbook and specialized deployment pages move to an Operations section, and the authenticated deployment is named a self-hosted instance.
 - Stale release references are corrected: the Action pin example, the upgrade guide (0.115.4), agent lifecycle availability (published since 0.107.0), the runtime injection default, the dated real-repository accuracy measurement with reproduction steps, and the OpenAI review cases rerun on 0.115.4. The version checker now also manages a bare `` `@vX.Y.Z` `` Action ref in prose.
 - The privacy notice, terms and OpenAI plugin README state that the public lookup service (`agent-bom-lookup.up.railway.app`) is not yet deployed instead of describing it as running.
+- The real-repository accuracy page is now reproducible: `scripts/measure_real_repo_accuracy.py` downloads each listed repository at a pinned commit, scans it, builds an independent OSV ground truth from its lockfiles, and writes per-repository results. The page reports the latest measurement, its commits, and the manifests that cannot be independently verified.
 
 ### CI
 - The merge queue runs the full suite in 16 Python shards, four Postgres partitions and eight browser shards, sized to merge in about five minutes. Each Python shard collects the test root once and keeps only its modules, because passing hundreds of module paths made pytest re-collect the test package for every path (90-170 s a shard). The demo-estate bootstrap tests are split across four modules so their per-test seeds spread over runners; every test keeps its fixture and assertions.
 - The daily surface-freshness monitor now checks every published image family — the API image on GHCR and Docker Hub plus the MCP stdio (`agent-bom-mcp`) and HTTP (`agent-bom-sse`) images — so a stale MCP image is reported instead of hidden behind a fresh API image.
 - The reusable workflow (`agent-bom-reusable.yml`) and the GitLab, Azure Pipelines and Bitbucket examples pin the published release (0.115.4) instead of 0.110.0. The release pin sweep now covers them, and a commit-pinned Action ref must be the commit its `# vX.Y.Z` tag names; the post-release pin update rewrites both together.
 - Workflow and composite-action inputs reach shell steps through `env:` instead of being pasted into the script (Postgres scale evidence dispatch inputs, the Snowflake release channel and the UI npm version), and a test rejects any new `${{ inputs.* }}` inside `run:`.
+- The distribution freshness report now says when Glama's public Schema page lists tool schemas from an older build, instead of only reporting that the Directory API returned 0 tools.
 
 ## [0.115.4] - 2026-11-18
 
