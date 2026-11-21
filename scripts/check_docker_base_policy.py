@@ -98,6 +98,11 @@ POLICY: dict[str, BasePolicy] = {
         expected_tags=("3.12.16-slim",),
         rationale="Public lookup MCP server; same Debian slim base as Dockerfile.sse.",
     ),
+    "examples/three-cloud-agent-lab/app/Dockerfile": BasePolicy(
+        image="python",
+        expected_tags=("3.12.16-slim",),
+        rationale="Lab agent image deployed to AWS, Azure and GCP; same Debian slim base as deploy/docker/.",
+    ),
     "deploy/docker/Dockerfile.snowpark": BasePolicy(
         image="python",
         expected_tags=("3.11.18-slim",),
