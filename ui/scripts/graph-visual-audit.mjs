@@ -112,3 +112,57 @@ export function renderedRelationshipCurves() {
     return [{ id: element.getAttribute("data-id"), relationship, points }];
   });
 }
+
+/**
+ * Runs inside Playwright's page context: the agreed graph grammar, measured on the first frame.
+ * Returns only violations; an empty object means the frame passes.
+ */
+export function auditGraphGrammar({ margin = 48, minGlyph = 48, minFill = 0.6 } = {}) {
+  const canvas = document.querySelector(".react-flow")?.getBoundingClientRect();
+  if (!canvas) return {};
+  const nodes = [...document.querySelectorAll(".react-flow__node")].filter(node => getComputedStyle(node).visibility !== "hidden")
+    .map(node => ({ id: node.getAttribute("data-id"), box: node.getBoundingClientRect(), glyph: node.querySelector(".graph-entity-glyph")?.getBoundingClientRect() }));
+  const inside = (box, p, pad = 0) => p.x >= box.left - pad && p.x <= box.right + pad && p.y >= box.top - pad && p.y <= box.bottom + pad;
+  const overlaps = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+  const nearest = p => nodes.reduce((best, node) => {
+    const dx = Math.max(node.box.left - p.x, 0, p.x - node.box.right), dy = Math.max(node.box.top - p.y, 0, p.y - node.box.bottom);
+    const d = Math.hypot(dx, dy);
+    return d < best.d ? { node, d } : best;
+  }, { node: null, d: Infinity }).node;
+  const violations = {};
+  const add = (key, item) => (violations[key] ??= []).push(item);
+  const diagnosticChips = [...document.querySelectorAll(".react-flow__node *")].filter(el => el.children.length === 0 && /semantic layer unavailable/i.test(el.textContent ?? ""));
+  if (diagnosticChips.length) add("diagnosticChips", diagnosticChips.length);
+  for (const element of document.querySelectorAll(".react-flow__edge")) {
+    const path = element.querySelector(".react-flow__edge-path");
+    const matrix = path?.getScreenCTM();
+    if (!path || !matrix) continue;
+    const length = path.getTotalLength();
+    const points = Array.from({ length: 49 }, (_, i) => {
+      const q = path.getPointAtLength(length * i / 48);
+      return { x: matrix.a * q.x + matrix.c * q.y + matrix.e, y: matrix.b * q.x + matrix.d * q.y + matrix.f };
+    });
+    const id = element.getAttribute("data-id");
+    const source = nearest(points[0]), target = nearest(points.at(-1));
+    if (!source || !target) continue;
+    const span = { left: Math.min(source.box.left, target.box.left), right: Math.max(source.box.right, target.box.right),
+      top: Math.min(source.box.top, target.box.top), bottom: Math.max(source.box.bottom, target.box.bottom) };
+    if (points.some(p => !inside(span, p, margin))) add("loops", id);
+    const through = nodes.filter(node => node !== source && node !== target && node.glyph
+      && points.some(p => inside({ left: node.glyph.left + 4, right: node.glyph.right - 4, top: node.glyph.top + 4, bottom: node.glyph.bottom - 4 }, p)));
+    if (through.length) add("throughNodes", `${id} through ${through.map(node => node.id).join(",")}`);
+    if (points.some(p => inside(canvas, p)) && ![source, target].every(node => overlaps(node.box, canvas))) add("offscreenEndpoints", id);
+  }
+  const visible = nodes.filter(node => overlaps(node.box, canvas));
+  const small = visible.filter(node => node.glyph && Math.min(node.glyph.width, node.glyph.height) < minGlyph - 0.5);
+  if (small.length) add("smallGlyphs", small.map(node => `${node.id}:${Math.round(Math.min(node.glyph.width, node.glyph.height))}px`));
+  if (visible.length >= 3) {
+    const left = Math.min(...visible.map(n => n.box.left)), right = Math.max(...visible.map(n => n.box.right));
+    const top = Math.min(...visible.map(n => n.box.top)), bottom = Math.max(...visible.map(n => n.box.bottom));
+    if ((right - left) / canvas.width < minFill && (bottom - top) / canvas.height < minFill) add("underfilled", `${Math.round((right - left) / canvas.width * 100)}% x ${Math.round((bottom - top) / canvas.height * 100)}%`);
+    const centers = visible.map(n => (n.box.left + n.box.right) / 2);
+    if (Math.max(...centers) - Math.min(...centers) < 8 && canvas.width > 640) add("singleColumn", visible.length);
+  }
+  if (nodes.length > visible.length && visible.length <= 1) add("loneNode", `${visible.length} of ${nodes.length}`);
+  return violations;
+}
