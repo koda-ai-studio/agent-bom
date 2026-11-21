@@ -11,6 +11,7 @@
 | MCP servers | 1 |
 | Packages scanned | 1 |
 | Vulnerabilities | 4 |
+| Possibly affected (review required) | 0 |
 | Policy/security findings | 0 |
 | Critical | 1 |
 | High | 1 |

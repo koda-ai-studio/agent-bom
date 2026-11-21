@@ -79,6 +79,7 @@ _COLUMNS = [
     "ai_advice_confidence",
     "ai_advice_rationale",
     "ai_advice_model",
+    "total_possibly_affected",
 ]
 
 
@@ -95,6 +96,7 @@ def _verdict_cell(finding: Finding, key: str) -> str:
 def to_csv(report: AIBOMReport, blast_radii: list[BlastRadius] | None = None) -> str:
     """Convert an AIBOMReport to CSV string with UTF-8 BOM."""
     findings = unified_export_findings(report, blast_radii)
+    possible_count = report.total_possibly_affected
 
     buf = io.StringIO()
     # UTF-8 BOM for Excel auto-detection
@@ -155,6 +157,7 @@ def to_csv(report: AIBOMReport, blast_radii: list[BlastRadius] | None = None) ->
             "symbol_reachability_reason": evidence(finding, "symbol_reachability_reason", ""),
             "runtime_dependency_chain": ";".join(evidence(finding, "runtime_dependency_chain", []) or []),
         }
+        row["total_possibly_affected"] = possible_count
         writer.writerow({key: _excel_safe_cell(value) for key, value in row.items()})
 
     for candidate in possibly_affected_rows(report):
@@ -167,6 +170,7 @@ def to_csv(report: AIBOMReport, blast_radii: list[BlastRadius] | None = None) ->
             "title": "Possibly affected — verification required",
             "summary": candidate.get("detail") or candidate["reason"],
         }
+        row["total_possibly_affected"] = possible_count
         writer.writerow({key: _excel_safe_cell(value) for key, value in row.items()})
     return buf.getvalue()
 

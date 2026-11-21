@@ -638,6 +638,10 @@
      "value": "1"
     },
     {
+     "name": "agent-bom:total-possibly-affected",
+     "value": "0"
+    },
+    {
      "name": "agent-bom:total-vulnerabilities",
      "value": "0"
     }

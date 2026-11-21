@@ -1836,7 +1836,8 @@
         "trust_assessment": {
           "verdict": "review",
           "confidence": "medium"
-        }
+        },
+        "total_possibly_affected": 0
       },
       "invocations": [
         {

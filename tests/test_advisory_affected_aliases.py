@@ -149,3 +149,29 @@ def test_a_fused_alias_group_never_pulls_in_another_cves_ranges(tmp_path: Path) 
     assert "CVE-2026-4800" not in advisory.aliases
     verdicts = [r["verdict"] for r in affected_answer(advisory, [report], source="feed")["rows"]]
     assert verdicts == ["not_affected"]
+
+
+@pytest.mark.parametrize("advisory_gap", [False, True])
+def test_unrelated_fused_metadata_does_not_degrade_scan(alias_db: Path, advisory_gap: bool) -> None:
+    from agent_bom.evidence.scan_run import ScanOutcome, ScanRun, scanner_warning_issues
+    from agent_bom.scanners.state import peek_scan_warnings, record_scan_warning, reset_scan_warnings
+
+    conn = init_db(alias_db)
+    _vuln(conn, "GHSA-old-fused-0001", f"{_CVE},CVE-2026-4800", source="ghsa", severity="high")
+    _range(conn, "GHSA-old-fused-0001", "npm", "unrelated-package", "1.0.0")
+    conn.commit()
+    conn.close()
+    reset_scan_warnings()
+    if advisory_gap:
+        record_scan_warning("Advisory database lookup failed; coverage is incomplete")
+    try:
+        advisory = _lookup(alias_db, _CVE)
+        assert advisory is not None
+        answer = affected_answer(advisory, [_report()], source="feed")
+        assert answer["summary"]["affected"] == 1
+        warnings = peek_scan_warnings()
+        assert warnings == (["Advisory database lookup failed; coverage is incomplete"] if advisory_gap else [])
+        run = ScanRun(issues=scanner_warning_issues(warnings))
+        assert run.outcome is (ScanOutcome.PARTIAL if advisory_gap else ScanOutcome.COMPLETE)
+    finally:
+        reset_scan_warnings()

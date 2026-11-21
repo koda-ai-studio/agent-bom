@@ -17,17 +17,19 @@ _FUSED_ALIAS_WARNING = (
 )
 
 
-def self_consistent_aliases(advisory_id: str, aliases: list[str]) -> list[str]:
+def self_consistent_aliases(advisory_id: str, aliases: list[str], *, matched: bool = True) -> list[str]:
     """Return a stored record's aliases, or none when they name several distinct CVEs.
 
     One advisory has one CVE. A stored alias set naming two (an alias group
     fused upstream and kept by a stale DB) would chain unrelated advisories
-    together, so the record is identified by its own ID alone.
+    together, so the record is identified by its own ID alone. Candidate
+    expansion passes matched=False: unrelated metadata is not a coverage gap.
     """
     cves = {cve for value in [advisory_id, *aliases] if (cve := derive_cve_from_advisory_id(value))}
     if len(cves) <= 1:
         return list(aliases)
-    record_scan_warning(_FUSED_ALIAS_WARNING)
+    if matched:
+        record_scan_warning(_FUSED_ALIAS_WARNING)
     return []
 
 

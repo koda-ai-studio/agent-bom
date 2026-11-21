@@ -16,7 +16,8 @@
         "scan_outcome": "complete",
         "posture_grade": "N/A",
         "posture_grade_label": "N/A",
-        "exposure_path_count": 0
+        "exposure_path_count": 0,
+        "total_possibly_affected": 0
       },
       "invocations": [
         {

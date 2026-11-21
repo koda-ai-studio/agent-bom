@@ -721,13 +721,13 @@ def print_export_hint(report: AIBOMReport) -> None:
 
         lines.append("")
 
-    # ── Summary ──
     vuln_color = "red" if report.total_vulnerabilities > 0 else "green"
     lines.append("[bold]AI Infrastructure Security Report[/bold]")
     lines.append(
         f"  [dim]{report.total_agents} agents · {report.total_servers} MCP servers · "
         f"{report.total_packages} packages ·[/dim] "
-        f"[bold {vuln_color}]{report.total_vulnerabilities} vulnerabilities[/bold {vuln_color}]"
+        f"[bold {vuln_color}]{report.total_vulnerabilities} vulnerabilities[/bold {vuln_color}], "
+        f"{report.total_possibly_affected} possibly affected (review required)"
     )
     lines.append("")
 

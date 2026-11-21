@@ -456,13 +456,7 @@ class AIBOMReport:
 
     @property
     def databricks_cis_benchmark_data(self) -> Optional[dict[str, Any]]:
-        """Deprecated alias for ``databricks_security_data``.
-
-        Databricks has no official CIS benchmark; the canonical field is
-        ``databricks_security_data`` (vendor security best practices). This
-        CIS-named property is retained for backward compatibility with existing
-        clients and delegates both read and write to the canonical field.
-        """
+        """Legacy read/write alias for Databricks vendor security best practices, not an official CIS benchmark."""
         return self.databricks_security_data
 
     @databricks_cis_benchmark_data.setter
@@ -487,6 +481,12 @@ class AIBOMReport:
     @property
     def total_vulnerabilities(self) -> int:
         return sum(s.total_vulnerabilities for a in self.agents for s in a.mcp_servers if not s.package_binding_of)
+
+    @property
+    def total_possibly_affected(self) -> int:
+        from agent_bom.domain.possibly_affected import count_possibly_affected
+
+        return count_possibly_affected(self.agents)
 
     @property
     def critical_vulns(self) -> list[BlastRadius]:

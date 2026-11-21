@@ -211,6 +211,7 @@ def _summary_cards(report: "AIBOMReport", findings: list["Finding"], policy_find
                     "#f87171" if policy_findings else "#34d399",
                     "non-CVE controls",
                 ),
+                card("?", str(report.total_possibly_affected), "Possibly affected", "#fbbf24", "review required"),
                 card("&#x1f511;", str(cred_servers), "Servers w/ Creds", "#fbbf24" if cred_servers else "#34d399", "credential exposure"),
                 card(
                     "&#x1f6a8;", str(crit + policy_crit), "Critical", "#ef4444" if crit or policy_crit else "#34d399", "needs immediate fix"

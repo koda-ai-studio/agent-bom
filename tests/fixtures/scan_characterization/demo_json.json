@@ -1,6 +1,6 @@
 {
  "document": {
-  "sha256": "f54934154891ee15c92a714bc62cedcf1672c12988bf3c03a5259c02c161f85b",
+  "sha256": "20c45958225eac17a4c1bf65459d5d6e3fa1f35963629d25f7674ff0805204db",
   "summary": {
    "coverage_warnings": [],
    "critical_findings": 2,
@@ -13,6 +13,7 @@
    "total_findings": 51,
    "total_mcp_servers": 10,
    "total_packages": 23,
+   "total_possibly_affected": 0,
    "total_vulnerabilities": 15,
    "unique_assets": 44,
    "unique_packages": 16,

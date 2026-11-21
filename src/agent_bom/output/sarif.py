@@ -770,6 +770,7 @@ def to_sarif(
         "version": "2.1.0",
         "runs": [_build_sarif_run(report, catalog, scan_run)],
     }
+    document["runs"][0].setdefault("properties", {})["total_possibly_affected"] = report.total_possibly_affected
     if report.enforcement_data and report.enforcement_data.get("coverage"):
         document["runs"][0].setdefault("properties", {})["mcp_audit_coverage"] = report.enforcement_data["coverage"]
     from agent_bom.output.interop_security import sanitize_linked_document

@@ -1,23 +1,23 @@
 {
  "demo": {
-  "html": "91954d8efd26719e300af0a3a5e0a0caef0f805b577dfe1b0b65d8184db95456",
-  "html_offline": "736d2776f2b1ebaa1d068f81667bf9a9e9650109bc568da596cae26c460d34ca",
-  "sarif_exclude_unfixable": "f6c4eef66585bc4d35fd6a1c37b2f2e066b61ac9f82483f60be69f28222e134f",
-  "sarif_file": "99c60c12ab0dabe7b867e3a260dfdc9ed245d1458717a5b26e1501630ba3b302",
-  "sarif_stdout": "f6c4eef66585bc4d35fd6a1c37b2f2e066b61ac9f82483f60be69f28222e134f"
+  "html": "fd83e1560437b3493736360b7b0357a47953de5c6d54f7abd0cf6f0053f7d625",
+  "html_offline": "ea7a70bc8e0cf6330da073daa10679a2b086c8408362241fdf73facf4547fef5",
+  "sarif_exclude_unfixable": "2a85791b21f2b4c9dd9594f71746c4897272fecefeabcf86d3acc8d52b7bf815",
+  "sarif_file": "9f009e15cd4c0d631f14c071dbfd7cc429d227f959af5c3b89a2f2a126ea42ea",
+  "sarif_stdout": "2a85791b21f2b4c9dd9594f71746c4897272fecefeabcf86d3acc8d52b7bf815"
  },
  "empty": {
-  "html": "b2165a5c90331906a4b9adb5d9838a9e5952fd1a1009fb2289f7643aa1669a04",
-  "html_offline": "9882a96ccc9596a500d7d1b5c7f166917e8a555ca933d503b850cc4a37994c33",
-  "sarif_exclude_unfixable": "443126d556126709d4c80bc44f573c69af3105ddb4a6ee86d4a649a811be9a05",
-  "sarif_file": "dae062ed8d78e3efaef7ae08ec85030cde5514eb35bbbdd30b1e38eb13d6fee2",
-  "sarif_stdout": "443126d556126709d4c80bc44f573c69af3105ddb4a6ee86d4a649a811be9a05"
+  "html": "f56a9b565b04dda5a432e76d9c5e00bc16de67e4759bc6e1fd98ac10cfd385a8",
+  "html_offline": "74d7ce6e4a12578a52a9008d0fa545903c57da9df3961c6efb395db18bfd6aa8",
+  "sarif_exclude_unfixable": "22153cf4f2e1d6f77abfe93da6c42b5056e1fbf09313af06f09b08159bb7b605",
+  "sarif_file": "21b0b8c96b07bb0f3af0d0800707257696e2b7d8ea93cb6679cfeb724bb7150d",
+  "sarif_stdout": "22153cf4f2e1d6f77abfe93da6c42b5056e1fbf09313af06f09b08159bb7b605"
  },
  "rich": {
-  "html": "1904515cd5c109c2690c5e9d79d7b95b1fdc86d537d33447db51985e774b900f",
-  "html_offline": "ef2cc0a0ec6d87c446a320ccf68e30da08c5c7007925a493d1c89282e497a289",
-  "sarif_exclude_unfixable": "c2e0ebc1563d9daa5e2cd2d3f7af73c76d9ac8d29f6ffa779612a751debb3598",
-  "sarif_file": "7cac6b814889f08ac1beeea93cca17a05387a3ac2e8495ecee929c2fd9c72c9c",
-  "sarif_stdout": "fced283af6f61153c0d286e7de8e1d721d8894f4cc765e7175506eb4583551cd"
+  "html": "a459726a75dbfead04ab469139785e01c7baf8dbad8b619452b471692247af5c",
+  "html_offline": "ee7d9a34bf93c39b7671164030f567eade500a99afd41a00e17bac310843aea2",
+  "sarif_exclude_unfixable": "f8506af59f49c07a51833c63a2876a54fd7e3bf17a842ac9cc5e84a175eee1a6",
+  "sarif_file": "4b9ad081d749fb2c76742e7e031adb7bcd484b4306e144fcabbddea7fc3bcf9a",
+  "sarif_stdout": "79ddb74895edccc9f6bc8bd380eccb849040307b8ea54e20d300c6bff6f2966b"
  }
 }

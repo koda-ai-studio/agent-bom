@@ -69,6 +69,7 @@ def to_markdown(report: AIBOMReport, blast_radii: list[BlastRadius] | None = Non
     lines.append(f"| MCP servers | {report.total_servers} |")
     lines.append(f"| Packages scanned | {report.total_packages} |")
     lines.append(f"| Vulnerabilities | {len(cve_rows)} |")
+    lines.append(f"| Possibly affected (review required) | {report.total_possibly_affected} |")
     lines.append(f"| Policy/security findings | {len(policy_findings)} |")
     lines.append(f"| Critical | {sev_counts.get('critical', 0)} |")
     lines.append(f"| High | {sev_counts.get('high', 0)} |")

@@ -251,6 +251,7 @@ export function ScanResultView({ id }: { id: string }) {
           <MiniStat label="Agents" value={summary.total_agents} />
           <MiniStat label="Packages" value={summary.total_packages} />
           <MiniStat label="Vulnerabilities" value={summary.total_vulnerabilities} />
+          <MiniStat label="Possibly affected · review required" value={summary.total_possibly_affected ?? "Unavailable"} />
           <MiniStat label="Critical" value={summary.critical_findings} accent="red" />
         </div>
       )}
@@ -691,7 +692,7 @@ function JobStatusBadge({ status, streaming }: { status: string; streaming: bool
   return <span className="text-xs bg-surface-muted border border-outline text-ink-secondary rounded-full px-2 py-0.5 font-mono">{status}</span>;
 }
 
-function MiniStat({ label, value, accent }: { label: string; value: number; accent?: string }) {
+function MiniStat({ label, value, accent }: { label: string; value: number | string; accent?: string }) {
   return <StatCard label={label} value={value} accent={accent === "red" ? "critical" : "neutral"} />;
 }
 

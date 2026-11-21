@@ -312,6 +312,7 @@ def print_compact_summary(report: AIBOMReport, *, verbose: bool = False) -> None
         f"Servers  [bold]{report.total_servers}[/bold]    "
         f"Packages  [bold]{report.total_packages}[/bold][dim]{pkg_detail}[/dim]    "
         f"Vulns  [bold]{report.total_vulnerabilities}[/bold]    "
+        f"Possibly affected  [bold]{report.total_possibly_affected}[/bold] (review required)    "
         f"Findings  [bold]{len(policy_findings)}[/bold]",
     ]
     if weak_dimensions:

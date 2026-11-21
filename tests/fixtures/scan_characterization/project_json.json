@@ -2145,6 +2145,7 @@
    "total_findings": 0,
    "total_mcp_servers": 1,
    "total_packages": 5,
+   "total_possibly_affected": 0,
    "total_vulnerabilities": 0,
    "unique_assets": 0,
    "unique_packages": 5,
