@@ -4,30 +4,34 @@ import { LANE_GAP, relationshipLaneFor } from "@/lib/relationship-lanes";
 import { relationshipPath } from "@/lib/relationship-routing";
 
 type Point = { x: number; y: number };
+/** Sample the rendered cubics, rather than treating control points as line segments. */
 const points = (path: string): Point[] => {
-  const numbers = path.match(/-?\d+(?:\.\d+)?/g)!.map(Number);
-  return Array.from({ length: numbers.length / 2 }, (_, index) => ({ x: numbers[index * 2]!, y: numbers[index * 2 + 1]! }));
-};
-
-/** Axis-aligned runs of a rounded right-angle route, ignoring the short corner curves. */
-function runs(path: string): Array<{ axis: "h" | "v"; at: number; from: number; to: number }> {
-  const list = points(path);
-  const result: Array<{ axis: "h" | "v"; at: number; from: number; to: number }> = [];
-  for (let index = 1; index < list.length; index++) {
-    const a = list[index - 1]!, b = list[index]!;
-    if (a.y === b.y && a.x !== b.x) result.push({ axis: "h", at: a.y, from: Math.min(a.x, b.x), to: Math.max(a.x, b.x) });
-    if (a.x === b.x && a.y !== b.y) result.push({ axis: "v", at: a.x, from: Math.min(a.y, b.y), to: Math.max(a.y, b.y) });
+  const values = path.match(/-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi)!.map(Number);
+  const result: Point[] = [];
+  for (let index = 0; index < values.length - 2; index += 6) for (let step = 0; step <= 100; step++) {
+    const t = step / 100, u = 1 - t;
+    const coordinate = (axis: number) => u ** 3 * values[index + axis]! + 3 * u ** 2 * t * values[index + axis + 2]!
+      + 3 * u * t ** 2 * values[index + axis + 4]! + t ** 3 * values[index + axis + 6]!;
+    result.push({ x: coordinate(0), y: coordinate(1) });
   }
   return result;
-}
-
+};
+const cross = (a: Point, b: Point, c: Point) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+const segments = (path: string) => { const list = points(path); return list.slice(1).map((point, index) => [list[index]!, point] as const); };
 function sharedLength(a: string, b: string): number {
   let shared = 0;
-  for (const left of runs(a)) for (const right of runs(b)) {
-    if (left.axis !== right.axis || Math.abs(left.at - right.at) > 2) continue;
-    shared += Math.max(0, Math.min(left.to, right.to) - Math.max(left.from, right.from));
+  for (const [p, q] of segments(a)) for (const [r, s] of segments(b)) {
+    if (Math.abs(cross(p, q, r)) > 0.00001 || Math.abs(cross(p, q, s)) > 0.00001) continue;
+    const length = Math.hypot(q.x - p.x, q.y - p.y);
+    if (length === 0) continue;
+    const along = (point: Point) => ((point.x - p.x) * (q.x - p.x) + (point.y - p.y) * (q.y - p.y)) / length;
+    shared += Math.max(0, Math.min(length, Math.max(along(r), along(s))) - Math.max(0, Math.min(along(r), along(s))));
   }
   return shared;
+}
+function curvesCross(a: string, b: string): boolean {
+  return segments(a).some(([p, q]) => segments(b).some(([r, s]) =>
+    cross(p, q, r) * cross(p, q, s) < -0.00001 && cross(r, s, p) * cross(r, s, q) < -0.00001));
 }
 
 // The mesh capture: developer-copilot uses two MCP servers and a role can access it,
@@ -41,8 +45,8 @@ const edges = [
 const yOf = (id: string) => nodeY[id];
 
 describe("parallel relationship lanes", () => {
-  it("keeps one relationship type on one lane", () => {
-    expect(relationshipLaneFor("uses-fs", edges, yOf)).toEqual(relationshipLaneFor("uses-gh", edges, yOf));
+  it("gives each source-target pair a distinct lane even for one relationship type", () => {
+    expect(relationshipLaneFor("uses-fs", edges, yOf).source).not.toBe(relationshipLaneFor("uses-gh", edges, yOf).source);
   });
 
   it("gives a different relationship type leaving the same port its own lane", () => {
@@ -53,14 +57,15 @@ describe("parallel relationship lanes", () => {
     expect(access.source).toBeGreaterThan(uses.source);
   });
 
-  it("leaves a port with a single relationship type on its centre line", () => {
+  it("centres a pair of distinct connections around their shared port", () => {
     const single = edges.filter(edge => edge.data.relationship === "uses");
-    expect(relationshipLaneFor("uses-fs", single, yOf)).toEqual({ source: 0, target: 0 });
+    expect(relationshipLaneFor("uses-fs", single, yOf)).toEqual({ source: -LANE_GAP / 2, target: 0 });
+    expect(relationshipLaneFor("uses-gh", single, yOf)).toEqual({ source: LANE_GAP / 2, target: 0 });
   });
 
   it("ignores hidden edges", () => {
     const hidden = edges.map(edge => edge.id === "access" ? { ...edge, hidden: true } : edge);
-    expect(relationshipLaneFor("uses-fs", hidden, yOf)).toEqual({ source: 0, target: 0 });
+    expect(relationshipLaneFor("uses-fs", hidden, yOf)).toEqual(relationshipLaneFor("uses-fs", hidden.filter(edge => !("hidden" in edge && edge.hidden)), yOf));
   });
 
   it("draws two relationship types from one port without a shared run", () => {
@@ -71,8 +76,8 @@ describe("parallel relationship lanes", () => {
     const access = relationshipPath({ ...base, target: "role", targetX, targetY: 680 }, [], relationshipLaneFor("access", edges, yOf))[0];
     expect(sharedLength(access, usesFs)).toBe(0);
     expect(sharedLength(access, usesGh)).toBe(0);
-    // Two edges of the same type still read as one bundle.
-    expect(sharedLength(usesFs, usesGh)).toBeGreaterThan(100);
+    // The same relationship kind never creates a shared trunk.
+    expect(sharedLength(usesFs, usesGh)).toBe(0);
   });
 
   it("keeps an incoming relationship off the lane of outgoing ones on the same side of a card", () => {
@@ -125,8 +130,7 @@ describe("parallel relationship lanes", () => {
     const base = { source: "a", sourceX: 0, sourceY: 0, sourcePosition: Position.Right, targetPosition: Position.Left };
     const near = relationshipPath({ ...base, target: "b", targetX: 400, targetY: 200 }, [], relationshipLaneFor("near", lanes, id => ys[id]))[0];
     const far = relationshipPath({ ...base, target: "c", targetX: 400, targetY: 400 }, [], relationshipLaneFor("far", lanes, id => ys[id]))[0];
-    const crossing = runs(near).some(left => runs(far).some(right => left.axis !== right.axis
-      && left.at > right.from && left.at < right.to && right.at > left.from && right.at < left.to));
+    const crossing = curvesCross(near, far);
     expect(crossing).toBe(false);
     expect(sharedLength(near, far)).toBe(0);
   });
@@ -150,12 +154,13 @@ describe("parallel relationship lanes", () => {
         targetX: 680, targetY: at[link.target]!.y, sourcePosition: Position.Right, targetPosition: Position.Left },
       [], relationshipLaneFor(id, links, node => at[node]?.y, node => at[node]?.x));
     };
-    // Each target's lines share one channel, distinct from the other target's.
-    expect(route("server-agent")[1]).not.toBeCloseTo(route("instance2-pillow")[1], 0);
+    // Channels belong to source-target pairs, not only to targets.
+    expect(relationshipLaneFor("server-agent", links, node => at[node]?.y, node => at[node]?.x).channel)
+      .not.toBe(relationshipLaneFor("instance1-agent", links, node => at[node]?.y, node => at[node]?.x).channel);
     expect(sharedLength(route("server-agent")[0], route("instance2-pillow")[0])).toBe(0);
     expect(sharedLength(route("server-agent")[0], route("instance1-pillow")[0])).toBe(0);
-    // Two lines of one type into one target still merge as a bundle at its port.
-    expect(sharedLength(route("instance1-pillow")[0], route("instance2-pillow")[0])).toBeGreaterThan(0);
+    // Different sources remain separate all the way to the target.
+    expect(sharedLength(route("instance1-pillow")[0], route("instance2-pillow")[0])).toBe(0);
     // A line never ends off its target's port row by more than one lane.
     for (const id of ["pin-pillow", "instance1-pillow", "instance2-pillow"]) {
       const end = points(route(id)[0]).at(-1)!;
@@ -175,8 +180,7 @@ describe("parallel relationship lanes", () => {
         targetX: 400, targetY: at[link.target]!.y, sourcePosition: Position.Right, targetPosition: Position.Left },
       [], relationshipLaneFor(id, links, node => at[node]?.y, node => at[node]?.x))[0];
     };
-    const crossing = runs(route("a-near")).some(left => runs(route("b-far")).some(right => left.axis !== right.axis
-      && left.at > right.from && left.at < right.to && right.at > left.from && right.at < left.to));
+    const crossing = curvesCross(route("a-near"), route("b-far"));
     expect(crossing).toBe(false);
   });
 
