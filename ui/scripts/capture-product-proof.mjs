@@ -3139,7 +3139,7 @@ async function main() {
         `/graph?capture=1&scan=${REFERENCE_CORRELATION_ID}&layers=${REFERENCE_RELATIONSHIP_LAYERS}`,
         `graph-relationship-${theme}-live.png`, async (p) => {
           await expect(p.locator(".react-flow__node")).toHaveCount(5);
-          const finding = p.locator('.react-flow__edge[data-id="vulnerable_to:package:iac:pillow:vulnerability:sbom:cve-2023-4863"]');
+          const finding = p.locator('.react-flow__edge[data-id="vulnerable_to:package:mcp:pillow:vulnerability:sbom:cve-2023-4863"]');
           await finding.focus();
           await finding.press("Space");
           const receipt = p.getByLabel("Relationship details", { exact: true });
