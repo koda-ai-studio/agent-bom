@@ -49,6 +49,7 @@ PURL = "pkg:pypi/pillow@9.0.0"
 ADVISORY = "CVE-2023-4863"
 RUNTIME_ID = "reference-evidence-workload"
 TOOL_ID = "mcp-tool:reference-lab:render-untrusted-image"
+SERVER_ID = "mcp-server:reference-lab:document-review"
 TOOL_NAME = "render_untrusted_image"
 _RUNTIME_FACTS_KEY = b"reference-lab-runtime-facts-key-32-bytes"
 
@@ -200,6 +201,8 @@ def _source_evidence() -> tuple[dict[str, dict[str, str]], dict[str, Any]]:
     raw_tool = next((item for item in raw_server.get("tools", []) if item.get("name") == TOOL_NAME), None)
     if server is None or raw_tool is None or raw_tool.get("stable_id") != TOOL_ID:
         raise RuntimeError("reference lab MCP parser did not bind the expected server and tool")
+    if raw_server.get("stable_id") != SERVER_ID or raw_server.get("image") != f"ghcr.io/example/reference-evidence-api@{image_digest}":
+        raise RuntimeError("reference lab MCP server must run from the SBOM-pinned image digest")
 
     identity = json.loads(IDENTITY_INPUT.read_text(encoding="utf-8"))
     identity_record = identity.get("workload_identity", {})
@@ -233,7 +236,7 @@ def _source_evidence() -> tuple[dict[str, dict[str, str]], dict[str, Any]]:
             "service_account": str(deployment.get("spec", {}).get("template", {}).get("spec", {}).get("serviceAccountName") or ""),
             "image_digest": image_digest,
         },
-        "mcp": {"server": server, "tool_name": str(raw_tool["name"]), "tool_id": str(raw_tool["stable_id"])},
+        "mcp": {"server": server, "server_id": SERVER_ID, "tool_name": str(raw_tool["name"]), "tool_id": str(raw_tool["stable_id"])},
         "identity": {"identity": identity_record, "permission": permission},
     }
 
@@ -547,6 +550,53 @@ def _snapshots(
             index=3,
         )
     )
+    # The workload's MCP config declares the document-review server and the
+    # image it runs from; that image is the SBOM-pinned digest that ships
+    # pillow. Model the server's package dependency from that binding only.
+    mcp.add_node(
+        _node(
+            "agent:mcp:reference-workload",
+            EntityType.AGENT,
+            str(identity["runtime_id"]),
+            source="mcp_config",
+            attributes={"canonical_id": f"runtime-agent:{identity['runtime_id']}", "runtime_id": identity["runtime_id"]},
+            index=3,
+        )
+    )
+    mcp.add_node(
+        _node(
+            "server:mcp:document-review",
+            EntityType.SERVER,
+            "document-review MCP",
+            source="mcp_config",
+            attributes={
+                "canonical_id": str(mcp_evidence["server_id"]),
+                "stable_id": str(mcp_evidence["server_id"]),
+                "image_digest": image_digest,
+            },
+            index=3,
+        )
+    )
+    mcp.add_node(
+        _node(
+            "package:mcp:pillow",
+            EntityType.PACKAGE,
+            "pillow@9.0.0",
+            source="mcp_config_image_projection",
+            attributes={"purl": purl, "canonical_id": purl, "modeled": True},
+            index=3,
+        )
+    )
+    image_projection = ("mcp_config_image_projection", "modeled_infrastructure")
+    for source_id, target_id, relationship, source_kind, tier in (
+        ("agent:mcp:reference-workload", "server:mcp:document-review", RelationshipType.USES, "mcp_config", "static_scan"),
+        ("server:mcp:document-review", "tool:mcp:render-untrusted-image", RelationshipType.PROVIDES_TOOL, "mcp_config", "static_scan"),
+        ("server:mcp:document-review", "package:mcp:pillow", RelationshipType.DEPENDS_ON, *image_projection),
+    ):
+        mcp_edge = _edge(source_id, target_id, relationship, scan_id=mcp.scan_id, source_kind=source_kind, evidence_tier=tier, index=3)
+        if relationship == RelationshipType.DEPENDS_ON:
+            mcp_edge.evidence.update({"image_digest": image_digest, "sbom_artifact": str(SBOM_INPUT.relative_to(ROOT))})
+        mcp.add_edge(mcp_edge)
 
     runtime = _graph("reference-runtime-observation", 4)
     runtime.add_node(
@@ -636,6 +686,7 @@ def _snapshots(
                 "cloud_resource_id": str(target["resource_id"]),
                 "data_sensitivity": str(target["data_sensitivity"]),
                 "data_classification_tier": str(target["data_classification_tier"]),
+                "data_classification": str(target["data_sensitivity"]),
                 "modeled": True,
             },
             index=5,
@@ -730,7 +781,11 @@ async def _build_payload() -> dict[str, Any]:
                     "entity_type": "agent",
                     "canonical_id": f"runtime-agent:{RUNTIME_ID}",
                     "basis": "stable_runtime_id",
-                    "source_snapshots": ["reference-runtime-observation", "reference-identity-permission-scan"],
+                    "source_snapshots": [
+                        "reference-mcp-config-scan",
+                        "reference-runtime-observation",
+                        "reference-identity-permission-scan",
+                    ],
                 },
             ],
             "runtime_control": runtime_control,

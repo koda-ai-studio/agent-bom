@@ -10,7 +10,7 @@
       ]
     }
   ],
-  "artifact_sha256": "sha256:036744c93ecaacbcf041bd8c4afc4d28b6f636f5fb3b9dda386b66fa0e589e53",
+  "artifact_sha256": "sha256:5f8609d54ec1e902f8499c542811fc2b62560e2453ff8aded7631160a332e61b",
   "capture_fixture": {
     "fix_first": {
       "attack_campaigns": [
@@ -51,6 +51,1060 @@
       "cards": [
         {
           "affected": {
+            "agents": [
+              "reference-evidence-workload"
+            ],
+            "credentials": [],
+            "finding_labels": [
+              "CVE-2023-4863"
+            ],
+            "findings": [
+              "reference-finding-cve-2023-4863"
+            ],
+            "packages": [
+              "pillow@9.0.0"
+            ],
+            "servers": [
+              "document-review MCP"
+            ],
+            "tools": [
+              "render_untrusted_image"
+            ]
+          },
+          "attack_path": {
+            "analysis": {
+              "limits": {
+                "max_depth": 8,
+                "max_entries": 200,
+                "max_nodes": 5000,
+                "max_paths": 50,
+                "max_visited_per_entry": 2000
+              },
+              "observed": {
+                "candidate_path_count": 1,
+                "entry_count": 1,
+                "evaluated_entry_count": 1,
+                "hop_count": 3,
+                "node_count": 11,
+                "result_count": 1
+              },
+              "reason_codes": [],
+              "status": "complete"
+            },
+            "composite_risk": 87.1,
+            "credential_exposure": [],
+            "edges": [
+              "uses",
+              "depends_on",
+              "vulnerable_to"
+            ],
+            "finding_ids": [
+              "reference-finding-cve-2023-4863"
+            ],
+            "hop_evidence": [
+              {
+                "canonical_edge_id": "014e774a-c7d9-570e-9545-b8282a2d1666",
+                "complete": true,
+                "confidence": 1.0,
+                "correlation_identity_status": "current",
+                "direction": "directed",
+                "evidence_tier": "static_scan",
+                "freshness": "fresh",
+                "reason_codes": [],
+                "relationship": "uses",
+                "relationship_provenance": "recorded",
+                "runtime_observed_state": "not_observed",
+                "runtime_references": [],
+                "source_node_id": "agent:model:reference-workload",
+                "source_snapshot_ids": [
+                  "reference-mcp-config-scan"
+                ],
+                "target_node_id": "server:mcp:document-review",
+                "traversable": true,
+                "truncated": false
+              },
+              {
+                "canonical_edge_id": "da5e3844-dbea-55c8-9338-986aea01f4f8",
+                "complete": true,
+                "confidence": 1.0,
+                "correlation_identity_status": "current",
+                "direction": "directed",
+                "evidence_tier": "modeled_infrastructure",
+                "freshness": "fresh",
+                "reason_codes": [],
+                "relationship": "depends_on",
+                "relationship_provenance": "recorded",
+                "runtime_observed_state": "not_observed",
+                "runtime_references": [],
+                "source_node_id": "server:mcp:document-review",
+                "source_snapshot_ids": [
+                  "reference-mcp-config-scan"
+                ],
+                "target_node_id": "package:mcp:pillow",
+                "traversable": true,
+                "truncated": false
+              },
+              {
+                "canonical_edge_id": "fdb66cb8-b823-5c9f-b6dd-ca979f36c3ca",
+                "complete": true,
+                "confidence": 1.0,
+                "correlation_identity_status": "current",
+                "direction": "directed",
+                "evidence_tier": "static_scan",
+                "freshness": "fresh",
+                "reason_codes": [
+                  "applicability_unassessed"
+                ],
+                "relationship": "vulnerable_to",
+                "relationship_provenance": "recorded",
+                "runtime_observed_state": "not_observed",
+                "runtime_references": [],
+                "source_node_id": "package:mcp:pillow",
+                "source_snapshot_ids": [
+                  "reference-image-sbom-scan"
+                ],
+                "target_node_id": "vulnerability:sbom:cve-2023-4863",
+                "traversable": true,
+                "truncated": false
+              }
+            ],
+            "hops": [
+              "agent:model:reference-workload",
+              "server:mcp:document-review",
+              "package:mcp:pillow",
+              "vulnerability:sbom:cve-2023-4863"
+            ],
+            "mitre_technique_ids": [],
+            "reachability": "likely",
+            "reachability_basis": [
+              "insufficient_evidence",
+              "applicability_unassessed",
+              "directed_provenance_backed_hops"
+            ],
+            "source": "agent:model:reference-workload",
+            "summary": "Unverified structural candidate: graph topology connects the agent and vulnerable package/server, but no executable graph or symbol path has been proven.",
+            "target": "vulnerability:sbom:cve-2023-4863",
+            "technique_mappings": [],
+            "tool_exposure": [
+              "render_untrusted_image"
+            ],
+            "vuln_ids": [
+              "CVE-2023-4863"
+            ]
+          },
+          "exposure_path": {
+            "affectedAgents": [
+              "reference-evidence-workload"
+            ],
+            "affectedServers": [
+              "document-review MCP"
+            ],
+            "dependencyContext": {
+              "ecosystem": "",
+              "packageName": "pillow@9.0.0",
+              "packageVersion": "",
+              "serverName": "document-review MCP"
+            },
+            "edgeIds": [
+              "uses:agent:model:reference-workload:server:mcp:document-review",
+              "depends_on:server:mcp:document-review:package:mcp:pillow",
+              "vulnerable_to:package:mcp:pillow:vulnerability:sbom:cve-2023-4863"
+            ],
+            "evidence": {
+              "attackComplexity": null,
+              "attackVector": null,
+              "cvssScore": null,
+              "cvssVector": null,
+              "epssScore": null,
+              "impactCategory": null,
+              "isKev": true,
+              "networkExploitable": null,
+              "privilegesRequired": null,
+              "source": "graph_attack_path",
+              "userInteraction": null
+            },
+            "evidenceDimensions": {
+              "actionability": {
+                "actionable": null,
+                "basis": [],
+                "reasonCodes": [
+                  "actionability_not_assessed"
+                ],
+                "status": "unavailable"
+              },
+              "completeness": {
+                "analysisStatus": "complete",
+                "evidencedHops": 3,
+                "expectedHops": 3,
+                "reasonCodes": [],
+                "status": "complete"
+              },
+              "exploitability": {
+                "basis": [],
+                "reasonCodes": [
+                  "exploitability_not_assessed"
+                ],
+                "status": "unavailable",
+                "verdict": null
+              },
+              "impact": {
+                "basis": [],
+                "category": null,
+                "reasonCodes": [
+                  "impact_not_assessed"
+                ],
+                "status": "unavailable"
+              },
+              "reachability": {
+                "basis": [
+                  "insufficient_evidence",
+                  "applicability_unassessed",
+                  "directed_provenance_backed_hops"
+                ],
+                "status": "complete",
+                "verdict": "likely"
+              }
+            },
+            "exposedCredentials": [],
+            "findings": [
+              "reference-finding-cve-2023-4863"
+            ],
+            "hopEvidence": [
+              {
+                "canonical_edge_id": "014e774a-c7d9-570e-9545-b8282a2d1666",
+                "complete": true,
+                "confidence": 1.0,
+                "correlation_identity_status": "current",
+                "direction": "directed",
+                "evidence_tier": "static_scan",
+                "freshness": "fresh",
+                "reason_codes": [],
+                "relationship": "uses",
+                "relationship_provenance": "recorded",
+                "runtime_observed_state": "not_observed",
+                "runtime_outcome": "unknown",
+                "runtime_references": [],
+                "source_node_id": "agent:model:reference-workload",
+                "source_snapshot_ids": [
+                  "reference-mcp-config-scan"
+                ],
+                "target_node_id": "server:mcp:document-review",
+                "traversable": true,
+                "truncated": false
+              },
+              {
+                "canonical_edge_id": "da5e3844-dbea-55c8-9338-986aea01f4f8",
+                "complete": true,
+                "confidence": 1.0,
+                "correlation_identity_status": "current",
+                "direction": "directed",
+                "evidence_tier": "modeled_infrastructure",
+                "freshness": "fresh",
+                "reason_codes": [],
+                "relationship": "depends_on",
+                "relationship_provenance": "recorded",
+                "runtime_observed_state": "not_observed",
+                "runtime_outcome": "unknown",
+                "runtime_references": [],
+                "source_node_id": "server:mcp:document-review",
+                "source_snapshot_ids": [
+                  "reference-mcp-config-scan"
+                ],
+                "target_node_id": "package:mcp:pillow",
+                "traversable": true,
+                "truncated": false
+              },
+              {
+                "canonical_edge_id": "fdb66cb8-b823-5c9f-b6dd-ca979f36c3ca",
+                "complete": true,
+                "confidence": 1.0,
+                "correlation_identity_status": "current",
+                "direction": "directed",
+                "evidence_tier": "static_scan",
+                "freshness": "fresh",
+                "reason_codes": [
+                  "applicability_unassessed"
+                ],
+                "relationship": "vulnerable_to",
+                "relationship_provenance": "recorded",
+                "runtime_observed_state": "not_observed",
+                "runtime_outcome": "unknown",
+                "runtime_references": [],
+                "source_node_id": "package:mcp:pillow",
+                "source_snapshot_ids": [
+                  "reference-image-sbom-scan"
+                ],
+                "target_node_id": "vulnerability:sbom:cve-2023-4863",
+                "traversable": true,
+                "truncated": false
+              }
+            ],
+            "hops": [
+              {
+                "entityType": "agent",
+                "evidenceProvenance": {
+                  "execution": "not_established",
+                  "first_seen": "2026-08-30T04:02:00+00:00",
+                  "last_seen": "2026-08-30T04:05:00+00:00",
+                  "schema_version": "agent-bom.graph-evidence/v1",
+                  "source_snapshot_ids": [
+                    "reference-identity-permission-scan",
+                    "reference-kubernetes-iac-scan",
+                    "reference-mcp-config-scan",
+                    "reference-runtime-observation"
+                  ],
+                  "sources": [
+                    "gateway_runtime",
+                    "identity_model",
+                    "kubernetes_iac",
+                    "mcp_config"
+                  ],
+                  "tier": "unspecified",
+                  "time_basis": "recorded_observation"
+                },
+                "id": "agent:model:reference-workload",
+                "label": "reference-evidence-workload",
+                "rawLabel": "reference-evidence-workload",
+                "risk_assessment": {
+                  "basis": null,
+                  "scope": null,
+                  "status": "not_assessed"
+                },
+                "role": "agent"
+              },
+              {
+                "entityType": "server",
+                "evidenceProvenance": {
+                  "execution": "not_established",
+                  "first_seen": "2026-08-30T04:03:00+00:00",
+                  "last_seen": "2026-08-30T04:03:00+00:00",
+                  "schema_version": "agent-bom.graph-evidence/v1",
+                  "source_snapshot_ids": [
+                    "reference-mcp-config-scan"
+                  ],
+                  "sources": [
+                    "mcp_config"
+                  ],
+                  "tier": "unspecified",
+                  "time_basis": "recorded_observation"
+                },
+                "id": "server:mcp:document-review",
+                "label": "document-review MCP",
+                "rawLabel": "document-review MCP",
+                "risk_assessment": {
+                  "basis": null,
+                  "scope": null,
+                  "status": "not_assessed"
+                },
+                "role": "server"
+              },
+              {
+                "entityType": "package",
+                "evidenceProvenance": {
+                  "execution": "not_established",
+                  "first_seen": "2026-08-30T04:00:00+00:00",
+                  "last_seen": "2026-08-30T04:03:00+00:00",
+                  "schema_version": "agent-bom.graph-evidence/v1",
+                  "source_snapshot_ids": [
+                    "reference-image-sbom-scan",
+                    "reference-kubernetes-iac-scan",
+                    "reference-mcp-config-scan",
+                    "reference-repository-scan"
+                  ],
+                  "sources": [
+                    "cyclonedx_sbom",
+                    "kubernetes_iac_sbom_projection",
+                    "mcp_config_image_projection",
+                    "repository_parser"
+                  ],
+                  "tier": "unspecified",
+                  "time_basis": "recorded_observation"
+                },
+                "id": "package:mcp:pillow",
+                "label": "pillow@9.0.0",
+                "rawLabel": "pillow@9.0.0",
+                "riskScore": 8.8,
+                "risk_assessment": {
+                  "basis": null,
+                  "scope": null,
+                  "status": "not_assessed"
+                },
+                "role": "package",
+                "severity": "high"
+              },
+              {
+                "entityType": "vulnerability",
+                "evidenceProvenance": {
+                  "execution": "not_established",
+                  "first_seen": "2026-08-30T04:01:00+00:00",
+                  "last_seen": "2026-08-30T04:01:00+00:00",
+                  "schema_version": "agent-bom.graph-evidence/v1",
+                  "source_snapshot_ids": [
+                    "reference-image-sbom-scan"
+                  ],
+                  "sources": [
+                    "bundled_advisory_scanner"
+                  ],
+                  "tier": "unspecified",
+                  "time_basis": "recorded_observation"
+                },
+                "id": "vulnerability:sbom:cve-2023-4863",
+                "label": "CVE-2023-4863",
+                "rawLabel": "CVE-2023-4863",
+                "riskScore": 8.8,
+                "risk_assessment": {
+                  "basis": null,
+                  "scope": null,
+                  "status": "not_assessed"
+                },
+                "role": "finding",
+                "severity": "high"
+              }
+            ],
+            "id": "agent:model:reference-workload::vulnerability:sbom:cve-2023-4863::agent:model:reference-workload->server:mcp:document-review->package:mcp:pillow->vulnerability:sbom:cve-2023-4863::uses,depends_on,vulnerable_to",
+            "label": "CVE-2023-4863 via reference-evidence-workload",
+            "nodeIds": [
+              "agent:model:reference-workload",
+              "server:mcp:document-review",
+              "package:mcp:pillow",
+              "vulnerability:sbom:cve-2023-4863"
+            ],
+            "provenance": {
+              "scanId": "reference-evidence-correlation-v1",
+              "source": "graph_attack_path"
+            },
+            "rank": 1,
+            "reachability": "likely",
+            "reachabilityBasis": [
+              "insufficient_evidence",
+              "applicability_unassessed",
+              "directed_provenance_backed_hops"
+            ],
+            "reachableTools": [
+              "render_untrusted_image"
+            ],
+            "relationships": [
+              {
+                "confidence": 1.0,
+                "direction": "directed",
+                "id": "uses:agent:model:reference-workload:server:mcp:document-review",
+                "relationship": "uses",
+                "source": "agent:model:reference-workload",
+                "target": "server:mcp:document-review",
+                "traversable": true
+              },
+              {
+                "confidence": 1.0,
+                "direction": "directed",
+                "id": "depends_on:server:mcp:document-review:package:mcp:pillow",
+                "relationship": "depends_on",
+                "source": "server:mcp:document-review",
+                "target": "package:mcp:pillow",
+                "traversable": true
+              },
+              {
+                "confidence": 1.0,
+                "direction": "directed",
+                "id": "vulnerable_to:package:mcp:pillow:vulnerability:sbom:cve-2023-4863",
+                "relationship": "vulnerable_to",
+                "source": "package:mcp:pillow",
+                "target": "vulnerability:sbom:cve-2023-4863",
+                "traversable": true
+              }
+            ],
+            "riskScore": 87.1,
+            "schemaVersion": "agent-bom.graph-evidence/v1",
+            "severity": "high",
+            "source": {
+              "entityType": "agent",
+              "evidenceProvenance": {
+                "execution": "not_established",
+                "first_seen": "2026-08-30T04:02:00+00:00",
+                "last_seen": "2026-08-30T04:05:00+00:00",
+                "schema_version": "agent-bom.graph-evidence/v1",
+                "source_snapshot_ids": [
+                  "reference-identity-permission-scan",
+                  "reference-kubernetes-iac-scan",
+                  "reference-mcp-config-scan",
+                  "reference-runtime-observation"
+                ],
+                "sources": [
+                  "gateway_runtime",
+                  "identity_model",
+                  "kubernetes_iac",
+                  "mcp_config"
+                ],
+                "tier": "unspecified",
+                "time_basis": "recorded_observation"
+              },
+              "id": "agent:model:reference-workload",
+              "label": "reference-evidence-workload",
+              "rawLabel": "reference-evidence-workload",
+              "risk_assessment": {
+                "basis": null,
+                "scope": null,
+                "status": "not_assessed"
+              },
+              "role": "agent"
+            },
+            "summary": "Unverified structural candidate: graph topology connects the agent and vulnerable package/server, but no executable graph or symbol path has been proven.",
+            "target": {
+              "entityType": "vulnerability",
+              "evidenceProvenance": {
+                "execution": "not_established",
+                "first_seen": "2026-08-30T04:01:00+00:00",
+                "last_seen": "2026-08-30T04:01:00+00:00",
+                "schema_version": "agent-bom.graph-evidence/v1",
+                "source_snapshot_ids": [
+                  "reference-image-sbom-scan"
+                ],
+                "sources": [
+                  "bundled_advisory_scanner"
+                ],
+                "tier": "unspecified",
+                "time_basis": "recorded_observation"
+              },
+              "id": "vulnerability:sbom:cve-2023-4863",
+              "label": "CVE-2023-4863",
+              "rawLabel": "CVE-2023-4863",
+              "riskScore": 8.8,
+              "risk_assessment": {
+                "basis": null,
+                "scope": null,
+                "status": "not_assessed"
+              },
+              "role": "finding",
+              "severity": "high"
+            }
+          },
+          "id": "agent:model:reference-workload::vulnerability:sbom:cve-2023-4863::agent:model:reference-workload->server:mcp:document-review->package:mcp:pillow->vulnerability:sbom:cve-2023-4863::uses,depends_on,vulnerable_to",
+          "next_actions": [
+            {
+              "detail": "Open the first finding and confirm the root cause before expanding the graph.",
+              "href": "/findings?finding=reference-finding-cve-2023-4863",
+              "title": "Validate lead finding"
+            },
+            {
+              "detail": "Review the agent, user, or service account that can trigger this path.",
+              "href": "/agents?name=reference-evidence-workload",
+              "title": "Inspect exposed identity"
+            },
+            {
+              "detail": "Check whether the tool permissions turn this finding into a real incident path.",
+              "href": "/mesh",
+              "title": "Review reachable tools"
+            },
+            {
+              "detail": "Open the full lineage graph only when neighboring context is needed.",
+              "href": "/graph",
+              "title": "Expand topology"
+            }
+          ],
+          "nodes": [
+            {
+              "attributes": {
+                "agent_context": {
+                  "agent_kind": "unknown",
+                  "execution": {
+                    "items": [],
+                    "recorded_count": 0,
+                    "status": "not_recorded",
+                    "truncated": false
+                  },
+                  "membership": {
+                    "items": [],
+                    "recorded_count": 0,
+                    "status": "not_recorded",
+                    "truncated": false
+                  },
+                  "models": {
+                    "items": [],
+                    "recorded_count": 0,
+                    "status": "not_recorded",
+                    "truncated": false
+                  },
+                  "platforms": {
+                    "items": [],
+                    "recorded_count": 0,
+                    "status": "not_recorded",
+                    "truncated": false
+                  },
+                  "schema_version": "agent.context.v1"
+                },
+                "canonical_id": "runtime-agent:reference-evidence-workload",
+                "correlation": {
+                  "conflict_fields": [],
+                  "identity_basis": "runtime_stable_id",
+                  "identity_version": "scoped-identity.v7",
+                  "observation_count": 4,
+                  "observations": [
+                    {
+                      "attribute_digest": "sha256:97d8c3e82c5107658027db1923a02dd257ce767dc3e49e49c936a5dd080793b3",
+                      "data_sources": [
+                        "kubernetes_iac"
+                      ],
+                      "risk_assessment": {
+                        "basis": null,
+                        "scope": null,
+                        "status": "not_assessed"
+                      },
+                      "risk_score": 0.0,
+                      "scan_id": "reference-kubernetes-iac-scan",
+                      "severity": "",
+                      "snapshot_created_at": "2026-08-30T04:02:00+00:00",
+                      "source_node_id": "workload:reference-api"
+                    },
+                    {
+                      "attribute_digest": "sha256:8591c9e5ec7d801db84383fd0ae2696645d7f49bc6616f3f22cd18038ccd57ee",
+                      "data_sources": [
+                        "mcp_config"
+                      ],
+                      "risk_assessment": {
+                        "basis": null,
+                        "scope": null,
+                        "status": "not_assessed"
+                      },
+                      "risk_score": 0.0,
+                      "scan_id": "reference-mcp-config-scan",
+                      "severity": "",
+                      "snapshot_created_at": "2026-08-30T04:03:00+00:00",
+                      "source_node_id": "agent:mcp:reference-workload"
+                    },
+                    {
+                      "attribute_digest": "sha256:8591c9e5ec7d801db84383fd0ae2696645d7f49bc6616f3f22cd18038ccd57ee",
+                      "data_sources": [
+                        "gateway_runtime"
+                      ],
+                      "risk_assessment": {
+                        "basis": null,
+                        "scope": null,
+                        "status": "not_assessed"
+                      },
+                      "risk_score": 0.0,
+                      "scan_id": "reference-runtime-observation",
+                      "severity": "",
+                      "snapshot_created_at": "2026-08-30T04:04:00+00:00",
+                      "source_node_id": "agent:runtime:reference-workload"
+                    },
+                    {
+                      "attribute_digest": "sha256:d6357ff798ff67499a12f322299929ed37af3d8645d5901b9b360cedb5d547c4",
+                      "data_sources": [
+                        "identity_model"
+                      ],
+                      "risk_assessment": {
+                        "basis": null,
+                        "scope": null,
+                        "status": "not_assessed"
+                      },
+                      "risk_score": 0.0,
+                      "scan_id": "reference-identity-permission-scan",
+                      "severity": "",
+                      "snapshot_created_at": "2026-08-30T04:05:00+00:00",
+                      "source_node_id": "agent:model:reference-workload"
+                    }
+                  ],
+                  "source_scan_ids": [
+                    "reference-identity-permission-scan",
+                    "reference-kubernetes-iac-scan",
+                    "reference-mcp-config-scan",
+                    "reference-runtime-observation"
+                  ]
+                },
+                "modeled": true,
+                "risk_assessment": {
+                  "basis": null,
+                  "scope": null,
+                  "scored_value": 0.0,
+                  "status": "not_assessed"
+                },
+                "runtime_id": "reference-evidence-workload",
+                "service_account": "reference-evidence-workload"
+              },
+              "canonical_id": "runtime-agent:reference-evidence-workload",
+              "category_uid": 5,
+              "class_uid": 4001,
+              "compliance_tags": [],
+              "data_sources": [
+                "gateway_runtime",
+                "identity_model",
+                "kubernetes_iac",
+                "mcp_config"
+              ],
+              "dimensions": {},
+              "entity_type": "agent",
+              "evidence_provenance": {
+                "execution": "not_established",
+                "first_seen": "2026-08-30T04:02:00+00:00",
+                "last_seen": "2026-08-30T04:05:00+00:00",
+                "schema_version": "agent-bom.graph-evidence/v1",
+                "source_snapshot_ids": [
+                  "reference-identity-permission-scan",
+                  "reference-kubernetes-iac-scan",
+                  "reference-mcp-config-scan",
+                  "reference-runtime-observation"
+                ],
+                "sources": [
+                  "gateway_runtime",
+                  "identity_model",
+                  "kubernetes_iac",
+                  "mcp_config"
+                ],
+                "tier": "unspecified",
+                "time_basis": "recorded_observation"
+              },
+              "first_seen": "2026-08-30T04:02:00+00:00",
+              "id": "agent:model:reference-workload",
+              "label": "reference-evidence-workload",
+              "last_seen": "2026-08-30T04:05:00+00:00",
+              "risk_assessment": {
+                "basis": null,
+                "scope": null,
+                "status": "not_assessed"
+              },
+              "risk_score": 0.0,
+              "severity": "",
+              "severity_id": 0,
+              "status": "active",
+              "type_uid": 400101
+            },
+            {
+              "attributes": {
+                "canonical_id": "mcp-server:reference-lab:document-review",
+                "correlation": {
+                  "conflict_fields": [],
+                  "identity_basis": "runtime_stable_id",
+                  "identity_version": "scoped-identity.v7",
+                  "observation_count": 1,
+                  "observations": [
+                    {
+                      "attribute_digest": "sha256:9a64077891cf188043e3c1ad3a26288ebe0209f60f4625b9a3b89cbe8a6ac692",
+                      "data_sources": [
+                        "mcp_config"
+                      ],
+                      "risk_assessment": {
+                        "basis": null,
+                        "scope": null,
+                        "status": "not_assessed"
+                      },
+                      "risk_score": 0.0,
+                      "scan_id": "reference-mcp-config-scan",
+                      "severity": "",
+                      "snapshot_created_at": "2026-08-30T04:03:00+00:00",
+                      "source_node_id": "server:mcp:document-review"
+                    }
+                  ],
+                  "source_scan_ids": [
+                    "reference-mcp-config-scan"
+                  ]
+                },
+                "image_digest": "sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a",
+                "risk_assessment": {
+                  "basis": null,
+                  "scope": null,
+                  "scored_value": 0.0,
+                  "status": "not_assessed"
+                },
+                "stable_id": "mcp-server:reference-lab:document-review"
+              },
+              "canonical_id": "mcp-server:reference-lab:document-review",
+              "category_uid": 5,
+              "class_uid": 4001,
+              "compliance_tags": [],
+              "data_sources": [
+                "mcp_config"
+              ],
+              "dimensions": {},
+              "entity_type": "server",
+              "evidence_provenance": {
+                "execution": "not_established",
+                "first_seen": "2026-08-30T04:03:00+00:00",
+                "last_seen": "2026-08-30T04:03:00+00:00",
+                "schema_version": "agent-bom.graph-evidence/v1",
+                "source_snapshot_ids": [
+                  "reference-mcp-config-scan"
+                ],
+                "sources": [
+                  "mcp_config"
+                ],
+                "tier": "unspecified",
+                "time_basis": "recorded_observation"
+              },
+              "first_seen": "2026-08-30T04:03:00+00:00",
+              "id": "server:mcp:document-review",
+              "label": "document-review MCP",
+              "last_seen": "2026-08-30T04:03:00+00:00",
+              "risk_assessment": {
+                "basis": null,
+                "scope": null,
+                "status": "not_assessed"
+              },
+              "risk_score": 0.0,
+              "severity": "",
+              "severity_id": 0,
+              "status": "active",
+              "type_uid": 400101
+            },
+            {
+              "attributes": {
+                "canonical_id": "pkg:pypi/pillow@9.0.0",
+                "correlation": {
+                  "conflict_fields": [],
+                  "identity_basis": "purl",
+                  "identity_version": "scoped-identity.v7",
+                  "observation_count": 4,
+                  "observations": [
+                    {
+                      "attribute_digest": "sha256:98984700d5f5c77f1b882b1b713cb75c09673593ca8d610940378ec298b7a538",
+                      "data_sources": [
+                        "repository_parser"
+                      ],
+                      "risk_assessment": {
+                        "basis": null,
+                        "scope": null,
+                        "status": "not_assessed"
+                      },
+                      "risk_score": 0.0,
+                      "scan_id": "reference-repository-scan",
+                      "severity": "",
+                      "snapshot_created_at": "2026-08-30T04:00:00+00:00",
+                      "source_node_id": "package:repo:pillow"
+                    },
+                    {
+                      "attribute_digest": "sha256:98984700d5f5c77f1b882b1b713cb75c09673593ca8d610940378ec298b7a538",
+                      "data_sources": [
+                        "cyclonedx_sbom"
+                      ],
+                      "risk_assessment": {
+                        "basis": null,
+                        "scope": null,
+                        "status": "not_assessed"
+                      },
+                      "risk_score": 8.8,
+                      "scan_id": "reference-image-sbom-scan",
+                      "severity": "high",
+                      "snapshot_created_at": "2026-08-30T04:01:00+00:00",
+                      "source_node_id": "package:sbom:pillow"
+                    },
+                    {
+                      "attribute_digest": "sha256:f1f74b36894189d6acd4540b763cc80b8d0097cc693617acb6e95c1a52e4d7a9",
+                      "data_sources": [
+                        "kubernetes_iac_sbom_projection"
+                      ],
+                      "risk_assessment": {
+                        "basis": null,
+                        "scope": null,
+                        "status": "not_assessed"
+                      },
+                      "risk_score": 0.0,
+                      "scan_id": "reference-kubernetes-iac-scan",
+                      "severity": "",
+                      "snapshot_created_at": "2026-08-30T04:02:00+00:00",
+                      "source_node_id": "package:iac:pillow"
+                    },
+                    {
+                      "attribute_digest": "sha256:f1f74b36894189d6acd4540b763cc80b8d0097cc693617acb6e95c1a52e4d7a9",
+                      "data_sources": [
+                        "mcp_config_image_projection"
+                      ],
+                      "risk_assessment": {
+                        "basis": null,
+                        "scope": null,
+                        "status": "not_assessed"
+                      },
+                      "risk_score": 0.0,
+                      "scan_id": "reference-mcp-config-scan",
+                      "severity": "",
+                      "snapshot_created_at": "2026-08-30T04:03:00+00:00",
+                      "source_node_id": "package:mcp:pillow"
+                    }
+                  ],
+                  "source_scan_ids": [
+                    "reference-image-sbom-scan",
+                    "reference-kubernetes-iac-scan",
+                    "reference-mcp-config-scan",
+                    "reference-repository-scan"
+                  ]
+                },
+                "modeled": true,
+                "purl": "pkg:pypi/pillow@9.0.0",
+                "risk_assessment": {
+                  "basis": null,
+                  "scope": null,
+                  "scored_value": 8.8,
+                  "status": "not_assessed"
+                }
+              },
+              "canonical_id": "pkg:pypi/pillow@9.0.0",
+              "category_uid": 5,
+              "class_uid": 4001,
+              "compliance_tags": [],
+              "data_sources": [
+                "cyclonedx_sbom",
+                "kubernetes_iac_sbom_projection",
+                "mcp_config_image_projection",
+                "repository_parser"
+              ],
+              "dimensions": {},
+              "entity_type": "package",
+              "evidence_provenance": {
+                "execution": "not_established",
+                "first_seen": "2026-08-30T04:00:00+00:00",
+                "last_seen": "2026-08-30T04:03:00+00:00",
+                "schema_version": "agent-bom.graph-evidence/v1",
+                "source_snapshot_ids": [
+                  "reference-image-sbom-scan",
+                  "reference-kubernetes-iac-scan",
+                  "reference-mcp-config-scan",
+                  "reference-repository-scan"
+                ],
+                "sources": [
+                  "cyclonedx_sbom",
+                  "kubernetes_iac_sbom_projection",
+                  "mcp_config_image_projection",
+                  "repository_parser"
+                ],
+                "tier": "unspecified",
+                "time_basis": "recorded_observation"
+              },
+              "first_seen": "2026-08-30T04:00:00+00:00",
+              "id": "package:mcp:pillow",
+              "label": "pillow@9.0.0",
+              "last_seen": "2026-08-30T04:03:00+00:00",
+              "risk_assessment": {
+                "basis": null,
+                "scope": null,
+                "status": "not_assessed"
+              },
+              "risk_score": 8.8,
+              "severity": "high",
+              "severity_id": 4,
+              "status": "active",
+              "type_uid": 400101
+            },
+            {
+              "attributes": {
+                "canonical_id": "CVE-2023-4863",
+                "correlation": {
+                  "conflict_fields": [],
+                  "identity_basis": "canonical_id",
+                  "identity_version": "scoped-identity.v7",
+                  "observation_count": 1,
+                  "observations": [
+                    {
+                      "attribute_digest": "sha256:914b28e9904543fb9feb40ebed3ebe25bcf8f1d452584ad3c3cfdcfdb6a7515b",
+                      "data_sources": [
+                        "bundled_advisory_scanner"
+                      ],
+                      "risk_assessment": {
+                        "basis": null,
+                        "scope": null,
+                        "status": "not_assessed"
+                      },
+                      "risk_score": 8.8,
+                      "scan_id": "reference-image-sbom-scan",
+                      "severity": "high",
+                      "snapshot_created_at": "2026-08-30T04:01:00+00:00",
+                      "source_node_id": "vulnerability:sbom:cve-2023-4863"
+                    }
+                  ],
+                  "source_scan_ids": [
+                    "reference-image-sbom-scan"
+                  ]
+                },
+                "finding_id": "reference-finding-cve-2023-4863",
+                "is_kev": true,
+                "risk_assessment": {
+                  "basis": null,
+                  "scope": null,
+                  "scored_value": 8.8,
+                  "status": "not_assessed"
+                }
+              },
+              "canonical_id": "CVE-2023-4863",
+              "category_uid": 2,
+              "class_uid": 2001,
+              "compliance_tags": [],
+              "data_sources": [
+                "bundled_advisory_scanner"
+              ],
+              "dimensions": {},
+              "entity_type": "vulnerability",
+              "evidence_provenance": {
+                "execution": "not_established",
+                "first_seen": "2026-08-30T04:01:00+00:00",
+                "last_seen": "2026-08-30T04:01:00+00:00",
+                "schema_version": "agent-bom.graph-evidence/v1",
+                "source_snapshot_ids": [
+                  "reference-image-sbom-scan"
+                ],
+                "sources": [
+                  "bundled_advisory_scanner"
+                ],
+                "tier": "unspecified",
+                "time_basis": "recorded_observation"
+              },
+              "first_seen": "2026-08-30T04:01:00+00:00",
+              "id": "vulnerability:sbom:cve-2023-4863",
+              "label": "CVE-2023-4863",
+              "last_seen": "2026-08-30T04:01:00+00:00",
+              "risk_assessment": {
+                "basis": null,
+                "scope": null,
+                "status": "not_assessed"
+              },
+              "risk_score": 8.8,
+              "severity": "high",
+              "severity_id": 4,
+              "status": "active",
+              "type_uid": 200101
+            }
+          ],
+          "occurrence_count": 1,
+          "occurrence_path_ids": [
+            "agent:model:reference-workload::vulnerability:sbom:cve-2023-4863::agent:model:reference-workload->server:mcp:document-review->package:mcp:pillow->vulnerability:sbom:cve-2023-4863::uses,depends_on,vulnerable_to"
+          ],
+          "rank": 1,
+          "rank_meta": {
+            "environment_weight": 1.0,
+            "environments": [],
+            "raw_severity": "high",
+            "reachability": "likely",
+            "tool_capabilities": []
+          },
+          "risk_reasons": [
+            {
+              "detail": "reference-evidence-workload has recorded runtime activity; end-to-end reachability is assessed separately.",
+              "kind": "runtime_observed",
+              "label": "Runtime-observed"
+            },
+            {
+              "detail": "Composite risk is high enough to prioritize before broad topology review.",
+              "kind": "high_reach",
+              "label": "High reach"
+            },
+            {
+              "detail": "1 tool(s) are reachable from the affected agent/server.",
+              "kind": "tool_reach",
+              "label": "Tool reach"
+            },
+            {
+              "detail": "1 vulnerability or misconfiguration finding(s) anchor this path.",
+              "kind": "finding",
+              "label": "Finding in chain"
+            }
+          ],
+          "semantic_key": "finding=cve-2023-4863&agent=agent%3Amodel%3Areference-workload&package=package%3Amcp%3Apillow&asset=server%3Amcp%3Adocument-review",
+          "sequence_labels": [
+            "reference-evidence-workload",
+            "document-review MCP",
+            "pillow@9.0.0",
+            "CVE-2023-4863"
+          ],
+          "summary": "Unverified structural candidate: graph topology connects the agent and vulnerable package/server, but no executable graph or symbol path has been proven.",
+          "title": "CVE-2023-4863 via reference-evidence-workload with render_untrusted_image"
+        },
+        {
+          "affected": {
             "agents": [],
             "credentials": [],
             "finding_labels": [
@@ -81,7 +1135,7 @@
                 "entry_count": 1,
                 "evaluated_entry_count": 1,
                 "hop_count": 2,
-                "node_count": 10,
+                "node_count": 11,
                 "result_count": 1
               },
               "reason_codes": [],
@@ -98,7 +1152,7 @@
             ],
             "hop_evidence": [
               {
-                "canonical_edge_id": "dc5515f8-d6b7-5bd4-ae49-33b7a7862a54",
+                "canonical_edge_id": "8e2d4884-57e9-564e-8ef5-bf853fa24a9d",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
@@ -114,12 +1168,12 @@
                 "source_snapshot_ids": [
                   "reference-kubernetes-iac-scan"
                 ],
-                "target_node_id": "package:iac:pillow",
+                "target_node_id": "package:mcp:pillow",
                 "traversable": true,
                 "truncated": false
               },
               {
-                "canonical_edge_id": "2941dee5-f391-5cfc-84b2-e4f32cac32e0",
+                "canonical_edge_id": "fdb66cb8-b823-5c9f-b6dd-ca979f36c3ca",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
@@ -133,7 +1187,7 @@
                 "relationship_provenance": "recorded",
                 "runtime_observed_state": "not_observed",
                 "runtime_references": [],
-                "source_node_id": "package:iac:pillow",
+                "source_node_id": "package:mcp:pillow",
                 "source_snapshot_ids": [
                   "reference-image-sbom-scan"
                 ],
@@ -144,7 +1198,7 @@
             ],
             "hops": [
               "container:iac:reference-api",
-              "package:iac:pillow",
+              "package:mcp:pillow",
               "vulnerability:sbom:cve-2023-4863"
             ],
             "mitre_technique_ids": [],
@@ -175,8 +1229,8 @@
               "serverName": "reference-evidence-api@sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a"
             },
             "edgeIds": [
-              "contains:container:iac:reference-api:package:iac:pillow",
-              "vulnerable_to:package:iac:pillow:vulnerability:sbom:cve-2023-4863"
+              "contains:container:iac:reference-api:package:mcp:pillow",
+              "vulnerable_to:package:mcp:pillow:vulnerability:sbom:cve-2023-4863"
             ],
             "evidence": {
               "attackComplexity": null,
@@ -239,7 +1293,7 @@
             ],
             "hopEvidence": [
               {
-                "canonical_edge_id": "dc5515f8-d6b7-5bd4-ae49-33b7a7862a54",
+                "canonical_edge_id": "8e2d4884-57e9-564e-8ef5-bf853fa24a9d",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
@@ -256,12 +1310,12 @@
                 "source_snapshot_ids": [
                   "reference-kubernetes-iac-scan"
                 ],
-                "target_node_id": "package:iac:pillow",
+                "target_node_id": "package:mcp:pillow",
                 "traversable": true,
                 "truncated": false
               },
               {
-                "canonical_edge_id": "2941dee5-f391-5cfc-84b2-e4f32cac32e0",
+                "canonical_edge_id": "fdb66cb8-b823-5c9f-b6dd-ca979f36c3ca",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
@@ -276,7 +1330,7 @@
                 "runtime_observed_state": "not_observed",
                 "runtime_outcome": "unknown",
                 "runtime_references": [],
-                "source_node_id": "package:iac:pillow",
+                "source_node_id": "package:mcp:pillow",
                 "source_snapshot_ids": [
                   "reference-image-sbom-scan"
                 ],
@@ -317,22 +1371,24 @@
                 "evidenceProvenance": {
                   "execution": "not_established",
                   "first_seen": "2026-08-30T04:00:00+00:00",
-                  "last_seen": "2026-08-30T04:02:00+00:00",
+                  "last_seen": "2026-08-30T04:03:00+00:00",
                   "schema_version": "agent-bom.graph-evidence/v1",
                   "source_snapshot_ids": [
                     "reference-image-sbom-scan",
                     "reference-kubernetes-iac-scan",
+                    "reference-mcp-config-scan",
                     "reference-repository-scan"
                   ],
                   "sources": [
                     "cyclonedx_sbom",
                     "kubernetes_iac_sbom_projection",
+                    "mcp_config_image_projection",
                     "repository_parser"
                   ],
                   "tier": "unspecified",
                   "time_basis": "recorded_observation"
                 },
-                "id": "package:iac:pillow",
+                "id": "package:mcp:pillow",
                 "label": "pillow@9.0.0",
                 "rawLabel": "pillow@9.0.0",
                 "riskScore": 8.8,
@@ -373,18 +1429,18 @@
                 "severity": "high"
               }
             ],
-            "id": "container:iac:reference-api::vulnerability:sbom:cve-2023-4863::container:iac:reference-api->package:iac:pillow->vulnerability:sbom:cve-2023-4863::contains,vulnerable_to",
+            "id": "container:iac:reference-api::vulnerability:sbom:cve-2023-4863::container:iac:reference-api->package:mcp:pillow->vulnerability:sbom:cve-2023-4863::contains,vulnerable_to",
             "label": "CVE-2023-4863 via reference-evidence-api@sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a",
             "nodeIds": [
               "container:iac:reference-api",
-              "package:iac:pillow",
+              "package:mcp:pillow",
               "vulnerability:sbom:cve-2023-4863"
             ],
             "provenance": {
               "scanId": "reference-evidence-correlation-v1",
               "source": "graph_attack_path"
             },
-            "rank": 1,
+            "rank": 2,
             "reachability": "likely",
             "reachabilityBasis": [
               "insufficient_evidence",
@@ -396,18 +1452,18 @@
               {
                 "confidence": 1.0,
                 "direction": "directed",
-                "id": "contains:container:iac:reference-api:package:iac:pillow",
+                "id": "contains:container:iac:reference-api:package:mcp:pillow",
                 "relationship": "contains",
                 "source": "container:iac:reference-api",
-                "target": "package:iac:pillow",
+                "target": "package:mcp:pillow",
                 "traversable": true
               },
               {
                 "confidence": 1.0,
                 "direction": "directed",
-                "id": "vulnerable_to:package:iac:pillow:vulnerability:sbom:cve-2023-4863",
+                "id": "vulnerable_to:package:mcp:pillow:vulnerability:sbom:cve-2023-4863",
                 "relationship": "vulnerable_to",
-                "source": "package:iac:pillow",
+                "source": "package:mcp:pillow",
                 "target": "vulnerability:sbom:cve-2023-4863",
                 "traversable": true
               }
@@ -471,7 +1527,7 @@
               "severity": "high"
             }
           },
-          "id": "container:iac:reference-api::vulnerability:sbom:cve-2023-4863::container:iac:reference-api->package:iac:pillow->vulnerability:sbom:cve-2023-4863::contains,vulnerable_to",
+          "id": "container:iac:reference-api::vulnerability:sbom:cve-2023-4863::container:iac:reference-api->package:mcp:pillow->vulnerability:sbom:cve-2023-4863::contains,vulnerable_to",
           "next_actions": [
             {
               "detail": "Open the first finding and confirm the root cause before expanding the graph.",
@@ -568,7 +1624,7 @@
                   "conflict_fields": [],
                   "identity_basis": "purl",
                   "identity_version": "scoped-identity.v7",
-                  "observation_count": 3,
+                  "observation_count": 4,
                   "observations": [
                     {
                       "attribute_digest": "sha256:98984700d5f5c77f1b882b1b713cb75c09673593ca8d610940378ec298b7a538",
@@ -617,11 +1673,28 @@
                       "severity": "",
                       "snapshot_created_at": "2026-08-30T04:02:00+00:00",
                       "source_node_id": "package:iac:pillow"
+                    },
+                    {
+                      "attribute_digest": "sha256:f1f74b36894189d6acd4540b763cc80b8d0097cc693617acb6e95c1a52e4d7a9",
+                      "data_sources": [
+                        "mcp_config_image_projection"
+                      ],
+                      "risk_assessment": {
+                        "basis": null,
+                        "scope": null,
+                        "status": "not_assessed"
+                      },
+                      "risk_score": 0.0,
+                      "scan_id": "reference-mcp-config-scan",
+                      "severity": "",
+                      "snapshot_created_at": "2026-08-30T04:03:00+00:00",
+                      "source_node_id": "package:mcp:pillow"
                     }
                   ],
                   "source_scan_ids": [
                     "reference-image-sbom-scan",
                     "reference-kubernetes-iac-scan",
+                    "reference-mcp-config-scan",
                     "reference-repository-scan"
                   ]
                 },
@@ -641,6 +1714,7 @@
               "data_sources": [
                 "cyclonedx_sbom",
                 "kubernetes_iac_sbom_projection",
+                "mcp_config_image_projection",
                 "repository_parser"
               ],
               "dimensions": {},
@@ -648,25 +1722,27 @@
               "evidence_provenance": {
                 "execution": "not_established",
                 "first_seen": "2026-08-30T04:00:00+00:00",
-                "last_seen": "2026-08-30T04:02:00+00:00",
+                "last_seen": "2026-08-30T04:03:00+00:00",
                 "schema_version": "agent-bom.graph-evidence/v1",
                 "source_snapshot_ids": [
                   "reference-image-sbom-scan",
                   "reference-kubernetes-iac-scan",
+                  "reference-mcp-config-scan",
                   "reference-repository-scan"
                 ],
                 "sources": [
                   "cyclonedx_sbom",
                   "kubernetes_iac_sbom_projection",
+                  "mcp_config_image_projection",
                   "repository_parser"
                 ],
                 "tier": "unspecified",
                 "time_basis": "recorded_observation"
               },
               "first_seen": "2026-08-30T04:00:00+00:00",
-              "id": "package:iac:pillow",
+              "id": "package:mcp:pillow",
               "label": "pillow@9.0.0",
-              "last_seen": "2026-08-30T04:02:00+00:00",
+              "last_seen": "2026-08-30T04:03:00+00:00",
               "risk_assessment": {
                 "basis": null,
                 "scope": null,
@@ -758,9 +1834,9 @@
           ],
           "occurrence_count": 1,
           "occurrence_path_ids": [
-            "container:iac:reference-api::vulnerability:sbom:cve-2023-4863::container:iac:reference-api->package:iac:pillow->vulnerability:sbom:cve-2023-4863::contains,vulnerable_to"
+            "container:iac:reference-api::vulnerability:sbom:cve-2023-4863::container:iac:reference-api->package:mcp:pillow->vulnerability:sbom:cve-2023-4863::contains,vulnerable_to"
           ],
-          "rank": 1,
+          "rank": 2,
           "rank_meta": {
             "environment_weight": 1.0,
             "environments": [],
@@ -780,7 +1856,7 @@
               "label": "Finding in chain"
             }
           ],
-          "semantic_key": "finding=cve-2023-4863&agent=container%3Aiac%3Areference-api&package=package%3Aiac%3Apillow&asset=container%3Aiac%3Areference-api",
+          "semantic_key": "finding=cve-2023-4863&agent=container%3Aiac%3Areference-api&package=package%3Amcp%3Apillow&asset=container%3Aiac%3Areference-api",
           "sequence_labels": [
             "reference-evidence-api@sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a",
             "pillow@9.0.0",
@@ -821,7 +1897,7 @@
                 "entry_count": 1,
                 "evaluated_entry_count": 1,
                 "hop_count": 2,
-                "node_count": 10,
+                "node_count": 11,
                 "result_count": 1
               },
               "reason_codes": [],
@@ -838,7 +1914,7 @@
             ],
             "hop_evidence": [
               {
-                "canonical_edge_id": "a6cb36c4-bb8a-5918-8515-3fc46c1e23ed",
+                "canonical_edge_id": "550df527-a763-50a0-afd7-47a9ae5acea5",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
@@ -854,12 +1930,12 @@
                 "source_snapshot_ids": [
                   "reference-image-sbom-scan"
                 ],
-                "target_node_id": "package:iac:pillow",
+                "target_node_id": "package:mcp:pillow",
                 "traversable": true,
                 "truncated": false
               },
               {
-                "canonical_edge_id": "2941dee5-f391-5cfc-84b2-e4f32cac32e0",
+                "canonical_edge_id": "fdb66cb8-b823-5c9f-b6dd-ca979f36c3ca",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
@@ -873,7 +1949,7 @@
                 "relationship_provenance": "recorded",
                 "runtime_observed_state": "not_observed",
                 "runtime_references": [],
-                "source_node_id": "package:iac:pillow",
+                "source_node_id": "package:mcp:pillow",
                 "source_snapshot_ids": [
                   "reference-image-sbom-scan"
                 ],
@@ -884,7 +1960,7 @@
             ],
             "hops": [
               "container:sbom:reference-api",
-              "package:iac:pillow",
+              "package:mcp:pillow",
               "vulnerability:sbom:cve-2023-4863"
             ],
             "mitre_technique_ids": [],
@@ -915,8 +1991,8 @@
               "serverName": "reference-evidence-api@sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a"
             },
             "edgeIds": [
-              "contains:container:sbom:reference-api:package:iac:pillow",
-              "vulnerable_to:package:iac:pillow:vulnerability:sbom:cve-2023-4863"
+              "contains:container:sbom:reference-api:package:mcp:pillow",
+              "vulnerable_to:package:mcp:pillow:vulnerability:sbom:cve-2023-4863"
             ],
             "evidence": {
               "attackComplexity": null,
@@ -979,7 +2055,7 @@
             ],
             "hopEvidence": [
               {
-                "canonical_edge_id": "a6cb36c4-bb8a-5918-8515-3fc46c1e23ed",
+                "canonical_edge_id": "550df527-a763-50a0-afd7-47a9ae5acea5",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
@@ -996,12 +2072,12 @@
                 "source_snapshot_ids": [
                   "reference-image-sbom-scan"
                 ],
-                "target_node_id": "package:iac:pillow",
+                "target_node_id": "package:mcp:pillow",
                 "traversable": true,
                 "truncated": false
               },
               {
-                "canonical_edge_id": "2941dee5-f391-5cfc-84b2-e4f32cac32e0",
+                "canonical_edge_id": "fdb66cb8-b823-5c9f-b6dd-ca979f36c3ca",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
@@ -1016,7 +2092,7 @@
                 "runtime_observed_state": "not_observed",
                 "runtime_outcome": "unknown",
                 "runtime_references": [],
-                "source_node_id": "package:iac:pillow",
+                "source_node_id": "package:mcp:pillow",
                 "source_snapshot_ids": [
                   "reference-image-sbom-scan"
                 ],
@@ -1057,22 +2133,24 @@
                 "evidenceProvenance": {
                   "execution": "not_established",
                   "first_seen": "2026-08-30T04:00:00+00:00",
-                  "last_seen": "2026-08-30T04:02:00+00:00",
+                  "last_seen": "2026-08-30T04:03:00+00:00",
                   "schema_version": "agent-bom.graph-evidence/v1",
                   "source_snapshot_ids": [
                     "reference-image-sbom-scan",
                     "reference-kubernetes-iac-scan",
+                    "reference-mcp-config-scan",
                     "reference-repository-scan"
                   ],
                   "sources": [
                     "cyclonedx_sbom",
                     "kubernetes_iac_sbom_projection",
+                    "mcp_config_image_projection",
                     "repository_parser"
                   ],
                   "tier": "unspecified",
                   "time_basis": "recorded_observation"
                 },
-                "id": "package:iac:pillow",
+                "id": "package:mcp:pillow",
                 "label": "pillow@9.0.0",
                 "rawLabel": "pillow@9.0.0",
                 "riskScore": 8.8,
@@ -1113,18 +2191,18 @@
                 "severity": "high"
               }
             ],
-            "id": "container:sbom:reference-api::vulnerability:sbom:cve-2023-4863::container:sbom:reference-api->package:iac:pillow->vulnerability:sbom:cve-2023-4863::contains,vulnerable_to",
+            "id": "container:sbom:reference-api::vulnerability:sbom:cve-2023-4863::container:sbom:reference-api->package:mcp:pillow->vulnerability:sbom:cve-2023-4863::contains,vulnerable_to",
             "label": "CVE-2023-4863 via reference-evidence-api@sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a",
             "nodeIds": [
               "container:sbom:reference-api",
-              "package:iac:pillow",
+              "package:mcp:pillow",
               "vulnerability:sbom:cve-2023-4863"
             ],
             "provenance": {
               "scanId": "reference-evidence-correlation-v1",
               "source": "graph_attack_path"
             },
-            "rank": 2,
+            "rank": 3,
             "reachability": "likely",
             "reachabilityBasis": [
               "insufficient_evidence",
@@ -1136,18 +2214,18 @@
               {
                 "confidence": 1.0,
                 "direction": "directed",
-                "id": "contains:container:sbom:reference-api:package:iac:pillow",
+                "id": "contains:container:sbom:reference-api:package:mcp:pillow",
                 "relationship": "contains",
                 "source": "container:sbom:reference-api",
-                "target": "package:iac:pillow",
+                "target": "package:mcp:pillow",
                 "traversable": true
               },
               {
                 "confidence": 1.0,
                 "direction": "directed",
-                "id": "vulnerable_to:package:iac:pillow:vulnerability:sbom:cve-2023-4863",
+                "id": "vulnerable_to:package:mcp:pillow:vulnerability:sbom:cve-2023-4863",
                 "relationship": "vulnerable_to",
-                "source": "package:iac:pillow",
+                "source": "package:mcp:pillow",
                 "target": "vulnerability:sbom:cve-2023-4863",
                 "traversable": true
               }
@@ -1211,7 +2289,7 @@
               "severity": "high"
             }
           },
-          "id": "container:sbom:reference-api::vulnerability:sbom:cve-2023-4863::container:sbom:reference-api->package:iac:pillow->vulnerability:sbom:cve-2023-4863::contains,vulnerable_to",
+          "id": "container:sbom:reference-api::vulnerability:sbom:cve-2023-4863::container:sbom:reference-api->package:mcp:pillow->vulnerability:sbom:cve-2023-4863::contains,vulnerable_to",
           "next_actions": [
             {
               "detail": "Open the first finding and confirm the root cause before expanding the graph.",
@@ -1308,7 +2386,7 @@
                   "conflict_fields": [],
                   "identity_basis": "purl",
                   "identity_version": "scoped-identity.v7",
-                  "observation_count": 3,
+                  "observation_count": 4,
                   "observations": [
                     {
                       "attribute_digest": "sha256:98984700d5f5c77f1b882b1b713cb75c09673593ca8d610940378ec298b7a538",
@@ -1357,11 +2435,28 @@
                       "severity": "",
                       "snapshot_created_at": "2026-08-30T04:02:00+00:00",
                       "source_node_id": "package:iac:pillow"
+                    },
+                    {
+                      "attribute_digest": "sha256:f1f74b36894189d6acd4540b763cc80b8d0097cc693617acb6e95c1a52e4d7a9",
+                      "data_sources": [
+                        "mcp_config_image_projection"
+                      ],
+                      "risk_assessment": {
+                        "basis": null,
+                        "scope": null,
+                        "status": "not_assessed"
+                      },
+                      "risk_score": 0.0,
+                      "scan_id": "reference-mcp-config-scan",
+                      "severity": "",
+                      "snapshot_created_at": "2026-08-30T04:03:00+00:00",
+                      "source_node_id": "package:mcp:pillow"
                     }
                   ],
                   "source_scan_ids": [
                     "reference-image-sbom-scan",
                     "reference-kubernetes-iac-scan",
+                    "reference-mcp-config-scan",
                     "reference-repository-scan"
                   ]
                 },
@@ -1381,6 +2476,7 @@
               "data_sources": [
                 "cyclonedx_sbom",
                 "kubernetes_iac_sbom_projection",
+                "mcp_config_image_projection",
                 "repository_parser"
               ],
               "dimensions": {},
@@ -1388,25 +2484,27 @@
               "evidence_provenance": {
                 "execution": "not_established",
                 "first_seen": "2026-08-30T04:00:00+00:00",
-                "last_seen": "2026-08-30T04:02:00+00:00",
+                "last_seen": "2026-08-30T04:03:00+00:00",
                 "schema_version": "agent-bom.graph-evidence/v1",
                 "source_snapshot_ids": [
                   "reference-image-sbom-scan",
                   "reference-kubernetes-iac-scan",
+                  "reference-mcp-config-scan",
                   "reference-repository-scan"
                 ],
                 "sources": [
                   "cyclonedx_sbom",
                   "kubernetes_iac_sbom_projection",
+                  "mcp_config_image_projection",
                   "repository_parser"
                 ],
                 "tier": "unspecified",
                 "time_basis": "recorded_observation"
               },
               "first_seen": "2026-08-30T04:00:00+00:00",
-              "id": "package:iac:pillow",
+              "id": "package:mcp:pillow",
               "label": "pillow@9.0.0",
-              "last_seen": "2026-08-30T04:02:00+00:00",
+              "last_seen": "2026-08-30T04:03:00+00:00",
               "risk_assessment": {
                 "basis": null,
                 "scope": null,
@@ -1498,9 +2596,9 @@
           ],
           "occurrence_count": 1,
           "occurrence_path_ids": [
-            "container:sbom:reference-api::vulnerability:sbom:cve-2023-4863::container:sbom:reference-api->package:iac:pillow->vulnerability:sbom:cve-2023-4863::contains,vulnerable_to"
+            "container:sbom:reference-api::vulnerability:sbom:cve-2023-4863::container:sbom:reference-api->package:mcp:pillow->vulnerability:sbom:cve-2023-4863::contains,vulnerable_to"
           ],
-          "rank": 2,
+          "rank": 3,
           "rank_meta": {
             "environment_weight": 1.0,
             "environments": [],
@@ -1520,7 +2618,7 @@
               "label": "Finding in chain"
             }
           ],
-          "semantic_key": "finding=cve-2023-4863&agent=container%3Asbom%3Areference-api&package=package%3Aiac%3Apillow&asset=container%3Asbom%3Areference-api",
+          "semantic_key": "finding=cve-2023-4863&agent=container%3Asbom%3Areference-api&package=package%3Amcp%3Apillow&asset=container%3Asbom%3Areference-api",
           "sequence_labels": [
             "reference-evidence-api@sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a",
             "pillow@9.0.0",
@@ -1559,7 +2657,7 @@
                 "entry_count": 1,
                 "evaluated_entry_count": 1,
                 "hop_count": 2,
-                "node_count": 10,
+                "node_count": 11,
                 "result_count": 1
               },
               "reason_codes": [],
@@ -1576,7 +2674,7 @@
             ],
             "hop_evidence": [
               {
-                "canonical_edge_id": "c23a1d0f-1466-5f06-b5b0-4aeb6eaa4eec",
+                "canonical_edge_id": "c0ad34e7-e3b8-57f4-9899-ff4ffb2b72cb",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
@@ -1592,12 +2690,12 @@
                 "source_snapshot_ids": [
                   "reference-repository-scan"
                 ],
-                "target_node_id": "package:iac:pillow",
+                "target_node_id": "package:mcp:pillow",
                 "traversable": true,
                 "truncated": false
               },
               {
-                "canonical_edge_id": "2941dee5-f391-5cfc-84b2-e4f32cac32e0",
+                "canonical_edge_id": "fdb66cb8-b823-5c9f-b6dd-ca979f36c3ca",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
@@ -1611,7 +2709,7 @@
                 "relationship_provenance": "recorded",
                 "runtime_observed_state": "not_observed",
                 "runtime_references": [],
-                "source_node_id": "package:iac:pillow",
+                "source_node_id": "package:mcp:pillow",
                 "source_snapshot_ids": [
                   "reference-image-sbom-scan"
                 ],
@@ -1622,7 +2720,7 @@
             ],
             "hops": [
               "source:pinned-package",
-              "package:iac:pillow",
+              "package:mcp:pillow",
               "vulnerability:sbom:cve-2023-4863"
             ],
             "mitre_technique_ids": [],
@@ -1651,8 +2749,8 @@
               "serverName": ""
             },
             "edgeIds": [
-              "depends_on:source:pinned-package:package:iac:pillow",
-              "vulnerable_to:package:iac:pillow:vulnerability:sbom:cve-2023-4863"
+              "depends_on:source:pinned-package:package:mcp:pillow",
+              "vulnerable_to:package:mcp:pillow:vulnerability:sbom:cve-2023-4863"
             ],
             "evidence": {
               "attackComplexity": null,
@@ -1715,7 +2813,7 @@
             ],
             "hopEvidence": [
               {
-                "canonical_edge_id": "c23a1d0f-1466-5f06-b5b0-4aeb6eaa4eec",
+                "canonical_edge_id": "c0ad34e7-e3b8-57f4-9899-ff4ffb2b72cb",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
@@ -1732,12 +2830,12 @@
                 "source_snapshot_ids": [
                   "reference-repository-scan"
                 ],
-                "target_node_id": "package:iac:pillow",
+                "target_node_id": "package:mcp:pillow",
                 "traversable": true,
                 "truncated": false
               },
               {
-                "canonical_edge_id": "2941dee5-f391-5cfc-84b2-e4f32cac32e0",
+                "canonical_edge_id": "fdb66cb8-b823-5c9f-b6dd-ca979f36c3ca",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
@@ -1752,7 +2850,7 @@
                 "runtime_observed_state": "not_observed",
                 "runtime_outcome": "unknown",
                 "runtime_references": [],
-                "source_node_id": "package:iac:pillow",
+                "source_node_id": "package:mcp:pillow",
                 "source_snapshot_ids": [
                   "reference-image-sbom-scan"
                 ],
@@ -1793,22 +2891,24 @@
                 "evidenceProvenance": {
                   "execution": "not_established",
                   "first_seen": "2026-08-30T04:00:00+00:00",
-                  "last_seen": "2026-08-30T04:02:00+00:00",
+                  "last_seen": "2026-08-30T04:03:00+00:00",
                   "schema_version": "agent-bom.graph-evidence/v1",
                   "source_snapshot_ids": [
                     "reference-image-sbom-scan",
                     "reference-kubernetes-iac-scan",
+                    "reference-mcp-config-scan",
                     "reference-repository-scan"
                   ],
                   "sources": [
                     "cyclonedx_sbom",
                     "kubernetes_iac_sbom_projection",
+                    "mcp_config_image_projection",
                     "repository_parser"
                   ],
                   "tier": "unspecified",
                   "time_basis": "recorded_observation"
                 },
-                "id": "package:iac:pillow",
+                "id": "package:mcp:pillow",
                 "label": "pillow@9.0.0",
                 "rawLabel": "pillow@9.0.0",
                 "riskScore": 8.8,
@@ -1849,18 +2949,18 @@
                 "severity": "high"
               }
             ],
-            "id": "source:pinned-package::vulnerability:sbom:cve-2023-4863::source:pinned-package->package:iac:pillow->vulnerability:sbom:cve-2023-4863::depends_on,vulnerable_to",
+            "id": "source:pinned-package::vulnerability:sbom:cve-2023-4863::source:pinned-package->package:mcp:pillow->vulnerability:sbom:cve-2023-4863::depends_on,vulnerable_to",
             "label": "CVE-2023-4863 via pinned-package.txt",
             "nodeIds": [
               "source:pinned-package",
-              "package:iac:pillow",
+              "package:mcp:pillow",
               "vulnerability:sbom:cve-2023-4863"
             ],
             "provenance": {
               "scanId": "reference-evidence-correlation-v1",
               "source": "graph_attack_path"
             },
-            "rank": 3,
+            "rank": 4,
             "reachability": "likely",
             "reachabilityBasis": [
               "insufficient_evidence",
@@ -1872,18 +2972,18 @@
               {
                 "confidence": 1.0,
                 "direction": "directed",
-                "id": "depends_on:source:pinned-package:package:iac:pillow",
+                "id": "depends_on:source:pinned-package:package:mcp:pillow",
                 "relationship": "depends_on",
                 "source": "source:pinned-package",
-                "target": "package:iac:pillow",
+                "target": "package:mcp:pillow",
                 "traversable": true
               },
               {
                 "confidence": 1.0,
                 "direction": "directed",
-                "id": "vulnerable_to:package:iac:pillow:vulnerability:sbom:cve-2023-4863",
+                "id": "vulnerable_to:package:mcp:pillow:vulnerability:sbom:cve-2023-4863",
                 "relationship": "vulnerable_to",
-                "source": "package:iac:pillow",
+                "source": "package:mcp:pillow",
                 "target": "vulnerability:sbom:cve-2023-4863",
                 "traversable": true
               }
@@ -1947,7 +3047,7 @@
               "severity": "high"
             }
           },
-          "id": "source:pinned-package::vulnerability:sbom:cve-2023-4863::source:pinned-package->package:iac:pillow->vulnerability:sbom:cve-2023-4863::depends_on,vulnerable_to",
+          "id": "source:pinned-package::vulnerability:sbom:cve-2023-4863::source:pinned-package->package:mcp:pillow->vulnerability:sbom:cve-2023-4863::depends_on,vulnerable_to",
           "next_actions": [
             {
               "detail": "Open the first finding and confirm the root cause before expanding the graph.",
@@ -2044,7 +3144,7 @@
                   "conflict_fields": [],
                   "identity_basis": "purl",
                   "identity_version": "scoped-identity.v7",
-                  "observation_count": 3,
+                  "observation_count": 4,
                   "observations": [
                     {
                       "attribute_digest": "sha256:98984700d5f5c77f1b882b1b713cb75c09673593ca8d610940378ec298b7a538",
@@ -2093,11 +3193,28 @@
                       "severity": "",
                       "snapshot_created_at": "2026-08-30T04:02:00+00:00",
                       "source_node_id": "package:iac:pillow"
+                    },
+                    {
+                      "attribute_digest": "sha256:f1f74b36894189d6acd4540b763cc80b8d0097cc693617acb6e95c1a52e4d7a9",
+                      "data_sources": [
+                        "mcp_config_image_projection"
+                      ],
+                      "risk_assessment": {
+                        "basis": null,
+                        "scope": null,
+                        "status": "not_assessed"
+                      },
+                      "risk_score": 0.0,
+                      "scan_id": "reference-mcp-config-scan",
+                      "severity": "",
+                      "snapshot_created_at": "2026-08-30T04:03:00+00:00",
+                      "source_node_id": "package:mcp:pillow"
                     }
                   ],
                   "source_scan_ids": [
                     "reference-image-sbom-scan",
                     "reference-kubernetes-iac-scan",
+                    "reference-mcp-config-scan",
                     "reference-repository-scan"
                   ]
                 },
@@ -2117,6 +3234,7 @@
               "data_sources": [
                 "cyclonedx_sbom",
                 "kubernetes_iac_sbom_projection",
+                "mcp_config_image_projection",
                 "repository_parser"
               ],
               "dimensions": {},
@@ -2124,25 +3242,27 @@
               "evidence_provenance": {
                 "execution": "not_established",
                 "first_seen": "2026-08-30T04:00:00+00:00",
-                "last_seen": "2026-08-30T04:02:00+00:00",
+                "last_seen": "2026-08-30T04:03:00+00:00",
                 "schema_version": "agent-bom.graph-evidence/v1",
                 "source_snapshot_ids": [
                   "reference-image-sbom-scan",
                   "reference-kubernetes-iac-scan",
+                  "reference-mcp-config-scan",
                   "reference-repository-scan"
                 ],
                 "sources": [
                   "cyclonedx_sbom",
                   "kubernetes_iac_sbom_projection",
+                  "mcp_config_image_projection",
                   "repository_parser"
                 ],
                 "tier": "unspecified",
                 "time_basis": "recorded_observation"
               },
               "first_seen": "2026-08-30T04:00:00+00:00",
-              "id": "package:iac:pillow",
+              "id": "package:mcp:pillow",
               "label": "pillow@9.0.0",
-              "last_seen": "2026-08-30T04:02:00+00:00",
+              "last_seen": "2026-08-30T04:03:00+00:00",
               "risk_assessment": {
                 "basis": null,
                 "scope": null,
@@ -2234,9 +3354,9 @@
           ],
           "occurrence_count": 1,
           "occurrence_path_ids": [
-            "source:pinned-package::vulnerability:sbom:cve-2023-4863::source:pinned-package->package:iac:pillow->vulnerability:sbom:cve-2023-4863::depends_on,vulnerable_to"
+            "source:pinned-package::vulnerability:sbom:cve-2023-4863::source:pinned-package->package:mcp:pillow->vulnerability:sbom:cve-2023-4863::depends_on,vulnerable_to"
           ],
-          "rank": 3,
+          "rank": 4,
           "rank_meta": {
             "environment_weight": 1.0,
             "environments": [],
@@ -2256,7 +3376,7 @@
               "label": "Finding in chain"
             }
           ],
-          "semantic_key": "finding=cve-2023-4863&agent=source%3Apinned-package&package=package%3Aiac%3Apillow&asset=",
+          "semantic_key": "finding=cve-2023-4863&agent=source%3Apinned-package&package=package%3Amcp%3Apillow&asset=",
           "sequence_labels": [
             "pinned-package.txt",
             "pillow@9.0.0",
@@ -2293,7 +3413,7 @@
                 "entry_count": 1,
                 "evaluated_entry_count": 1,
                 "hop_count": 3,
-                "node_count": 10,
+                "node_count": 11,
                 "result_count": 1
               },
               "reason_codes": [],
@@ -2573,12 +3693,14 @@
                   "source_snapshot_ids": [
                     "reference-identity-permission-scan",
                     "reference-kubernetes-iac-scan",
+                    "reference-mcp-config-scan",
                     "reference-runtime-observation"
                   ],
                   "sources": [
                     "gateway_runtime",
                     "identity_model",
-                    "kubernetes_iac"
+                    "kubernetes_iac",
+                    "mcp_config"
                   ],
                   "tier": "unspecified",
                   "time_basis": "recorded_observation"
@@ -2658,7 +3780,7 @@
               "scanId": "reference-evidence-correlation-v1",
               "source": "graph_attack_path"
             },
-            "rank": 4,
+            "rank": 5,
             "reachability": "likely",
             "reachabilityBasis": [
               "observed_graph_edges",
@@ -2879,7 +4001,7 @@
                   "conflict_fields": [],
                   "identity_basis": "runtime_stable_id",
                   "identity_version": "scoped-identity.v7",
-                  "observation_count": 3,
+                  "observation_count": 4,
                   "observations": [
                     {
                       "attribute_digest": "sha256:97d8c3e82c5107658027db1923a02dd257ce767dc3e49e49c936a5dd080793b3",
@@ -2896,6 +4018,22 @@
                       "severity": "",
                       "snapshot_created_at": "2026-08-30T04:02:00+00:00",
                       "source_node_id": "workload:reference-api"
+                    },
+                    {
+                      "attribute_digest": "sha256:8591c9e5ec7d801db84383fd0ae2696645d7f49bc6616f3f22cd18038ccd57ee",
+                      "data_sources": [
+                        "mcp_config"
+                      ],
+                      "risk_assessment": {
+                        "basis": null,
+                        "scope": null,
+                        "status": "not_assessed"
+                      },
+                      "risk_score": 0.0,
+                      "scan_id": "reference-mcp-config-scan",
+                      "severity": "",
+                      "snapshot_created_at": "2026-08-30T04:03:00+00:00",
+                      "source_node_id": "agent:mcp:reference-workload"
                     },
                     {
                       "attribute_digest": "sha256:8591c9e5ec7d801db84383fd0ae2696645d7f49bc6616f3f22cd18038ccd57ee",
@@ -2933,6 +4071,7 @@
                   "source_scan_ids": [
                     "reference-identity-permission-scan",
                     "reference-kubernetes-iac-scan",
+                    "reference-mcp-config-scan",
                     "reference-runtime-observation"
                   ]
                 },
@@ -2953,7 +4092,8 @@
               "data_sources": [
                 "gateway_runtime",
                 "identity_model",
-                "kubernetes_iac"
+                "kubernetes_iac",
+                "mcp_config"
               ],
               "dimensions": {},
               "entity_type": "agent",
@@ -2965,12 +4105,14 @@
                 "source_snapshot_ids": [
                   "reference-identity-permission-scan",
                   "reference-kubernetes-iac-scan",
+                  "reference-mcp-config-scan",
                   "reference-runtime-observation"
                 ],
                 "sources": [
                   "gateway_runtime",
                   "identity_model",
-                  "kubernetes_iac"
+                  "kubernetes_iac",
+                  "mcp_config"
                 ],
                 "tier": "unspecified",
                 "time_basis": "recorded_observation"
@@ -3078,7 +4220,7 @@
                   "observation_count": 1,
                   "observations": [
                     {
-                      "attribute_digest": "sha256:2e2aca459f11c9f706ed9d1402bb5e78bd8a37562774a7cf09c6e1364d72dcf6",
+                      "attribute_digest": "sha256:9e40af41795b545584e4fb77e97088a60748463f15e849b057eb4b359f47d945",
                       "data_sources": [
                         "identity_model"
                       ],
@@ -3098,6 +4240,7 @@
                     "reference-identity-permission-scan"
                   ]
                 },
+                "data_classification": "restricted",
                 "data_classification_tier": "crown_jewel",
                 "data_sensitivity": "restricted",
                 "modeled": true,
@@ -3151,7 +4294,7 @@
           "occurrence_path_ids": [
             "service:reference-api::data-store:reference-customer-records::service:reference-api->agent:model:reference-workload->identity:model:reference-workload->data-store:reference-customer-records::exposed_to,authenticates_as,has_permission"
           ],
-          "rank": 4,
+          "rank": 5,
           "rank_meta": {
             "environment_weight": 1.0,
             "environments": [],
@@ -3189,10 +4332,10 @@
       ],
       "completeness": {
         "complete": true,
-        "returned": 4,
+        "returned": 5,
         "sampled": false,
         "status": "complete",
-        "total": 4,
+        "total": 5,
         "truncated": false
       },
       "created_at": "2026-08-30T04:06:00+00:00",
@@ -3202,7 +4345,7 @@
         "package": ""
       },
       "remediation_priorities": {
-        "assessed_paths": 4,
+        "assessed_paths": 5,
         "candidate_count": 0,
         "complete": true,
         "coverage_basis": "recorded_paths_touching_selected_findings",
@@ -3212,24 +4355,24 @@
         "path_budget": 5000,
         "recommendation_limit": 5,
         "recommendations": [],
-        "remaining_paths": 4,
+        "remaining_paths": 5,
         "remediation_verified": false,
         "schema_version": "graph-remediation-priorities.v1",
         "source_coverage": "not_assessed",
-        "total_paths": 4
+        "total_paths": 5
       },
       "scan_id": "reference-evidence-correlation-v1",
       "summary": {
         "campaign_count": 1,
         "collapsed_occurrences": 0,
         "covered_findings": 1,
-        "edge_count": 9,
-        "highest_risk": 76.6,
-        "matched_paths": 4,
-        "node_count": 10,
-        "presentation_paths": 4,
-        "returned_paths": 4,
-        "total_paths": 4
+        "edge_count": 12,
+        "highest_risk": 87.1,
+        "matched_paths": 5,
+        "node_count": 11,
+        "presentation_paths": 5,
+        "returned_paths": 5,
+        "total_paths": 5
       },
       "tenant_id": "reference-lab"
     },
@@ -3247,7 +4390,7 @@
             "candidate_path_count": 1,
             "entry_count": 1,
             "evaluated_entry_count": 1,
-            "node_count": 10,
+            "node_count": 11,
             "result_count": 1
           },
           "reason_codes": [],
@@ -3261,7 +4404,7 @@
           "observed": {
             "alternate_chains": 0,
             "occurrences": 1,
-            "paths": 3,
+            "paths": 4,
             "unlikely_excluded": 0,
             "vex_excluded": 0
           },
@@ -3344,7 +4487,7 @@
               "entry_count": 1,
               "evaluated_entry_count": 1,
               "hop_count": 3,
-              "node_count": 10,
+              "node_count": 11,
               "result_count": 1
             },
             "reason_codes": [],
@@ -3445,10 +4588,10 @@
       ],
       "completeness": {
         "complete": true,
-        "returned": 10,
+        "returned": 11,
         "sampled": false,
         "status": "complete",
-        "total": 10,
+        "total": 11,
         "truncated": false
       },
       "created_at": "2026-08-30T04:06:00+00:00",
@@ -3501,6 +4644,56 @@
           "target_id": "identity:model:reference-workload",
           "traversable": true,
           "valid_from": "2026-08-30T04:05:00+00:00",
+          "valid_to": null,
+          "weight": 1.0
+        },
+        {
+          "activity_id": 1,
+          "canonical_id": "014e774a-c7d9-570e-9545-b8282a2d1666",
+          "confidence": 1.0,
+          "direction": "directed",
+          "evidence": {
+            "evidence_tier": "static_scan",
+            "source": "mcp_config",
+            "source_kind": "mcp_config",
+            "tier": "static_scan"
+          },
+          "first_seen": "2026-08-30T04:03:00+00:00",
+          "id": "uses:agent:model:reference-workload:server:mcp:document-review",
+          "last_seen": "2026-08-30T04:03:00+00:00",
+          "provenance": {
+            "artifact": "examples/reference-evidence-lab",
+            "correlation": {
+              "conflict_fields": [],
+              "freshness": "fresh",
+              "identity_version": "scoped-identity.v7",
+              "observation_count": 1,
+              "observations": [
+                {
+                  "confidence": 1.0,
+                  "direction": "directed",
+                  "evidence_digest": "sha256:c0585de692ef2a6538bb4a5750537d0bd7aba557a486281629ac7667d527bb94",
+                  "scan_id": "reference-mcp-config-scan",
+                  "snapshot_created_at": "2026-08-30T04:03:00+00:00",
+                  "source_edge_id": "uses:agent:mcp:reference-workload:server:mcp:document-review",
+                  "traversable": true
+                }
+              ],
+              "source_scan_ids": [
+                "reference-mcp-config-scan"
+              ]
+            },
+            "source": "mcp_config"
+          },
+          "relationship": "uses",
+          "source": "agent:model:reference-workload",
+          "source_id": "agent:model:reference-workload",
+          "source_run_id": "reference-evidence-correlation-v1",
+          "source_scan_id": "reference-evidence-correlation-v1",
+          "target": "server:mcp:document-review",
+          "target_id": "server:mcp:document-review",
+          "traversable": true,
+          "valid_from": "2026-08-30T04:03:00+00:00",
           "valid_to": null,
           "weight": 1.0
         },
@@ -3609,7 +4802,7 @@
         },
         {
           "activity_id": 1,
-          "canonical_id": "dc5515f8-d6b7-5bd4-ae49-33b7a7862a54",
+          "canonical_id": "8e2d4884-57e9-564e-8ef5-bf853fa24a9d",
           "confidence": 1.0,
           "direction": "directed",
           "evidence": {
@@ -3622,7 +4815,7 @@
             "tier": "modeled_infrastructure"
           },
           "first_seen": "2026-08-30T04:02:00+00:00",
-          "id": "contains:container:iac:reference-api:package:iac:pillow",
+          "id": "contains:container:iac:reference-api:package:mcp:pillow",
           "last_seen": "2026-08-30T04:02:00+00:00",
           "provenance": {
             "artifact": "examples/reference-evidence-lab",
@@ -3653,8 +4846,8 @@
           "source_id": "container:iac:reference-api",
           "source_run_id": "reference-evidence-correlation-v1",
           "source_scan_id": "reference-evidence-correlation-v1",
-          "target": "package:iac:pillow",
-          "target_id": "package:iac:pillow",
+          "target": "package:mcp:pillow",
+          "target_id": "package:mcp:pillow",
           "traversable": true,
           "valid_from": "2026-08-30T04:02:00+00:00",
           "valid_to": null,
@@ -3662,7 +4855,7 @@
         },
         {
           "activity_id": 1,
-          "canonical_id": "a6cb36c4-bb8a-5918-8515-3fc46c1e23ed",
+          "canonical_id": "550df527-a763-50a0-afd7-47a9ae5acea5",
           "confidence": 1.0,
           "direction": "directed",
           "evidence": {
@@ -3672,7 +4865,7 @@
             "tier": "static_scan"
           },
           "first_seen": "2026-08-30T04:01:00+00:00",
-          "id": "contains:container:sbom:reference-api:package:iac:pillow",
+          "id": "contains:container:sbom:reference-api:package:mcp:pillow",
           "last_seen": "2026-08-30T04:01:00+00:00",
           "provenance": {
             "artifact": "examples/reference-evidence-lab",
@@ -3703,8 +4896,8 @@
           "source_id": "container:sbom:reference-api",
           "source_run_id": "reference-evidence-correlation-v1",
           "source_scan_id": "reference-evidence-correlation-v1",
-          "target": "package:iac:pillow",
-          "target_id": "package:iac:pillow",
+          "target": "package:mcp:pillow",
+          "target_id": "package:mcp:pillow",
           "traversable": true,
           "valid_from": "2026-08-30T04:01:00+00:00",
           "valid_to": null,
@@ -3763,7 +4956,7 @@
         },
         {
           "activity_id": 1,
-          "canonical_id": "2941dee5-f391-5cfc-84b2-e4f32cac32e0",
+          "canonical_id": "fdb66cb8-b823-5c9f-b6dd-ca979f36c3ca",
           "confidence": 1.0,
           "direction": "directed",
           "evidence": {
@@ -3773,7 +4966,7 @@
             "tier": "static_scan"
           },
           "first_seen": "2026-08-30T04:01:00+00:00",
-          "id": "vulnerable_to:package:iac:pillow:vulnerability:sbom:cve-2023-4863",
+          "id": "vulnerable_to:package:mcp:pillow:vulnerability:sbom:cve-2023-4863",
           "last_seen": "2026-08-30T04:01:00+00:00",
           "provenance": {
             "artifact": "examples/reference-evidence-lab",
@@ -3800,14 +4993,117 @@
             "source": "bundled_advisory_scanner"
           },
           "relationship": "vulnerable_to",
-          "source": "package:iac:pillow",
-          "source_id": "package:iac:pillow",
+          "source": "package:mcp:pillow",
+          "source_id": "package:mcp:pillow",
           "source_run_id": "reference-evidence-correlation-v1",
           "source_scan_id": "reference-evidence-correlation-v1",
           "target": "vulnerability:sbom:cve-2023-4863",
           "target_id": "vulnerability:sbom:cve-2023-4863",
           "traversable": true,
           "valid_from": "2026-08-30T04:01:00+00:00",
+          "valid_to": null,
+          "weight": 1.0
+        },
+        {
+          "activity_id": 1,
+          "canonical_id": "da5e3844-dbea-55c8-9338-986aea01f4f8",
+          "confidence": 1.0,
+          "direction": "directed",
+          "evidence": {
+            "evidence_tier": "modeled_infrastructure",
+            "image_digest": "sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a",
+            "modeled": true,
+            "sbom_artifact": "examples/reference-evidence-lab/sbom.cdx.json",
+            "source": "mcp_config_image_projection",
+            "source_kind": "mcp_config_image_projection",
+            "tier": "modeled_infrastructure"
+          },
+          "first_seen": "2026-08-30T04:03:00+00:00",
+          "id": "depends_on:server:mcp:document-review:package:mcp:pillow",
+          "last_seen": "2026-08-30T04:03:00+00:00",
+          "provenance": {
+            "artifact": "examples/reference-evidence-lab",
+            "correlation": {
+              "conflict_fields": [],
+              "freshness": "fresh",
+              "identity_version": "scoped-identity.v7",
+              "observation_count": 1,
+              "observations": [
+                {
+                  "confidence": 1.0,
+                  "direction": "directed",
+                  "evidence_digest": "sha256:2923ed4714404b8d093024292bd30324a81ebd3187fa395d9e78887216192d97",
+                  "scan_id": "reference-mcp-config-scan",
+                  "snapshot_created_at": "2026-08-30T04:03:00+00:00",
+                  "source_edge_id": "depends_on:server:mcp:document-review:package:mcp:pillow",
+                  "traversable": true
+                }
+              ],
+              "source_scan_ids": [
+                "reference-mcp-config-scan"
+              ]
+            },
+            "source": "mcp_config_image_projection"
+          },
+          "relationship": "depends_on",
+          "source": "server:mcp:document-review",
+          "source_id": "server:mcp:document-review",
+          "source_run_id": "reference-evidence-correlation-v1",
+          "source_scan_id": "reference-evidence-correlation-v1",
+          "target": "package:mcp:pillow",
+          "target_id": "package:mcp:pillow",
+          "traversable": true,
+          "valid_from": "2026-08-30T04:03:00+00:00",
+          "valid_to": null,
+          "weight": 1.0
+        },
+        {
+          "activity_id": 1,
+          "canonical_id": "bcac4e30-1e7d-5564-ac49-f17665387263",
+          "confidence": 1.0,
+          "direction": "directed",
+          "evidence": {
+            "evidence_tier": "static_scan",
+            "source": "mcp_config",
+            "source_kind": "mcp_config",
+            "tier": "static_scan"
+          },
+          "first_seen": "2026-08-30T04:03:00+00:00",
+          "id": "provides_tool:server:mcp:document-review:tool:runtime:render-untrusted-image",
+          "last_seen": "2026-08-30T04:03:00+00:00",
+          "provenance": {
+            "artifact": "examples/reference-evidence-lab",
+            "correlation": {
+              "conflict_fields": [],
+              "freshness": "fresh",
+              "identity_version": "scoped-identity.v7",
+              "observation_count": 1,
+              "observations": [
+                {
+                  "confidence": 1.0,
+                  "direction": "directed",
+                  "evidence_digest": "sha256:c0585de692ef2a6538bb4a5750537d0bd7aba557a486281629ac7667d527bb94",
+                  "scan_id": "reference-mcp-config-scan",
+                  "snapshot_created_at": "2026-08-30T04:03:00+00:00",
+                  "source_edge_id": "provides_tool:server:mcp:document-review:tool:mcp:render-untrusted-image",
+                  "traversable": true
+                }
+              ],
+              "source_scan_ids": [
+                "reference-mcp-config-scan"
+              ]
+            },
+            "source": "mcp_config"
+          },
+          "relationship": "provides_tool",
+          "source": "server:mcp:document-review",
+          "source_id": "server:mcp:document-review",
+          "source_run_id": "reference-evidence-correlation-v1",
+          "source_scan_id": "reference-evidence-correlation-v1",
+          "target": "tool:runtime:render-untrusted-image",
+          "target_id": "tool:runtime:render-untrusted-image",
+          "traversable": true,
+          "valid_from": "2026-08-30T04:03:00+00:00",
           "valid_to": null,
           "weight": 1.0
         },
@@ -3864,7 +5160,7 @@
         },
         {
           "activity_id": 1,
-          "canonical_id": "c23a1d0f-1466-5f06-b5b0-4aeb6eaa4eec",
+          "canonical_id": "c0ad34e7-e3b8-57f4-9899-ff4ffb2b72cb",
           "confidence": 1.0,
           "direction": "directed",
           "evidence": {
@@ -3874,7 +5170,7 @@
             "tier": "static_scan"
           },
           "first_seen": "2026-08-30T04:00:00+00:00",
-          "id": "depends_on:source:pinned-package:package:iac:pillow",
+          "id": "depends_on:source:pinned-package:package:mcp:pillow",
           "last_seen": "2026-08-30T04:00:00+00:00",
           "provenance": {
             "artifact": "examples/reference-evidence-lab",
@@ -3905,8 +5201,8 @@
           "source_id": "source:pinned-package",
           "source_run_id": "reference-evidence-correlation-v1",
           "source_scan_id": "reference-evidence-correlation-v1",
-          "target": "package:iac:pillow",
-          "target_id": "package:iac:pillow",
+          "target": "package:mcp:pillow",
+          "target_id": "package:mcp:pillow",
           "traversable": true,
           "valid_from": "2026-08-30T04:00:00+00:00",
           "valid_to": null,
@@ -3950,7 +5246,7 @@
               "conflict_fields": [],
               "identity_basis": "runtime_stable_id",
               "identity_version": "scoped-identity.v7",
-              "observation_count": 3,
+              "observation_count": 4,
               "observations": [
                 {
                   "attribute_digest": "sha256:97d8c3e82c5107658027db1923a02dd257ce767dc3e49e49c936a5dd080793b3",
@@ -3967,6 +5263,22 @@
                   "severity": "",
                   "snapshot_created_at": "2026-08-30T04:02:00+00:00",
                   "source_node_id": "workload:reference-api"
+                },
+                {
+                  "attribute_digest": "sha256:8591c9e5ec7d801db84383fd0ae2696645d7f49bc6616f3f22cd18038ccd57ee",
+                  "data_sources": [
+                    "mcp_config"
+                  ],
+                  "risk_assessment": {
+                    "basis": null,
+                    "scope": null,
+                    "status": "not_assessed"
+                  },
+                  "risk_score": 0.0,
+                  "scan_id": "reference-mcp-config-scan",
+                  "severity": "",
+                  "snapshot_created_at": "2026-08-30T04:03:00+00:00",
+                  "source_node_id": "agent:mcp:reference-workload"
                 },
                 {
                   "attribute_digest": "sha256:8591c9e5ec7d801db84383fd0ae2696645d7f49bc6616f3f22cd18038ccd57ee",
@@ -4004,6 +5316,7 @@
               "source_scan_ids": [
                 "reference-identity-permission-scan",
                 "reference-kubernetes-iac-scan",
+                "reference-mcp-config-scan",
                 "reference-runtime-observation"
               ]
             },
@@ -4024,7 +5337,8 @@
           "data_sources": [
             "gateway_runtime",
             "identity_model",
-            "kubernetes_iac"
+            "kubernetes_iac",
+            "mcp_config"
           ],
           "dimensions": {},
           "entity_type": "agent",
@@ -4036,12 +5350,14 @@
             "source_snapshot_ids": [
               "reference-identity-permission-scan",
               "reference-kubernetes-iac-scan",
+              "reference-mcp-config-scan",
               "reference-runtime-observation"
             ],
             "sources": [
               "gateway_runtime",
               "identity_model",
-              "kubernetes_iac"
+              "kubernetes_iac",
+              "mcp_config"
             ],
             "tier": "unspecified",
             "time_basis": "recorded_observation"
@@ -4224,7 +5540,7 @@
               "observation_count": 1,
               "observations": [
                 {
-                  "attribute_digest": "sha256:2e2aca459f11c9f706ed9d1402bb5e78bd8a37562774a7cf09c6e1364d72dcf6",
+                  "attribute_digest": "sha256:9e40af41795b545584e4fb77e97088a60748463f15e849b057eb4b359f47d945",
                   "data_sources": [
                     "identity_model"
                   ],
@@ -4244,6 +5560,7 @@
                 "reference-identity-permission-scan"
               ]
             },
+            "data_classification": "restricted",
             "data_classification_tier": "crown_jewel",
             "data_sensitivity": "restricted",
             "modeled": true,
@@ -4376,7 +5693,7 @@
               "conflict_fields": [],
               "identity_basis": "purl",
               "identity_version": "scoped-identity.v7",
-              "observation_count": 3,
+              "observation_count": 4,
               "observations": [
                 {
                   "attribute_digest": "sha256:98984700d5f5c77f1b882b1b713cb75c09673593ca8d610940378ec298b7a538",
@@ -4425,11 +5742,28 @@
                   "severity": "",
                   "snapshot_created_at": "2026-08-30T04:02:00+00:00",
                   "source_node_id": "package:iac:pillow"
+                },
+                {
+                  "attribute_digest": "sha256:f1f74b36894189d6acd4540b763cc80b8d0097cc693617acb6e95c1a52e4d7a9",
+                  "data_sources": [
+                    "mcp_config_image_projection"
+                  ],
+                  "risk_assessment": {
+                    "basis": null,
+                    "scope": null,
+                    "status": "not_assessed"
+                  },
+                  "risk_score": 0.0,
+                  "scan_id": "reference-mcp-config-scan",
+                  "severity": "",
+                  "snapshot_created_at": "2026-08-30T04:03:00+00:00",
+                  "source_node_id": "package:mcp:pillow"
                 }
               ],
               "source_scan_ids": [
                 "reference-image-sbom-scan",
                 "reference-kubernetes-iac-scan",
+                "reference-mcp-config-scan",
                 "reference-repository-scan"
               ]
             },
@@ -4449,6 +5783,7 @@
           "data_sources": [
             "cyclonedx_sbom",
             "kubernetes_iac_sbom_projection",
+            "mcp_config_image_projection",
             "repository_parser"
           ],
           "dimensions": {},
@@ -4456,25 +5791,27 @@
           "evidence_provenance": {
             "execution": "not_established",
             "first_seen": "2026-08-30T04:00:00+00:00",
-            "last_seen": "2026-08-30T04:02:00+00:00",
+            "last_seen": "2026-08-30T04:03:00+00:00",
             "schema_version": "agent-bom.graph-evidence/v1",
             "source_snapshot_ids": [
               "reference-image-sbom-scan",
               "reference-kubernetes-iac-scan",
+              "reference-mcp-config-scan",
               "reference-repository-scan"
             ],
             "sources": [
               "cyclonedx_sbom",
               "kubernetes_iac_sbom_projection",
+              "mcp_config_image_projection",
               "repository_parser"
             ],
             "tier": "unspecified",
             "time_basis": "recorded_observation"
           },
           "first_seen": "2026-08-30T04:00:00+00:00",
-          "id": "package:iac:pillow",
+          "id": "package:mcp:pillow",
           "label": "pillow@9.0.0",
-          "last_seen": "2026-08-30T04:02:00+00:00",
+          "last_seen": "2026-08-30T04:03:00+00:00",
           "risk_assessment": {
             "basis": null,
             "scope": null,
@@ -4483,6 +5820,83 @@
           "risk_score": 8.8,
           "severity": "high",
           "severity_id": 4,
+          "status": "active",
+          "type_uid": 400101
+        },
+        {
+          "attributes": {
+            "canonical_id": "mcp-server:reference-lab:document-review",
+            "correlation": {
+              "conflict_fields": [],
+              "identity_basis": "runtime_stable_id",
+              "identity_version": "scoped-identity.v7",
+              "observation_count": 1,
+              "observations": [
+                {
+                  "attribute_digest": "sha256:9a64077891cf188043e3c1ad3a26288ebe0209f60f4625b9a3b89cbe8a6ac692",
+                  "data_sources": [
+                    "mcp_config"
+                  ],
+                  "risk_assessment": {
+                    "basis": null,
+                    "scope": null,
+                    "status": "not_assessed"
+                  },
+                  "risk_score": 0.0,
+                  "scan_id": "reference-mcp-config-scan",
+                  "severity": "",
+                  "snapshot_created_at": "2026-08-30T04:03:00+00:00",
+                  "source_node_id": "server:mcp:document-review"
+                }
+              ],
+              "source_scan_ids": [
+                "reference-mcp-config-scan"
+              ]
+            },
+            "image_digest": "sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a",
+            "risk_assessment": {
+              "basis": null,
+              "scope": null,
+              "scored_value": 0.0,
+              "status": "not_assessed"
+            },
+            "stable_id": "mcp-server:reference-lab:document-review"
+          },
+          "canonical_id": "mcp-server:reference-lab:document-review",
+          "category_uid": 5,
+          "class_uid": 4001,
+          "compliance_tags": [],
+          "data_sources": [
+            "mcp_config"
+          ],
+          "dimensions": {},
+          "entity_type": "server",
+          "evidence_provenance": {
+            "execution": "not_established",
+            "first_seen": "2026-08-30T04:03:00+00:00",
+            "last_seen": "2026-08-30T04:03:00+00:00",
+            "schema_version": "agent-bom.graph-evidence/v1",
+            "source_snapshot_ids": [
+              "reference-mcp-config-scan"
+            ],
+            "sources": [
+              "mcp_config"
+            ],
+            "tier": "unspecified",
+            "time_basis": "recorded_observation"
+          },
+          "first_seen": "2026-08-30T04:03:00+00:00",
+          "id": "server:mcp:document-review",
+          "label": "document-review MCP",
+          "last_seen": "2026-08-30T04:03:00+00:00",
+          "risk_assessment": {
+            "basis": null,
+            "scope": null,
+            "status": "not_assessed"
+          },
+          "risk_score": 0.0,
+          "severity": "",
+          "severity_id": 0,
           "status": "active",
           "type_uid": 400101
         },
@@ -4834,7 +6248,7 @@
               "candidate_path_count": 1,
               "entry_count": 1,
               "evaluated_entry_count": 1,
-              "node_count": 10,
+              "node_count": 11,
               "result_count": 1
             },
             "reason_codes": [],
@@ -4848,7 +6262,7 @@
             "observed": {
               "alternate_chains": 0,
               "occurrences": 1,
-              "paths": 3,
+              "paths": 4,
               "unlikely_excluded": 0,
               "vex_excluded": 0
             },
@@ -4891,7 +6305,7 @@
           "container": 2,
           "data_store": 1,
           "package": 1,
-          "server": 1,
+          "server": 2,
           "service_account": 1,
           "source_file": 1,
           "tool": 1,
@@ -4900,18 +6314,20 @@
         "relationship_types": {
           "authenticates_as": 1,
           "contains": 3,
-          "depends_on": 1,
+          "depends_on": 2,
           "exposed_to": 1,
           "has_permission": 1,
           "invoked": 1,
+          "provides_tool": 1,
+          "uses": 1,
           "vulnerable_to": 1
         },
         "severity_counts": {
           "high": 1
         },
-        "total_edges": 9,
-        "total_nodes": 10,
-        "total_nodes_source": 10
+        "total_edges": 12,
+        "total_nodes": 11,
+        "total_nodes_source": 11
       },
       "tenant_id": "reference-lab"
     },
@@ -4944,8 +6360,8 @@
       },
       {
         "created_at": "2026-08-30T04:03:00+00:00",
-        "edge_count": 0,
-        "node_count": 1,
+        "edge_count": 3,
+        "node_count": 4,
         "risk_summary": {},
         "scan_id": "reference-mcp-config-scan",
         "snapshot_kind": "scan"
@@ -4980,7 +6396,7 @@
       {
         "age_hours": 0.016667,
         "created_at": "2026-08-30T04:05:00+00:00",
-        "digest": "sha256:0eb76de3adf86e5a9c3733de3bfc45e8ed69ada0ea64c8f480d51b619b1fa8ab",
+        "digest": "sha256:62dd011eb8872b5c818ce638ab67913e6993880ad7ef32521740a30587f609a9",
         "edge_count": 2,
         "freshness": "fresh",
         "node_count": 3,
@@ -4989,7 +6405,7 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:688912e75bd305a1363ef5dd85b9ccb1e8ead25e4a616ae11465efd9b72bdf9b"
+          "value": "sha256:0994126292eec2ab3d30508266b4c27ea701801f9f7aa36a2d939bbb2ff38401"
         },
         "source_kinds": [
           "identity_model"
@@ -5036,19 +6452,20 @@
       {
         "age_hours": 0.05,
         "created_at": "2026-08-30T04:03:00+00:00",
-        "digest": "sha256:3b159f6aaca109ffda12aa87dd6c60b514330e5dcb25fb0c240ef899e41b04d8",
-        "edge_count": 0,
+        "digest": "sha256:e0619a995951c679639da969ecc166cce6a97c07ec4c6da4a45e2c2ec5f5e5f9",
+        "edge_count": 3,
         "freshness": "fresh",
-        "node_count": 1,
+        "node_count": 4,
         "scan_id": "reference-mcp-config-scan",
         "signature": {
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:35b488c035c989bf99b9a7011cb834e884ca4411f1a73ba366c2f60d3170e000"
+          "value": "sha256:fd2aa2a61f717ea968f3e56643de4026a0bd2950ae6655aa2ceb9f9036209649"
         },
         "source_kinds": [
-          "mcp_config"
+          "mcp_config",
+          "mcp_config_image_projection"
         ]
       },
       {
@@ -5088,7 +6505,7 @@
         ]
       }
     ],
-    "manifest_sha256": "sha256:01c597b6e2d9aeb08eeae2f82eca1746ecd49322aacb0a01896c4c93c564e411",
+    "manifest_sha256": "sha256:e9d2c33b3e520b2020da11de9161599f7dfaf7eaf9b03240f6c13ec9c76e7c1a",
     "max_age_hours": 168,
     "name": "Reference evidence lab",
     "output_scan_id": "reference-evidence-correlation-v1",
@@ -5106,20 +6523,20 @@
             "candidate_path_count": 1,
             "entry_count": 1,
             "evaluated_entry_count": 1,
-            "node_count": 10,
+            "node_count": 11,
             "result_count": 1
           },
           "reason_codes": [],
           "status": "complete"
         },
         "correlation_merge": {
-          "edge_count": 9,
+          "edge_count": 12,
           "edge_limit": 500000,
           "execution_strategy": "disk_backed_incremental",
-          "input_edge_observation_count": 9,
-          "input_node_observation_count": 15,
+          "input_edge_observation_count": 12,
+          "input_node_observation_count": 18,
           "max_resident_source_graphs": 1,
-          "node_count": 10,
+          "node_count": 11,
           "node_limit": 100000,
           "status": "complete",
           "truncated": false
@@ -5140,7 +6557,7 @@
         {
           "age_hours": 0.016667,
           "created_at": "2026-08-30T04:05:00+00:00",
-          "digest": "sha256:0eb76de3adf86e5a9c3733de3bfc45e8ed69ada0ea64c8f480d51b619b1fa8ab",
+          "digest": "sha256:62dd011eb8872b5c818ce638ab67913e6993880ad7ef32521740a30587f609a9",
           "edge_count": 2,
           "freshness": "fresh",
           "node_count": 3,
@@ -5149,7 +6566,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:688912e75bd305a1363ef5dd85b9ccb1e8ead25e4a616ae11465efd9b72bdf9b"
+            "value": "sha256:0994126292eec2ab3d30508266b4c27ea701801f9f7aa36a2d939bbb2ff38401"
           },
           "source_kinds": [
             "identity_model"
@@ -5196,19 +6613,20 @@
         {
           "age_hours": 0.05,
           "created_at": "2026-08-30T04:03:00+00:00",
-          "digest": "sha256:3b159f6aaca109ffda12aa87dd6c60b514330e5dcb25fb0c240ef899e41b04d8",
-          "edge_count": 0,
+          "digest": "sha256:e0619a995951c679639da969ecc166cce6a97c07ec4c6da4a45e2c2ec5f5e5f9",
+          "edge_count": 3,
           "freshness": "fresh",
-          "node_count": 1,
+          "node_count": 4,
           "scan_id": "reference-mcp-config-scan",
           "signature": {
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:35b488c035c989bf99b9a7011cb834e884ca4411f1a73ba366c2f60d3170e000"
+            "value": "sha256:fd2aa2a61f717ea968f3e56643de4026a0bd2950ae6655aa2ceb9f9036209649"
           },
           "source_kinds": [
-            "mcp_config"
+            "mcp_config",
+            "mcp_config_image_projection"
           ]
         },
         {
@@ -5250,9 +6668,9 @@
       ],
       "output": {
         "attack_path_count": 1,
-        "edge_count": 9,
-        "graph_digest_sha256": "sha256:89634dc82bbd754e231d72f7e8213cf2b50c5550781592f1052316909405fc99",
-        "node_count": 10,
+        "edge_count": 12,
+        "graph_digest_sha256": "sha256:be1fbb70729c90da4823b8610c51439569d937eacd3e7f638c4dc02a8a5c26eb",
+        "node_count": 11,
         "scan_id": "reference-evidence-correlation-v1"
       },
       "schema_version": "agent-bom.graph-correlation-manifest/v1",
@@ -5307,6 +6725,7 @@
       "canonical_id": "runtime-agent:reference-evidence-workload",
       "entity_type": "agent",
       "source_snapshots": [
+        "reference-mcp-config-scan",
         "reference-runtime-observation",
         "reference-identity-permission-scan"
       ]
@@ -5315,8 +6734,8 @@
   "label": "Reference evidence lab — modeled local infrastructure",
   "output_counts": {
     "attack_paths": 1,
-    "edges": 9,
-    "nodes": 10
+    "edges": 12,
+    "nodes": 11
   },
   "proof_path": {
     "analysis": {
@@ -5332,7 +6751,7 @@
         "entry_count": 1,
         "evaluated_entry_count": 1,
         "hop_count": 3,
-        "node_count": 10,
+        "node_count": 11,
         "result_count": 1
       },
       "reason_codes": [],
@@ -5478,7 +6897,7 @@
     "mcp": {
       "parser": "agent_bom.discovery.parse_mcp_config",
       "path": "examples/reference-evidence-lab/mcp.json",
-      "sha256": "sha256:a23c2d4c439471af9f00dd7bbf3d1a83931fbb7a6f50829ddc00000a3f6accbd"
+      "sha256": "sha256:5b601f0b8d86f38385679f439d7d13bebcfaaa48d22df0f9548a540d3c1c3646"
     },
     "sbom": {
       "parser": "agent_bom.sbom.load_sbom",

@@ -23,13 +23,13 @@ describe("product proof capture contract", () => {
     expect(select).toBeLessThan(block.indexOf('getByTestId("security-graph-investigation")'));
   });
 
-  it("carries advisory severity on every overview queue fixture path", () => {
-    const pathSource = source.slice(source.indexOf("  const attackPaths = ["), source.indexOf("  const stats = {", source.indexOf("  const attackPaths = [")));
+  it("carries advisory severity on every overview queue fixture path", async () => {
+    const { buildGraph } = await import("../scripts/product-proof-graph.mjs");
     const advisories = JSON.parse(fs.readFileSync(path.join(process.cwd(), "fixtures/gallery-advisories.json"), "utf8")).advisories;
     const advisory = (id: string) => advisories.find((item: { id: string }) => item.id === id);
-    const paths = new Function("edgeIdsFor", "hopEvidenceFor", "advisory", `${pathSource}; return attackPaths;`)(() => [], () => [], advisory);
+    const paths = buildGraph().attack_paths;
     expect(paths).toHaveLength(3);
-    for (const item of paths) expect(item.severity).toBe(advisory(item.vuln_ids[0]).severity);
+    for (const item of paths.filter((entry) => entry.vuln_ids.length)) expect(item.severity).toBe(advisory(item.vuln_ids[0]).severity);
   });
 
   it("verifies its own spawned listener before opening a capture browser", () => {
@@ -60,7 +60,8 @@ describe("product proof capture contract", () => {
     expect(source).toContain("REFERENCE_LAB.source_artifacts");
     expect(source).toContain("CVE-2023-4863");
     expect(source).not.toContain("DEMO-VULN-");
-    expect(source).toContain("gallery-advisories.json");
+    expect(source).toContain('from "./product-proof-graph.mjs"');
+    expect(fs.readFileSync(path.join(process.cwd(), "scripts", "product-proof-graph.mjs"), "utf8")).toContain("gallery-advisories.json");
     expect(source).toContain("checkAdvisoryFixtures();");
     expect(source).not.toContain('source: "nvd"');
     expect(source).not.toContain("is_kev: true");

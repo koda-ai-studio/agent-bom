@@ -3,6 +3,8 @@
     "document-review": {
       "command": "python",
       "args": ["-m", "reference_lab.server"],
+      "stable_id": "mcp-server:reference-lab:document-review",
+      "image": "ghcr.io/example/reference-evidence-api@sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a",
       "tools": [
         {
           "name": "render_untrusted_image",

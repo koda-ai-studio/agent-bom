@@ -214,7 +214,7 @@ Start with **Posture**, inspect **Top risks**, and scope **Assets & coverage**. 
 
 <p align="center"><a href="images/dashboard-live.png"><img src="images/dashboard-live.png" alt="Posture and open findings with compliance and security-area disclosures collapsed in a labeled sample environment" width="1440"></a></p>
 
-Explore [expanded framework evidence](images/dashboard-paths-live.png), [Top risks](images/dashboard-risks-live.png), [scoped Inventory](images/inventory-live.png), [recorded scan history](GALLERY.md#compare-recorded-scan-history), [framework controls and evidence](../site-docs/features/compliance.md), and the [per-agent BOM preview](SCAN_EVIDENCE_JOURNEY.md).
+Explore [expanded framework evidence](images/dashboard-frameworks-live.png), [Top risks](images/dashboard-risks-live.png), [scoped Inventory](images/inventory-live.png), [recorded scan history](GALLERY.md#compare-recorded-scan-history), [framework controls and evidence](../site-docs/features/compliance.md), and the [per-agent BOM preview](SCAN_EVIDENCE_JOURNEY.md).
 
 ### AppSec and cloud teams: investigate a finding
 

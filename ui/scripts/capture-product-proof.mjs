@@ -13,6 +13,10 @@ import { assertCaptureSnapshotScope, graphResponseWithPagination } from "./produ
 import { waitForOwnedServer } from "./product-proof-server.mjs";
 import { fitViewportToContent } from "./product-proof-fit.mjs";
 import { CREATED_AT, intelSourcesFixture, loadOverviewProof } from "./product-proof-fixtures.mjs";
+import {
+  DEMO_AGENT_SPECS, SCAN_ID, SCENARIO_ID, advisory, buildBlastRadius, buildGraph, contextGraph, edge,
+  demoScanAgent, graphScenario, graphScenarioComparison, node, severityId, vuln,
+} from "./product-proof-graph.mjs";
 import { runGraphQualityCapture } from "./graph-quality-capture.mjs";
 import { AGENT_ARCHITECTURE_SCREENSHOTS, captureAgentArchitecture, installAgentArchitectureRoutes } from "./product-proof-agent-architecture.mjs";
 import { captureSourceProvenance } from "./product-proof-provenance.mjs";
@@ -40,25 +44,10 @@ const REFERENCE_LAB_DIGEST_PATH = path.join(
   "generated",
   "correlation-proof.sha256",
 );
-// The generated taxonomy owns direction and traversal, including correlations.
-const graphSchemaSource = await fs.readFile(path.join(UI_ROOT, "lib/graph-schema.generated.ts"), "utf8");
-const graphRelationshipJson = graphSchemaSource.match(/export const GRAPH_EDGE_KIND_META:[^\n]+ = (\{[\s\S]*?\n\});/);
-if (!graphRelationshipJson) throw new Error("Generated graph relationship taxonomy is missing");
-// The TypeScript generator appends a comma after the final dictionary entry.
-const graphRelationshipSpecs = JSON.parse(graphRelationshipJson[1].replace(/,\s*}$/, "\n}"));
-const galleryAdvisories = JSON.parse(await fs.readFile(path.join(UI_ROOT, "fixtures/gallery-advisories.json"), "utf8")).advisories;
-const advisoryById = new Map(galleryAdvisories.map((item) => [item.id, item]));
-function advisory(id) {
-  const item = advisoryById.get(id);
-  if (!item) throw new Error(`Gallery advisory is not verified: ${id}`);
-  return item;
-}
 const overviewProof = await loadOverviewProof();
 const UI_PACKAGE = JSON.parse(await fs.readFile(path.join(UI_ROOT, "package.json"), "utf8"));
 const RELEASE_VERSION = UI_PACKAGE.version;
-const SCAN_ID = "scan-proof-ai-platform";
 const PREVIOUS_SCAN_ID = "scan-proof-ai-platform-prev";
-const SCENARIO_ID = "scenario-private-service-endpoint";
 // The README context map: what developer-copilot reaches through its MCP servers.
 // Both remediation desktop captures end just below the campaign panel instead of an empty lower half.
 const REMEDIATION_FIT = { selector: "main details", min: 480, pad: 32 };
@@ -135,223 +124,6 @@ async function screenshotSha256(filePath) {
   return `sha256:${digest}`;
 }
 
-function severityId(severity) {
-  return { none: 0, low: 1, medium: 2, high: 3, critical: 4 }[severity] ?? 0;
-}
-
-function node(id, entityType, label, severity = "none", riskScore = 0, attributes = {}) {
-  return {
-    id,
-    entity_type: entityType,
-    label,
-    category_uid: 0,
-    class_uid: 0,
-    type_uid: 0,
-    status: "active",
-    risk_score: riskScore,
-    severity,
-    severity_id: severityId(severity),
-    first_seen: CREATED_AT,
-    last_seen: CREATED_AT,
-    attributes,
-    compliance_tags: attributes.compliance_tags ?? [],
-    data_sources: attributes.data_sources ?? ["demo-scan", "gateway-runtime", "fleet-sync"],
-    dimensions: {
-      owner: String(attributes.owner ?? "platform-security"),
-      environment: String(attributes.environment ?? "prod"),
-    },
-  };
-}
-
-function edge(source, target, relationship, weight = 1, evidence = {}) {
-  const spec = graphRelationshipSpecs[relationship];
-  if (!spec) throw new Error(`Unknown sample relationship: ${relationship}`);
-  return {
-    id: `${source}->${target}:${relationship}`,
-    source,
-    target,
-    relationship,
-    direction: spec.direction,
-    weight,
-    traversable: spec.traversable,
-    first_seen: CREATED_AT,
-    last_seen: CREATED_AT,
-    // Hand-authored sample topology is modeled; it is not a runtime receipt.
-    evidence: { tier: "modeled_infrastructure", source: "gallery-fixture", ...evidence },
-    activity_id: 1,
-  };
-}
-
-function buildGraph() {
-  const nodes = [
-    node("provider:aws-prod", "provider", "AWS prod account", "medium", 5.4, { environment: "prod", owner: "cloud-platform" }),
-    node("env:prod-ai", "environment", "prod-ai-control-plane", "high", 7.8, { environment: "prod", owner: "ai-platform" }),
-    node("cluster:eks-ai", "cluster", "eks-ai-runtime", "high", 7.5, { environment: "prod", owner: "platform-security" }),
-    node("container:agent-gateway", "container", "agent-gateway:0.91.0", "high", 7.6, { container_kind: "workload", image: "agent-bom/gateway:0.91.0" }),
-    node("agent:developer-copilot", "agent", "developer-copilot", "critical", 9.4, { agent_type: "ide", owner: "platform-security", environment: "prod" }),
-    node("agent:sre-runbook", "agent", "sre-runbook-agent", "high", 8.6, { agent_type: "runbook", owner: "sre", environment: "prod" }),
-    node("agent:finance-rag", "agent", "finance-rag-agent", "high", 8.2, { agent_type: "rag", owner: "finance-data", environment: "prod" }),
-    node("user:contractor", "user", "contractor-reviewer", "high", 8.4, { owner: "identity", environment: "prod" }),
-    node("sa:jit-review", "service_account", "jit-prod-reviewer", "high", 8.1, { owner: "identity", environment: "prod" }),
-    node("role:prod-admin", "role", "prod-ai-admin", "critical", 9.2, { owner: "identity", environment: "prod" }),
-    node("policy:gateway-default-deny", "policy", "default-deny gateway policy", "medium", 4.8, { owner: "platform-security" }),
-    node("server:github", "server", "github-enterprise MCP", "critical", 9.1, { transport: "sse", registry_verified: true }),
-    node("server:filesystem", "server", "filesystem MCP", "critical", 9.0, { transport: "stdio", scope: "/workspace/prod" }),
-    node("server:snowflake", "server", "snowflake-rag MCP", "high", 8.4, { transport: "sse", scope: "finance_warehouse" }),
-    node("server:slack", "server", "incident-slack MCP", "high", 7.8, { transport: "sse" }),
-    node("tool:repo-write", "tool", "create_pull_request", "high", 8.2, { tool_class: "repo-write" }),
-    node("tool:exec", "tool", "execute_command", "critical", 9.5, { tool_class: "shell" }),
-    node("tool:query", "tool", "run_sql", "high", 8.3, { tool_class: "data-query" }),
-    node("tool:post", "tool", "post_incident_update", "medium", 4.8, { tool_class: "messaging" }),
-    node("cred:github", "credential", "DEMO_CRED_REF", "critical", 9.1, { safe_to_store: false }),
-    node("cred:snowflake", "credential", "SNOWFLAKE_PROD_KEY", "critical", 9.3, { safe_to_store: false }),
-    node("cred:aws", "credential", "AWS_ROLE_SESSION", "high", 8.1, { safe_to_store: false }),
-    node("pkg:next", "package", "next@15.2.2", "critical", 9.2, { ecosystem: "npm", version: "15.2.2" }),
-    node("pkg:urllib3", "package", "urllib3@2.2.1", "high", 8.5, { ecosystem: "pypi", version: "2.2.1" }),
-    node("pkg:protobuf", "package", "protobuf@6.31.0", "high", 8.0, { ecosystem: "pypi", version: "6.31.0" }),
-    node("pkg:langchain", "package", "langchain@0.3.21", "medium", 5.8, { ecosystem: "pypi", version: "0.3.21" }),
-    node("cve:next", "vulnerability", "CVE-2025-29927", advisory("CVE-2025-29927").severity, advisory("CVE-2025-29927").cvss_score, { ...advisory("CVE-2025-29927"), simulated: true, compliance_tags: ["NIST-RA-5"] }),
-    node("cve:urllib3", "vulnerability", "CVE-2024-37891", advisory("CVE-2024-37891").severity, advisory("CVE-2024-37891").cvss_score, { ...advisory("CVE-2024-37891"), simulated: true }),
-    node("cve:protobuf", "vulnerability", "CVE-2025-4565", advisory("CVE-2025-4565").severity, advisory("CVE-2025-4565").cvss_score, { ...advisory("CVE-2025-4565"), simulated: true }),
-    node("dataset:finance-docs", "dataset", "finance-board-rag-index", "high", 8.0, { data_classification: "confidential" }),
-    node("model:gpt-prod", "model", "prod-reasoning-model", "medium", 4.8, { provider: "customer-managed" }),
-  ];
-
-  const edges = [
-    edge("provider:aws-prod", "env:prod-ai", "hosts"),
-    edge("env:prod-ai", "cluster:eks-ai", "hosts"),
-    edge("cluster:eks-ai", "container:agent-gateway", "hosts"),
-    edge("container:agent-gateway", "policy:gateway-default-deny", "manages"),
-    edge("user:contractor", "sa:jit-review", "acted_as"),
-    edge("sa:jit-review", "role:prod-admin", "assumes"),
-    edge("role:prod-admin", "agent:developer-copilot", "can_access"),
-    edge("agent:developer-copilot", "server:github", "uses"),
-    edge("agent:developer-copilot", "server:filesystem", "uses"),
-    edge("agent:sre-runbook", "server:filesystem", "uses"),
-    edge("agent:sre-runbook", "server:slack", "uses"),
-    edge("agent:finance-rag", "server:snowflake", "uses"),
-    edge("agent:finance-rag", "server:slack", "uses"),
-    edge("agent:developer-copilot", "agent:sre-runbook", "shares_server"),
-    edge("agent:sre-runbook", "agent:finance-rag", "shares_cred"),
-    edge("server:github", "tool:repo-write", "provides_tool"),
-    edge("server:filesystem", "tool:exec", "provides_tool"),
-    edge("server:snowflake", "tool:query", "provides_tool"),
-    edge("server:slack", "tool:post", "provides_tool"),
-    edge("server:github", "cred:github", "exposes_cred"),
-    edge("server:snowflake", "cred:snowflake", "exposes_cred"),
-    edge("server:filesystem", "cred:aws", "exposes_cred"),
-    edge("server:github", "pkg:next", "depends_on"),
-    edge("server:filesystem", "pkg:urllib3", "depends_on"),
-    edge("server:snowflake", "pkg:protobuf", "depends_on"),
-    edge("server:snowflake", "pkg:langchain", "depends_on"),
-    edge("pkg:next", "cve:next", "vulnerable_to", 1.6, { cvss_score: advisory("CVE-2025-29927").cvss_score }),
-    edge("pkg:urllib3", "cve:urllib3", "vulnerable_to", 1.4, { cvss_score: advisory("CVE-2024-37891").cvss_score }),
-    edge("pkg:protobuf", "cve:protobuf", "vulnerable_to", 1.2, { cvss_score: advisory("CVE-2025-4565").cvss_score }),
-    edge("server:snowflake", "dataset:finance-docs", "accessed"),
-    edge("agent:finance-rag", "model:gpt-prod", "uses"),
-    edge("policy:gateway-default-deny", "tool:exec", "manages"),
-  ];
-  const edgeIdsFor = (hops) =>
-    hops.slice(0, -1).map((source, index) => {
-      const target = hops[index + 1];
-      return edges.find((item) => item.source === source && item.target === target)?.relationship ?? "related";
-    });
-  const hopEvidenceFor = (hops) =>
-    hops.slice(0, -1).map((source, index) => {
-      const target = hops[index + 1];
-      const graphEdge = edges.find((item) => item.source === source && item.target === target);
-      return {
-        source_node_id: source,
-        target_node_id: target,
-        relationship: graphEdge?.relationship ?? "related",
-        source_snapshot_ids: [SCAN_ID],
-        evidence_tier: "static_scan",
-        confidence: 1,
-        freshness: "fresh",
-        runtime_observed_state: "not_observed",
-        direction: graphEdge?.direction ?? "unknown",
-        traversable: graphEdge?.traversable === true,
-        complete: true,
-        relationship_provenance: graphEdge ? "recorded" : "unavailable",
-        correlation_identity_status: "current",
-        truncated: false,
-      };
-    });
-
-  const attackPaths = [
-    {
-      source: "user:contractor",
-      target: "cve:next",
-      hops: ["user:contractor", "sa:jit-review", "role:prod-admin", "agent:developer-copilot", "server:github", "pkg:next", "cve:next"],
-      edges: edgeIdsFor(["user:contractor", "sa:jit-review", "role:prod-admin", "agent:developer-copilot", "server:github", "pkg:next", "cve:next"]),
-      analysis: { status: "complete" },
-      hop_evidence: hopEvidenceFor(["user:contractor", "sa:jit-review", "role:prod-admin", "agent:developer-copilot", "server:github", "pkg:next", "cve:next"]),
-      composite_risk: 9.8,
-      reachability: "confirmed",
-      summary: "JIT reviewer identity can reach a critical Next.js exposure through developer-copilot and GitHub MCP.",
-      credential_exposure: ["DEMO_CRED_REF"],
-      tool_exposure: ["create_pull_request"],
-      vuln_ids: ["CVE-2025-29927"],
-      severity: advisory("CVE-2025-29927").severity,
-    },
-    {
-      source: "agent:sre-runbook",
-      target: "cve:urllib3",
-      hops: ["agent:sre-runbook", "server:filesystem", "pkg:urllib3", "cve:urllib3"],
-      edges: edgeIdsFor(["agent:sre-runbook", "server:filesystem", "pkg:urllib3", "cve:urllib3"]),
-      composite_risk: 8.9,
-      summary: "SRE runbook agent reaches filesystem MCP command tooling through vulnerable urllib3.",
-      credential_exposure: ["AWS_ROLE_SESSION"],
-      tool_exposure: ["execute_command"],
-      vuln_ids: ["CVE-2024-37891"],
-      severity: advisory("CVE-2024-37891").severity,
-    },
-    {
-      source: "agent:finance-rag",
-      target: "dataset:finance-docs",
-      hops: ["agent:finance-rag", "server:snowflake", "cred:snowflake", "dataset:finance-docs"],
-      edges: edgeIdsFor(["agent:finance-rag", "server:snowflake", "cred:snowflake", "dataset:finance-docs"]),
-      composite_risk: 8.4,
-      summary: "Finance RAG agent can query confidential board material through Snowflake MCP and a production key reference.",
-      credential_exposure: ["SNOWFLAKE_PROD_KEY"],
-      tool_exposure: ["run_sql"],
-      vuln_ids: ["CVE-2025-4565"],
-      severity: advisory("CVE-2025-4565").severity,
-    },
-  ];
-
-  const stats = {
-    total_nodes: nodes.length,
-    total_edges: edges.length,
-    node_types: nodes.reduce((acc, item) => ({ ...acc, [item.entity_type]: (acc[item.entity_type] ?? 0) + 1 }), {}),
-    severity_counts: { critical: 9, high: 13, medium: 4, low: 0 },
-    relationship_types: edges.reduce((acc, item) => ({ ...acc, [item.relationship]: (acc[item.relationship] ?? 0) + 1 }), {}),
-    attack_path_count: attackPaths.length,
-    interaction_risk_count: 4,
-    max_attack_path_risk: 9.8,
-    highest_interaction_risk: 8.8,
-    analysis_status: {
-      attack_path_fusion: {
-        status: "complete",
-        reason_codes: [],
-        limits: { max_nodes: 5000, max_paths: 1000 },
-        observed: { nodes: nodes.length, paths: attackPaths.length },
-      },
-    },
-  };
-
-  return {
-    scan_id: SCAN_ID,
-    tenant_id: "default",
-    created_at: CREATED_AT,
-    nodes,
-    edges,
-    attack_paths: attackPaths,
-    interaction_risks: [],
-    stats,
-    pagination: { total: nodes.length, offset: 0, limit: nodes.length, has_more: false },
-  };
-}
 
 const graph = buildGraph();
 
@@ -360,356 +132,8 @@ function buildScopeShowcase(kind) {
   return buildScopeShowcaseFixture(kind, { node, edge, base: graph, advisory, referenceCve: referenceKevCve });
 }
 
-function graphScenario() {
-  return {
-    scenario_id: SCENARIO_ID,
-    tenant_id: "default",
-    base_scan_id: SCAN_ID,
-    revision: 1,
-    name: "Private service endpoint",
-    description: "Replace public service access with a private endpoint and remove the credential-bearing edge.",
-    assumptions: ["The private endpoint policy is deployed with least privilege."],
-    changes: [],
-    created_by: "platform-security",
-    created_at: CREATED_AT,
-    updated_at: CREATED_AT,
-  };
-}
 
-function graphScenarioComparison() {
-  const proposedNode = node(
-    `proposal:${SCENARIO_ID}:private-endpoint`,
-    "cloud_resource",
-    "Private service endpoint",
-    "none",
-    0,
-    {
-      evidence_state: "proposed",
-      observed: false,
-      deployed: false,
-      scenario_id: SCENARIO_ID,
-      scenario_revision: 1,
-      assumption: "The private endpoint policy is deployed with least privilege.",
-    },
-  );
-  proposedNode.status = "proposed";
-  const removedEdge = "server:github->cred:github:exposes_cred";
-  return {
-    schema: "graph.scenario-comparison.v1",
-    available: true,
-    base_status: "available",
-    stale: false,
-    scenario: graphScenario(),
-    current: {
-      scan_id: SCAN_ID,
-      node_count: graph.nodes.length,
-      edge_count: graph.edges.length,
-      completeness: {
-        status: "complete",
-        complete: true,
-        sampled: false,
-        truncated: false,
-        returned: graph.nodes.length,
-        total: graph.nodes.length,
-      },
-    },
-    proposed: {
-      scan_id: SCAN_ID,
-      node_count: graph.nodes.length + 1,
-      edge_count: graph.edges.length - 1,
-      modeled: true,
-      nodes: [...graph.nodes, proposedNode],
-      edges: graph.edges.filter((item) => item.id !== removedEdge),
-      completeness: {
-        status: "complete",
-        complete: true,
-        sampled: false,
-        truncated: false,
-        returned: graph.nodes.length + 1,
-        total: graph.nodes.length + 1,
-      },
-    },
-    difference: {
-      nodes_added: [proposedNode.id],
-      nodes_removed: [],
-      nodes_changed: ["server:github"],
-      edges_added: [],
-      edges_removed: [removedEdge],
-      touched_observed_path_count: 1,
-      touched_observed_path_ids: ["user:contractor->cve:next"],
-    },
-    comparison: {
-      observed_path_count: graph.attack_paths.length,
-      modeled_path_count: graph.attack_paths.length - 1,
-      path_delta: -1,
-      risk_delta: -1.8,
-    },
-    completeness: {
-      status: "complete",
-      complete: true,
-      sampled: false,
-      truncated: false,
-      returned: graph.nodes.length + 1,
-      total: graph.nodes.length + 1,
-    },
-  };
-}
 
-function contextGraph() {
-  const nodes = [
-    { id: "agent:developer-copilot", kind: "agent", label: "developer-copilot", metadata: { severity: "critical", agent_type: "ide" } },
-    { id: "agent:sre-runbook", kind: "agent", label: "sre-runbook-agent", metadata: { severity: "high", agent_type: "runbook" } },
-    { id: "agent:finance-rag", kind: "agent", label: "finance-rag-agent", metadata: { severity: "high", agent_type: "rag" } },
-    { id: "iam:jit-review", kind: "iam_role", entity_type: "service_account", label: "jit-prod-reviewer", metadata: { severity: "high" } },
-    { id: "server:github", kind: "server", label: "github-enterprise MCP", metadata: { severity: "critical" } },
-    { id: "server:filesystem", kind: "server", label: "filesystem MCP", metadata: { severity: "critical" } },
-    { id: "server:snowflake", kind: "server", label: "snowflake-rag MCP", metadata: { severity: "high" } },
-    { id: "cred:github", kind: "credential", label: "DEMO_CRED_REF", metadata: { severity: "critical" } },
-    { id: "cred:snowflake", kind: "credential", label: "SNOWFLAKE_PROD_KEY", metadata: { severity: "critical" } },
-    { id: "tool:repo-write", kind: "tool", label: "create_pull_request", metadata: { severity: "high" } },
-    { id: "tool:exec", kind: "tool", label: "execute_command", metadata: { severity: "critical" } },
-    { id: "tool:query", kind: "tool", label: "run_sql", metadata: { severity: "high" } },
-    { id: "cve:next", kind: "vulnerability", label: "CVE-2025-29927", metadata: { severity: advisory("CVE-2025-29927").severity, cvss_score: advisory("CVE-2025-29927").cvss_score } },
-    { id: "cve:urllib3", kind: "vulnerability", label: "CVE-2024-37891", metadata: { severity: advisory("CVE-2024-37891").severity, cvss_score: advisory("CVE-2024-37891").cvss_score } },
-  ];
-  const edges = [
-    { source: "iam:jit-review", target: "agent:developer-copilot", kind: "member_of", relationship: "member_of", weight: 1, metadata: {} },
-    { source: "agent:developer-copilot", target: "server:github", kind: "uses", relationship: "uses", weight: 1, metadata: { effective_reach_score: 9.4 } },
-    { source: "agent:developer-copilot", target: "server:filesystem", kind: "uses", relationship: "uses", weight: 1, metadata: { effective_reach_score: 9.1 } },
-    { source: "server:github", target: "cred:github", kind: "exposes_cred", relationship: "exposes_cred", weight: 1, metadata: { effective_reach_score: 9.2 } },
-    { source: "server:github", target: "tool:repo-write", kind: "provides_tool", relationship: "provides_tool", weight: 1, metadata: { effective_reach_score: 8.3 } },
-    { source: "server:github", target: "cve:next", kind: "vulnerable_to", relationship: "vulnerable_to", weight: 1, metadata: { effective_reach_score: 9.8, package: `${advisory("CVE-2025-29927").package}@${advisory("CVE-2025-29927").version}` } },
-    { source: "server:filesystem", target: "tool:exec", kind: "provides_tool", relationship: "provides_tool", weight: 1, metadata: { effective_reach_score: 9.5 } },
-    { source: "server:filesystem", target: "cve:urllib3", kind: "vulnerable_to", relationship: "vulnerable_to", weight: 1, metadata: { effective_reach_score: 8.8, package: `${advisory("CVE-2024-37891").package}@${advisory("CVE-2024-37891").version}` } },
-    { source: "agent:sre-runbook", target: "server:filesystem", kind: "uses", relationship: "uses", weight: 1, metadata: { effective_reach_score: 8.5 } },
-    { source: "agent:finance-rag", target: "server:snowflake", kind: "uses", relationship: "uses", weight: 1, metadata: { effective_reach_score: 8.4 } },
-    { source: "server:snowflake", target: "cred:snowflake", kind: "exposes_cred", relationship: "exposes_cred", weight: 1, metadata: { effective_reach_score: 9.0 } },
-    { source: "server:snowflake", target: "tool:query", kind: "provides_tool", relationship: "provides_tool", weight: 1, metadata: { effective_reach_score: 8.4 } },
-    { source: "agent:developer-copilot", target: "agent:sre-runbook", kind: "shares_server", relationship: "shares_server", weight: 1, metadata: { server: "filesystem MCP" } },
-    { source: "agent:sre-runbook", target: "agent:finance-rag", kind: "shares_credential", relationship: "shares_credential", weight: 1, metadata: { credential: "shared incident webhook" } },
-  ];
-  return {
-    nodes,
-    edges,
-    lateral_paths: [
-      {
-        source: "agent:developer-copilot",
-        target: "cve:next",
-        hops: ["agent:developer-copilot", "server:github", "cve:next"],
-        edges: [],
-        composite_risk: 9.8,
-        summary: "Configured GitHub MCP server has an affected package. Tool execution is not established.",
-        credential_exposure: ["DEMO_CRED_REF"],
-        tool_exposure: ["create_pull_request"],
-        vuln_ids: ["CVE-2025-29927"],
-      },
-      {
-        source: "agent:developer-copilot",
-        target: "tool:exec",
-        hops: ["agent:developer-copilot", "server:filesystem", "tool:exec"],
-        edges: [],
-        composite_risk: 8.9,
-        summary: "Configured filesystem MCP advertises an execution tool; invocation is not established.",
-        credential_exposure: ["AWS_ROLE_SESSION"],
-        tool_exposure: ["execute_command"],
-        vuln_ids: ["CVE-2024-37891"],
-      },
-    ],
-    interaction_risks: [
-      {
-        pattern: "shared_server_lateral_path",
-        agents: ["developer-copilot", "sre-runbook-agent"],
-        risk_score: 8.9,
-        description: "Two high-trust agents share filesystem MCP command tooling; scope narrowing is the lowest-cost choke point.",
-        owasp_agentic_tag: "ASI07",
-      },
-      {
-        pattern: "credential_reuse",
-        agents: ["sre-runbook-agent", "finance-rag-agent"],
-        risk_score: 8.2,
-        description: "Incident workflow and RAG workflow share a credential-bearing messaging path.",
-        owasp_agentic_tag: "ASI07",
-      },
-    ],
-    stats: {
-      total_nodes: nodes.length,
-      total_edges: edges.length,
-      agent_count: 3,
-      shared_server_count: 2,
-      shared_credential_count: 2,
-      lateral_path_count: 2,
-      max_lateral_depth: 4,
-      highest_path_risk: 9.8,
-      interaction_risk_count: 2,
-    },
-  };
-}
-
-function vuln(id) {
-  const item = advisory(id);
-  return {
-    id, severity: item.severity, summary: item.summary,
-    description: `${item.summary}. Simulated exposure condition: ${item.precondition}`,
-    references: [item.reference], advisory_sources: ["github-advisory-database"],
-    cvss_score: item.cvss_score, cvss_vector: item.cvss_vector,
-    fixed_version: item.fixed_version,
-  };
-}
-
-const DEMO_AGENT_SPECS = [
-  { name: "data-pipeline-agent", agent_type: "etl", owner: "data-platform", environment: "prod-analytics", server: "warehouse MCP", pkg: "pyyaml", version: "5.3", ecosystem: "pypi", cve: ["CVE-2020-14343"] },
-  { name: "customer-support-bot", agent_type: "support", owner: "cx-ops", environment: "prod-support", server: "zendesk MCP", pkg: "requests", version: "2.30.0", ecosystem: "pypi", cve: ["CVE-2023-32681"] },
-  { name: "legal-review-agent", agent_type: "review", owner: "legal", environment: "prod-legal", server: "docusign MCP", pkg: "cryptography", version: "41.0.7", ecosystem: "pypi", cve: ["CVE-2023-50782"] },
-  { name: "hr-onboarding-agent", agent_type: "hr", owner: "people-ops", environment: "prod-hr", server: "workday MCP", pkg: "pillow", version: "11.1.0", ecosystem: "pypi", cve: null },
-  { name: "marketing-copilot", agent_type: "marketing", owner: "growth", environment: "staging", server: "hubspot MCP", pkg: "axios", version: "1.4.0", ecosystem: "npm", cve: ["CVE-2023-45857"] },
-  { name: "incident-commander", agent_type: "runbook", owner: "sre", environment: "prod-ai-control-plane", server: "pagerduty MCP", pkg: "aiohttp", version: "3.9.1", ecosystem: "pypi", cve: ["CVE-2024-23334"] },
-  { name: "platform-ops-agent", agent_type: "ops", owner: "platform", environment: "prod-ai-control-plane", server: "kubernetes MCP", pkg: "urllib3", version: "2.0.5", ecosystem: "pypi", cve: ["CVE-2023-43804"] },
-  { name: "ml-training-agent", agent_type: "ml", owner: "ml-platform", environment: "prod-ml", server: "wandb MCP", pkg: "torch", version: "2.5.1", ecosystem: "pypi", cve: ["CVE-2025-32434"] },
-  { name: "code-review-bot", agent_type: "ide", owner: "engineering", environment: "prod-ai-control-plane", server: "gitlab MCP", pkg: "eslint", version: "9.21.0", ecosystem: "npm", cve: null },
-  { name: "compliance-auditor", agent_type: "audit", owner: "grc", environment: "prod-grc", server: "grc MCP", pkg: "idna", version: "3.6", ecosystem: "pypi", cve: ["CVE-2024-3651"] },
-  { name: "vendor-risk-agent", agent_type: "risk", owner: "security", environment: "staging", server: "vendor MCP", pkg: "starlette", version: "0.39.2", ecosystem: "pypi", cve: ["CVE-2024-47874"] },
-  { name: "research-assistant", agent_type: "rag", owner: "research", environment: "staging", server: "arxiv MCP", pkg: "pillow", version: "9.2.0", ecosystem: "pypi", cve: ["CVE-2022-45199"] },
-  { name: "sales-enablement-bot", agent_type: "sales", owner: "revenue", environment: "prod-sales", server: "salesforce MCP", pkg: "simple-salesforce", version: "1.12.6", ecosystem: "pypi", cve: null },
-  { name: "devops-release-agent", agent_type: "release", owner: "devops", environment: "prod-ai-control-plane", server: "argocd MCP", pkg: "jinja2", version: "3.1.4", ecosystem: "pypi", cve: ["CVE-2024-56326"] },
-  { name: "shadow-copilot", agent_type: "shadow", owner: "unknown", environment: "unmanaged", server: "openai MCP", pkg: "langchain", version: "0.0.150", ecosystem: "pypi", cve: ["CVE-2023-36258"] },
-];
-
-function demoScanAgent(spec) {
-  const vulnerabilities = spec.cve
-    ? [vuln(spec.cve[0])]
-    : [];
-  return {
-    name: spec.name,
-    agent_type: spec.agent_type,
-    owner: spec.owner,
-    environment: spec.environment,
-    tags: ["simulated", spec.environment.startsWith("prod") ? "prod" : "staging"],
-    mcp_servers: [
-      {
-        name: spec.server,
-        transport: "sse",
-        config_path: `/workspace/${spec.name}/mcp.json`,
-        has_credentials: spec.name !== "code-review-bot",
-        credential_env_vars: spec.name !== "code-review-bot" ? [`${spec.name.toUpperCase().replace(/-/g, "_")}_TOKEN`] : [],
-        tools: [{ name: "query" }, { name: "read_context" }],
-        packages: [
-          {
-            name: spec.pkg,
-            version: spec.version,
-            ecosystem: spec.ecosystem,
-            purl: `pkg:${spec.ecosystem}/${spec.pkg}@${spec.version}`,
-            vulnerabilities,
-          },
-        ],
-      },
-    ],
-  };
-}
-
-function buildBlastRadius() {
-  const entries = [
-    {
-      vulnerability_id: "CVE-2025-29927",
-      severity: "critical",
-      package: "next",
-      ecosystem: "npm",
-      affected_agents: ["developer-copilot"],
-      affected_servers: ["github-enterprise MCP"],
-      exposed_credentials: ["DEMO_CRED_REF"],
-      reachable_tools: ["create_pull_request"],
-      blast_score: 98,
-      risk_score: 9.8,
-      cvss_score: 9.8,
-      fixed_version: "15.2.3",
-    },
-    {
-      vulnerability_id: "CVE-2024-37891",
-      severity: "high",
-      package: "urllib3",
-      ecosystem: "pypi",
-      affected_agents: ["sre-runbook-agent", "developer-copilot"],
-      affected_servers: ["filesystem MCP"],
-      exposed_credentials: ["AWS_ROLE_SESSION"],
-      reachable_tools: ["execute_command"],
-      blast_score: 89,
-      risk_score: 8.9,
-      cvss_score: 8.8,
-      fixed_version: "2.2.2",
-    },
-    {
-      vulnerability_id: "CVE-2025-4565",
-      severity: "high",
-      package: "protobuf",
-      ecosystem: "pypi",
-      affected_agents: ["finance-rag-agent"],
-      affected_servers: ["snowflake-rag MCP"],
-      exposed_credentials: ["SNOWFLAKE_PROD_KEY"],
-      reachable_tools: ["run_sql"],
-      blast_score: 81,
-      risk_score: 8.1,
-      cvss_score: 8.1,
-      fixed_version: "6.31.1",
-    },
-    {
-      vulnerability_id: "CVE-2024-23334",
-      severity: "critical",
-      package: "aiohttp",
-      ecosystem: "pypi",
-      affected_agents: ["incident-commander"],
-      affected_servers: ["pagerduty MCP"],
-      exposed_credentials: ["INCIDENT_COMMANDER_TOKEN"],
-      reachable_tools: ["query"],
-      blast_score: 91,
-      risk_score: 9.1,
-      cvss_score: 9.1,
-      fixed_version: "3.11.14",
-    },
-    {
-      vulnerability_id: "CVE-2023-36258",
-      severity: "critical",
-      package: "openai",
-      ecosystem: "pypi",
-      affected_agents: ["shadow-copilot"],
-      affected_servers: ["openai MCP"],
-      exposed_credentials: ["SHADOW_COPILOT_TOKEN"],
-      reachable_tools: ["query"],
-      blast_score: 90,
-      risk_score: 9.0,
-      cvss_score: 9.0,
-      fixed_version: "1.66.5",
-    },
-  ];
-  const seenIds = new Set(entries.map((item) => item.vulnerability_id));
-  for (const spec of DEMO_AGENT_SPECS) {
-    if (!spec.cve) continue;
-    const [id] = spec.cve;
-    const { severity, cvss_score: cvss, fixed_version: fixedVersion } = advisory(id);
-    if (seenIds.has(id)) continue;
-    seenIds.add(id);
-    entries.push({
-      vulnerability_id: id,
-      severity,
-      package: spec.pkg,
-      ecosystem: spec.ecosystem,
-      affected_agents: [spec.name],
-      affected_servers: [spec.server],
-      exposed_credentials: [`${spec.name.toUpperCase().replace(/-/g, "_")}_TOKEN`],
-      reachable_tools: ["query"],
-      blast_score: Math.round(cvss * 10),
-      risk_score: cvss,
-      cvss_score: cvss,
-      fixed_version: fixedVersion,
-    });
-  }
-  return entries.map((item) => {
-    const facts = advisory(item.vulnerability_id);
-    return { ...item, package: `${facts.package}@${facts.version}`, ecosystem: facts.ecosystem,
-      severity: facts.severity, cvss_score: facts.cvss_score, cvss_vector: facts.cvss_vector,
-      fixed_version: facts.fixed_version, impact_category: facts.impact_category,
-      ...(["availability", "client-side"].includes(facts.impact_category) ? { exposed_credentials: [], reachable_tools: [] } : {}),
-      attack_vector_summary: `Simulated exposure condition: ${facts.precondition}` };
-  });
-}
 
 function buildFindings() {
   return buildBlastRadius().map((item, index) => ({
@@ -719,7 +143,7 @@ function buildFindings() {
     source: "demo-fixture",
     severity: item.severity,
     effective_severity: item.severity,
-    title: `Vulnerable ${item.severity} package on ${item.affected_servers?.[0] ?? "MCP path"}`,
+    title: `Vulnerable ${item.severity} package on ${item.affected_servers?.[0] ?? item.affected_agents?.[0] ?? "MCP path"}`,
     description: `${advisory(item.vulnerability_id).summary}. ${item.attack_vector_summary}`,
     cve_id: item.vulnerability_id,
     package_name: advisory(item.vulnerability_id).package,
@@ -768,24 +192,16 @@ function scanAgents() {
         {
           name: "github-enterprise MCP",
           transport: "sse",
-          config_path: "/demo/workstation/.cursor/mcp.json",
+          config_path: "/demo/workstation/.vscode/mcp.json",
           has_credentials: true,
-          credential_env_vars: ["DEMO_CRED_REF"],
+          credential_env_vars: ["GITHUB_ENTERPRISE_TOKEN"],
           tools: [{ name: "create_pull_request" }, { name: "read_repository" }],
-          packages: [
-            {
-              name: "next",
-              version: "15.2.2",
-              ecosystem: "npm",
-              purl: "pkg:npm/next@15.2.2",
-              vulnerabilities: [vuln("CVE-2025-29927")],
-            },
-          ],
+          packages: [],
         },
         {
           name: "filesystem MCP",
           transport: "stdio",
-          config_path: "/demo/workstation/.cursor/mcp.json",
+          config_path: "/demo/workstation/.vscode/mcp.json",
           has_credentials: true,
           credential_env_vars: ["AWS_ROLE_SESSION"],
           tools: [{ name: "execute_command" }, { name: "read_file" }],
@@ -866,30 +282,31 @@ function scanAgents() {
 
 function scanJob() {
   const agents = scanAgents();
+  const blastRisk = (id) => buildBlastRadius().find((item) => item.vulnerability_id === id).risk_score;
   const remediationPlan = [
     {
       package: "next",
       ecosystem: "npm",
       current_version: "15.2.2",
       fixed_version: "15.2.3",
-      severity: "critical",
-      impact_score: 9.8,
+      severity: advisory("CVE-2025-29927").severity,
+      impact_score: blastRisk("CVE-2025-29927"),
       priority: 1,
       action: "upgrade",
-      reason: "Critical reachable package on the highest-risk repo-write MCP path.",
+      reason: "Critical package on the internet-exposed Developer Copilot portal, reachable from the admin-equivalent JIT path.",
       command: "npm install next@15.2.3",
       verify_command: "agent-bom scan --fail-on-severity high",
       vulnerabilities: ["CVE-2025-29927"],
       affected_agents: ["developer-copilot"],
       agents_pct: 33,
-      exposed_credentials: ["DEMO_CRED_REF"],
-      credentials_pct: 33,
-      reachable_tools: ["create_pull_request"],
-      tools_pct: 25,
+      exposed_credentials: [],
+      credentials_pct: 0,
+      reachable_tools: [],
+      tools_pct: 0,
       owasp_tags: ["LLM02", "LLM03"],
       atlas_tags: ["AML.T0051"],
       references: [advisory("CVE-2025-29927").reference],
-      risk_narrative: "Patch the package first because the affected server exposes repo-write tooling and a credential reference.",
+      risk_narrative: "Patch the package first because the portal is internet-exposed and the advisory bypasses middleware authorization.",
     },
     {
       package: "urllib3",
@@ -897,7 +314,7 @@ function scanJob() {
       current_version: "2.2.1",
       fixed_version: "2.2.2",
       severity: advisory("CVE-2024-37891").severity,
-      impact_score: 8.9,
+      impact_score: blastRisk("CVE-2024-37891"),
       priority: 2,
       action: "upgrade",
       reason: "A cross-origin redirect can disclose a manually supplied proxy authorization header.",
@@ -2145,7 +1562,7 @@ export async function installRoutes(page, fixtureGraph = graph) {
   await page.route("**/v1/graph/diff?**", (route) => fulfill(route, {
     nodes_added: ["sa:jit-review", "role:prod-admin", "policy:gateway-default-deny", "cve:next"],
     nodes_removed: [],
-    nodes_changed: ["agent:developer-copilot", "server:github", "cred:github"],
+    nodes_changed: ["agent:developer-copilot", "container:copilot-portal", "server:github", "cred:github"],
     edges_added: [["sa:jit-review", "role:prod-admin", "assumes"], ["policy:gateway-default-deny", "tool:exec", "manages"]],
     edges_removed: [],
   }));
@@ -2483,7 +1900,7 @@ const README_CAPTURE_FILES = new Set([
   "context-map-light-live.png", "context-map-live.png", "correlation-graph-live.png",
   "graph-relationship-dark-live.png", "graph-relationship-light-live.png",
   ...["cloud", "repository", "environment"].flatMap(scope => ["dark", "light"].map(theme => `graph-${scope}-${theme}-live.png`)),
-  "dashboard-live.png", "dashboard-paths-live.png", "dashboard-risks-live.png", "inventory-live.png", "remediation-live.png",
+  "dashboard-live.png", "dashboard-frameworks-live.png", "dashboard-risks-live.png", "inventory-live.png", "remediation-live.png",
 ]);
 
 async function capture(page, urlPath, filename, beforeShot, options = {}) {
@@ -2996,7 +2413,7 @@ async function writeScreenshotManifest(outputDir = IMAGE_DIR) {
       scope: "Executive impact summaries at a 390 by 844 viewport", presentation: "dark mobile",
     },
     {
-      path: "dashboard-paths-live.png",
+      path: "dashboard-frameworks-live.png",
       page: "/?capture=1",
       scope: "Expanded Overview assessment summary with four priority frameworks and risk mappings collapsed at 1440 by 900",
     },
@@ -3175,7 +2592,7 @@ async function writeScreenshotManifest(outputDir = IMAGE_DIR) {
       scope: "Audit log filtered to identity resources with issue, rotate, and revoke events",
     },
     {
-      path: "dependency-map-live.png",
+      path: "findings-queue-live.png",
       page: "/findings?capture=1",
       scope: "Findings queue with seeded package and CVE evidence from the demo estate",
     },
@@ -3463,7 +2880,7 @@ async function main() {
     await overviewPage.close();
     await capture(page, "/?capture=1", "dashboard-risks-live.png", prepareExecutiveRisks, executiveRiskAssertions);
     const frameworkPage = await newCapturePage(CAPTURE_THEME, { width: 1440, height: 900 });
-    await capture(frameworkPage, "/?capture=1", "dashboard-paths-live.png", async (dashboardPage) => {
+    await capture(frameworkPage, "/?capture=1", "dashboard-frameworks-live.png", async (dashboardPage) => {
       const frameworks = dashboardPage.getByRole("region", { name: "Compliance & frameworks", exact: true });
       await frameworks.scrollIntoViewIfNeeded();
       const top = await frameworks.evaluate((element) => element.getBoundingClientRect().top + window.scrollY);
@@ -3722,7 +3139,7 @@ async function main() {
         `/graph?capture=1&scan=${REFERENCE_CORRELATION_ID}&layers=${REFERENCE_RELATIONSHIP_LAYERS}`,
         `graph-relationship-${theme}-live.png`, async (p) => {
           await expect(p.locator(".react-flow__node")).toHaveCount(5);
-          const finding = p.locator('.react-flow__edge[data-id="vulnerable_to:package:iac:pillow:vulnerability:sbom:cve-2023-4863"]');
+          const finding = p.locator('.react-flow__edge[data-id="vulnerable_to:package:mcp:pillow:vulnerability:sbom:cve-2023-4863"]');
           await finding.focus();
           await finding.press("Space");
           const receipt = p.getByLabel("Relationship details", { exact: true });
@@ -3807,8 +3224,8 @@ async function main() {
         });
         const unconnected = canvasPage.getByRole("region", { name: "Unconnected proposal items" });
         await expect(unconnected).toBeVisible();
-        await expect(unconnected.getByRole("button", { name: /Private service endpoint/ })).toBeVisible();
-        await expect(canvasPage.locator(`.react-flow [data-id="proposal:${SCENARIO_ID}:private-endpoint"]`)).toHaveCount(0);
+        await expect(unconnected.getByRole("button", { name: /next@15\.2\.3/ })).toBeVisible();
+        await expect(canvasPage.locator(`.react-flow [data-id="proposal:${SCENARIO_ID}:next-upgrade"]`)).toHaveCount(0);
         await expect.poll(() => canvasPage.locator(".react-flow__node").evaluateAll(nodes => nodes.flatMap(node => {
           const box = node.getBoundingClientRect();
           const frame = node.closest(".react-flow").getBoundingClientRect();
@@ -3906,10 +3323,10 @@ async function main() {
         assertNoHorizontalOverflow: true,
       },
     );
-    // Inventory relationships two hops out, after one expansion: both MCP servers, github's tool,
-    // credential and package, filesystem's tool, and the agent sharing filesystem MCP.
+    // Inventory relationships two hops out, after one expansion: both MCP servers, github's tool
+    // and credential, the portal workload that runs next, filesystem's tool, and the agent sharing filesystem MCP.
     const CONTEXT_MAP_NODES = ["agent:developer-copilot", "server:github", "server:filesystem", "agent:sre-runbook",
-      "tool:repo-write", "cred:github", "pkg:next", "tool:exec"];
+      "tool:repo-write", "cred:github", "container:copilot-portal", "tool:exec"];
     const CONTEXT_MAP_EDGES = 7;
     const prepareContextNeighborhood = async (contextPage) => {
       await contextPage.getByRole("heading", { name: "Investigation", exact: true }).waitFor({ state: "visible", timeout: 30_000 });
@@ -3935,7 +3352,7 @@ async function main() {
     };
     const prepareHorizontalNeighborhood = prepareContextNeighborhood;
     const contextNeighborhoodAssertions = {
-      expectedText: ["Investigation", "Developer Copilot", "github-enterprise MCP", "filesystem MCP", "create_pull_request", "execute_command", "DEMO_CRED_REF", "next@15.2.2"],
+      expectedText: ["Investigation", "Developer Copilot", "github-enterprise MCP", "filesystem MCP", "create_pull_request", "execute_command", "GITHUB_ENTERPRISE_TOKEN", "copilot-portal:2.4.0"],
       expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/query"],
       minGraphNodes: CONTEXT_MAP_NODES.length, maxGraphNodes: CONTEXT_MAP_NODES.length,
       minGraphEdges: CONTEXT_MAP_EDGES, maxGraphEdges: CONTEXT_MAP_EDGES,
@@ -4000,7 +3417,7 @@ async function main() {
       assertNoHorizontalOverflow: true,
     });
     await page.setViewportSize({ width: 1440, height: 980 });
-    await capture(page, "/findings?capture=1", "dependency-map-live.png", async (findingsPage) => {
+    await capture(page, "/findings?capture=1", "findings-queue-live.png", async (findingsPage) => {
       await findingsPage.getByRole("heading", { name: "Findings", exact: true }).waitFor({
         state: "visible",
         timeout: 10_000,

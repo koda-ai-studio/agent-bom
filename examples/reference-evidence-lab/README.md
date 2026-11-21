@@ -11,7 +11,12 @@ call proves tool invocation; modeled identity grants do not prove provider
 authentication, resource activity, or exploitability. The graph retains these
 separate evidence relationships. Its modeled permission route describes potential
 access to the data asset; it contains no vulnerability exploit edge or observed
-cloud activity. The dependency advisory remains a separate finding.
+cloud activity. The dependency advisory remains a separate finding: the MCP
+config pins the `document-review` server to the same image digest the SBOM
+describes, so the graph models that server's dependency on pillow 9.0.0 and
+the fix-first queue ranks the workload → `document-review` MCP →
+pillow 9.0.0 → CVE-2023-4863 path (the server provides the invoked
+`render_untrusted_image` tool) above the identity route.
 
 The infrastructure is intentionally local and modeled. It is not customer or
 live-cloud evidence. Cross-source joins use exact canonical identifiers only;

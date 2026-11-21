@@ -34,7 +34,7 @@ function definitions({ cve, kevCve }) {
         ["cred:tickets", "credential_ref", "TICKETING_API_KEY", { safe_to_store: false }],
         cve("cve:torch", "CVE-2025-32434"),
         kevCve("cve:webp"),
-        ["data:tickets", "data_store", "customer-ticket-archive", { environment: "production", cloud_provider: "aws", data_sensitivity: "pii" }],
+        ["data:tickets", "data_store", "customer-ticket-archive", { environment: "production", cloud_provider: "aws", data_sensitivity: "pii", data_classification: "restricted" }],
       ],
       edges: [
         ["env:prod-ai", "container:serving", "hosts"], ["env:prod-ai", "agent:intake", "contains"],
@@ -88,7 +88,7 @@ function definitions({ cve, kevCve }) {
         ["role:checkout", "role", "checkout-runtime-role", { cloud_provider: "aws", service: "iam_role" }],
         cve("cve:next", "CVE-2025-29927"),
         cve("cve:urllib3", "CVE-2023-43804"),
-        ["data:pii", "data_store", "customer-pii-bucket", { cloud_provider: "aws", environment: "production", service: "S3", data_sensitivity: "pii" }],
+        ["data:pii", "data_store", "customer-pii-bucket", { cloud_provider: "aws", environment: "production", service: "S3", data_sensitivity: "pii", data_classification: "restricted" }],
       ],
       edges: [
         ["account:prod", "gateway:public", "contains"], ["account:prod", "cluster:payments", "contains"],
