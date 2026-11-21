@@ -19,12 +19,12 @@ export function withInternetAnchor(nodes: Node<LineageNodeData>[], edges: Edge[]
   const cleanEdges = edges.filter(edge => !(edge.source === INTERNET_ANCHOR_ID && edge.data?.displayOnly));
   if (!visible.length) return { nodes: cleanNodes, edges: cleanEdges };
   const anchor: Node<LineageNodeData> = {
-    id: INTERNET_ANCHOR_ID, type: "cloudResourceNode", position: { x: 0, y: 0 }, draggable: false,
+    id: INTERNET_ANCHOR_ID, ariaLabel: "Internet, recorded exposure context", type: "cloudResourceNode", position: { x: 0, y: 0 }, draggable: false,
     data: { label: "Internet", nodeType: "cloudResource", semanticLayer: "user", displayOnly: true,
       readingLabel: "Exposure context", attributes: { resource_type: "internet_boundary" } },
   };
   return { nodes: [...cleanNodes, anchor], edges: [...cleanEdges, ...visible.map(node => ({
-    id: `${INTERNET_ANCHOR_ID}:${node.id}`, source: INTERNET_ANCHOR_ID, target: node.id, type: "relationship",
+    id: `${INTERNET_ANCHOR_ID}:${node.id}`, ariaLabel: `Recorded internet exposure for ${node.data.label}; display context, not a traversable relationship`, source: INTERNET_ANCHOR_ID, target: node.id, type: "relationship",
     label: "Internet-exposed", markerEnd: { type: MarkerType.ArrowClosed },
     style: { stroke: "var(--text-secondary)", strokeWidth: 1, strokeDasharray: "6 3" },
     data: { relationship: "exposed_to", displayOnly: true, traversable: false, evidenceMode: "inferred", individualLabel: true },

@@ -45,3 +45,11 @@ it("shows a display-only Internet anchor on a selected exposed path", () => {
   expect(model.edges.find(edge => edge.source === "display:internet")?.onPath).toBe(false);
   expect(model.pathNodeIds[0]).toBe("display:internet");
 });
+
+it("names display exposure links by their target without leaking synthetic ids", () => {
+  const target = node("private:opaque-id", { internet_exposed: true });
+  target.data.label = "Public API";
+  const result = semanticGraphLayout([target], []);
+  expect(result.nodes.find(node => node.data.displayOnly)?.ariaLabel).toBe("Internet, recorded exposure context");
+  expect(result.edges[0]?.ariaLabel).toBe("Recorded internet exposure for Public API; display context, not a traversable relationship");
+});
