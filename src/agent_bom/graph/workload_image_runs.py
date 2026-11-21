@@ -23,6 +23,7 @@ import re
 
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.container_kind import IMAGE, WORKLOAD, container_kind
+from agent_bom.graph.correlation_scope import CORRELATION_IDENTITY_VERSION
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.edge_evidence import edge_evidence
 from agent_bom.graph.node import UnifiedNode
@@ -100,7 +101,22 @@ def _runs_edge(workload: UnifiedNode, image: UnifiedNode, digest: str) -> Unifie
             workload_sources=sorted(workload.data_sources),
             image_sources=sorted(image.data_sources),
         ),
+        provenance=_provenance(workload, image),
     )
+
+
+def _scan_ids(node: UnifiedNode) -> list[str]:
+    correlation = node.attributes.get("correlation")
+    raw = correlation.get("source_scan_ids") if isinstance(correlation, dict) else None
+    return [str(item) for item in raw if str(item).strip()] if isinstance(raw, list) else []
+
+
+def _provenance(workload: UnifiedNode, image: UnifiedNode) -> dict[str, object]:
+    """On a correlated graph, the scans that observed either endpoint, under the current identity version."""
+    scans = sorted({*_scan_ids(workload), *_scan_ids(image)})
+    if not scans:
+        return {"source": SOURCE}
+    return {"source": SOURCE, "correlation": {"identity_version": CORRELATION_IDENTITY_VERSION, "source_scan_ids": scans}}
 
 
 __all__ = ["SOURCE", "link_workload_images"]

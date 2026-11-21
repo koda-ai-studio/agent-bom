@@ -489,29 +489,9 @@ def _snapshots(
         )
     )
     # The parsed deployment pins this exact SBOM image (validated above).
-    # Model its package composition as an explicit edge; never merge the
-    # SBOM image node with a permission-bearing deployment by digest.
-    iac.add_node(
-        _node(
-            "package:iac:pillow",
-            EntityType.PACKAGE,
-            "pillow@9.0.0",
-            source="kubernetes_iac_sbom_projection",
-            attributes={"purl": purl, "canonical_id": purl, "modeled": True},
-            index=2,
-        )
-    )
-    composition_edge = _edge(
-        "container:iac:reference-api",
-        "package:iac:pillow",
-        RelationshipType.CONTAINS,
-        scan_id=iac.scan_id,
-        source_kind="kubernetes_iac_sbom_projection",
-        evidence_tier="modeled_infrastructure",
-        index=2,
-    )
-    composition_edge.evidence.update({"image_digest": image_digest, "sbom_artifact": str(SBOM_INPUT.relative_to(ROOT))})
-    iac.add_edge(composition_edge)
+    # Correlation joins it to the SBOM image with a digest-proven ``runs``
+    # edge; the packages stay under the image and are never copied here, and
+    # the image never merges with this permission-bearing deployment.
     iac.add_edge(
         _edge(
             "service:reference-api",

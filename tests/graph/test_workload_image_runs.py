@@ -148,3 +148,11 @@ def test_correlation_merge_emits_runs_between_snapshot_sources() -> None:
     [edge] = _runs(result.graph)
     assert edge.target == "container:sbom:api"
     assert result.manifest["output"]["edge_count"] == len(result.graph.edges) == 1
+    # The derived hop names both observing scans under the current correlation identity
+    # (the correlation service stamps freshness afterwards; the reference lab proves it complete).
+    from agent_bom.graph.path_evidence import _hop_receipt
+
+    receipt = _hop_receipt(result.graph, "container:iac:api", "container:sbom:api", "runs", None)
+    assert receipt["relationship_provenance"] == "recorded"
+    assert receipt["correlation_identity_status"] == "current"
+    assert receipt["source_snapshot_ids"] == ["iac-scan", "sbom-scan"]
