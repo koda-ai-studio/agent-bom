@@ -3008,11 +3008,16 @@ async function main() {
       await meshPage.reload({ waitUntil: "load" });
       await meshPage
         .locator(".react-flow__node:visible")
-        .filter({ hasText: "filesystem MCP" })
+        .filter({ hasText: "Developer Copilot" })
         .first()
         .waitFor({ state: "visible", timeout: 30_000 });
       const more = meshPage.getByRole("button", { name: "Show more connections", exact: true });
       if (await more.isVisible()) await more.click();
+      await meshPage
+        .locator(".react-flow__node:visible")
+        .filter({ hasText: "filesystem MCP" })
+        .first()
+        .waitFor({ state: "visible", timeout: 30_000 });
       await meshPage
         .locator(".react-flow__node:visible")
         .filter({ hasText: /sre[ -]runbook[ -]agent/i })
