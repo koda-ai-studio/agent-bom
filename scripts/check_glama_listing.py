@@ -668,6 +668,9 @@ def main(argv: list[str] | None = None) -> int:
                     api_result = indexed_result
                     public_schema_result = True
                     print("Glama public API returned no tools; verified the exact contract from the public Schema page", file=sys.stderr)
+                elif indexed_result is not None:
+                    # An empty API alone reads as "0 tools"; say what the indexed build actually differs on.
+                    failures.extend(f"Glama public Schema page: {failure}" for failure in indexed_result[1])
             if api_result is None and schema_page:
                 try:
                     indexed_tools = _extract_schema_tool_contract(schema_page, args.url)
