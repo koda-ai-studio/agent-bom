@@ -2843,13 +2843,13 @@ async function main() {
       await riskTab.click();
       await expect(riskTab).toHaveAttribute("aria-selected", "true");
       const rows = dashboardPage.getByRole("group", { name: "Select a risk", exact: true }).getByRole("button");
-      await expect(rows).toHaveCount(3);
+      await expect(rows).toHaveCount(2);
       if (dashboardPage.viewportSize().width >= 1440) {
         await dashboardPage.getByRole("region", { name: "Selected risk", exact: true }).waitFor({ state: "visible" });
       }
     };
     const executiveRiskAssertions = {
-      expectedText: ["Same order as Investigation · top 3 advisories from 3 ranked paths", /Top risks/i, /Assets & coverage/i],
+      expectedText: ["Same order as Investigation · top 2 advisories from 3 ranked paths", /Top risks/i, /Assets & coverage/i],
       rejectedText: ["Severity unavailable"],
       expectedApiPaths: ["/v1/overview", "/v1/inventory/summary", "/v1/graph/attack-paths"], assertNoHorizontalOverflow: true,
     };
