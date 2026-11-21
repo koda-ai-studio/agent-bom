@@ -1,0 +1,1721 @@
+{
+  "node_aggregates": {
+    "agent:developer-copilot": {
+      "aggregate": {
+        "by_type": {
+          "credential": 2,
+          "package": 1,
+          "server": 2,
+          "tool": 2,
+          "vulnerability": 1
+        },
+        "descendant_count": 8,
+        "exposed_count": 0,
+        "finding_occurrence_count": 1,
+        "internet_exposed": false,
+        "issue_count": 1,
+        "severity_counts": {
+          "critical": 0,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 1,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "critical",
+        "worst_severity_rank": 5
+      },
+      "semantic_layer": "orchestration"
+    },
+    "agent:finance-rag": {
+      "aggregate": {
+        "by_type": {
+          "credential": 2,
+          "package": 2,
+          "server": 2,
+          "tool": 2,
+          "vulnerability": 1
+        },
+        "descendant_count": 9,
+        "exposed_count": 0,
+        "finding_occurrence_count": 1,
+        "internet_exposed": false,
+        "issue_count": 1,
+        "severity_counts": {
+          "critical": 0,
+          "high": 1,
+          "info": 0,
+          "low": 0,
+          "medium": 0,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "critical",
+        "worst_severity_rank": 5
+      },
+      "semantic_layer": "orchestration"
+    },
+    "agent:sre-runbook": {
+      "aggregate": {
+        "by_type": {
+          "credential": 2,
+          "package": 1,
+          "server": 2,
+          "tool": 2,
+          "vulnerability": 1
+        },
+        "descendant_count": 8,
+        "exposed_count": 0,
+        "finding_occurrence_count": 1,
+        "internet_exposed": false,
+        "issue_count": 1,
+        "severity_counts": {
+          "critical": 0,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 1,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "critical",
+        "worst_severity_rank": 5
+      },
+      "semantic_layer": "orchestration"
+    },
+    "cluster:eks-ai": {
+      "aggregate": {
+        "by_type": {},
+        "descendant_count": 0,
+        "exposed_count": 0,
+        "finding_occurrence_count": 0,
+        "internet_exposed": false,
+        "issue_count": 0,
+        "severity_counts": {
+          "critical": 0,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 0,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "none",
+        "worst_severity_rank": 0
+      },
+      "semantic_layer": "infra"
+    },
+    "container:agent-gateway": {
+      "aggregate": {
+        "by_type": {},
+        "descendant_count": 0,
+        "exposed_count": 0,
+        "finding_occurrence_count": 0,
+        "internet_exposed": false,
+        "issue_count": 0,
+        "severity_counts": {
+          "critical": 0,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 0,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "none",
+        "worst_severity_rank": 0
+      },
+      "semantic_layer": "infra"
+    },
+    "container:copilot-portal": {
+      "aggregate": {
+        "by_type": {},
+        "descendant_count": 0,
+        "exposed_count": 0,
+        "finding_occurrence_count": 0,
+        "internet_exposed": false,
+        "issue_count": 0,
+        "severity_counts": {
+          "critical": 0,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 0,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "none",
+        "worst_severity_rank": 0
+      },
+      "semantic_layer": "infra"
+    },
+    "cred:aws": {
+      "aggregate": {
+        "by_type": {},
+        "descendant_count": 0,
+        "exposed_count": 0,
+        "finding_occurrence_count": 0,
+        "internet_exposed": false,
+        "issue_count": 0,
+        "severity_counts": {
+          "critical": 0,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 0,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "none",
+        "worst_severity_rank": 0
+      },
+      "semantic_layer": "identity"
+    },
+    "cred:github": {
+      "aggregate": {
+        "by_type": {},
+        "descendant_count": 0,
+        "exposed_count": 0,
+        "finding_occurrence_count": 0,
+        "internet_exposed": false,
+        "issue_count": 0,
+        "severity_counts": {
+          "critical": 0,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 0,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "none",
+        "worst_severity_rank": 0
+      },
+      "semantic_layer": "identity"
+    },
+    "cred:incident-webhook": {
+      "aggregate": {
+        "by_type": {},
+        "descendant_count": 0,
+        "exposed_count": 0,
+        "finding_occurrence_count": 0,
+        "internet_exposed": false,
+        "issue_count": 0,
+        "severity_counts": {
+          "critical": 0,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 0,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "none",
+        "worst_severity_rank": 0
+      },
+      "semantic_layer": "identity"
+    },
+    "cred:snowflake": {
+      "aggregate": {
+        "by_type": {},
+        "descendant_count": 0,
+        "exposed_count": 0,
+        "finding_occurrence_count": 0,
+        "internet_exposed": false,
+        "issue_count": 0,
+        "severity_counts": {
+          "critical": 0,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 0,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "none",
+        "worst_severity_rank": 0
+      },
+      "semantic_layer": "identity"
+    },
+    "cve:next": {
+      "aggregate": {
+        "by_type": {},
+        "descendant_count": 0,
+        "exposed_count": 0,
+        "finding_occurrence_count": 1,
+        "internet_exposed": false,
+        "issue_count": 1,
+        "severity_counts": {
+          "critical": 1,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 0,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "none",
+        "worst_severity_rank": 0
+      },
+      "semantic_layer": "finding"
+    },
+    "cve:protobuf": {
+      "aggregate": {
+        "by_type": {},
+        "descendant_count": 0,
+        "exposed_count": 0,
+        "finding_occurrence_count": 1,
+        "internet_exposed": false,
+        "issue_count": 1,
+        "severity_counts": {
+          "critical": 0,
+          "high": 1,
+          "info": 0,
+          "low": 0,
+          "medium": 0,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "none",
+        "worst_severity_rank": 0
+      },
+      "semantic_layer": "finding"
+    },
+    "cve:urllib3": {
+      "aggregate": {
+        "by_type": {},
+        "descendant_count": 0,
+        "exposed_count": 0,
+        "finding_occurrence_count": 1,
+        "internet_exposed": false,
+        "issue_count": 1,
+        "severity_counts": {
+          "critical": 0,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 1,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "none",
+        "worst_severity_rank": 0
+      },
+      "semantic_layer": "finding"
+    },
+    "dataset:finance-docs": {
+      "aggregate": {
+        "by_type": {},
+        "descendant_count": 0,
+        "exposed_count": 0,
+        "finding_occurrence_count": 0,
+        "internet_exposed": false,
+        "issue_count": 0,
+        "severity_counts": {
+          "critical": 0,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 0,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "none",
+        "worst_severity_rank": 0
+      },
+      "semantic_layer": "asset"
+    },
+    "env:prod-ai": {
+      "aggregate": {
+        "by_type": {},
+        "descendant_count": 0,
+        "exposed_count": 0,
+        "finding_occurrence_count": 0,
+        "internet_exposed": false,
+        "issue_count": 0,
+        "severity_counts": {
+          "critical": 0,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 0,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "none",
+        "worst_severity_rank": 0
+      },
+      "semantic_layer": "infra"
+    },
+    "model:gpt-prod": {
+      "aggregate": {
+        "by_type": {},
+        "descendant_count": 0,
+        "exposed_count": 0,
+        "finding_occurrence_count": 0,
+        "internet_exposed": false,
+        "issue_count": 0,
+        "severity_counts": {
+          "critical": 0,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 0,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "none",
+        "worst_severity_rank": 0
+      },
+      "semantic_layer": "asset"
+    },
+    "pkg:langchain": {
+      "aggregate": {
+        "by_type": {},
+        "descendant_count": 0,
+        "exposed_count": 0,
+        "finding_occurrence_count": 0,
+        "internet_exposed": false,
+        "issue_count": 0,
+        "severity_counts": {
+          "critical": 0,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 0,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "none",
+        "worst_severity_rank": 0
+      },
+      "semantic_layer": "package"
+    },
+    "pkg:next": {
+      "aggregate": {
+        "by_type": {
+          "vulnerability": 1
+        },
+        "descendant_count": 1,
+        "exposed_count": 0,
+        "finding_occurrence_count": 1,
+        "internet_exposed": false,
+        "issue_count": 1,
+        "severity_counts": {
+          "critical": 1,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 0,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "critical",
+        "worst_severity_rank": 5
+      },
+      "semantic_layer": "package"
+    },
+    "pkg:protobuf": {
+      "aggregate": {
+        "by_type": {
+          "vulnerability": 1
+        },
+        "descendant_count": 1,
+        "exposed_count": 0,
+        "finding_occurrence_count": 1,
+        "internet_exposed": false,
+        "issue_count": 1,
+        "severity_counts": {
+          "critical": 0,
+          "high": 1,
+          "info": 0,
+          "low": 0,
+          "medium": 0,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "high",
+        "worst_severity_rank": 4
+      },
+      "semantic_layer": "package"
+    },
+    "pkg:urllib3": {
+      "aggregate": {
+        "by_type": {
+          "vulnerability": 1
+        },
+        "descendant_count": 1,
+        "exposed_count": 0,
+        "finding_occurrence_count": 1,
+        "internet_exposed": false,
+        "issue_count": 1,
+        "severity_counts": {
+          "critical": 0,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 1,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "medium",
+        "worst_severity_rank": 3
+      },
+      "semantic_layer": "package"
+    },
+    "policy:gateway-default-deny": {
+      "aggregate": {
+        "by_type": {},
+        "descendant_count": 0,
+        "exposed_count": 0,
+        "finding_occurrence_count": 0,
+        "internet_exposed": false,
+        "issue_count": 0,
+        "severity_counts": {
+          "critical": 0,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 0,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "none",
+        "worst_severity_rank": 0
+      },
+      "semantic_layer": "identity"
+    },
+    "provider:aws-prod": {
+      "aggregate": {
+        "by_type": {},
+        "descendant_count": 0,
+        "exposed_count": 0,
+        "finding_occurrence_count": 0,
+        "internet_exposed": false,
+        "issue_count": 0,
+        "severity_counts": {
+          "critical": 0,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 0,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "none",
+        "worst_severity_rank": 0
+      },
+      "semantic_layer": "infra"
+    },
+    "role:prod-admin": {
+      "aggregate": {
+        "by_type": {},
+        "descendant_count": 0,
+        "exposed_count": 0,
+        "finding_occurrence_count": 0,
+        "internet_exposed": false,
+        "issue_count": 0,
+        "severity_counts": {
+          "critical": 0,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 0,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "none",
+        "worst_severity_rank": 0
+      },
+      "semantic_layer": "identity"
+    },
+    "sa:jit-review": {
+      "aggregate": {
+        "by_type": {},
+        "descendant_count": 0,
+        "exposed_count": 0,
+        "finding_occurrence_count": 0,
+        "internet_exposed": false,
+        "issue_count": 0,
+        "severity_counts": {
+          "critical": 0,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 0,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "none",
+        "worst_severity_rank": 0
+      },
+      "semantic_layer": "identity"
+    },
+    "server:filesystem": {
+      "aggregate": {
+        "by_type": {
+          "credential": 1,
+          "package": 1,
+          "tool": 1,
+          "vulnerability": 1
+        },
+        "descendant_count": 4,
+        "exposed_count": 0,
+        "finding_occurrence_count": 1,
+        "internet_exposed": false,
+        "issue_count": 1,
+        "severity_counts": {
+          "critical": 0,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 1,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "critical",
+        "worst_severity_rank": 5
+      },
+      "semantic_layer": "mcp_server"
+    },
+    "server:github": {
+      "aggregate": {
+        "by_type": {
+          "credential": 1,
+          "tool": 1
+        },
+        "descendant_count": 2,
+        "exposed_count": 0,
+        "finding_occurrence_count": 0,
+        "internet_exposed": false,
+        "issue_count": 0,
+        "severity_counts": {
+          "critical": 0,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 0,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "critical",
+        "worst_severity_rank": 5
+      },
+      "semantic_layer": "mcp_server"
+    },
+    "server:slack": {
+      "aggregate": {
+        "by_type": {
+          "credential": 1,
+          "tool": 1
+        },
+        "descendant_count": 2,
+        "exposed_count": 0,
+        "finding_occurrence_count": 0,
+        "internet_exposed": false,
+        "issue_count": 0,
+        "severity_counts": {
+          "critical": 0,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 0,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "high",
+        "worst_severity_rank": 4
+      },
+      "semantic_layer": "mcp_server"
+    },
+    "server:snowflake": {
+      "aggregate": {
+        "by_type": {
+          "credential": 1,
+          "package": 2,
+          "tool": 1,
+          "vulnerability": 1
+        },
+        "descendant_count": 5,
+        "exposed_count": 0,
+        "finding_occurrence_count": 1,
+        "internet_exposed": false,
+        "issue_count": 1,
+        "severity_counts": {
+          "critical": 0,
+          "high": 1,
+          "info": 0,
+          "low": 0,
+          "medium": 0,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "critical",
+        "worst_severity_rank": 5
+      },
+      "semantic_layer": "mcp_server"
+    },
+    "tool:exec": {
+      "aggregate": {
+        "by_type": {},
+        "descendant_count": 0,
+        "exposed_count": 0,
+        "finding_occurrence_count": 0,
+        "internet_exposed": false,
+        "issue_count": 0,
+        "severity_counts": {
+          "critical": 0,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 0,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "none",
+        "worst_severity_rank": 0
+      },
+      "semantic_layer": "tool"
+    },
+    "tool:post": {
+      "aggregate": {
+        "by_type": {},
+        "descendant_count": 0,
+        "exposed_count": 0,
+        "finding_occurrence_count": 0,
+        "internet_exposed": false,
+        "issue_count": 0,
+        "severity_counts": {
+          "critical": 0,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 0,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "none",
+        "worst_severity_rank": 0
+      },
+      "semantic_layer": "tool"
+    },
+    "tool:query": {
+      "aggregate": {
+        "by_type": {},
+        "descendant_count": 0,
+        "exposed_count": 0,
+        "finding_occurrence_count": 0,
+        "internet_exposed": false,
+        "issue_count": 0,
+        "severity_counts": {
+          "critical": 0,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 0,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "none",
+        "worst_severity_rank": 0
+      },
+      "semantic_layer": "tool"
+    },
+    "tool:repo-write": {
+      "aggregate": {
+        "by_type": {},
+        "descendant_count": 0,
+        "exposed_count": 0,
+        "finding_occurrence_count": 0,
+        "internet_exposed": false,
+        "issue_count": 0,
+        "severity_counts": {
+          "critical": 0,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 0,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "none",
+        "worst_severity_rank": 0
+      },
+      "semantic_layer": "tool"
+    },
+    "user:contractor": {
+      "aggregate": {
+        "by_type": {},
+        "descendant_count": 0,
+        "exposed_count": 0,
+        "finding_occurrence_count": 0,
+        "internet_exposed": false,
+        "issue_count": 0,
+        "severity_counts": {
+          "critical": 0,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 0,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "none",
+        "worst_severity_rank": 0
+      },
+      "semantic_layer": "user"
+    }
+  },
+  "rollup": {
+    "aggregate_count_metadata": {
+      "additive": false,
+      "basis": "returned_entry_descendants",
+      "definition": "Filtered descendants of returned entries, excluding each entry itself; not an estate total.",
+      "descendant_memberships": 26,
+      "distinct_descendants": 18,
+      "distinct_finding_occurrences": 3,
+      "extra_memberships": 8,
+      "finding_occurrence_memberships": 4,
+      "occurrences_additive": false,
+      "reason": "",
+      "severity_basis": "issue_groups",
+      "severity_definition": "Distinct open finding issues among the scope's descendants: VEX-suppressed findings and rated non-finding nodes are excluded, and occurrences of one advisory on one package count once.",
+      "shared_descendants": 8,
+      "source_truncated": false
+    },
+    "completeness": {
+      "complete": true,
+      "returned": 15,
+      "sampled": false,
+      "status": "complete",
+      "total": 15,
+      "truncated": false
+    },
+    "created_at": "2026-06-03T20:30:00Z",
+    "edge_count_metadata": {
+      "connections_definition": "Each entry's connections count other returned entries it is linked to, before the row cap.",
+      "definition": "Aggregated non-containment container-to-container relationship rows in the roll-up source graph.",
+      "reason": "",
+      "returned": 15,
+      "source_total": 15,
+      "source_truncated": false,
+      "truncated": false
+    },
+    "edges": [
+      {
+        "count": 2,
+        "directions": [
+          "directed"
+        ],
+        "relationship_counts": {
+          "accessed": 1,
+          "can_access": 1
+        },
+        "relationships": [
+          "accessed",
+          "can_access"
+        ],
+        "source": "agent:finance-rag",
+        "target": "dataset:finance-docs"
+      },
+      {
+        "count": 1,
+        "directions": [
+          "bidirectional"
+        ],
+        "relationship_counts": {
+          "shares_server": 1
+        },
+        "relationships": [
+          "shares_server"
+        ],
+        "source": "agent:developer-copilot",
+        "target": "agent:sre-runbook"
+      },
+      {
+        "count": 1,
+        "directions": [
+          "directed"
+        ],
+        "relationship_counts": {
+          "hosted_on": 1
+        },
+        "relationships": [
+          "hosted_on"
+        ],
+        "source": "agent:developer-copilot",
+        "target": "container:copilot-portal"
+      },
+      {
+        "count": 1,
+        "directions": [
+          "directed"
+        ],
+        "relationship_counts": {
+          "uses": 1
+        },
+        "relationships": [
+          "uses"
+        ],
+        "source": "agent:finance-rag",
+        "target": "model:gpt-prod"
+      },
+      {
+        "count": 1,
+        "directions": [
+          "bidirectional"
+        ],
+        "relationship_counts": {
+          "shares_cred": 1
+        },
+        "relationships": [
+          "shares_cred"
+        ],
+        "source": "agent:sre-runbook",
+        "target": "agent:finance-rag"
+      },
+      {
+        "count": 1,
+        "directions": [
+          "directed"
+        ],
+        "relationship_counts": {
+          "hosts": 1
+        },
+        "relationships": [
+          "hosts"
+        ],
+        "source": "cluster:eks-ai",
+        "target": "container:agent-gateway"
+      },
+      {
+        "count": 1,
+        "directions": [
+          "directed"
+        ],
+        "relationship_counts": {
+          "hosts": 1
+        },
+        "relationships": [
+          "hosts"
+        ],
+        "source": "cluster:eks-ai",
+        "target": "container:copilot-portal"
+      },
+      {
+        "count": 1,
+        "directions": [
+          "directed"
+        ],
+        "relationship_counts": {
+          "manages": 1
+        },
+        "relationships": [
+          "manages"
+        ],
+        "source": "container:agent-gateway",
+        "target": "policy:gateway-default-deny"
+      },
+      {
+        "count": 1,
+        "directions": [
+          "directed"
+        ],
+        "relationship_counts": {
+          "depends_on": 1
+        },
+        "relationships": [
+          "depends_on"
+        ],
+        "source": "container:copilot-portal",
+        "target": "pkg:next"
+      },
+      {
+        "count": 1,
+        "directions": [
+          "directed"
+        ],
+        "relationship_counts": {
+          "hosts": 1
+        },
+        "relationships": [
+          "hosts"
+        ],
+        "source": "env:prod-ai",
+        "target": "cluster:eks-ai"
+      },
+      {
+        "count": 1,
+        "directions": [
+          "directed"
+        ],
+        "relationship_counts": {
+          "manages": 1
+        },
+        "relationships": [
+          "manages"
+        ],
+        "source": "policy:gateway-default-deny",
+        "target": "agent:developer-copilot"
+      },
+      {
+        "count": 1,
+        "directions": [
+          "directed"
+        ],
+        "relationship_counts": {
+          "hosts": 1
+        },
+        "relationships": [
+          "hosts"
+        ],
+        "source": "provider:aws-prod",
+        "target": "env:prod-ai"
+      },
+      {
+        "count": 1,
+        "directions": [
+          "directed"
+        ],
+        "relationship_counts": {
+          "can_access": 1
+        },
+        "relationships": [
+          "can_access"
+        ],
+        "source": "role:prod-admin",
+        "target": "agent:developer-copilot"
+      },
+      {
+        "count": 1,
+        "directions": [
+          "directed"
+        ],
+        "relationship_counts": {
+          "assumes": 1
+        },
+        "relationships": [
+          "assumes"
+        ],
+        "source": "sa:jit-review",
+        "target": "role:prod-admin"
+      },
+      {
+        "count": 1,
+        "directions": [
+          "directed"
+        ],
+        "relationship_counts": {
+          "acted_as": 1
+        },
+        "relationships": [
+          "acted_as"
+        ],
+        "source": "user:contractor",
+        "target": "sa:jit-review"
+      }
+    ],
+    "filters": {
+      "exposed_only": false,
+      "min_severity": "",
+      "toxic_only": false
+    },
+    "mode": "rollup",
+    "orphan_summary": {
+      "by_type": {
+        "cluster": 1,
+        "container": 2,
+        "dataset": 1,
+        "environment": 1,
+        "model": 1,
+        "policy": 1,
+        "provider": 1,
+        "role": 1,
+        "service_account": 1,
+        "user": 1
+      },
+      "exposed_count": 1,
+      "internet_exposed": true,
+      "issue_count": 0,
+      "sample": [],
+      "severity_counts": {
+        "critical": 0,
+        "high": 0,
+        "info": 0,
+        "low": 0,
+        "medium": 0,
+        "none": 0
+      },
+      "shown": 11,
+      "total": 11,
+      "toxic_combo": false,
+      "toxic_count": 0,
+      "truncated": 0,
+      "worst_severity": "critical",
+      "worst_severity_rank": 5
+    },
+    "pagination": {
+      "has_more": false,
+      "limit": null,
+      "next_offset": null,
+      "offset": 0,
+      "returned": 15,
+      "total": 15
+    },
+    "scan_id": "scan-proof-ai-platform",
+    "summary": {
+      "container_count": 4,
+      "finding_occurrence_count": 3,
+      "issue_count": 3,
+      "issue_severity_counts": {
+        "critical": 1,
+        "high": 1,
+        "info": 0,
+        "low": 0,
+        "medium": 1,
+        "none": 0
+      },
+      "orphan_count": 11,
+      "orphan_shown_count": 11,
+      "orphan_truncated_count": 0,
+      "returned_top_level_count": 15,
+      "severity_basis": "issue_groups",
+      "top_level_count": 15,
+      "total_edges": 36,
+      "total_nodes": 33,
+      "total_nodes_source": 33
+    },
+    "tenant_id": "default",
+    "top_level": [
+      {
+        "aggregate": {
+          "by_type": {
+            "credential": 2,
+            "package": 2,
+            "server": 2,
+            "tool": 2,
+            "vulnerability": 1
+          },
+          "descendant_count": 9,
+          "exposed_count": 0,
+          "finding_occurrence_count": 1,
+          "internet_exposed": false,
+          "issue_count": 1,
+          "severity_counts": {
+            "critical": 0,
+            "high": 1,
+            "info": 0,
+            "low": 0,
+            "medium": 0,
+            "none": 0
+          },
+          "toxic_combo": false,
+          "toxic_count": 0,
+          "worst_severity": "critical",
+          "worst_severity_rank": 5
+        },
+        "cloud_provider": "",
+        "cloud_provider_basis": "",
+        "connections": {
+          "connected_entry_count": 3,
+          "relationship_count": 4
+        },
+        "context": {
+          "environment": "prod"
+        },
+        "direct_child_count": 2,
+        "entity_type": "agent",
+        "has_children": true,
+        "id": "agent:finance-rag",
+        "is_container": true,
+        "label": "Finance RAG Agent",
+        "semantic_layer": "orchestration",
+        "severity": "high"
+      },
+      {
+        "aggregate": {
+          "by_type": {
+            "credential": 2,
+            "package": 1,
+            "server": 2,
+            "tool": 2,
+            "vulnerability": 1
+          },
+          "descendant_count": 8,
+          "exposed_count": 0,
+          "finding_occurrence_count": 1,
+          "internet_exposed": false,
+          "issue_count": 1,
+          "severity_counts": {
+            "critical": 0,
+            "high": 0,
+            "info": 0,
+            "low": 0,
+            "medium": 1,
+            "none": 0
+          },
+          "toxic_combo": false,
+          "toxic_count": 0,
+          "worst_severity": "critical",
+          "worst_severity_rank": 5
+        },
+        "cloud_provider": "",
+        "cloud_provider_basis": "",
+        "connections": {
+          "connected_entry_count": 4,
+          "relationship_count": 4
+        },
+        "context": {
+          "environment": "prod"
+        },
+        "direct_child_count": 2,
+        "entity_type": "agent",
+        "has_children": true,
+        "id": "agent:developer-copilot",
+        "is_container": true,
+        "label": "Developer Copilot",
+        "semantic_layer": "orchestration",
+        "severity": "critical"
+      },
+      {
+        "aggregate": {
+          "by_type": {
+            "credential": 2,
+            "package": 1,
+            "server": 2,
+            "tool": 2,
+            "vulnerability": 1
+          },
+          "descendant_count": 8,
+          "exposed_count": 0,
+          "finding_occurrence_count": 1,
+          "internet_exposed": false,
+          "issue_count": 1,
+          "severity_counts": {
+            "critical": 0,
+            "high": 0,
+            "info": 0,
+            "low": 0,
+            "medium": 1,
+            "none": 0
+          },
+          "toxic_combo": false,
+          "toxic_count": 0,
+          "worst_severity": "critical",
+          "worst_severity_rank": 5
+        },
+        "cloud_provider": "",
+        "cloud_provider_basis": "",
+        "connections": {
+          "connected_entry_count": 2,
+          "relationship_count": 2
+        },
+        "context": {
+          "environment": "prod"
+        },
+        "direct_child_count": 2,
+        "entity_type": "agent",
+        "has_children": true,
+        "id": "agent:sre-runbook",
+        "is_container": true,
+        "label": "SRE Runbook Agent",
+        "semantic_layer": "orchestration",
+        "severity": "high"
+      },
+      {
+        "aggregate": {
+          "by_type": {
+            "vulnerability": 1
+          },
+          "descendant_count": 1,
+          "exposed_count": 0,
+          "finding_occurrence_count": 1,
+          "internet_exposed": false,
+          "issue_count": 1,
+          "severity_counts": {
+            "critical": 1,
+            "high": 0,
+            "info": 0,
+            "low": 0,
+            "medium": 0,
+            "none": 0
+          },
+          "toxic_combo": false,
+          "toxic_count": 0,
+          "worst_severity": "critical",
+          "worst_severity_rank": 5
+        },
+        "cloud_provider": "",
+        "cloud_provider_basis": "",
+        "connections": {
+          "connected_entry_count": 1,
+          "relationship_count": 1
+        },
+        "context": {},
+        "direct_child_count": 1,
+        "entity_type": "package",
+        "has_children": true,
+        "id": "pkg:next",
+        "is_container": true,
+        "label": "next@15.2.2",
+        "semantic_layer": "package",
+        "severity": "critical"
+      },
+      {
+        "aggregate": {
+          "by_type": {},
+          "descendant_count": 0,
+          "exposed_count": 0,
+          "finding_occurrence_count": 0,
+          "internet_exposed": false,
+          "issue_count": 0,
+          "severity_counts": {
+            "critical": 0,
+            "high": 0,
+            "info": 0,
+            "low": 0,
+            "medium": 0,
+            "none": 0
+          },
+          "toxic_combo": false,
+          "toxic_count": 0,
+          "worst_severity": "none",
+          "worst_severity_rank": 0
+        },
+        "cloud_provider": "",
+        "cloud_provider_basis": "",
+        "connections": {
+          "connected_entry_count": 3,
+          "relationship_count": 3
+        },
+        "context": {
+          "environment": "prod"
+        },
+        "direct_child_count": 0,
+        "entity_type": "container",
+        "has_children": false,
+        "id": "container:copilot-portal",
+        "is_container": true,
+        "label": "copilot-portal:2.4.0",
+        "semantic_layer": "infra",
+        "severity": "critical"
+      },
+      {
+        "aggregate": {
+          "by_type": {},
+          "descendant_count": 0,
+          "exposed_count": 0,
+          "finding_occurrence_count": 0,
+          "internet_exposed": false,
+          "issue_count": 0,
+          "severity_counts": {
+            "critical": 0,
+            "high": 0,
+            "info": 0,
+            "low": 0,
+            "medium": 0,
+            "none": 0
+          },
+          "toxic_combo": false,
+          "toxic_count": 0,
+          "worst_severity": "none",
+          "worst_severity_rank": 0
+        },
+        "cloud_provider": "",
+        "cloud_provider_basis": "",
+        "connections": {
+          "connected_entry_count": 2,
+          "relationship_count": 2
+        },
+        "context": {
+          "environment": "prod"
+        },
+        "direct_child_count": 0,
+        "entity_type": "role",
+        "has_children": false,
+        "id": "role:prod-admin",
+        "is_container": false,
+        "label": "prod-ai-admin",
+        "semantic_layer": "identity",
+        "severity": "critical"
+      },
+      {
+        "aggregate": {
+          "by_type": {},
+          "descendant_count": 0,
+          "exposed_count": 0,
+          "finding_occurrence_count": 0,
+          "internet_exposed": false,
+          "issue_count": 0,
+          "severity_counts": {
+            "critical": 0,
+            "high": 0,
+            "info": 0,
+            "low": 0,
+            "medium": 0,
+            "none": 0
+          },
+          "toxic_combo": false,
+          "toxic_count": 0,
+          "worst_severity": "none",
+          "worst_severity_rank": 0
+        },
+        "cloud_provider": "",
+        "cloud_provider_basis": "",
+        "connections": {
+          "connected_entry_count": 3,
+          "relationship_count": 3
+        },
+        "context": {
+          "environment": "prod"
+        },
+        "direct_child_count": 0,
+        "entity_type": "cluster",
+        "has_children": false,
+        "id": "cluster:eks-ai",
+        "is_container": true,
+        "label": "eks-ai-runtime",
+        "semantic_layer": "infra",
+        "severity": "high"
+      },
+      {
+        "aggregate": {
+          "by_type": {},
+          "descendant_count": 0,
+          "exposed_count": 0,
+          "finding_occurrence_count": 0,
+          "internet_exposed": false,
+          "issue_count": 0,
+          "severity_counts": {
+            "critical": 0,
+            "high": 0,
+            "info": 0,
+            "low": 0,
+            "medium": 0,
+            "none": 0
+          },
+          "toxic_combo": false,
+          "toxic_count": 0,
+          "worst_severity": "none",
+          "worst_severity_rank": 0
+        },
+        "cloud_provider": "",
+        "cloud_provider_basis": "",
+        "connections": {
+          "connected_entry_count": 2,
+          "relationship_count": 2
+        },
+        "context": {},
+        "direct_child_count": 0,
+        "entity_type": "container",
+        "has_children": false,
+        "id": "container:agent-gateway",
+        "is_container": true,
+        "label": "agent-gateway:0.91.0",
+        "semantic_layer": "infra",
+        "severity": "high"
+      },
+      {
+        "aggregate": {
+          "by_type": {},
+          "descendant_count": 0,
+          "exposed_count": 0,
+          "finding_occurrence_count": 0,
+          "internet_exposed": false,
+          "issue_count": 0,
+          "severity_counts": {
+            "critical": 0,
+            "high": 0,
+            "info": 0,
+            "low": 0,
+            "medium": 0,
+            "none": 0
+          },
+          "toxic_combo": false,
+          "toxic_count": 0,
+          "worst_severity": "none",
+          "worst_severity_rank": 0
+        },
+        "cloud_provider": "",
+        "cloud_provider_basis": "",
+        "connections": {
+          "connected_entry_count": 1,
+          "relationship_count": 2
+        },
+        "context": {},
+        "direct_child_count": 0,
+        "entity_type": "dataset",
+        "has_children": false,
+        "id": "dataset:finance-docs",
+        "is_container": false,
+        "label": "finance-board-rag-index",
+        "semantic_layer": "asset",
+        "severity": "high"
+      },
+      {
+        "aggregate": {
+          "by_type": {},
+          "descendant_count": 0,
+          "exposed_count": 0,
+          "finding_occurrence_count": 0,
+          "internet_exposed": false,
+          "issue_count": 0,
+          "severity_counts": {
+            "critical": 0,
+            "high": 0,
+            "info": 0,
+            "low": 0,
+            "medium": 0,
+            "none": 0
+          },
+          "toxic_combo": false,
+          "toxic_count": 0,
+          "worst_severity": "none",
+          "worst_severity_rank": 0
+        },
+        "cloud_provider": "",
+        "cloud_provider_basis": "",
+        "connections": {
+          "connected_entry_count": 2,
+          "relationship_count": 2
+        },
+        "context": {
+          "environment": "prod"
+        },
+        "direct_child_count": 0,
+        "entity_type": "environment",
+        "has_children": false,
+        "id": "env:prod-ai",
+        "is_container": true,
+        "label": "prod-ai-control-plane",
+        "semantic_layer": "infra",
+        "severity": "high"
+      },
+      {
+        "aggregate": {
+          "by_type": {},
+          "descendant_count": 0,
+          "exposed_count": 0,
+          "finding_occurrence_count": 0,
+          "internet_exposed": false,
+          "issue_count": 0,
+          "severity_counts": {
+            "critical": 0,
+            "high": 0,
+            "info": 0,
+            "low": 0,
+            "medium": 0,
+            "none": 0
+          },
+          "toxic_combo": false,
+          "toxic_count": 0,
+          "worst_severity": "none",
+          "worst_severity_rank": 0
+        },
+        "cloud_provider": "",
+        "cloud_provider_basis": "",
+        "connections": {
+          "connected_entry_count": 2,
+          "relationship_count": 2
+        },
+        "context": {
+          "environment": "prod"
+        },
+        "direct_child_count": 0,
+        "entity_type": "service_account",
+        "has_children": false,
+        "id": "sa:jit-review",
+        "is_container": false,
+        "label": "jit-prod-reviewer",
+        "semantic_layer": "identity",
+        "severity": "high"
+      },
+      {
+        "aggregate": {
+          "by_type": {},
+          "descendant_count": 0,
+          "exposed_count": 0,
+          "finding_occurrence_count": 0,
+          "internet_exposed": false,
+          "issue_count": 0,
+          "severity_counts": {
+            "critical": 0,
+            "high": 0,
+            "info": 0,
+            "low": 0,
+            "medium": 0,
+            "none": 0
+          },
+          "toxic_combo": false,
+          "toxic_count": 0,
+          "worst_severity": "none",
+          "worst_severity_rank": 0
+        },
+        "cloud_provider": "",
+        "cloud_provider_basis": "",
+        "connections": {
+          "connected_entry_count": 1,
+          "relationship_count": 1
+        },
+        "context": {
+          "environment": "prod"
+        },
+        "direct_child_count": 0,
+        "entity_type": "user",
+        "has_children": false,
+        "id": "user:contractor",
+        "is_container": false,
+        "label": "contractor-reviewer",
+        "semantic_layer": "user",
+        "severity": "high"
+      },
+      {
+        "aggregate": {
+          "by_type": {},
+          "descendant_count": 0,
+          "exposed_count": 0,
+          "finding_occurrence_count": 0,
+          "internet_exposed": false,
+          "issue_count": 0,
+          "severity_counts": {
+            "critical": 0,
+            "high": 0,
+            "info": 0,
+            "low": 0,
+            "medium": 0,
+            "none": 0
+          },
+          "toxic_combo": false,
+          "toxic_count": 0,
+          "worst_severity": "none",
+          "worst_severity_rank": 0
+        },
+        "cloud_provider": "",
+        "cloud_provider_basis": "",
+        "connections": {
+          "connected_entry_count": 1,
+          "relationship_count": 1
+        },
+        "context": {},
+        "direct_child_count": 0,
+        "entity_type": "model",
+        "has_children": false,
+        "id": "model:gpt-prod",
+        "is_container": false,
+        "label": "prod-reasoning-model",
+        "semantic_layer": "asset",
+        "severity": "medium"
+      },
+      {
+        "aggregate": {
+          "by_type": {},
+          "descendant_count": 0,
+          "exposed_count": 0,
+          "finding_occurrence_count": 0,
+          "internet_exposed": false,
+          "issue_count": 0,
+          "severity_counts": {
+            "critical": 0,
+            "high": 0,
+            "info": 0,
+            "low": 0,
+            "medium": 0,
+            "none": 0
+          },
+          "toxic_combo": false,
+          "toxic_count": 0,
+          "worst_severity": "none",
+          "worst_severity_rank": 0
+        },
+        "cloud_provider": "",
+        "cloud_provider_basis": "",
+        "connections": {
+          "connected_entry_count": 2,
+          "relationship_count": 2
+        },
+        "context": {},
+        "direct_child_count": 0,
+        "entity_type": "policy",
+        "has_children": false,
+        "id": "policy:gateway-default-deny",
+        "is_container": false,
+        "label": "default-deny gateway policy",
+        "semantic_layer": "identity",
+        "severity": "medium"
+      },
+      {
+        "aggregate": {
+          "by_type": {},
+          "descendant_count": 0,
+          "exposed_count": 0,
+          "finding_occurrence_count": 0,
+          "internet_exposed": false,
+          "issue_count": 0,
+          "severity_counts": {
+            "critical": 0,
+            "high": 0,
+            "info": 0,
+            "low": 0,
+            "medium": 0,
+            "none": 0
+          },
+          "toxic_combo": false,
+          "toxic_count": 0,
+          "worst_severity": "none",
+          "worst_severity_rank": 0
+        },
+        "cloud_provider": "",
+        "cloud_provider_basis": "",
+        "connections": {
+          "connected_entry_count": 1,
+          "relationship_count": 1
+        },
+        "context": {
+          "environment": "prod"
+        },
+        "direct_child_count": 0,
+        "entity_type": "provider",
+        "has_children": false,
+        "id": "provider:aws-prod",
+        "is_container": true,
+        "label": "AWS prod account",
+        "semantic_layer": "infra",
+        "severity": "medium"
+      }
+    ]
+  }
+}

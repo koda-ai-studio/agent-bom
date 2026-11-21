@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { nodeAggregatesResponse, rollupResponse } from "./product-proof-rollup.mjs";
 import { auditRenderedGraph, renderedRelationshipCurves, sharedRelationshipRuns } from "./graph-visual-audit.mjs";
 import { chromium, expect } from "@playwright/test";
 import { spawn, spawnSync } from "node:child_process";
@@ -1472,62 +1473,12 @@ export async function installRoutes(page, fixtureGraph = graph) {
     scenarios: [graphScenario()],
   }));
   await page.route("**/v1/graph/rollup?**", (route) => {
-    const body = {
-      scan_id: SCAN_ID,
-      tenant_id: "default",
-      created_at: CREATED_AT,
-      mode: "rollup",
-      filters: { min_severity: "high" },
-      top_level: graph.nodes.slice(0, 30).map((node) => ({
-        id: node.id,
-        label: node.label,
-        entity_type: node.entity_type,
-        severity: node.severity,
-        is_container: true,
-        has_children: true,
-        direct_child_count: 3,
-        aggregate: {
-          descendant_count: 12,
-          by_type: { agent: 2, server: 3, package: 4, vulnerability: 3 },
-          severity_counts: { critical: 2, high: 4, medium: 3, low: 0 },
-          worst_severity: node.severity,
-          worst_severity_rank: severityId(node.severity),
-          internet_exposed: node.severity === "critical",
-          toxic_combo: node.severity === "critical",
-          exposed_count: node.severity === "critical" ? 2 : 0,
-          toxic_count: node.severity === "critical" ? 1 : 0,
-        },
-      })),
-      summary: {
-        total_nodes: graph.nodes.length,
-        total_nodes_source: graph.nodes.length,
-        total_edges: graph.edges.length,
-        container_count: 30,
-        severity_counts: graph.stats.severity_counts,
-      },
-      edges: [
-        {
-          source: graph.nodes[0].id,
-          target: graph.nodes[1].id,
-          count: 1,
-          relationships: ["hosts"],
-        },
-      ],
-      completeness: {
-        returned: 30,
-        total: 30,
-        truncated: false,
-        reason: "",
-      },
-      edge_count_metadata: {
-        definition: "aggregated non-containment relationship rows between returned containers",
-        source_total: 1,
-        returned: 1,
-        truncated: false,
-        source_truncated: false,
-        reason: "",
-      },
-    };
+    const body = rollupResponse();
+    assertCaptureSnapshotScope(route.request().url(), SCAN_ID, [body.scan_id]);
+    return fulfill(route, body);
+  });
+  await page.route("**/v1/graph/node-aggregates?**", (route) => {
+    const body = nodeAggregatesResponse(new URL(route.request().url()));
     assertCaptureSnapshotScope(route.request().url(), SCAN_ID, [body.scan_id]);
     return fulfill(route, body);
   });
