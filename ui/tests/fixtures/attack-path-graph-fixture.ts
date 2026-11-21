@@ -1,10 +1,26 @@
 import type { AttackPath, UnifiedEdge, UnifiedGraphData, UnifiedNode } from "@/lib/graph-schema";
+import layerByEntityType from "./product-proof-layers.json";
+import riskContexts from "./risk-context.json";
 
+const canonical = (value: unknown) => JSON.stringify(value, Object.keys(value as object).sort());
+
+/** The stored risk context the backend derives for these recorded attributes (scripts/generate_product_proof_rollup.py). */
+function riskContextFor(entityType: string, attributes: Record<string, unknown>) {
+  if (!Object.keys(attributes).length || "risk_context" in attributes) return null;
+  const match = riskContexts.find(item => item.entity_type === entityType && canonical(item.attributes) === canonical(attributes));
+  if (!match) throw new Error(`No backend risk context for ${entityType} ${canonical(attributes)}; add it to RISK_CONTEXT_INPUTS`);
+  return match.risk_context;
+}
+
+/** A node as the API serves it: recorded attributes, the stored risk context, and the semantic layer. */
 export function node(id: string, entity_type: string, label: string, attributes: Record<string, unknown> = {}, severity = "none"): UnifiedNode {
+  const riskContext = riskContextFor(entity_type, attributes);
   return {
     id, entity_type, label, severity, risk_score: 0, status: "active",
     first_seen: "2026-11-01T00:00:00Z", last_seen: "2026-11-01T00:00:00Z",
-    attributes, compliance_tags: [], data_sources: [], dimensions: {},
+    attributes: riskContext ? { ...attributes, risk_context: riskContext } : attributes,
+    semantic_layer: (layerByEntityType as Record<string, string>)[entity_type] ?? "asset",
+    compliance_tags: [], data_sources: [], dimensions: {},
   } as unknown as UnifiedNode;
 }
 

@@ -2652,7 +2652,10 @@ async function main() {
           await expect(view).toHaveAttribute("aria-pressed", "true");
           await p.getByRole("button", { name: "View & layers", exact: true }).click();
           if (scope === "cloud") await p.getByRole("button", { name: /^Expand findings/ }).click();
-          await expect(p.locator(".react-flow__node")).toHaveCount(fixture.nodes.length);
+          // Every fixture node is drawn; display-only anchors (the Internet entry) are extra, and only for backend-true exposure.
+          await expect(p.locator('.react-flow__node:not([data-id^="display:"])')).toHaveCount(fixture.nodes.length);
+          const exposed = fixture.nodes.some(item => (item.attributes?.risk_context?.internet_exposed ?? item.attributes?.internet_exposed) === true);
+          if (!exposed) await expect(p.locator('.react-flow__node[data-id^="display:internet:"]')).toHaveCount(0);
           await fitReactFlow(p);
           await scrollTo(p, 0);
           if (scope === "cloud") {
