@@ -112,6 +112,13 @@ export function layoutAttackPathGraph(model: AttackPathGraphModel, _requestedDir
     width = Math.max(width, x + PATH_NODE.width + (row ? 0 : margin));
     height = Math.max(height, y + PATH_NODE.height + (row ? margin : 0));
   }
+  // Empty semantic layers do not consume canvas space before the first node.
+  // Translate the whole layout; retain every backend column and relative gap.
+  const occupiedLeft = positions.size ? Math.min(...[...positions.values()].map(point => point.x)) : 0;
+  if (occupiedLeft) {
+    for (const [id, point] of positions) positions.set(id, { ...point, x: point.x - occupiedLeft });
+    width -= occupiedLeft;
+  }
   return {
     direction, positions, columns, lanes, minLane, maxLane, rankGap: spacing.rank, laneGap: spacing.lane, margin,
     width, height, nodeWidth: PATH_NODE.width, nodeHeight: PATH_NODE.height,

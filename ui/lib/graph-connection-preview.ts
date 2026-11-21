@@ -43,6 +43,12 @@ export function graphConnectionPreview<N extends Node<LineageNodeData>, E extend
     }
     frontier = next;
   }
+  // An inventory with no recorded links still opens a useful bounded window.
+  // An explicitly chosen isolated root remains scoped to that root.
+  if (!rootId && edges.length === 0) for (const node of roots) {
+    if (selected.size >= budget) break;
+    selected.add(node.id);
+  }
   return { root, roots, nodes: nodes.filter(node => selected.has(node.id)),
     edges: edges.filter(edge => selected.has(edge.source) && selected.has(edge.target)),
     totalNodes: nodes.length, totalEdges: edges.length, allNodes: nodes, allEdges: edges };

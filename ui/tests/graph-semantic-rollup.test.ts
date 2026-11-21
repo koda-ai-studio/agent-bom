@@ -36,6 +36,7 @@ it("uses the backend rollup count and severity rather than the loaded finding su
   const result = cloudFindingDisclosure([owner, finding], [], new Set(), () => undefined, true);
   const group = result.nodes.find(n => n.type === "findingGroupNode")!;
   expect(group.data.readingFindings?.count).toBe(41);
+  expect(group.data.semanticLayout).toBe(true);
   expect(group.data.readingFindings?.severity).toBe("critical");
   expect(group.position.x).toBe(owner.position.x);
   expect(group.position.y).toBeGreaterThan(owner.position.y);
@@ -73,5 +74,6 @@ it("uses the same backend aggregate for a bounded raw context's Findings group",
   const result = cloudFindingDisclosure([rawOwner, finding], [], new Set(), () => undefined, true);
   const group = result.nodes.find(node => node.type === "findingGroupNode")!;
   expect(group.data.readingFindings?.count).toBe(41);
+  expect(group.data.semanticLayout).toBe(true);
   expect(group.data.findingAggregate).toBe(aggregate);
 });

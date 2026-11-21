@@ -51,7 +51,7 @@ export function cloudFindingDisclosure(nodes: Node<LineageNodeData>[], edges: Ed
     const grouped = `${count} finding${count === 1 ? "" : "s"}`;
     groupNodes.push({ id, initialWidth: 240, initialHeight: 180, draggable: false, type: "findingGroupNode", position, ariaLabel: `Findings for ${asset.data.label}: ${count}`,
       data: { label: "Findings", nodeType: "misconfiguration", displayOnly: true, displayTargetId: owner,
-        rollup: asset.data.rollup, findingAggregate: asset.data.findingAggregate, semanticLayer: "finding", semanticOwner: owner,
+        rollup: asset.data.rollup, findingAggregate: asset.data.findingAggregate, semanticLayout: true, semanticLayer: "finding", semanticOwner: owner,
         description: asset.data.label, readingFindings: { ...asset.data.readingFindings, count, expanded: false, toggle: () => toggle(owner) } } });
     // A group left of its owner is entered from its far side; otherwise the edge crosses its own glyph.
     groupEdges.push({ id: `${id}:summary`, source: owner, target: id, type: "smoothstep", label: "Has findings", ariaLabel: `${asset.data.label} has ${grouped}`,

@@ -20,3 +20,12 @@ it("allocates preview context across sibling branches rather than exhausting the
   expect(graphConnectionPreview(nodes, edges, "root", 5)!.nodes.map(n => n.id).sort()).toEqual(["root", "left", "right", "left-a", "right-a"].sort());
   expect(graphConnectionPreview(nodes, edges, "root", 12)!.nodes).toHaveLength(7);
 });
+
+it("opens a disconnected inventory with six real nodes and no invented links", () => {
+  const nodes = Array.from({ length: 40 }, (_, i) => node(`scope-${String(i).padStart(2, "0")}`));
+  const preview = graphConnectionPreview(nodes, [])!;
+  expect(preview.nodes).toHaveLength(6);
+  expect(preview.edges).toEqual([]);
+  expect(preview.totalNodes).toBe(40);
+  expect(preview.nodes.every(node => nodes.includes(node))).toBe(true);
+});

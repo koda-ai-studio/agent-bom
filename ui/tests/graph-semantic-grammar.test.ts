@@ -165,3 +165,12 @@ it("keeps same-layer path hops distinct within their backend column", () => {
   expect(first!.position.x).toBeLessThan(second!.position.x);
   expect(second!.position.x).toBeLessThan(tool!.position.x);
 });
+
+it("frames the occupied selected-path columns without a blank leading canvas", () => {
+  const { graph, selected } = branchingFixture();
+  const model = buildAttackPathGraphModel(graph, selected);
+  const layout = layoutAttackPathGraph(model, "LR");
+  const xs = [...layout.positions.values()].map(point => point.x);
+  expect(Math.min(...xs)).toBe(0);
+  expect(layout.width).toBe(Math.max(...xs) + layout.nodeWidth);
+});

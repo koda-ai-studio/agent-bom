@@ -100,7 +100,7 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
       const from = positions.get(edge.source), to = positions.get(edge.target);
       const reverse = from && to && from.x > to.x;
       return { ...edge, type: "relationship", sourceHandle: reverse ? "context" : null, targetHandle: reverse ? "context" : null,
-        data: { ...edge.data, semanticLayout: true, individualLabel: true, directionEmphasis: true, quietLabel: true,
+        data: { ...edge.data, semanticLayout: true, individualLabel: true, directionEmphasis: true, quietLabel: edge.data?.isClusterEdge !== true,
           pathEmphasis: pathPairs.has(`${edge.source}\u0000${edge.target}`) || edge.data?.pathEmphasis === true } };
     }),
   };
