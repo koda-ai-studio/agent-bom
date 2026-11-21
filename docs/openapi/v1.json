@@ -21967,6 +21967,39 @@
         "title": "GraphAgentsResponse",
         "type": "object"
       },
+      "GraphAttackPathCounts": {
+        "additionalProperties": true,
+        "description": "The one attack-path count every surface reports for a snapshot.",
+        "properties": {
+          "assessed_count": {
+            "description": "Candidates the analyzers evaluated before deduplication, caps and exclusions; never below retained_count.",
+            "title": "Assessed Count",
+            "type": "integer"
+          },
+          "basis": {
+            "description": "derived: the snapshot path index; persisted: stored path rows; served: the count the payload reported.",
+            "enum": [
+              "derived_graph_paths",
+              "persisted_graph_paths",
+              "served_graph_paths"
+            ],
+            "title": "Basis",
+            "type": "string"
+          },
+          "retained_count": {
+            "description": "The attack-path queue's snapshot total; ``attack_path_count`` equals it.",
+            "title": "Retained Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "retained_count",
+          "assessed_count",
+          "basis"
+        ],
+        "title": "GraphAttackPathCounts",
+        "type": "object"
+      },
       "GraphAttackPathRecord": {
         "additionalProperties": true,
         "description": "Serialized attack path; recorded reachability never implies execution.",
@@ -23950,6 +23983,108 @@
         "title": "GraphCorrelationList",
         "type": "object"
       },
+      "GraphCorrelationOutput": {
+        "additionalProperties": true,
+        "description": "The output graph a completed correlation receipt binds.",
+        "properties": {
+          "attack_path_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attack Path Count"
+          },
+          "attack_paths": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GraphAttackPathCounts"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "edge_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edge Count"
+          },
+          "graph_digest_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Graph Digest Sha256"
+          },
+          "node_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Node Count"
+          },
+          "scan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Id"
+          }
+        },
+        "title": "GraphCorrelationOutput",
+        "type": "object"
+      },
+      "GraphCorrelationResultManifest": {
+        "additionalProperties": true,
+        "description": "A correlation run's receipt; empty until the run completes.",
+        "properties": {
+          "output": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GraphCorrelationOutput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schema Version"
+          }
+        },
+        "title": "GraphCorrelationResultManifest",
+        "type": "object"
+      },
       "GraphCorrelationRunResponse": {
         "additionalProperties": true,
         "properties": {
@@ -24002,9 +24137,7 @@
             "type": "string"
           },
           "result_manifest": {
-            "additionalProperties": true,
-            "title": "Result Manifest",
-            "type": "object"
+            "$ref": "#/components/schemas/GraphCorrelationResultManifest"
           },
           "started_at": {
             "title": "Started At",
@@ -27140,9 +27273,7 @@
             "title": "Snapshot Generation"
           },
           "stats": {
-            "additionalProperties": true,
-            "title": "Stats",
-            "type": "object"
+            "$ref": "#/components/schemas/GraphPageStats"
           },
           "tenant_id": {
             "title": "Tenant Id",
@@ -27178,6 +27309,35 @@
           "completeness"
         ],
         "title": "GraphPageResponse",
+        "type": "object"
+      },
+      "GraphPageStats": {
+        "additionalProperties": true,
+        "description": "``GET /v1/graph`` stats: counts and analysis status, plus the typed attack-path count.",
+        "properties": {
+          "attack_path_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attack Path Count"
+          },
+          "attack_paths": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GraphAttackPathCounts"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "GraphPageStats",
         "type": "object"
       },
       "GraphPagination": {

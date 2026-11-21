@@ -7,6 +7,7 @@ from typing import Any
 from pydantic import ConfigDict, Field
 
 from agent_bom.api.read_models._base import Completeness, Num, ReadModel, ReadResponse
+from agent_bom.api.read_models.graph_path_counts import GraphCorrelationResultManifest
 
 # ── Snowflake governance + Cortex telemetry ──────────────────────────────────
 
@@ -468,7 +469,7 @@ class GraphCorrelationRunResponse(ReadResponse):
     max_age_hours: int
     allow_stale: bool
     input_manifest: list[dict[str, Any]]
-    result_manifest: dict[str, Any]
+    result_manifest: GraphCorrelationResultManifest
     manifest_sha256: str
     output_scan_id: str
     failure_code: str

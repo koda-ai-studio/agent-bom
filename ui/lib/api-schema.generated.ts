@@ -16872,6 +16872,30 @@ export interface components {
             [key: string]: unknown;
         };
         /**
+         * GraphAttackPathCounts
+         * @description The one attack-path count every surface reports for a snapshot.
+         */
+        GraphAttackPathCounts: {
+            /**
+             * Assessed Count
+             * @description Candidates the analyzers evaluated before deduplication, caps and exclusions; never below retained_count.
+             */
+            assessed_count: number;
+            /**
+             * Basis
+             * @description derived: the snapshot path index; persisted: stored path rows; served: the count the payload reported.
+             * @enum {string}
+             */
+            basis: "derived_graph_paths" | "persisted_graph_paths" | "served_graph_paths";
+            /**
+             * Retained Count
+             * @description The attack-path queue's snapshot total; ``attack_path_count`` equals it.
+             */
+            retained_count: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
          * GraphAttackPathRecord
          * @description Serialized attack path; recorded reachability never implies execution.
          */
@@ -17637,6 +17661,36 @@ export interface components {
                 [key: string]: unknown;
             }[];
         };
+        /**
+         * GraphCorrelationOutput
+         * @description The output graph a completed correlation receipt binds.
+         */
+        GraphCorrelationOutput: {
+            /** Attack Path Count */
+            attack_path_count?: number | null;
+            attack_paths?: components["schemas"]["GraphAttackPathCounts"] | null;
+            /** Edge Count */
+            edge_count?: number | null;
+            /** Graph Digest Sha256 */
+            graph_digest_sha256?: string | null;
+            /** Node Count */
+            node_count?: number | null;
+            /** Scan Id */
+            scan_id?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * GraphCorrelationResultManifest
+         * @description A correlation run's receipt; empty until the run completes.
+         */
+        GraphCorrelationResultManifest: {
+            output?: components["schemas"]["GraphCorrelationOutput"] | null;
+            /** Schema Version */
+            schema_version?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
         /** GraphCorrelationRunResponse */
         GraphCorrelationRunResponse: {
             /** Allow Stale */
@@ -17663,10 +17717,7 @@ export interface components {
             name: string;
             /** Output Scan Id */
             output_scan_id: string;
-            /** Result Manifest */
-            result_manifest: {
-                [key: string]: unknown;
-            };
+            result_manifest: components["schemas"]["GraphCorrelationResultManifest"];
             /** Started At */
             started_at: string;
             /** Status */
@@ -18793,10 +18844,7 @@ export interface components {
             scan_id: string;
             /** Snapshot Generation */
             snapshot_generation?: string | null;
-            /** Stats */
-            stats: {
-                [key: string]: unknown;
-            };
+            stats: components["schemas"]["GraphPageStats"];
             /** Tenant Id */
             tenant_id: string;
             /**
@@ -18804,6 +18852,17 @@ export interface components {
              * @description The projection served; absent on view=full (the default).
              */
             view?: ("summary" | "canvas") | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * GraphPageStats
+         * @description ``GET /v1/graph`` stats: counts and analysis status, plus the typed attack-path count.
+         */
+        GraphPageStats: {
+            /** Attack Path Count */
+            attack_path_count?: number | null;
+            attack_paths?: components["schemas"]["GraphAttackPathCounts"] | null;
         } & {
             [key: string]: unknown;
         };
