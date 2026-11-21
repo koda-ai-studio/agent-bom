@@ -106,3 +106,17 @@ describe("attack path viewport", () => {
     for (const id of viewport.hiddenNodeIds) expect(model.pathNodeIds).not.toContain(id);
   });
 });
+
+it("reserves badge room before framing phone context to the left of the selected spine", () => {
+  const layout = {
+    direction: "LR" as const, nodeWidth: 152, nodeHeight: 136, width: 1152, height: 840,
+    positions: new Map([["left-context", { x: 0, y: 0 }], ["spine", { x: 600, y: 336 }], ["right-context", { x: 1000, y: 0 }]]),
+  };
+  const width = attackPathCanvasWidth(layout, true, 358);
+  const height = attackPathCanvasHeight(layout, true, width);
+  const viewport = attackPathViewport(layout, ["spine"], { width, height }, NARROW_MIN_ZOOM);
+  expect(viewport.hiddenNodeIds).toEqual([]);
+  expect(viewport.zoom).toBeGreaterThanOrEqual(NARROW_MIN_ZOOM);
+  const right = viewport.x + layout.width * viewport.zoom;
+  expect(right + FINDING_BADGE_OVERHANG * viewport.zoom).toBeLessThanOrEqual(width);
+});

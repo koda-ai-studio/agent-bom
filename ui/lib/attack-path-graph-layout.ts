@@ -1,7 +1,7 @@
 import { semanticColumns } from "@/lib/graph-semantic-columns";
 
 import type { AttackPathGraphModel } from "@/lib/attack-path-graph-model";
-import { ATTACK_PATH_FIT_PADDING } from "@/lib/attack-path-graph-viewport";
+import { ATTACK_PATH_FIT_PADDING, FINDING_BADGE_OVERHANG } from "@/lib/attack-path-graph-viewport";
 import { legibleZoomForText } from "@/lib/graph-adaptive-frame";
 
 export type AttackPathDirection = "LR" | "TB";
@@ -142,7 +142,7 @@ function fittedZoom(layout: Pick<AttackPathLayout, "width">, containerWidth: num
  */
 export function attackPathCanvasWidth(layout: Pick<AttackPathLayout, "width">, narrow: boolean, containerWidth: number): number {
   if (!narrow || !(containerWidth > 0)) return containerWidth;
-  const needed = layout.width * NARROW_MIN_ZOOM + ATTACK_PATH_FIT_PADDING.left + ATTACK_PATH_FIT_PADDING.right;
+  const needed = layout.width * NARROW_MIN_ZOOM + ATTACK_PATH_FIT_PADDING.left + ATTACK_PATH_FIT_PADDING.right + FINDING_BADGE_OVERHANG;
   return Math.max(containerWidth, Math.ceil(needed));
 }
 
