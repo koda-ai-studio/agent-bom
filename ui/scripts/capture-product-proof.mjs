@@ -3000,7 +3000,7 @@ async function main() {
       minGraphNodes: 3,
       minGraphEdges: 2,
     });
-    await page.setViewportSize({ width: 1440, height: 820 });
+    await page.setViewportSize({ width: 1440, height: 1000 });
     await capture(page, `/graph?lens=mesh&scan=${SCAN_ID}&agent=agent%3Adeveloper-copilot&capture=1`, "mesh-live.png", async (meshPage) => {
       // ReactFlow can preserve a hidden, pre-measurement node tree across an
       // App Router transition. A hard reload gives the capture a fresh canvas
