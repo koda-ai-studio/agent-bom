@@ -3,14 +3,17 @@ import type { Edge, Node } from "@xyflow/react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { cloudFindingDisclosure } from "@/lib/graph-finding-disclosure";
 const nodes: Node<LineageNodeData>[] = [
-  { id: "owner", position: { x: 0, y: 0 }, data: { nodeType: "container", label: "app", readingGroup: "Applications" } },
-  { id: "finding", position: { x: 600, y: 0 }, data: { nodeType: "misconfiguration", label: "WAF missing", readingFinding: true, readingOwner: "owner", severity: "high" } },
+  { id: "owner", position: { x: 0, y: 0 }, data: { nodeType: "container", label: "app", readingGroup: "Applications", semanticLayer: "app", findingAggregate: {
+    issue_count: 7, finding_occurrence_count: 7, descendant_count: 8, by_type: {}, severity_counts: { critical: 7 }, worst_severity: "critical",
+    worst_severity_rank: 5, internet_exposed: false, exposed_count: 0, toxic_count: 0, toxic_combo: false,
+  } } },
+  { id: "finding", position: { x: 600, y: 0 }, data: { nodeType: "misconfiguration", label: "WAF missing", semanticLayer: "finding", readingFinding: true, readingOwner: "owner", severity: "high" } },
 ];
 const edges: Edge[] = [{ id: "affects", source: "finding", target: "owner", data: { relationship: "affects", evidenceMode: "inferred" } }];
 it("collapses only uniquely owned findings and preserves records, count and severity", () => {
   const result = cloudFindingDisclosure(nodes, edges, new Set(), () => {});
   expect(result.nodes.find(n => n.id === "finding")!.hidden).toBe(true);
-  expect(result.nodes[0]!.data.readingFindings).toMatchObject({ count: 1, expanded: false, severity: "high" });
+  expect(result.nodes[0]!.data.readingFindings).toMatchObject({ count: 7, expanded: false, severity: "critical" });
   expect(result.edges[0]).toMatchObject({ ...edges[0], hidden: true });
   expect(nodes[1]!.hidden).toBeUndefined();
 });
@@ -47,8 +50,8 @@ it("offers a separate finding group with original findings available on expansio
   const collapsed = cloudFindingDisclosure(nodes, edges, new Set(), () => {});
   const group = collapsed.nodes.find(n => n.type === "findingGroupNode");
   expect(group?.data.label).toBe("Findings");
-  expect(group?.data.readingFindings?.count).toBe(1);
-  expect(group?.data.readingFindings?.severity).toBe("high");
+  expect(group?.data.readingFindings?.count).toBe(7);
+  expect(group?.data.readingFindings?.severity).toBe("critical");
   expect(group?.data.displayOnly).toBe(true);
   expect(group?.draggable).toBe(false);
   const expanded = cloudFindingDisclosure(nodes, edges, new Set(["owner"]), () => {});
@@ -63,15 +66,17 @@ it("keeps finding disclosure available when an asset uses the display ID prefix"
   expect(new Set(result.nodes.map(n => n.id)).size).toBe(result.nodes.length);
 });
 
-it("gives a finding group an accessible name and a connector that faces it", () => {
+it("keeps a finding group below its owner with its authoritative accessible count", () => {
   const left = nodes.map(n => n.id === "finding" ? { ...n, position: { x: -600, y: 0 } } : n);
   const result = cloudFindingDisclosure(left, edges, new Set(), () => {}, true);
   const group = result.nodes.find(n => n.type === "findingGroupNode")!;
   const link = result.edges.find(e => e.data?.relationship === "finding_group")!;
-  expect(group.position.x).toBeLessThan(0);
-  expect(link).toMatchObject({ sourceHandle: "context", targetHandle: "context" });
-  expect(group.ariaLabel).toBe("Findings for app: 1 grouped");
-  expect(link.ariaLabel).toBe("app has 1 grouped finding");
+  expect(group.position.x).toBe(nodes[0]!.position.x);
+  expect(group.position.y).toBeGreaterThan(nodes[0]!.position.y);
+  expect(link.sourceHandle).toBeUndefined();
+  expect(link.targetHandle).toBeUndefined();
+  expect(group.ariaLabel).toBe("Findings for app: 7");
+  expect(link.ariaLabel).toBe("app has 7 findings");
   const right = cloudFindingDisclosure(nodes, edges, new Set(), () => {}, true).edges.find(e => e.data?.relationship === "finding_group")!;
   expect(right.sourceHandle).toBeUndefined();
 });
