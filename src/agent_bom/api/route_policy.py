@@ -205,7 +205,9 @@ ROUTE_POLICIES: tuple[RoutePolicy, ...] = (
     RoutePolicy("GET", "/v1/cloud", "viewer", "cloud:read"),
     RoutePolicy("GET", "/v1/conditional-access-policies", "viewer", "identity.policy:read"),
     RoutePolicy("GET", "/v1/connectors", "viewer", "connectors:read"),
-    RoutePolicy("GET", "/v1/cortex", "viewer", "runtime:read"),
+    # Cortex telemetry and Snowflake governance reads spend the control plane's
+    # own Snowflake identity; stored blueprints under /v1/governance stay viewer.
+    RoutePolicy("GET", "/v1/cortex", "admin", "governance:read"),
     RoutePolicy("GET", "/v1/datasets", "viewer", "eval:read"),
     RoutePolicy("GET", "/v1/demo-estate", "viewer", "inventory:read"),
     RoutePolicy("GET", "/v1/device-posture", "viewer", "posture:read"),
@@ -217,7 +219,10 @@ ROUTE_POLICIES: tuple[RoutePolicy, ...] = (
     RoutePolicy("GET", "/v1/fleet", "viewer", "fleet:read"),
     RoutePolicy("GET", "/v1/frameworks", "viewer", "compliance:read"),
     RoutePolicy("GET", "/v1/gateway", "viewer", "gateway:read"),
+    # Equal-length match: the exact admin rule must precede the viewer prefix.
+    RoutePolicy("GET", "/v1/governance", "admin", "governance:read", exact=True),
     RoutePolicy("GET", "/v1/governance", "viewer", "governance:read"),
+    RoutePolicy("GET", "/v1/governance/findings", "admin", "governance:read"),
     RoutePolicy("GET", "/v1/identities", "viewer", "identity:read"),
     RoutePolicy("GET", "/v1/identity-jit-grants", "viewer", "identity.grant:read"),
     RoutePolicy("GET", "/v1/inventory", "viewer", "inventory:read"),

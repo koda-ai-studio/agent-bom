@@ -4,9 +4,22 @@ from __future__ import annotations
 
 from typing import Any
 
+from agent_bom.api.ambient_access import ambient_scan_refusal
 from agent_bom.api.models import ScanRequest
 from agent_bom.api.scan_batches import scan_request_targets
 from agent_bom.api.stores import _get_schedule_store, _get_source_store
+from agent_bom.security import SecurityError
+
+# Schedules and stored sources that reach ambient credentials could only be
+# written by a ``cloud_ambient`` caller; the scheduler has no caller, so it
+# trusts that admission and rechecks only the operator flags and tenant binding.
+_SCHEDULED = True
+
+
+def _require_ambient_targets_still_enabled(request_body: ScanRequest, tenant_id: str) -> None:
+    refusal = ambient_scan_refusal(request_body, tenant_id)
+    if refusal:
+        raise SecurityError(refusal)
 
 
 def _enqueue_scheduled_scan(
@@ -35,6 +48,7 @@ def _enqueue_scheduled_scan(
     if isinstance(legacy_path, str) and legacy_path and not request_payload.get("agent_projects"):
         request_payload["agent_projects"] = [legacy_path]
     request_body = ScanRequest(**request_payload)
+    _require_ambient_targets_still_enabled(request_body, resolved_tenant_id)
     if request_body.discover_host:
         from agent_bom.api.scan_boundary import require_host_discovery_for_tenant
 
@@ -95,7 +109,7 @@ def _enqueue_source_cohort(
             if source is None or source.tenant_id != resolved_tenant_id or not source.enabled:
                 raise RuntimeError("Scheduled correlation source is unavailable in this tenant")
             _validate_credential_ref_for_tenant(resolved_tenant_id, source)
-            request_body = _request_for_source(source)
+            request_body = _request_for_source(source, ambient_caller=_SCHEDULED)
             if len(scan_request_targets(request_body)) != 1:
                 raise RuntimeError("Scheduled correlation source must resolve to exactly one scan target")
             members.append((member_source_id, request_body))
@@ -150,7 +164,7 @@ def _enqueue_source(source_id: str, resolved_tenant_id: str, schedule_id: str | 
         if not source.enabled:
             raise RuntimeError("Scheduled source is disabled")
         _validate_credential_ref_for_tenant(resolved_tenant_id, source)
-        request_body = _request_for_source(source)
+        request_body = _request_for_source(source, ambient_caller=_SCHEDULED)
         target_count = len(scan_request_targets(request_body))
         attempted_jobs = target_count + 1 if target_count > 1 else 1
         enforce_active_scan_quota(resolved_tenant_id, attempted=attempted_jobs)

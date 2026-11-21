@@ -40527,7 +40527,15 @@ paths:
       - connectors
   /v1/connectors/{name}/health:
     get:
-      description: Check connectivity for a SaaS connector.
+      description: 'Check connectivity for a SaaS connector.
+
+
+        The check authenticates with tokens from the API server''s environment, so
+        it
+
+        only runs for an admin once an operator sets AGENT_BOM_API_CONNECTOR_SCANS;
+
+        everyone else gets a ``disabled`` state and no outbound call.'
       operationId: connector_health_v1_connectors__name__health_get
       parameters:
       - in: path
@@ -40579,6 +40587,30 @@ paths:
           default: 24
           title: Hours
           type: integer
+      - in: header
+        name: X-Agent-Bom-Role
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Agent-Bom-Role
+      - in: header
+        name: X-Agent-Bom-Tenant-ID
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Agent-Bom-Tenant-Id
+      - in: header
+        name: X-Agent-Bom-Proxy-Secret
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Agent-Bom-Proxy-Secret
       responses:
         '200':
           content:
@@ -40608,6 +40640,31 @@ paths:
     get:
       description: Health status for all Cortex agents.
       operationId: cortex_health_v1_cortex_health_get
+      parameters:
+      - in: header
+        name: X-Agent-Bom-Role
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Agent-Bom-Role
+      - in: header
+        name: X-Agent-Bom-Tenant-ID
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Agent-Bom-Tenant-Id
+      - in: header
+        name: X-Agent-Bom-Proxy-Secret
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Agent-Bom-Proxy-Secret
       responses:
         '200':
           content:
@@ -40656,6 +40713,30 @@ paths:
           default: 24
           title: Hours
           type: integer
+      - in: header
+        name: X-Agent-Bom-Role
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Agent-Bom-Role
+      - in: header
+        name: X-Agent-Bom-Tenant-ID
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Agent-Bom-Tenant-Id
+      - in: header
+        name: X-Agent-Bom-Proxy-Secret
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Agent-Bom-Proxy-Secret
       responses:
         '200':
           content:
@@ -45469,7 +45550,9 @@ paths:
 
         Mines ACCESS_HISTORY, GRANTS_TO_ROLES, TAG_REFERENCES, and
 
-        CORTEX_AGENT_USAGE_HISTORY. Requires SNOWFLAKE_ACCOUNT env var.'
+        CORTEX_AGENT_USAGE_HISTORY. Requires AGENT_BOM_SNOWFLAKE_GOVERNANCE,
+
+        SNOWFLAKE_ACCOUNT and an admin caller.'
       operationId: governance_report_v1_governance_get
       parameters:
       - in: query
@@ -45479,6 +45562,30 @@ paths:
           default: 30
           title: Days
           type: integer
+      - in: header
+        name: X-Agent-Bom-Role
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Agent-Bom-Role
+      - in: header
+        name: X-Agent-Bom-Tenant-ID
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Agent-Bom-Tenant-Id
+      - in: header
+        name: X-Agent-Bom-Proxy-Secret
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Agent-Bom-Proxy-Secret
       responses:
         '200':
           content:
@@ -46315,6 +46422,30 @@ paths:
           default: 0
           title: Offset
           type: integer
+      - in: header
+        name: X-Agent-Bom-Role
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Agent-Bom-Role
+      - in: header
+        name: X-Agent-Bom-Tenant-ID
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Agent-Bom-Tenant-Id
+      - in: header
+        name: X-Agent-Bom-Proxy-Secret
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Agent-Bom-Proxy-Secret
       responses:
         '200':
           content:
@@ -58781,7 +58912,14 @@ paths:
 
         Verifies serialization safety (safetensors vs pickle), digest integrity,
 
-        model card presence, gating status, and public exposure risk.'
+        model card presence, gating status, and public exposure risk.
+
+
+        The server''s ``HF_TOKEN`` and Ollama host belong to the operator: Hub reads
+
+        are anonymous and Ollama is refused unless an admin calls with
+
+        AGENT_BOM_API_MODEL_HUB_CREDENTIALS set.'
       operationId: scan_model_provenance_v1_scan_model_provenance_post
       requestBody:
         content:

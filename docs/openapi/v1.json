@@ -60188,7 +60188,7 @@
     },
     "/v1/connectors/{name}/health": {
       "get": {
-        "description": "Check connectivity for a SaaS connector.",
+        "description": "Check connectivity for a SaaS connector.\n\nThe check authenticates with tokens from the API server's environment, so it\nonly runs for an admin once an operator sets AGENT_BOM_API_CONNECTOR_SCANS;\neveryone else gets a ``disabled`` state and no outbound call.",
         "operationId": "connector_health_v1_connectors__name__health_get",
         "parameters": [
           {
@@ -60262,6 +60262,54 @@
               "title": "Hours",
               "type": "integer"
             }
+          },
+          {
+            "in": "header",
+            "name": "X-Agent-Bom-Role",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Bom-Role"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Agent-Bom-Tenant-ID",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Bom-Tenant-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Agent-Bom-Proxy-Secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Bom-Proxy-Secret"
+            }
           }
         ],
         "responses": {
@@ -60306,6 +60354,56 @@
       "get": {
         "description": "Health status for all Cortex agents.",
         "operationId": "cortex_health_v1_cortex_health_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Agent-Bom-Role",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Bom-Role"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Agent-Bom-Tenant-ID",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Bom-Tenant-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Agent-Bom-Proxy-Secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Bom-Proxy-Secret"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -60358,6 +60456,54 @@
               "default": 24,
               "title": "Hours",
               "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Agent-Bom-Role",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Bom-Role"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Agent-Bom-Tenant-ID",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Bom-Tenant-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Agent-Bom-Proxy-Secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Bom-Proxy-Secret"
             }
           }
         ],
@@ -67770,7 +67916,7 @@
     },
     "/v1/governance": {
       "get": {
-        "description": "Run Snowflake governance discovery and return findings.\n\nMines ACCESS_HISTORY, GRANTS_TO_ROLES, TAG_REFERENCES, and\nCORTEX_AGENT_USAGE_HISTORY. Requires SNOWFLAKE_ACCOUNT env var.",
+        "description": "Run Snowflake governance discovery and return findings.\n\nMines ACCESS_HISTORY, GRANTS_TO_ROLES, TAG_REFERENCES, and\nCORTEX_AGENT_USAGE_HISTORY. Requires AGENT_BOM_SNOWFLAKE_GOVERNANCE,\nSNOWFLAKE_ACCOUNT and an admin caller.",
         "operationId": "governance_report_v1_governance_get",
         "parameters": [
           {
@@ -67781,6 +67927,54 @@
               "default": 30,
               "title": "Days",
               "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Agent-Bom-Role",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Bom-Role"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Agent-Bom-Tenant-ID",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Bom-Tenant-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Agent-Bom-Proxy-Secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Bom-Proxy-Secret"
             }
           }
         ],
@@ -69123,6 +69317,54 @@
               "default": 0,
               "title": "Offset",
               "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Agent-Bom-Role",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Bom-Role"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Agent-Bom-Tenant-ID",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Bom-Tenant-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Agent-Bom-Proxy-Secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Bom-Proxy-Secret"
             }
           }
         ],
@@ -87421,7 +87663,7 @@
     },
     "/v1/scan/model-provenance": {
       "post": {
-        "description": "Check model provenance for HuggingFace and Ollama models.\n\nVerifies serialization safety (safetensors vs pickle), digest integrity,\nmodel card presence, gating status, and public exposure risk.",
+        "description": "Check model provenance for HuggingFace and Ollama models.\n\nVerifies serialization safety (safetensors vs pickle), digest integrity,\nmodel card presence, gating status, and public exposure risk.\n\nThe server's ``HF_TOKEN`` and Ollama host belong to the operator: Hub reads\nare anonymous and Ollama is refused unless an admin calls with\nAGENT_BOM_API_MODEL_HUB_CREDENTIALS set.",
         "operationId": "scan_model_provenance_v1_scan_model_provenance_post",
         "requestBody": {
           "content": {

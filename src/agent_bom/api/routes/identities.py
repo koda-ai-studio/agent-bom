@@ -28,6 +28,7 @@ from agent_bom.api.agent_identity_store import (
     rotate_identity,
     set_conditional_policy_status,
 )
+from agent_bom.api.ambient_access import discover_idp_subjects
 from agent_bom.api.audit_log import log_action
 from agent_bom.api.delegation_service import (
     DelegationSourceMissingError,
@@ -668,7 +669,7 @@ def propagate_agent_delegation(request: Request, body: dict) -> dict[str, object
     }
 
 
-@router.post("/identities/discover", dependencies=[_dep("read")])
+@router.post("/identities/discover", dependencies=[_dep("cloud_ambient")])
 def discover_non_human_identities(request: Request, body: dict | None = None) -> dict[str, object]:
     """Discover non-human identities (service accounts / principals) from IdPs.
 
@@ -737,19 +738,6 @@ def list_agent_identities(request: Request, include_inactive: bool = False, limi
 # does not route "access-reviews" into the single-identity lookup.
 
 
-def _discover_nhi_subjects() -> list[dict[str, object]]:
-    """Run read-only NHI discovery and return reference-only subject dicts.
-
-    Reuses the same Okta/Entra discovery used by ``/v1/identities/discover`` —
-    never reads secret material; each provider is gated by its own env flag.
-    """
-    from agent_bom.graph.nhi_overlay import merge_discovery_results
-    from agent_bom.identity import discover_entra_non_human_identities, discover_okta_non_human_identities
-
-    merged = merge_discovery_results([discover_okta_non_human_identities(), discover_entra_non_human_identities()])
-    return list(merged.get("identities", []))
-
-
 @router.post("/identities/access-reviews", status_code=201, dependencies=[_dep("config")])
 def create_access_review(request: Request, body: dict | None = None) -> dict[str, object]:
     """Create a scheduled access-review / recertification campaign over NHIs.
@@ -794,7 +782,7 @@ def create_access_review(request: Request, body: dict | None = None) -> dict[str
             description=description,
         )
     else:
-        discovered = _discover_nhi_subjects()
+        discovered = discover_idp_subjects(request)
         campaign, items = create_campaign_from_discovery(
             store,
             tenant_id=tenant_id,

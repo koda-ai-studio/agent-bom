@@ -40,6 +40,7 @@ def offload_spy(monkeypatch, request):
 
     monkeypatch.setattr(governance.anyio.to_thread, "run_sync", _spy)
     monkeypatch.setenv("SNOWFLAKE_ACCOUNT", "acct-test")
+    monkeypatch.setenv("AGENT_BOM_SNOWFLAKE_GOVERNANCE", "1")
     return offloaded
 
 

@@ -54,6 +54,7 @@ def _partial_result() -> K8sPostureResult:
 def test_post_posture_persists_and_returns_honest_partial(monkeypatch) -> None:
     set_kspm_posture_store(InMemoryKspmPostureStore())
     monkeypatch.setattr(kspm_route, "_collect_posture", lambda **_kw: _partial_result())
+    monkeypatch.setenv("AGENT_BOM_API_K8S_SCANS", "1")
 
     client = TestClient(app)
     resp = client.post("/v1/kspm/clusters/posture", json={"namespace": "prod"}, headers=_SCAN)
@@ -84,6 +85,7 @@ def test_post_posture_persists_and_returns_honest_partial(monkeypatch) -> None:
 def test_get_returns_latest_persisted_run(monkeypatch) -> None:
     set_kspm_posture_store(InMemoryKspmPostureStore())
     monkeypatch.setattr(kspm_route, "_collect_posture", lambda **_kw: _partial_result())
+    monkeypatch.setenv("AGENT_BOM_API_K8S_SCANS", "1")
 
     client = TestClient(app)
     post = client.post("/v1/kspm/clusters/posture", json={"namespace": "prod"}, headers=_SCAN)

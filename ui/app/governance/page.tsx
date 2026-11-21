@@ -19,6 +19,7 @@ import {
   formatDate,
 } from "@/lib/api";
 import type { GovernanceReport, GovernanceFinding } from "@/lib/api";
+import { ApiError } from "@/lib/api-errors";
 import { useChartTheme } from "@/lib/theme-colors";
 
 import { PageEmptyState, PageErrorState } from "@/components/states/page-state";
@@ -40,6 +41,7 @@ export default function GovernancePage() {
   const [report, setReport] = useState<GovernanceReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [blocked, setBlocked] = useState<"not_enabled" | "admin_only" | null>(null);
   const [days, setDays] = useState(30);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [severityFilter, setSeverityFilter] = useState<string | null>(null);
@@ -51,10 +53,17 @@ export default function GovernancePage() {
     }
     setLoading(true);
     setError(null);
+    setBlocked(null);
     api
       .getGovernance(days)
       .then(setReport)
-      .catch(() => setError("Governance evidence unavailable"))
+      .catch((reason: unknown) => {
+        // These reads spend the deployment's own Snowflake identity: 404 means the
+        // operator has not opted in, 403 means the caller is not an admin.
+        if (reason instanceof ApiError && reason.status === 404) setBlocked("not_enabled");
+        else if (reason instanceof ApiError && reason.status === 403) setBlocked("admin_only");
+        else setError("Governance evidence unavailable");
+      })
       .finally(() => setLoading(false));
   };
 
@@ -83,6 +92,30 @@ export default function GovernancePage() {
         <Loader2 className="h-6 w-6 animate-spin mr-2" />
         Loading governance report...
       </div>
+    );
+  }
+
+  if (blocked === "not_enabled") {
+    return (
+      <PageEmptyState
+        data-testid="governance-not-enabled"
+        titleAs="h1"
+        title="Snowflake governance reads are not enabled"
+        detail="This page reads access history, grants, tags and Cortex usage with this deployment's own Snowflake identity, so it is off by default. An operator can set AGENT_BOM_SNOWFLAKE_GOVERNANCE=1 on the API to let admins use it."
+        action={{ label: "Review connections", href: "/connections" }}
+      />
+    );
+  }
+
+  if (blocked === "admin_only") {
+    return (
+      <PageEmptyState
+        data-testid="governance-admin-only"
+        titleAs="h1"
+        title="Snowflake governance is limited to admins"
+        detail="This page reads the deployment's own Snowflake account, so only admins can open it. Ask an admin for access, or review findings from your tenant's connections."
+        action={{ label: "Explore compliance evidence", href: "/compliance" }}
+      />
     );
   }
 

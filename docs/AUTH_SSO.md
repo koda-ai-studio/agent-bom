@@ -542,6 +542,31 @@ scanned-estate agents (`scope: "scanned_estate"`), the same population
 `/v1/inventory` returns. These reads never write: live discovery is merged into
 the response in memory and is not persisted as MCP observations.
 
+### Server credentials (ambient access)
+
+Some API surfaces authenticate with credentials held by the API process rather
+than a tenant's stored connection. Each is off until an operator sets its flag,
+and then only answers admins (`cloud_ambient`):
+
+| Flag | Surfaces |
+|------|----------|
+| `AGENT_BOM_CLOUD_CIS_BENCHMARK` | `GET /v1/cloud/{provider}/cis-benchmark` |
+| `AGENT_BOM_SNOWFLAKE_GOVERNANCE` | `GET /v1/governance`, `/v1/governance/findings`, `/v1/cortex/*`; Snowflake history in `/v1/activity` |
+| `AGENT_BOM_API_K8S_SCANS` | `k8s: true` on `POST /v1/scan`, sources and schedules; `POST /v1/kspm/clusters/posture` |
+| `AGENT_BOM_API_CONNECTOR_SCANS` | `connectors` on `POST /v1/scan`, connector sources and schedules; `GET /v1/connectors/{name}/health` |
+| `AGENT_BOM_API_MODEL_HUB_CREDENTIALS` | `HF_TOKEN` and the Ollama host for `POST /v1/scan/model-provenance` |
+
+Without the flag or the role, scan requests and admin routes are refused with
+a fixed message, connector health reports `disabled` without calling the
+service, and Hugging Face lookups run anonymously. `POST
+/v1/kspm/clusters/posture` uses the current kubeconfig context; a request may
+name another context only if it is listed in `AGENT_BOM_API_K8S_CONTEXTS`.
+On a multi-tenant control plane, set `AGENT_BOM_AMBIENT_CREDENTIALS_TENANT` to
+the tenant that owns these credentials; admins of every other tenant are
+refused. Scheduled and queued scans recheck the flags and tenant before
+discovery. Server-side image scans never use the host's registry
+credentials; see [Image security](IMAGE_SECURITY.md).
+
 ## Role and operation policy
 
 The [route policy](../src/agent_bom/api/route_policy.py) is the owning catalog

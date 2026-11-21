@@ -433,8 +433,8 @@ def test_source_schedule_resolution_and_enqueue_are_fenced_against_delete(monkey
     enqueued: list[str] = []
     original_request = __import__("agent_bom.api.routes.sources", fromlist=["_request_for_source"])._request_for_source
 
-    def _blocking_request(current):
-        request = original_request(current)
+    def _blocking_request(current, *, ambient_caller):
+        request = original_request(current, ambient_caller=ambient_caller)
         request_resolved.set()
         assert release_request.wait(timeout=5)
         return request

@@ -6,6 +6,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from agent_bom.api.ambient_access import ambient_scan_refusal
 from agent_bom.api.scan_context import ScanContext
 from agent_bom.evidence.scan_run import nothing_to_scan_message
 from agent_bom.security import sanitize_error, sanitize_text
@@ -23,6 +24,10 @@ def prepare_request(ctx: ScanContext) -> bool:
     # skips scan_agents_sync(), whose normal scan path performs its own reset.
     reset_scan_warnings()
     req = ctx.req
+    # Queued and scheduled jobs outlive the request; a revoked opt-in stops them here.
+    ambient_refusal = ambient_scan_refusal(req, ctx.job.tenant_id)
+    if ambient_refusal:
+        raise RuntimeError(ambient_refusal)
     if req.discover_host:
         from agent_bom.api.scan_boundary import require_host_discovery_for_tenant
 

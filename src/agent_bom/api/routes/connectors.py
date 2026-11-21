@@ -17,9 +17,10 @@ from pathlib import Path as _Path
 from typing import Annotated
 
 import anyio.to_thread
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from agent_bom.api.agents_listing import AgentListQueryError, parse_cursor
+from agent_bom.api.ambient_access import connector_health_refusal
 from agent_bom.api.read_models import ConnectorsResponse, RegistryResponse, documented
 from agent_bom.api.read_models import runtime_estate_b as rt
 from agent_bom.api.registry_listing import MAX_REGISTRY_PAGE_SIZE, MAX_REGISTRY_QUERY_LENGTH, RegistryRisk, page_registry
@@ -108,15 +109,25 @@ def list_available_connectors() -> dict:
 
 
 @router.get("/connectors/{name}/health", **documented(rt.ConnectorHealthResponse), tags=["connectors"])
-async def connector_health(name: str) -> dict:
-    """Check connectivity for a SaaS connector."""
-    try:
-        from agent_bom.connectors import check_connector_health
+async def connector_health(request: Request, name: str) -> dict:
+    """Check connectivity for a SaaS connector.
 
+    The check authenticates with tokens from the API server's environment, so it
+    only runs for an admin once an operator sets AGENT_BOM_API_CONNECTOR_SCANS;
+    everyone else gets a ``disabled`` state and no outbound call.
+    """
+    from agent_bom.connectors import check_connector_health, list_connectors
+
+    if name not in list_connectors():
+        raise HTTPException(status_code=404, detail="Connector not found")
+    refusal = connector_health_refusal(request)
+    if refusal:
+        return {"connector": name, "state": "disabled", "message": refusal, "api_version": None}
+    try:
         status = await anyio.to_thread.run_sync(check_connector_health, name)
-        return {"connector": status.connector, "state": status.state.value, "message": status.message, "api_version": status.api_version}
     except ValueError as exc:
         raise HTTPException(status_code=404, detail="Connector not found") from exc
+    return {"connector": status.connector, "state": status.state.value, "message": status.message, "api_version": status.api_version}
 
 
 # ─── Registry endpoints ──────────────────────────────────────────────────────

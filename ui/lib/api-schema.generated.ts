@@ -2479,6 +2479,10 @@ export interface paths {
         /**
          * Connector Health
          * @description Check connectivity for a SaaS connector.
+         *
+         *     The check authenticates with tokens from the API server's environment, so it
+         *     only runs for an admin once an operator sets AGENT_BOM_API_CONNECTOR_SCANS;
+         *     everyone else gets a ``disabled`` state and no outbound call.
          */
         get: operations["connector_health_v1_connectors__name__health_get"];
         put?: never;
@@ -4024,7 +4028,8 @@ export interface paths {
          * @description Run Snowflake governance discovery and return findings.
          *
          *     Mines ACCESS_HISTORY, GRANTS_TO_ROLES, TAG_REFERENCES, and
-         *     CORTEX_AGENT_USAGE_HISTORY. Requires SNOWFLAKE_ACCOUNT env var.
+         *     CORTEX_AGENT_USAGE_HISTORY. Requires AGENT_BOM_SNOWFLAKE_GOVERNANCE,
+         *     SNOWFLAKE_ACCOUNT and an admin caller.
          */
         get: operations["governance_report_v1_governance_get"];
         put?: never;
@@ -7420,6 +7425,10 @@ export interface paths {
          *
          *     Verifies serialization safety (safetensors vs pickle), digest integrity,
          *     model card presence, gating status, and public exposure risk.
+         *
+         *     The server's ``HF_TOKEN`` and Ollama host belong to the operator: Hub reads
+         *     are anonymous and Ollama is refused unless an admin calls with
+         *     AGENT_BOM_API_MODEL_HUB_CREDENTIALS set.
          */
         post: operations["scan_model_provenance_v1_scan_model_provenance_post"];
         delete?: never;
@@ -32260,7 +32269,11 @@ export interface operations {
             query?: {
                 hours?: number;
             };
-            header?: never;
+            header?: {
+                "X-Agent-Bom-Role"?: string | null;
+                "X-Agent-Bom-Tenant-ID"?: string | null;
+                "X-Agent-Bom-Proxy-Secret"?: string | null;
+            };
             path: {
                 name: string;
             };
@@ -32300,7 +32313,11 @@ export interface operations {
     cortex_health_v1_cortex_health_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Agent-Bom-Role"?: string | null;
+                "X-Agent-Bom-Tenant-ID"?: string | null;
+                "X-Agent-Bom-Proxy-Secret"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -32340,7 +32357,11 @@ export interface operations {
             query?: {
                 hours?: number;
             };
-            header?: never;
+            header?: {
+                "X-Agent-Bom-Role"?: string | null;
+                "X-Agent-Bom-Tenant-ID"?: string | null;
+                "X-Agent-Bom-Proxy-Secret"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -36056,7 +36077,11 @@ export interface operations {
             query?: {
                 days?: number;
             };
-            header?: never;
+            header?: {
+                "X-Agent-Bom-Role"?: string | null;
+                "X-Agent-Bom-Tenant-ID"?: string | null;
+                "X-Agent-Bom-Proxy-Secret"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -36618,7 +36643,11 @@ export interface operations {
                 limit?: number;
                 offset?: number;
             };
-            header?: never;
+            header?: {
+                "X-Agent-Bom-Role"?: string | null;
+                "X-Agent-Bom-Tenant-ID"?: string | null;
+                "X-Agent-Bom-Proxy-Secret"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };

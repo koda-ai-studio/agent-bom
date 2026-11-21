@@ -111,10 +111,7 @@ class ProvenanceResult:
 # ---------------------------------------------------------------------------
 
 
-def check_hf_model(
-    model_id: str,
-    token: str | None = None,
-) -> ProvenanceResult:
+def check_hf_model(model_id: str, token: str | None = None, *, ambient_token: bool = True) -> ProvenanceResult:
     """Verify provenance of a HuggingFace Hub model.
 
     Checks:
@@ -127,13 +124,15 @@ def check_hf_model(
     Args:
         model_id: HuggingFace model ID, e.g. 'meta-llama/Llama-3.2-1B'.
         token: HF_TOKEN for accessing gated/private models.
+        ambient_token: Fall back to the process HF_TOKEN; ``False`` reads anonymously.
 
     Returns:
         ProvenanceResult with risk assessment.
     """
     import os
 
-    resolved_token = token or os.environ.get("HF_TOKEN", "") or None
+    # huggingface_hub treats ``False`` as "send no token", skipping HF_TOKEN and cached logins.
+    resolved_token: str | bool | None = token or (os.environ.get("HF_TOKEN", "") or None if ambient_token else False)
 
     result = ProvenanceResult(
         model_id=model_id,
@@ -380,9 +379,11 @@ def _get_ollama_manifest_file(model_name: str, tag: str) -> dict | None:
 def check_hf_models(
     model_ids: list[str],
     token: str | None = None,
+    *,
+    ambient_token: bool = True,
 ) -> list[ProvenanceResult]:
     """Check provenance for multiple HuggingFace models."""
-    return [check_hf_model(mid, token=token) for mid in model_ids]
+    return [check_hf_model(mid, token=token, ambient_token=ambient_token) for mid in model_ids]
 
 
 def check_ollama_models(

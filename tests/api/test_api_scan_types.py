@@ -196,11 +196,13 @@ def test_scan_model_provenance_hf():
     assert body["scan_type"] == "model-provenance"
     assert body["total"] == 1
     assert body["unsafe_format"] == 0
-    mock_hf.assert_called_once_with(["meta-llama/Llama-2-7b"])
+    # Without the operator opt-in the server's HF_TOKEN is not used.
+    mock_hf.assert_called_once_with(["meta-llama/Llama-2-7b"], ambient_token=False)
 
 
-def test_scan_model_provenance_ollama():
-    """POST /v1/scan/model-provenance scans Ollama models."""
+def test_scan_model_provenance_ollama(monkeypatch):
+    """POST /v1/scan/model-provenance scans Ollama models once an operator opts in."""
+    monkeypatch.setenv("AGENT_BOM_API_MODEL_HUB_CREDENTIALS", "1")
     client, _ = _fresh_client()
 
     @dataclass

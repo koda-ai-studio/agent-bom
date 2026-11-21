@@ -11,9 +11,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Request
 
 from agent_bom.api.ai_scan_runtime import _ai_scan_call, _dataclass_to_dict
+from agent_bom.api.ambient_access import caller_may_use_ambient
 from agent_bom.api.models import (
     BrowserExtensionsRequest,
     DatasetCardsRequest,
@@ -23,6 +24,7 @@ from agent_bom.api.models import (
     TrainingPipelinesRequest,
 )
 from agent_bom.api.scan_path_jail import _api_scan_path_or_400
+from agent_bom.cloud.ambient_credentials import API_MODEL_HUB_CREDENTIALS_ENV, ambient_disabled_note, api_model_hub_credentials_enabled
 
 router = APIRouter()
 
@@ -92,17 +94,27 @@ async def scan_browser_extensions_endpoint(request: BrowserExtensionsRequest) ->
 
 
 @router.post("/scan/model-provenance", tags=["scan"], status_code=200)
-async def scan_model_provenance(request: ModelProvenanceRequest) -> dict:
+async def scan_model_provenance(http_request: Request, request: ModelProvenanceRequest) -> dict:
     """Check model provenance for HuggingFace and Ollama models.
 
     Verifies serialization safety (safetensors vs pickle), digest integrity,
     model card presence, gating status, and public exposure risk.
+
+    The server's ``HF_TOKEN`` and Ollama host belong to the operator: Hub reads
+    are anonymous and Ollama is refused unless an admin calls with
+    AGENT_BOM_API_MODEL_HUB_CREDENTIALS set.
     """
     from agent_bom.cloud.model_provenance import check_hf_models, check_ollama_models
 
+    ambient = api_model_hub_credentials_enabled() and caller_may_use_ambient(http_request)
+    if request.ollama_models and not ambient:
+        raise HTTPException(
+            status_code=403,
+            detail=ambient_disabled_note(API_MODEL_HUB_CREDENTIALS_ENV, "Ollama provenance on the API server's host"),
+        )
     results: list[Any] = []
     if request.hf_models:
-        hf_results = await _ai_scan_call(check_hf_models, request.hf_models)
+        hf_results = await _ai_scan_call(check_hf_models, request.hf_models, ambient_token=ambient)
         results.extend(r.to_dict() if hasattr(r, "to_dict") else _dataclass_to_dict(r) for r in hf_results)
     if request.ollama_models:
         ollama_results = await _ai_scan_call(check_ollama_models, request.ollama_models)

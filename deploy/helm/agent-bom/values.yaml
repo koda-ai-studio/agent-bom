@@ -710,6 +710,18 @@ controlPlane:
     env:
       - name: AGENT_BOM_API_LOCAL_PATH_SCANS
         value: "disabled"
+      # Surfaces that use the API pod's own credentials stay off unless set here;
+      # they then answer admins only. See docs/AUTH_SSO.md "Server credentials".
+      # - name: AGENT_BOM_API_K8S_SCANS            # k8s scans + KSPM live posture
+      #   value: "1"
+      # - name: AGENT_BOM_API_K8S_CONTEXTS         # contexts a request may select
+      #   value: "staging"
+      # - name: AGENT_BOM_API_CONNECTOR_SCANS      # Jira/ServiceNow/Slack env tokens
+      #   value: "1"
+      # - name: AGENT_BOM_API_MODEL_HUB_CREDENTIALS
+      #   value: "1"
+      # - name: AGENT_BOM_AMBIENT_CREDENTIALS_TENANT  # multi-tenant: owning tenant
+      #   value: "platform"
       # Retention knobs (global default, optional per-tenant JSON overrides, analytics cap).
       # Per-tenant overrides can also be persisted via the control-plane tenant retention store.
       # - name: AGENT_BOM_GRAPH_RETENTION_DAYS
