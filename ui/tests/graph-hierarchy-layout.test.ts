@@ -76,10 +76,11 @@ describe("evidence-driven graph flow", () => {
     const result = graphHierarchyLayout(entries, links, readableLineageDagreLr({ fitAspect: 2.2 }));
     for (const a of result.nodes) for (const b of result.nodes) {
       if (a.id !== b.id && Math.abs(a.position.x - b.position.x) < 240) {
-        expect(Math.abs(a.position.y - b.position.y)).toBeGreaterThanOrEqual(240);
+        const upper = a.position.y < b.position.y ? a : b;
+        expect(Math.abs(a.position.y - b.position.y)).toBeGreaterThanOrEqual(Number(upper.style?.minHeight) + 24);
       }
     }
-    expect(result.nodes.every(n => Number(n.style?.minHeight) >= 216)).toBe(true);
+    expect(result.nodes.every(n => n.style?.minHeight === (n.data.semanticOwner ? 132 : 216))).toBe(true);
     expect(result.edges.map(e => [e.source, e.target])).toEqual(links.map(e => [e.source, e.target]));
   });
 

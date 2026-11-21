@@ -255,12 +255,12 @@ describe("a large map with no specific flow", () => {
     expect(result.edges.map(edge => [edge.source, edge.target])).toEqual(edges.map(edge => [edge.source, edge.target]));
   });
 
-  it("keeps semantic nodes as full readable glyphs and captions", () => {
+  it("keeps semantic nodes detailed with compact owned sub-rows", () => {
     const { nodes, edges } = k8sFlowGraph("projectScan");
     const banded = nodes.map(n => ({ ...n, data: { ...n.data, renderBand: "summary" as const } }));
     const result = investigationFlow(banded, edges, "auto");
     expect(result.applied).toBe(true);
-    expect(result.nodes.every(n => n.data.renderBand === "detail" && n.style?.minHeight === 216)).toBe(true);
+    expect(result.nodes.every(n => n.data.renderBand === "detail" && n.style?.minHeight === (n.data.semanticOwner ? 132 : 216))).toBe(true);
   });
 
   it("uses the same semantic layout for small maps", () => {
