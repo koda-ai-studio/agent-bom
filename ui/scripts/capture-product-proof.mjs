@@ -3011,6 +3011,8 @@ async function main() {
         .filter({ hasText: "Developer Copilot" })
         .first()
         .waitFor({ state: "visible", timeout: 30_000 });
+      // The mesh image is the agent neighborhood; identity and hosting context have their own captures.
+      await meshPage.getByRole("button", { name: "Agent connections", exact: true }).click();
       const more = meshPage.getByRole("button", { name: "Show more connections", exact: true });
       if (await more.isVisible()) await more.click();
       await meshPage
