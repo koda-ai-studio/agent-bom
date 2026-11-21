@@ -52,3 +52,19 @@ describe("layout fixtures leave room for a card and its caption", () => {
     expect(flowRowGap(true)).toBeGreaterThan(HEIGHT + CARD_GAP / 2);
   });
 });
+
+it("preserves backend semantic columns when measured captions grow", () => {
+  const input = [card("a", 380, 0, 240, 300), card("b", 380, 140, 240, 300)]
+    .map(node => ({ ...node, data: { ...node.data, semanticLayout: true, semanticLayer: "app" } }));
+  const nodes = separateCards(input);
+  expect(nodes.map(node => node.position.x)).toEqual([380, 380]);
+  expect(cardOverlaps(nodes)).toEqual([]);
+});
+
+it("keeps the backend-selected spine straight while separating its context", () => {
+  const input = [card("path-a", 0, 0), card("path-b", 380, 0), card("context", 0, -100)]
+    .map((node, i) => ({ ...node, data: { ...node.data, semanticLayout: true, semanticPathIndex: i < 2 ? i : undefined } }));
+  const nodes = separateCards(input);
+  expect(nodes.slice(0, 2).map(node => node.position)).toEqual([{ x: 0, y: 0 }, { x: 380, y: 0 }]);
+  expect(cardOverlaps(nodes)).toEqual([]);
+});

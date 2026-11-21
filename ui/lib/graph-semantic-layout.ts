@@ -84,7 +84,8 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
   return {
     nodes: nodes.map(node => ({ ...node, position: positions.get(node.id) ?? node.position,
       style: { ...node.style, width: 240, minHeight: 216, "--graph-node-card-width": "240px" },
-      data: { ...node.data, evidenceFlow: true, semanticLayout: true, renderBand: "detail" as const,
+      data: { ...node.data, evidenceFlow: true, semanticLayout: true,
+        ...(onPath.has(node.id) ? { semanticPathIndex: primary.indexOf(node.id) } : {}), renderBand: "detail" as const,
         readingLabel: node.data.readingLabel ?? assetServiceLabel({ nodeType: node.data.nodeType, entityType: node.data.entityType, attributes: node.data.attributes, provider: node.data.dimensions?.cloud_provider }) ?? assetKindLabel({ nodeType: node.data.nodeType, entityType: node.data.entityType, attributes: node.data.attributes }),
         readingFinding: semanticLayer(node) === "finding",
         evidenceFlowContext: node.data.evidenceFlowContext ?? (semanticLayer(node) === "mcp_server" ? (() => {

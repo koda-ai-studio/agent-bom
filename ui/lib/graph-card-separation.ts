@@ -29,9 +29,10 @@ export function cardOverlaps(nodes: Node[]): string[] {
  */
 export function separateCards<T extends Node>(nodes: T[]): T[] {
   if (nodes.length > SEPARATION_NODE_LIMIT) return nodes;
+  const spinePriority = (node: Node) => node.data.semanticLayout === true && typeof node.data.semanticPathIndex === "number" ? 0 : 1;
   const order = nodes.map((node, index) => ({ node, index, b: box(node) }))
     .filter((item): item is { node: T; index: number; b: Box } => item.b !== null)
-    .sort((a, b) => a.b.top - b.b.top || a.b.left - b.b.left);
+    .sort((a, b) => spinePriority(a.node) - spinePriority(b.node) || a.b.top - b.b.top || a.b.left - b.b.left);
   const placed: Box[] = [];
   const moved = new Map<number, { x: number; y: number }>();
   for (const item of order) {
@@ -40,7 +41,7 @@ export function separateCards<T extends Node>(nodes: T[]): T[] {
       const blocker = placed.find(other => intersects(current, other, CARD_GAP));
       if (!blocker) break;
       const width = current.right - current.left, height = current.bottom - current.top;
-      const sameRow = Math.abs(current.top - blocker.top) < Math.min(height, blocker.bottom - blocker.top) / 2;
+      const sameRow = item.node.data.semanticLayout !== true && Math.abs(current.top - blocker.top) < Math.min(height, blocker.bottom - blocker.top) / 2;
       const left = sameRow ? blocker.right + CARD_GAP : current.left;
       const top = sameRow ? current.top : blocker.bottom + CARD_GAP;
       current = { left, top, right: left + width, bottom: top + height };

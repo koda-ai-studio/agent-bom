@@ -97,3 +97,9 @@ describe("interactive React Flow surface contract", () => {
  expect(content).toContain("enabled={!layoutPending && !motion.animating}");
  expect(content).toContain("${selectedScenarioId ??");
  });
+
+it("anchors an explicit phone fit instead of clipping a zoom-floored whole graph", () => {
+  const content = source("hooks/use-graph-canvas-model.tsx");
+  expect(content).toContain("narrowViewport && !captureMode");
+  expect(content).toContain("graphReadableFitViewOptions(reactFlow.getNodes(), viewportOptions");
+});

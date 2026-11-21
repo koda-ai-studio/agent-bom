@@ -730,7 +730,9 @@ export function useGraphCanvasModel(page: GraphPageData) {
     const whole = selectedScenarioId ? { ...initialViewportOptions, nodes: reactFlow.getNodes() } : { ...viewportOptions, padding: Math.max(investigationContext ? 0.25 : 0.2, viewportOptions.padding) };
     // Fit all never shrinks cards below legible text; a topology larger than that is panned.
     // A capture cannot be panned, so it keeps the whole graph in the image.
-    const options = captureMode ? whole : legibleFit(whole, legibleFitZoom(canvasWidth));
+    const options = narrowViewport && !captureMode
+      ? graphReadableFitViewOptions(reactFlow.getNodes(), viewportOptions, selectedNodeId ?? investigationMode?.rootId)
+      : captureMode ? whole : legibleFit(whole, legibleFitZoom(canvasWidth));
     const fit = () => {
       if (fitGeneration.current !== generation) return;
       void reactFlow.fitView({ ...options, duration: 240 }).then(() => {
@@ -745,7 +747,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
     // Let React Flow apply manual-camera props before enqueueing the fit;
     // changing its fitView prop otherwise clears the pending imperative fit.
     requestAnimationFrame(() => requestAnimationFrame(fit));
-  }, [reactFlow, viewportOptions, investigationContext, cameraScope, selectedScenarioId, initialViewportOptions, canvasWidth, captureMode]);
+  }, [reactFlow, viewportOptions, investigationContext, cameraScope, selectedScenarioId, initialViewportOptions, canvasWidth, captureMode, narrowViewport, selectedNodeId, investigationMode?.rootId]);
   const fitSelection = useCallback(async () => {
     if (rollupNavigationActive) {
       await reactFlow.fitView({ ...viewportOptions, minZoom: 0.16, maxZoom: 1, padding: 0.04 });
