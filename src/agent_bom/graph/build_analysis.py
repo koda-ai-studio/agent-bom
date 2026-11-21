@@ -22,6 +22,7 @@ from agent_bom.graph.provider_inheritance import inherit_cloud_provider
 from agent_bom.graph.relationship_contract import audit_graph_contract
 from agent_bom.graph.risk_context_overlay import apply_node_risk_context
 from agent_bom.graph.storage_integration_correlation import correlate_storage_integrations
+from agent_bom.graph.workload_image_runs import link_workload_images
 
 _logger = logging.getLogger("agent_bom.graph.builder")
 ReportOverlay = Callable[[UnifiedGraph, Mapping[str, Any]], None]
@@ -52,6 +53,8 @@ def apply_build_analysis(graph: UnifiedGraph, report_json: dict[str, Any], ports
     bind_interaction_risk_agent_ids(graph)
     # Assets a finding row named for the first time join the asset they observe.
     canonicalize_assets(graph)
+    # A deployment and an image scan of one digest join over ``runs``.
+    link_workload_images(graph)
     # Merged assets inherit the provider their recorded host or scope proves.
     inherit_cloud_provider(graph)
     # Per-node exposure, privilege, sensitivity and crown-jewel context reads

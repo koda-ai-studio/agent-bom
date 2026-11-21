@@ -36,6 +36,7 @@ from agent_bom.graph.node import NodeDimensions, UnifiedNode
 from agent_bom.graph.security_assertions import resolve_security_assertions
 from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.graph.util import _now_iso
+from agent_bom.graph.workload_image_runs import link_workload_images
 
 _EMPTY_VALUES: tuple[Any, ...] = (None, "", [], {})
 _SHA256_RE = re.compile(r"sha256:[0-9a-f]{64}")
@@ -663,7 +664,7 @@ def merge_graph_snapshots(
     snapshots: Sequence[CorrelationSnapshot],
     created_at: str = "",
 ) -> CorrelationMergeResult:
-    """Merge selected immutable snapshots without inventing cross-source edges."""
+    """Merge selected immutable snapshots; the only cross-source edge added is a digest-proven ``runs``."""
     if len(snapshots) < 2:
         raise ValueError("Correlation requires at least 2 graph snapshots")
     if len(snapshots) > 32:
@@ -714,6 +715,7 @@ def merge_graph_snapshots(
             )
         )
 
+    link_workload_images(output)
     annotate_agent_context(output)
     manifest = {
         "schema_version": "agent-bom.graph-correlation.v1",

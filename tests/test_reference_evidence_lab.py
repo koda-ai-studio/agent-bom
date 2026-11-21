@@ -72,8 +72,9 @@ def test_reference_lab_preserves_source_receipts_and_evidence_boundaries() -> No
     capture = payload["capture_fixture"]
     assert capture["graph"]["scan_id"] == payload["correlation"]["output_scan_id"]
     assert capture["graph"]["attack_paths"] == [path]
-    # The modeled identity path plus one card per holder of the image/SBOM CVE
-    # occurrence (IaC container, SBOM container, pinned manifest).
+    # The modeled identity path plus one card per entry holding the image/SBOM CVE
+    # occurrence: the IaC workload (which runs the SBOM image by digest, so the
+    # image is not a separate entry) and the pinned manifest.
     cards = capture["fix_first"]["cards"]
     # Every card is a recorded graph path, so each is likely: never confirmed without
     # function-level or runtime evidence. An occurrence whose applicability was never
@@ -85,7 +86,6 @@ def test_reference_lab_preserves_source_receipts_and_evidence_boundaries() -> No
     assert len(identity_cards) == 1 and len(cve_cards) == len(cards) - 1
     assert sorted(card["id"].split("::")[0] for card in cve_cards) == [
         "container:iac:reference-api",
-        "container:sbom:reference-api",
         "source:pinned-package",
     ]
     assert all(card["attack_path"]["reachability"] == "likely" for card in cards)

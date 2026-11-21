@@ -50,7 +50,7 @@ class RelationshipType(str, Enum):
     CONTAINS = "contains"  # container → package
     IMPORTS = "imports"  # source file/module → external import/module
     DEFINES = "defines"  # source file → module/component/tool
-    RUNS = "runs"  # CI job → scanner/workflow/tool
+    RUNS = "runs"  # CI job → scanner/workflow/tool; workload container → image it pins by digest
     CONFIGURES = "configures"  # config file → agent/server/CI job
     OBSERVES = "observes"  # observability framework → agent/server (Langfuse-class)
 
