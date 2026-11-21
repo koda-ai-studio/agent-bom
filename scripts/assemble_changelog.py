@@ -196,7 +196,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.check:
         if args.expect_empty and paths:
-            print(f"{len(paths)} changelog fragment(s) not yet assembled; run scripts/assemble_changelog.py --version <version>:")
+            print(
+                f"{len(paths)} changelog fragment(s) not yet assembled; run scripts/assemble_changelog.py --version <version>"
+                " (add --amend when that version's section already exists and is not tagged yet):"
+            )
             print("\n".join(f"  {path.name}" for path in paths))
             return 1
         print(f"OK: {len(paths)} changelog fragment(s) valid.")
