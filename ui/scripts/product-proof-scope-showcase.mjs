@@ -265,6 +265,7 @@ export function buildScopeShowcase(kind, { node, edge, base, advisory, reference
       severity_counts: severityCounts,
       relationship_types: edges.reduce((acc, item) => ({ ...acc, [item.relationship]: (acc[item.relationship] ?? 0) + 1 }), {}),
       attack_path_count: attackPaths.length, interaction_risk_count: 0,
+      attack_paths: { retained_count: attackPaths.length, assessed_count: attackPaths.length, basis: "derived_graph_paths" },
       max_attack_path_risk: attackPaths[0]?.composite_risk ?? 0,
       analysis_status: {
         attack_path_fusion: {

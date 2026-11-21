@@ -212,6 +212,8 @@ export function buildGraph() {
     severity_counts: severityCounts(nodes),
     relationship_types: edges.reduce((acc, item) => ({ ...acc, [item.relationship]: (acc[item.relationship] ?? 0) + 1 }), {}),
     attack_path_count: attackPaths.length,
+    // The typed count /v1/graph serves; every derived path is retained, so assessed equals retained.
+    attack_paths: { retained_count: attackPaths.length, assessed_count: attackPaths.length, basis: "derived_graph_paths" },
     interaction_risk_count: 0,
     max_attack_path_risk: Math.max(...attackPaths.map((item) => item.composite_risk)),
     highest_interaction_risk: 0,

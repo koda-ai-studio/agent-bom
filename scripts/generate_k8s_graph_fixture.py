@@ -24,6 +24,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from agent_bom.demo import demo_inventory_document  # noqa: E402
 from agent_bom.graph.builder import build_unified_graph_from_report  # noqa: E402
+from agent_bom.graph.semantic_layer import node_payload  # noqa: E402
 from agent_bom.kubernetes.inventory import build_k8s_inventory  # noqa: E402
 from agent_bom.kubernetes.inventory_report import kubernetes_inventory_section  # noqa: E402
 
@@ -258,8 +259,11 @@ def _stable(value: Any) -> Any:
 def project(objects: list[Obj], extra: Obj | None = None) -> Obj:
     inventory = build_k8s_inventory(objects, source="live", cluster="prod-eks")
     report = {"scan_id": SCAN_ID, "kubernetes_inventory": kubernetes_inventory_section([inventory], []), **(extra or {})}
-    graph = build_unified_graph_from_report(report).to_dict()
-    return {"nodes": _stable(graph["nodes"]), "edges": _stable(graph["edges"])}
+    built = build_unified_graph_from_report(report)
+    graph = built.to_dict()
+    # Nodes as the API serves them, each with its semantic layer.
+    nodes = [node_payload(built.nodes[item["id"]]) for item in graph["nodes"]]
+    return {"nodes": _stable(nodes), "edges": _stable(graph["edges"])}
 
 
 def _records(records: list[Obj]) -> str:

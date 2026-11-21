@@ -1,0 +1,168 @@
+[
+  {
+    "attributes": {
+      "is_admin": true
+    },
+    "entity_type": "role",
+    "risk_context": {
+      "crown_jewel": false,
+      "data_sensitivity": null,
+      "internet_exposed": null,
+      "is_admin": true,
+      "privilege_level": "admin",
+      "reasons": [
+        {
+          "attribute": "is_admin",
+          "field": "privilege_level",
+          "rule": "recorded_admin_flag",
+          "value": true
+        }
+      ],
+      "scan_id": "scan-1",
+      "sources": [],
+      "version": 1
+    }
+  },
+  {
+    "attributes": {
+      "internet_exposed": true
+    },
+    "entity_type": "server",
+    "risk_context": {
+      "crown_jewel": false,
+      "data_sensitivity": null,
+      "internet_exposed": true,
+      "is_admin": null,
+      "privilege_level": null,
+      "reasons": [
+        {
+          "attribute": "internet_exposed",
+          "field": "internet_exposed",
+          "rule": "recorded_internet_exposed",
+          "value": true
+        }
+      ],
+      "scan_id": "scan-1",
+      "sources": [],
+      "version": 1
+    }
+  },
+  {
+    "attributes": {
+      "internet_exposed": "unknown"
+    },
+    "entity_type": "server",
+    "risk_context": null
+  },
+  {
+    "attributes": {
+      "data_sensitivity": "pii"
+    },
+    "entity_type": "dataset",
+    "risk_context": {
+      "crown_jewel": false,
+      "data_sensitivity": "pii",
+      "internet_exposed": null,
+      "is_admin": null,
+      "privilege_level": null,
+      "reasons": [
+        {
+          "attribute": "data_sensitivity",
+          "field": "data_sensitivity",
+          "rule": "recorded_data_sensitivity",
+          "value": "pii"
+        }
+      ],
+      "scan_id": "scan-1",
+      "sources": [],
+      "version": 1
+    }
+  },
+  {
+    "attributes": {
+      "data_sensitivity": "none"
+    },
+    "entity_type": "dataset",
+    "risk_context": {
+      "crown_jewel": false,
+      "data_sensitivity": "none",
+      "internet_exposed": null,
+      "is_admin": null,
+      "privilege_level": null,
+      "reasons": [
+        {
+          "attribute": "data_sensitivity",
+          "field": "data_sensitivity",
+          "rule": "recorded_data_sensitivity",
+          "value": "none"
+        }
+      ],
+      "scan_id": "scan-1",
+      "sources": [],
+      "version": 1
+    }
+  },
+  {
+    "attributes": {
+      "internet_exposed": "false"
+    },
+    "entity_type": "agent",
+    "risk_context": {
+      "crown_jewel": false,
+      "data_sensitivity": null,
+      "internet_exposed": false,
+      "is_admin": null,
+      "privilege_level": null,
+      "reasons": [
+        {
+          "attribute": "internet_exposed",
+          "field": "internet_exposed",
+          "rule": "recorded_not_public",
+          "value": false
+        }
+      ],
+      "scan_id": "scan-1",
+      "sources": [],
+      "version": 1
+    }
+  },
+  {
+    "attributes": {
+      "cloud_provider": "snowflake",
+      "resource_type": "stage"
+    },
+    "entity_type": "data_store",
+    "risk_context": null
+  },
+  {
+    "attributes": {
+      "data_sensitivity": "none",
+      "privilege_level": "read"
+    },
+    "entity_type": "dataset",
+    "risk_context": {
+      "crown_jewel": false,
+      "data_sensitivity": "none",
+      "internet_exposed": null,
+      "is_admin": null,
+      "privilege_level": "read",
+      "reasons": [
+        {
+          "attribute": "privilege_level",
+          "field": "privilege_level",
+          "rule": "recorded_privilege_level",
+          "value": "read"
+        },
+        {
+          "attribute": "data_sensitivity",
+          "field": "data_sensitivity",
+          "rule": "recorded_data_sensitivity",
+          "value": "none"
+        }
+      ],
+      "scan_id": "scan-1",
+      "sources": [],
+      "version": 1
+    }
+  }
+]
