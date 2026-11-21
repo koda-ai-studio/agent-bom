@@ -43,7 +43,7 @@ describe("attack path graph layout", () => {
     }
   });
 
-  it("keeps the selected path on the same straight row on desktop and phone", () => {
+  it("keeps a straight desktop row and a straight phone column", () => {
     const { graph, selected } = branchingFixture();
     const model = buildAttackPathGraphModel(graph, selected);
     const layout = layoutAttackPathGraph(model, "LR");
@@ -54,8 +54,8 @@ describe("attack path graph layout", () => {
       expect(layout.positions.get(node.id)!.y).not.toBe(row);
     }
     const vertical = layoutAttackPathGraph(model, "TB");
-    expect(vertical.direction).toBe("LR");
-    expect(vertical.positions).toEqual(layout.positions);
+    expect(vertical.direction).toBe("TB");
+    expect(new Set(model.pathNodeIds.map(id => vertical.positions.get(id)!.x)).size).toBe(1);
   });
 
   it("keeps generous column and branch-row spacing", () => {
@@ -73,15 +73,14 @@ describe("attack path graph layout", () => {
     expect(rowGap % 168).toBe(0);
   });
 
-  it("keeps a phone layout left to right", () => {
+  it("keeps the phone spine in the supplied hop order", () => {
     const { graph, selected } = branchingFixture();
     const model = buildAttackPathGraphModel(graph, selected);
     const layout = layoutAttackPathGraph(model, "TB");
     const y = model.pathNodeIds.map(id => layout.positions.get(id)!.y);
     expect(y).toEqual([...y].sort((a, b) => a - b));
-    expect(layout.direction).toBe("LR");
-    expect(new Set(y).size).toBe(1);
-    expect(layout.positions).toEqual(layoutAttackPathGraph(model, "LR").positions);
+    expect(layout.direction).toBe("TB");
+    expect(new Set(y).size).toBe(model.pathNodeIds.length);
   });
 
   it("gives a phone a scrollable canvas at readable zoom", () => {
@@ -92,7 +91,7 @@ describe("attack path graph layout", () => {
     expect(zoom).toBeLessThanOrEqual(1);
     const height = attackPathCanvasHeight(layout, true, 358);
     expect(height).toBeGreaterThanOrEqual(Math.round(layout.height * zoom));
-    expect(attackPathCanvasWidth(layout, true, 358)).toBeGreaterThan(358);
+    expect(attackPathCanvasWidth(layout, true, 358)).toBe(358);
   });
 
   it("sizes the canvas to the laid-out graph within bounds", () => {
@@ -109,7 +108,7 @@ describe("attack path graph layout", () => {
     expect(attackPathCanvasHeight(tall, false)).toBe(ATTACK_PATH_CANVAS_BOUNDS.max);
   });
 
-  it("keeps context off the selected spine with identical geometry on desktop and phone", () => {
+  it("keeps context off the selected spine in both orientations", () => {
     for (const fixture of [branchingFixture(), demoFixture("headline"), demoFixture("runbook"), fanOutFixture(5)]) {
       const model = buildAttackPathGraphModel(fixture.graph, fixture.selected, { collapseThreshold: 100 });
       const branches = model.nodes.filter(item => item.role === "branch");
@@ -118,7 +117,8 @@ describe("attack path graph layout", () => {
       const spineY = row.positions.get(model.pathNodeIds[0]!)!.y;
       for (const branch of branches) expect(row.positions.get(branch.id)!.y, branch.id).not.toBe(spineY);
       const column = layoutAttackPathGraph(model, "TB");
-      expect(column.positions).toEqual(row.positions);
+      const spineX = column.positions.get(model.pathNodeIds[0]!)!.x;
+      for (const branch of branches) expect(column.positions.get(branch.id)!.x, branch.id).toBeGreaterThan(spineX);
     }
   });
 
@@ -126,15 +126,15 @@ describe("attack path graph layout", () => {
     const { graph, selected } = fanOutFixture(5);
     const layout = layoutAttackPathGraph(buildAttackPathGraphModel(graph, selected, { collapseThreshold: 100 }), "TB");
     const width = attackPathCanvasWidth(layout, true, 358);
-    expect(width).toBeGreaterThan(358);
+    expect(width).toBe(358);
     const height = attackPathCanvasHeight(layout, true, width);
     const viewport = attackPathViewport(layout, selected.hops, { width, height }, NARROW_MIN_ZOOM);
     expect(viewport.zoom).toBeGreaterThanOrEqual(NARROW_MIN_ZOOM);
     expect(viewport.hiddenNodeIds).toEqual([]);
-    // A desktop keeps its frame; even a short four-hop phone path can scroll.
+    // Both frames keep their width; the phone page scrolls vertically.
     expect(attackPathCanvasWidth(layout, false, 900)).toBe(900);
     const small = layoutAttackPathGraph(buildAttackPathGraphModel(fanOutFixture(0).graph, fanOutFixture(0).selected), "TB");
-    expect(attackPathCanvasWidth(small, true, 358)).toBeGreaterThan(358);
+    expect(attackPathCanvasWidth(small, true, 358)).toBe(358);
   });
 });
 
