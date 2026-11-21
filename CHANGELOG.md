@@ -54,6 +54,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Do not downgrade scan coverage while inspecting unrelated stale advisory alias metadata; retain warnings on matched advisories and real coverage gaps.
 - Balance merge-queue Python and Postgres shards using measured job logs, run UI unit tests independently, distribute browser tests across shards, and share short validation jobs without removing checks.
 - Keep manual, scheduled, and push workflow runs out of stranded-PR cancellation.
+- Rebalance Python CI shards with measured costs from two merge-queue runs, retaining the slower per-module sample without reducing test coverage.
 
 ### Security
 - Container images move to CPython releases that include the `ssl` compromised-intermediate denylist (CVE-2026-115557, critical) and the `tarfile` extraction-filter fix (CVE-2026-87910): 3.12.16 for the MCP stdio, MCP HTTP, runtime, collector, public lookup and Glama images, 3.11.18 for the Snowflake images, and 3.14.10 for the CLI/API image, which no longer needs its hand-applied `tarfile` overlay. The MCP publish gate failed on this finding, so `agent-bom-mcp` and `agent-bom-sse` were not published for 0.115.4.
