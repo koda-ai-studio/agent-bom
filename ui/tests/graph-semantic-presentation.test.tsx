@@ -82,7 +82,7 @@ it("keeps badges outside the glyph baseline and omits an unassessed default zero
   const Renderer = lineageNodeTypes.containerNode;
   const { container } = render(<ReactFlowProvider><Renderer data={{ label: "Workload", nodeType: "container", semanticLayout: true,
     riskScore: 0, attributes: { admin_equivalent: true } }} /></ReactFlowProvider>);
-  expect(container.querySelector("[data-semantic-badges]")).toHaveClass("absolute");
+  expect(container.querySelector("[data-semantic-badges]")).not.toHaveClass("absolute");
   expect(container.querySelector("[data-semantic-risk]")).toBeNull();
 });
 
