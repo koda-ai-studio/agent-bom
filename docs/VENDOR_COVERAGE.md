@@ -75,7 +75,7 @@ Benchmarks:
 | Device posture connectors | 3 | crowdstrike; generic; intune |
 | Identity / NHI discovery | 2 | entra; okta |
 | Advisory sources | 9 | osv (primary); ghsa (primary); nvidia_csaf (primary); amd_psirt (primary); intel_psirt (primary); nodejs_security_wg (primary); nvd (enrichment); epss (enrichment); cisa_kev (enrichment) |
-| IaC rule families | 11 | CFN (19); COMPOSE (11); DBT-SEC (18); DOCKER (25); DOCKERD (8); GHA (4); HELM (15); IAM (3); K8S (34); TF-AI (10); TF-SEC (73) |
+| IaC rule families | 11 | CFN (19); COMPOSE (11); DBT-SEC (18); DOCKER (25); DOCKERD (8); GHA (4); HELM (15); IAM (3); K8S (34); TF-AI (10); TF-SEC (75) |
 | Agent / MCP clients | 29 | config_paths: 27; dynamic_or_workspace: 2 (full list in JSON) |
 
 Notes:
@@ -97,11 +97,11 @@ deliberate: they state what agent-bom does not do.
 | Secrets | provided | 35 credential patterns, 4 secret-file patterns, 11 PII patterns; values are never echoed | `src/agent_bom/runtime/patterns.py` `CREDENTIAL_PATTERNS, PII_PATTERNS`; `src/agent_bom/scanners/secret_lines.py` `FILE_SECRET_PATTERNS` |
 | SAST (native) | provided | Python interprocedural taint with 8 sink classes; JS/TS 6 and Go 2 dangerous-sink flow categories. Findings carry severity, CWE and (for LLM prompt sinks) OWASP LLM01. | `src/agent_bom/ast_python_analysis.py` `_TAINT_SINK_TITLES`; `src/agent_bom/ast/js_ts/*.py` `category="js_ts_*" literals`; `src/agent_bom/ast_go.py` `category="go_*"` |
 | SAST (imported) | provided | SARIF import via --external-scan plus 2 third-party report importers | `src/agent_bom/parsers/sarif.py` `module file`; `src/agent_bom/parsers/importers/*.py` `ImporterManifest(...)` |
-| IaC misconfiguration | provided | Terraform: AWS 50, Azure 12, GCP 11 rules (CIS ids per provider); other families: CFN 19, COMPOSE 11, DBT-SEC 18, DOCKER 25, DOCKERD 8, GHA 4, HELM 15, IAM 3, K8S 34, TF-AI 10 | `src/agent_bom/iac/terraform_security*.py` `rule_id="TF-SEC-NNN" literals by module`; `src/agent_bom/iac/**/*.py` `rule-id literals` |
+| IaC misconfiguration | provided | Terraform: AWS 50, Azure 13, GCP 12 rules (CIS ids per provider); other families: CFN 19, COMPOSE 11, DBT-SEC 18, DOCKER 25, DOCKERD 8, GHA 4, HELM 15, IAM 3, K8S 34, TF-AI 10 | `src/agent_bom/iac/terraform_security*.py` `rule_id="TF-SEC-NNN" literals by module`; `src/agent_bom/iac/**/*.py` `rule-id literals` |
 | MCP server audit | provided | 7 static tool-schema rules plus live tools/list introspection (mcp introspect, mcp audit --live). Tool-description poisoning heuristics are limited to the prompt-injection patterns in prompt_scanner. | `src/agent_bom/mcp_tool_rules.py` `rule_id="MCP-TOOL-NN-*"`; `src/agent_bom/mcp_introspect.py` `module file` |
 | Container image CVE | provided | OS package databases: Alpine (apk), Debian/Ubuntu (dpkg), RPM-based (rpm); distro advisory feeds synced: alpine, debian (OSV for the rest) | `src/agent_bom/parsers/__init__.py` `_BUILTIN_INVENTORY_PARSERS`; `src/agent_bom/db/sync.py` `DEFAULT_SYNC_SOURCES` |
 | Cloud posture (live, API) | provided | Benchmark checks against the provider API: aws 59, azure 94, databricks 12, gcp 59, snowflake 14 | `src/agent_bom/cloud/benchmark_inventory.json` `providers[*].implemented_control_count` |
-| Cloud posture (static IaC) | provided | Terraform AWS 50 / Azure 12 / GCP 11; CloudFormation 19 (AWS) | `src/agent_bom/iac/terraform_security*.py` `rule_id="TF-SEC-NNN" literals by module` |
+| Cloud posture (static IaC) | provided | Terraform AWS 50 / Azure 13 / GCP 12; CloudFormation 19 (AWS) | `src/agent_bom/iac/terraform_security*.py` `rule_id="TF-SEC-NNN" literals by module` |
 | HTTP/API dynamic testing (DAST) | not provided | No HTTP/API/web dynamic testing. Live MCP audit introspects tool schemas; it does not fuzz or probe endpoints. | `src/agent_bom/**/dast*.py` `module files` |
 
 ## Declared provider lists that disagree

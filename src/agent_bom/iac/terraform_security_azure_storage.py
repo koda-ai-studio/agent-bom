@@ -8,8 +8,10 @@ as public because the provider default changed between major versions.
 
 from __future__ import annotations
 
+import re
+
 from agent_bom.iac.models import IaCFinding
-from agent_bom.iac.terraform_security_common import TfResource
+from agent_bom.iac.terraform_security_common import TfResource, extract_block
 from agent_bom.iac.terraform_security_hcl import attr, tf_finding
 
 _PUBLIC_ACCESS_FLAGS = ("allow_blob_public_access", "allow_nested_items_to_be_public")
@@ -28,6 +30,8 @@ def tf_sec_101(res: TfResource) -> list[IaCFinding]:
     for flag in _PUBLIC_ACCESS_FLAGS:
         found = attr(res.block, flag)
         if found is not None and found.boolean is True:
+            if _has_public_child(res):
+                return []
             return [_public_access(res, f"{flag} = true", found.offset)]
     return []
 
@@ -88,3 +92,17 @@ def tf_sec_103(res: TfResource) -> list[IaCFinding]:
             offset=found.offset,
         )
     ]
+
+
+def _has_public_child(res: TfResource) -> bool:
+    """Keep the concrete container exposure instead of its linked prerequisite."""
+    for match in re.finditer(r'resource\s+"azurerm_storage_container"\s+"[^"\n]+"\s*\{', res.content):
+        body = extract_block(res.content, match.end())
+        level = attr(body, "container_access_type")
+        if level is None or level.string not in _PUBLIC_CONTAINER_LEVELS:
+            continue
+        for key, suffix in (("storage_account_id", "id"), ("storage_account_name", "name")):
+            parent = attr(body, key)
+            if parent and parent.raw == f"azurerm_storage_account.{res.rname}.{suffix}":
+                return True
+    return False
