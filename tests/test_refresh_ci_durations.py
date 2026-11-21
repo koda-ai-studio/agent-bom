@@ -105,3 +105,19 @@ def test_serial_collection_progress_is_recognized(tmp_path: Path) -> None:
     log = tmp_path / "serial.log"
     log.write_text(SERIAL_LOG.replace("Z collected", "Z collecting ... collected"))
     assert seconds_from_log(log) == pytest.approx({"tests/test_a.py": 3.5, "tests/api/test_b.py": 4.5})
+
+
+def test_max_refresh_keeps_slower_samples_without_adding_independent_runs(tmp_path, monkeypatch):
+    import sys
+
+    report = tmp_path / "junit.xml"
+    report.write_text(JUNIT)
+    out = tmp_path / "durations.json"
+    out.write_text(
+        json.dumps(
+            {"unit": "worker-seconds per module", "files": {"tests/test_a.py": 9, "tests/api/test_b.py": 1, "tests/test_untouched.py": 4.2}}
+        )
+    )
+    monkeypatch.setattr(sys, "argv", ["refresh", "--junit", str(report), "--output", str(out), "--max-existing"])
+    assert main() == 0
+    assert json.loads(out.read_text())["files"] == {"tests/test_a.py": 9, "tests/api/test_b.py": 2.0, "tests/test_untouched.py": 4.2}
