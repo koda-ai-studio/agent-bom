@@ -14,7 +14,7 @@ files — same approach as ``terraform.py``, no HCL parser needed.
 
 Rules
 -----
-TF-SEC-001  S3 bucket without encryption (AWS SEC08, CIS 2.1.1)
+TF-SEC-001  Retired: S3 applies SSE-S3 automatically to new uploads (January 2023)
 TF-SEC-002  S3 bucket (or aws_s3_bucket_acl) with public ACL (AWS SEC01, CIS 2.1.2)
 TF-SEC-003  Security group with 0.0.0.0/0 ingress on non-443/80 port (CIS 5.2)
 TF-SEC-004  IAM policy/policy document with Action * (or *:*) or Resource * (AWS SEC03, CIS 1.16)
@@ -64,6 +64,7 @@ TF-SEC-047  Redshift cluster without encryption (AWS SEC08, CIS 2.7)
 TF-SEC-048  Redshift cluster publicly accessible (AWS SEC01)
 TF-SEC-049  WAF not associated with ALB/CloudFront (AWS SEC05)
 TF-SEC-050  GuardDuty not enabled (AWS SEC04, CIS 4.1)
+TF-SEC-052  Model API key in plain runtime environment (NIST IA-5)
 TF-SEC-051  Hardcoded secret in a resource argument, any provider (NIST IA-5; CIS AWS 1.14 on aws_ only)
 
 Azure (azurerm_*; CIS Microsoft Azure Foundations IDs as used by the live benchmark)
@@ -78,6 +79,7 @@ TF-SEC-108  Managed disk without customer-managed key encryption (CIS Azure 7.3)
 TF-SEC-109  Network interface attaches a public IP (NIST SC-7)
 TF-SEC-110  NSG flow log disabled or retained < 90 days (NIST AU-12)
 TF-SEC-111  SQL server without an extended auditing policy (CIS Azure 4.1.1)
+TF-SEC-113  Owner/Contributor at resource-group or subscription scope (NIST AC-6)
 TF-SEC-112  SQL database with Transparent Data Encryption disabled (CIS Azure 4.1.2)
 
 GCP (google_*; CIS Google Cloud Platform Foundation IDs as used by the live benchmark)
@@ -91,6 +93,7 @@ TF-SEC-207  Compute instance with an external IP (CIS GCP 4.9)
 TF-SEC-208  OS Login disabled via instance or project metadata (CIS GCP 4.4)
 TF-SEC-209  Serial console enabled via metadata (CIS GCP 4.5)
 TF-SEC-210  Subnetwork without VPC flow logs (CIS GCP 3.9)
+TF-SEC-212  Broad GCP project IAM role (NIST AC-6)
 TF-SEC-211  Compute instance with IP forwarding enabled (CIS GCP 4.6)
 """
 
@@ -100,15 +103,18 @@ import re
 from pathlib import Path
 
 from agent_bom.iac import terraform_security_azure_data as _azure_data
+from agent_bom.iac import terraform_security_azure_identity as _azure_identity
 from agent_bom.iac import terraform_security_azure_network as _azure_network
 from agent_bom.iac import terraform_security_azure_storage as _azure_storage
 from agent_bom.iac import terraform_security_database as _database
 from agent_bom.iac import terraform_security_gcp_compute as _gcp_compute
+from agent_bom.iac import terraform_security_gcp_identity as _gcp_identity
 from agent_bom.iac import terraform_security_gcp_storage_sql as _gcp_storage_sql
 from agent_bom.iac import terraform_security_identity as _identity
 from agent_bom.iac import terraform_security_network as _network
 from agent_bom.iac import terraform_security_secrets as _secrets
 from agent_bom.iac import terraform_security_storage as _storage
+from agent_bom.iac import terraform_security_workloads as _workloads
 from agent_bom.iac.models import IaCFinding
 from agent_bom.iac.terraform_security_common import TfCheck, TfResource, extract_block, line_number
 
@@ -121,7 +127,7 @@ _DATA_CHECKS: dict[str, tuple[TfCheck, ...]] = {
 
 # Emission order is rule order; ``None`` scopes a rule to every resource type.
 _RULES: tuple[tuple[frozenset[str] | None, TfCheck], ...] = (
-    (frozenset({"aws_s3_bucket"}), _storage.tf_sec_001_002),
+    (frozenset({"aws_s3_bucket"}), _storage.tf_sec_002),
     (frozenset({"aws_security_group"}), _network.tf_sec_003),
     (_IAM_POLICY_TYPES, _identity.tf_sec_004),
     (frozenset({"aws_db_instance", "aws_rds_cluster"}), _database.tf_sec_005),
@@ -172,6 +178,9 @@ _RULES: tuple[tuple[frozenset[str] | None, TfCheck], ...] = (
     (frozenset({"aws_lb", "aws_alb", "aws_cloudfront_distribution"}), _network.tf_sec_049),
     (frozenset({"aws_guardduty_detector"}), _identity.tf_sec_050),
     (None, _secrets.tf_sec_051),
+    (frozenset({"aws_ecs_task_definition", "azurerm_container_app", "google_cloud_run_v2_service"}), _workloads.tf_sec_052),
+    (frozenset({"azurerm_role_assignment"}), _azure_identity.tf_sec_113),
+    (frozenset({"google_project_iam_member", "google_project_iam_binding"}), _gcp_identity.tf_sec_212),
     # Azure
     (frozenset({"azurerm_storage_account", "azurerm_storage_container"}), _azure_storage.tf_sec_101),
     (frozenset({"azurerm_storage_account"}), _azure_storage.tf_sec_102),

@@ -1,8 +1,7 @@
 """MITRE ATT&CK technique mapping for IaC misconfigurations.
 
 Maps IaC security findings to the ATT&CK techniques that the misconfiguration
-enables an attacker to execute. This provides "so what?" context: not just
-"your S3 bucket is unencrypted" but "this enables T1530 Data from Cloud Storage."
+enables an attacker to execute. This provides "so what?" context: such as public storage enabling T1530 Data from Cloud Storage.
 """
 
 from __future__ import annotations
@@ -13,7 +12,6 @@ from __future__ import annotations
 IAC_ATTACK_MAP: dict[str, list[str]] = {
     # ── Terraform (AWS) ─────────────────────────────────────────────────────
     # Encryption / Data Protection
-    "TF-SEC-001": ["T1530"],  # S3 without encryption → Data from Cloud Storage
     "TF-SEC-005": ["T1530", "T1565"],  # RDS without encryption → Data Manipulation
     "TF-SEC-011": ["T1530"],  # RDS without storage encryption
     "TF-SEC-017": ["T1557"],  # ElastiCache no transit encryption → Adversary-in-the-Middle
