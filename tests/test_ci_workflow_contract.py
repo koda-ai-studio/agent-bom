@@ -279,18 +279,31 @@ def test_postgres_integration_uses_a_persistent_audit_signing_key() -> None:
     assert postgres_env["AGENT_BOM_AUDIT_HMAC_KEY"] == "ci-postgres-audit-signing-key"
 
 
-def test_postgres_storage_contract_passes_every_listed_suite_to_one_pytest_command() -> None:
-    """A missing line continuation would run a suite path as its own shell command."""
+def _postgres_contract_suites() -> list[str]:
+    """Evaluate the step's SUITES array in bash, exactly as the runner does."""
+    import subprocess
+
     steps = _ci()["jobs"]["postgres-integration"]["steps"]
     script = next(step["run"] for step in steps if step.get("name") == "Run real Postgres storage contract")
-    lines = [line.strip() for line in script.strip().splitlines() if line.strip()]
+    start = script.index("SUITES=(")
+    block = script[start : script.index("\n)", start) + 2]
+    result = subprocess.run(["bash", "-c", block + '\nprintf "%s\\n" "${SUITES[@]}"'], capture_output=True, text=True, check=True)
+    return result.stdout.split()
 
-    assert lines[0].startswith("uv run pytest")
-    assert all(line.endswith("\\") for line in lines[:-1]), [line for line in lines[:-1] if not line.endswith("\\")]
-    listed = {line.rstrip("\\ ").strip() for line in lines[1:]}
+
+def test_postgres_storage_contract_passes_every_listed_suite_to_one_pytest_command() -> None:
+    """Every listed suite reaches the planner, and the partition reaches one pytest command."""
+    steps = _ci()["jobs"]["postgres-integration"]["steps"]
+    script = next(step["run"] for step in steps if step.get("name") == "Run real Postgres storage contract")
+    suites = _postgres_contract_suites()
+    listed = [token for token in script.split() if token.startswith("tests/") and token.endswith(".py")]
+    assert suites == listed, "every listed suite must be an element of SUITES"
+    assert all((ROOT / suite).is_file() for suite in suites)
     for suite in ("tests/test_tenant_quota_store.py", "tests/test_tenant_graph_retention_store.py", "tests/test_storage_sql.py"):
-        assert suite in listed
-        assert (ROOT / suite).is_file()
+        assert suite in suites
+    commands = [line.strip() for line in script[script.index("\n)", script.index("SUITES=(")) + 2 :].splitlines() if line.strip()]
+    assert sum("uv run pytest " in command for command in commands) == 1
+    assert '--files "${SUITES[@]}"' in next(command for command in commands if "pytest_ci_plan.py shard" in command)
 
 
 def test_test_job_timeout_leaves_margin_over_observed_worst_case() -> None:
@@ -1029,14 +1042,7 @@ def test_keycloak_image_participates_in_dependency_maintenance() -> None:
 
 
 def test_postgres_contract_suites_are_arguments_to_one_pytest_invocation() -> None:
-    import shlex
-
-    steps = _ci()["jobs"]["postgres-integration"]["steps"]
-    script = next(step["run"] for step in steps if step.get("name") == "Run real Postgres storage contract")
-    commands = [line.strip() for line in script.replace("\\\n", " ").splitlines() if line.strip()]
-    assert len(commands) == 1, "A missing shell continuation runs a test file as a command"
-    arguments = shlex.split(commands[0])
-    assert arguments[:3] == ["uv", "run", "pytest"]
+    arguments = _postgres_contract_suites()
     assert "tests/test_tenant_quota_store.py" in arguments
     assert "tests/test_jit_grant_tenant_boundary.py" in arguments
     assert "tests/test_identity_policy_tenant_boundary.py" in arguments
@@ -1391,12 +1397,16 @@ def test_workflow_classifier_combines_writer_and_shared_input_routing(tmp_path) 
             assert values[key] == value, (paths, key, values)
 
 
-def test_merge_group_full_suite_runs_in_eight_balanced_shards() -> None:
+def test_merge_group_full_suite_runs_in_sixteen_balanced_shards() -> None:
     job = _ci()["jobs"]["test-shard"]
     assert "github.event_name == 'merge_group'" in job["if"]
-    assert job["strategy"]["matrix"]["shard"] == list(range(8))
+    assert job["strategy"]["matrix"]["shard"] == list(range(16))
     run = next(step["run"] for step in job["steps"] if step.get("name") == "Run full correctness shard")
-    assert 'scripts/pytest_ci_plan.py shard --index "${{ matrix.shard }}" --total 8' in run
+    assert 'scripts/pytest_ci_plan.py shard --index "${{ matrix.shard }}" --total 16' in run
+    # The shard collects the test root once; the selection plugin keeps exactly its modules.
+    assert 'printf \'%s\\n\' "${TESTS[@]}" > "$SELECTION"' in run
+    pytest_line = next(line for line in run.splitlines() if "uv run pytest " in line)
+    assert pytest_line.lstrip().startswith('AGENT_BOM_PYTEST_SELECTION="$SELECTION" uv run pytest tests ')
 
 
 def test_main_matrix_partitions_each_interpreter_and_retains_coverage_artifacts() -> None:
@@ -1520,7 +1530,7 @@ def test_extras_audit_skips_only_proven_unchanged_dependency_inputs() -> None:
     assert "uv sync --frozen" in install
 
 
-UI_E2E_SHARDS = 4
+UI_E2E_SHARDS = 8
 
 
 def test_pr_browser_smoke_covers_graph_drawer_readability() -> None:

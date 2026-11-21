@@ -27,6 +27,10 @@ DEMO = "tests/test_demo_estate_bootstrap.py"
         (["tests/test_policy_engine.py"], None, 1),
         ([], 4, 4),
         (["./tests/test_demo_estate_bootstrap.py"], 4, 3),
+        (["tests/test_policy_engine.py", "tests/test_demo_estate_bootstrap_lifecycle.py"], 4, 3),
+        (["tests/test_demo_estate_bootstrap_rollover.py"], 4, 3),
+        (["tests/test_demo_estate_bootstrap_live_feeds.py"], 4, 3),
+        (["tests/test_demo_estate_bootstrap_reads.py"], 4, 4),
     ],
 )
 def test_worker_count_caps_memory_heavy_selections(files: list[str], cpus: int | None, expected: int) -> None:

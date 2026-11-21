@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import shlex
 from typing import Any
 
@@ -11,6 +12,7 @@ from click.core import ParameterSource
 # The footer supplies its own format and destination; these only shape this run's output.
 _REPLACED = frozenset({"output", "output_format", "quiet", "open_report"})
 _SECRET_MARKERS = ("pass", "secret", "token", "key", "credential")
+_ENV_NAME = re.compile(r"[A-Z_][A-Z0-9_]*")
 
 
 def _is_secret(param: click.Parameter) -> bool:
@@ -38,16 +40,30 @@ def _tokens(param: click.Parameter, value: Any) -> list[str]:
 def typed_scan_arguments(ctx: click.Context | None = None) -> str | None:
     """Shell-quoted scan arguments given on the command line; None outside a scan command.
 
-    Options from the environment or defaults are not repeated, nor any option whose
-    name marks it as a secret, so the footer never prints a credential.
+    Options from the environment or defaults are not repeated. A typed secret is
+    repeated as a reference to its environment variable, never its value, and is
+    dropped when it has none, so the footer never prints a credential.
     """
     ctx = ctx or click.get_current_context(silent=True)
     if ctx is None or ctx.command.name != "scan":
         return None
     tokens: list[str] = []
+    secrets: list[str] = []
     for param in ctx.command.params:
         name = param.name or ""
-        if name in _REPLACED or _is_secret(param) or ctx.get_parameter_source(name) is not ParameterSource.COMMANDLINE:
+        if name in _REPLACED or ctx.get_parameter_source(name) is not ParameterSource.COMMANDLINE:
+            continue
+        if _is_secret(param):
+            secrets += _secret_reference(param)
             continue
         tokens += _tokens(param, ctx.params.get(name))
-    return shlex.join(tokens)
+    return " ".join(part for part in (shlex.join(tokens), *secrets) if part)
+
+
+def _secret_reference(param: click.Parameter) -> list[str]:
+    envvar = getattr(param, "envvar", None)
+    if isinstance(envvar, (list, tuple)):
+        envvar = envvar[0] if envvar else None
+    if not isinstance(param, click.Option) or not param.opts or not envvar or not _ENV_NAME.fullmatch(envvar):
+        return []
+    return [f'{param.opts[0]} "${envvar}"']

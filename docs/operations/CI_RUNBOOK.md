@@ -32,7 +32,7 @@ Only direct references count: a transitive or dependency-version regression
 can pass the PR and fail the post-merge run, which then freezes merges (see
 below). The job log prints the 50 slowest tests (`--durations=50`).
 
-Full correctness is split into 8 parallel shards on Python 3.13 for a merge
+Full correctness is split into 16 parallel shards on Python 3.13 for a merge
 group (see "Merge-queue configuration"), and for a main push that did not come
 through the queue; those shards run every test module (with the same `otel`
 extra) plus the graph-fixture and DCM guards on shard 0.
@@ -58,7 +58,7 @@ remain: `Docker (multi-arch)` and, on dependency changes, the full musl suite
 in four shards. `Python correctness aggregation` and `Test (Python 3.13)` still
 report. A lookup failure, an unfinished or failed merge-group run, or a push
 that bypassed the queue sets `queue_proven=false`, and the push runs the
-merge-group lanes itself (the 8 full 3.13 shards, performance, Postgres, every
+merge-group lanes itself (the 16 full 3.13 shards, performance, Postgres, every
 UI lane) plus the post-merge lanes. `tests/test_ci_workflow_contract.py` checks
 that every merge-group lane carries the guard and that the guard never changes
 pull-request, merge-group or nightly routing.
@@ -91,8 +91,8 @@ Nightly, manual and release runs assign every test module to one of four
 shards for each supported interpreter, using the same exhaustive plan as PRs.
 `scripts/ci_pytest_workers.py` sizes pytest-xdist workers per job: every core
 of the 4-vCPU, 16 GB hosted runner, capped at three when the selection holds
-`tests/test_demo_estate_bootstrap.py` (each demo-estate worker reaches about
-4 GB RSS). This divides work across runners; elapsed time
+one of the demo-estate bootstrap modules in its `MEMORY_HEAVY_MODULES` (each
+demo-estate worker reaches about 4 GB RSS). This divides work across runners; elapsed time
 still depends on queue capacity and the slowest shard.
 
 The planner balances measured per-module seconds from `tests/.ci-durations.json`
@@ -185,8 +185,8 @@ when their path filters select them (on a PR: the musl subset and the
 `UI E2E smoke` job). Failed classification runs both lanes;
 a missing, failed, or cancelled selected lane fails that context.
 
-After merge, UI E2E runs as four `UI E2E shard (N/4)` jobs
-(`playwright test --shard=N/4`), each building its own standalone server, plus
+After merge, UI E2E runs as eight `UI E2E shard (N/8)` jobs
+(`playwright test --shard=N/8`), each building its own standalone server, plus
 one `UI container smoke` job. A pull request instead runs one `UI E2E smoke`
 job (`e2e/route-catalog-smoke.spec.ts` and
 `e2e/route-catalog-accessibility.spec.ts`) when `ui/`, the UI toolchain or
@@ -525,9 +525,13 @@ full 3.13 shards instead of the affected tests plus the performance,
 Postgres, UI E2E and dogfood lanes; the main push of the same commit then skips
 them (see "Main pushes reuse the merge-group run"). `Lint and Type Check`, `Build Package`, `Security Scan`,
 `Test (Python 3.13)`, `Version Alignment`, `UI Validate` and the CodeQL
-`Analyze` jobs therefore report on a merge group. The eight full shards bound
-the queue at about ten minutes; the demo-estate module fills one three-worker
-shard by itself, so splitting further gains nothing until that module is faster.
+`Analyze` jobs therefore report on a merge group. The queue waits for the
+slowest lane behind those checks: the sixteen full shards, the four Postgres
+partitions (`Test (Python 3.13)` waits for them through `Python correctness
+aggregation`), the eight UI E2E shards and `UI Validate`, each sized to finish
+in about four minutes. Each full shard collects the test root once and keeps
+only its modules (`tests/_ci_selection.py`); passing hundreds of module paths
+made pytest re-collect the package per path, which cost 90-170 s a shard.
 
 `Dependency Review` (`dependency-review.yml`) also declares `merge_group`.
 The review needs one PR's base and head dependency snapshots, which a merge
