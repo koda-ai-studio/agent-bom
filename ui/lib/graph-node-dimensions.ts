@@ -27,6 +27,8 @@ export function readableGraphNodeStyle(zoom: number, boundedContext = false, roo
     "--graph-node-label-size": units(DRAWN.label, roomyCaptions ? CEILING.roomyLabel : CEILING.label),
     "--graph-node-glyph-size": units(shape.glyph, CEILING.glyph),
     "--graph-node-icon-size": units(shape.icon, CEILING.icon),
+    "--graph-context-glyph-size": units(48, 120),
+    "--graph-context-icon-size": units(24, 60),
     "--graph-node-meta-size": units(DRAWN.meta, roomyCaptions ? CEILING.roomyMeta : CEILING.meta),
     "--graph-group-label-size": `${Math.min(75, Math.max(18, 12 / scale))}px`,
   } as CSSProperties;

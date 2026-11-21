@@ -246,9 +246,9 @@ function NodeCard({
     ? undefined : subtitle;
   return (
     <div title={[graphNodeTooltip(data), data.evidenceFlowContext, ring?.description, ...(data.readingConnections ?? []).map(summary => `${summary.relationship === "hosts" ? "Hosts" : "Contains"} ${summary.label} in this view`)].filter(Boolean).join(" · ")} data-graph-entity="true" data-graph-subrow={subrow ? data.semanticOwner : undefined} data-evidence-flow={data.evidenceFlow || undefined} data-finding-owner={data.readingOwner} data-rollup-container={isRollupContainer ? "true" : undefined}
-      style={{ width: "var(--graph-node-card-width, 220px)" }}
-      className={`relative w-[220px] ${subrow ? "grid grid-cols-[40px_minmax(0,1fr)] items-start gap-x-3 text-left [&>*]:col-start-2" : "flex flex-col items-center text-center"} transition-opacity ${data.dimmed ? "opacity-25" : ""}`}>
-      <div ref={glyphRef} data-image-subrow={data.imageSubrow || undefined} data-severity-ring={severity} style={{ width: compactGlyph ? 40 : "var(--graph-node-glyph-size, 72px)", height: compactGlyph ? 40 : "var(--graph-node-glyph-size, 72px)", ...(subrow ? { gridColumn: 1, gridRow: "1 / span 3" } : {}) }} className={`graph-entity-glyph relative mb-3 flex h-[72px] w-[72px] items-center justify-center rounded-full border-2 shadow-sm ${
+      style={{ width: "var(--graph-node-card-width, 220px)", ...(subrow ? { gridTemplateColumns: "var(--graph-context-glyph-size, 48px) minmax(0, 1fr)" } : {}) }}
+      className={`relative w-[220px] ${subrow ? "grid items-start gap-x-3 text-left [&>*]:col-start-2" : "flex flex-col items-center text-center"} transition-opacity ${data.dimmed ? "opacity-25" : ""}`}>
+      <div ref={glyphRef} data-image-subrow={data.imageSubrow || undefined} data-severity-ring={severity} style={{ width: compactGlyph ? "var(--graph-context-glyph-size, 48px)" : "var(--graph-node-glyph-size, 72px)", height: compactGlyph ? "var(--graph-context-glyph-size, 48px)" : "var(--graph-node-glyph-size, 72px)", ...(subrow ? { gridColumn: 1, gridRow: "1 / span 3" } : {}) }} className={`graph-entity-glyph relative mb-3 flex h-[72px] w-[72px] items-center justify-center rounded-full border-2 shadow-sm ${
         isRollupContainer ? "border-outline-strong bg-surface-elevated" : `${borderClass} ${bgClass}`
       } ${data.highlighted ? `ring-2 ring-offset-4 ring-offset-[var(--surface)] ${ringClass}` : ""}`}>
         {severity && <span className="sr-only" data-finding-severity={severity}>{`${severity} severity`}</span>}
@@ -266,7 +266,7 @@ function NodeCard({
           style={{ fontSize: "var(--graph-node-meta-size, 12px)", ...(data.readingFindings.severity ? { borderColor: `var(--severity-ring-${data.readingFindings.severity})` } : {}) }}>
           {data.readingFindings.count}<span className="sr-only"> findings</span>
         </button></GraphCountHint></span>}
-        <GraphPackageGlyph ecosystem={data.nodeType === "package" ? allBadges.find(badge => badge.kind === "ecosystem")?.value : undefined} fallback={<Icon aria-hidden="true" style={{ width: compactGlyph ? 22 : "var(--graph-node-icon-size, 32px)", height: compactGlyph ? 22 : "var(--graph-node-icon-size, 32px)" }} className={`h-8 w-8 ${iconClass}`} />} />
+        <GraphPackageGlyph ecosystem={data.nodeType === "package" ? allBadges.find(badge => badge.kind === "ecosystem")?.value : undefined} fallback={<Icon aria-hidden="true" style={{ width: compactGlyph ? "var(--graph-context-icon-size, 24px)" : "var(--graph-node-icon-size, 32px)", height: compactGlyph ? "var(--graph-context-icon-size, 24px)" : "var(--graph-node-icon-size, 32px)" }} className={`h-8 w-8 ${iconClass}`} />} />
         {/* A contrasting vendor badge above the caption, shown once per scope. */}
         {provider && <GraphProviderMark source={provider} attributes={repository ? undefined : data.attributes} className="graph-provider-mark-node absolute" />}
         {data.heldConnections ? <span data-testid="graph-held-connections" title={`${data.heldConnections} more ${data.heldConnections === 1 ? "connection" : "connections"} not drawn`} style={{ fontSize: "var(--graph-node-meta-size, 12px)" }}

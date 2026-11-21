@@ -69,3 +69,12 @@ it("gives a small graph a larger glyph that meets the readability floor, never t
   const large = readableGraphNodeStyle(1, false, false, SMALL_GRAPH_NODES + 1) as Record<string, string>;
   expect(Number.parseFloat(large["--graph-node-glyph-size"]!)).toBeLessThanOrEqual(56);
 });
+
+it("keeps owned context glyphs at the 48px acceptance floor after fitting", async () => {
+  const { readableGraphNodeStyle } = await import("@/lib/graph-node-dimensions");
+  for (const zoom of [0.4, 0.6, 0.85, 1, 1.25]) {
+    const style = readableGraphNodeStyle(zoom) as Record<string, string>;
+    expect(parseFloat(style["--graph-context-glyph-size"]!) * zoom).toBeGreaterThanOrEqual(48);
+    expect(parseFloat(style["--graph-context-icon-size"]!) * zoom).toBeGreaterThanOrEqual(24);
+  }
+});
