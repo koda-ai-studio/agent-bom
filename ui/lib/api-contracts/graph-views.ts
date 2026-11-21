@@ -265,6 +265,7 @@ export interface GraphRollupAggregate {
 }
 
 export interface GraphRollupContainer {
+  semantic_layer?: string | null;
   context?: { workload?: string; image?: string; environment?: string; account?: string };
   id: string;
   label: string;

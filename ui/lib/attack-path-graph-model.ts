@@ -1,3 +1,4 @@
+import type { GraphNodeAggregate } from "@/lib/graph-node-aggregates";
 import { graphEdgeEvidence } from "@/lib/graph-edge-evidence";
 import type { AttackPath, UnifiedEdge, UnifiedGraphData, UnifiedNode } from "@/lib/graph-schema";
 import { GRAPH_NODE_KIND_META } from "@/lib/graph-schema.generated";
@@ -29,6 +30,8 @@ export type PathGraphNode = {
   entityType: string;
   dimensions?: UnifiedNode["dimensions"] | undefined;
   semanticLayer?: string | null | undefined;
+  aggregate?: GraphNodeAggregate["aggregate"] | undefined;
+  isKev?: boolean | undefined;
   findings: PathGraphFinding[];
   markers: NodeContextMarker[];
   /** Collapsed sibling groups only. */
@@ -186,6 +189,7 @@ export function buildAttackPathGraphModel(
   graph: UnifiedGraphData,
   path: AttackPath,
   options: {
+    nodeAggregates?: ReadonlyMap<string, GraphNodeAggregate>;
     expandedGroups?: ReadonlySet<string>;
     collapseThreshold?: number;
     /** Recorded at-risk hops past the path (exploit story); drawn where a recorded edge reaches them. */
@@ -248,6 +252,8 @@ export function buildAttackPathGraphModel(
     return {
       id, kind: "entity", label: node.entity_type === "agent" ? formatInventoryAgentLabel(node.label || id) : node.label || id, entityType: node.entity_type, dimensions: node.dimensions, semanticLayer: node.semantic_layer, typeLabel: assetTypeLabel(node),
       role: index < 0 ? "branch" : index === 0 && lastIndex > 0 ? "entry" : index === lastIndex ? "target" : "path",
+      aggregate: options.nodeAggregates?.get(id)?.aggregate,
+      isKev: FINDING_ENTITY_TYPES.has(node.entity_type) && node.attributes?.is_kev === true,
       findings: findingsFor(id, graph, nodes, drawnFindings),
       markers: nodeContextMarkers(node.attributes ?? {}),
     };

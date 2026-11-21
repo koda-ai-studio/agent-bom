@@ -26,7 +26,7 @@ import { resolveSnapshotAttackPathCount } from "@/lib/graph-snapshot-metrics";
 import { lineageNodeTypeForEntity } from "@/lib/graph-entity-mapping";
 import { buildDriftIndex, diffChangeCounts, driftAttributeSummaries, countVisiblePathHops, graphNodeDisplayLabels, legendItemsForVisibleGraph, readableGraphEdges } from "@/lib/graph-utils";
 import { graphFitViewOptions, graphInitialFitViewOptions, graphReadableFitViewOptions, shouldShowGraphMiniMap } from "@/lib/graph-viewport";
-import { buildRollupFlowGraph, phoneStacksScopes } from "@/lib/graph-rollup-view";
+import { buildRollupFlowGraph } from "@/lib/graph-rollup-view";
 import { buildUnifiedFlowGraph } from "@/lib/unified-graph-flow";
 import { decideGraphRenderer } from "@/lib/graph-renderer-switch";
 import { applyFilters, encodeFiltersToParams } from "@/lib/filter-algebra";
@@ -62,7 +62,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
         rollupView.mode === "drilldown"
           ? (rollupView.children ?? [])
           : (rollupView.top_level ?? []);
-      const rollupFlow = buildRollupFlowGraph(items, { edges: rollupDisplayEdges, ...(phoneStacksScopes(narrowViewport, items.length) ? { columns: 1 } : {}) });
+      const rollupFlow = buildRollupFlowGraph(items, { edges: rollupDisplayEdges });
       return {
         nodes: rollupFlow.nodes,
         edges: rollupFlow.edges,
@@ -139,7 +139,6 @@ export function useGraphCanvasModel(page: GraphPageData) {
     rollupCanvasFailed,
     rollupView,
     rollupDisplayEdges,
-    narrowViewport,
   ]);
   const snapshotAttackPathCount = resolveSnapshotAttackPathCount(graphData?.stats.attack_paths);
 
@@ -379,11 +378,10 @@ export function useGraphCanvasModel(page: GraphPageData) {
   const previewExpanded = searchParams.get("map_view") === "full";
   const previewRoot = searchParams.get("preview_root") ?? undefined;
   const connectionPreview = useMemo(() => {
-    if (investigationMode || selectedAttackPath || selectedScenarioId || rollupNavigationActive || aggregated.nodes.length <= 24) return null;
-    if (decideGraphRenderer({ nodeCount: aggregated.nodes.length, edgeCount: aggregated.edges.length, captureMode }).kind === "webgl") return null;
+    if (investigationMode || selectedAttackPath || selectedScenarioId || aggregated.nodes.length <= 12) return null;
     return graphConnectionPreview(aggregated.nodes, aggregated.edges,
-      previewRoot, narrowViewport ? 2 : 6);
-  }, [aggregated, investigationMode, selectedAttackPath, selectedScenarioId, rollupNavigationActive, captureMode, previewRoot, narrowViewport]);
+      previewRoot, 6);
+  }, [aggregated, investigationMode, selectedAttackPath, selectedScenarioId, previewRoot]);
   const previewActive = Boolean(connectionPreview) && !previewExpanded;
   const setPreviewRoot = (root: string) => {
     const url = new URL(window.location.href);

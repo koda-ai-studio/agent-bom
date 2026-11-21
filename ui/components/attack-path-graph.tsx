@@ -8,6 +8,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { AttackPathArrowDefs, attackPathEdgeTypes, type AttackPathFlowEdge, type EdgeTrace } from "@/components/attack-path-graph-edge";
 import { AttackPathGraphLegend } from "@/components/attack-path-graph-legend";
 import { attackPathNodeTypes, type AttackPathFlowNode } from "@/components/attack-path-graph-node";
+import { useGraphNodeAggregates } from "@/lib/graph-node-aggregates";
 import { useElementWidth } from "@/hooks/use-element-width";
 import { activateGraphNodeFromKeyboard } from "@/lib/graph-keyboard-selection";
 import { useWheelZoomGate, WheelZoomHint } from "@/hooks/use-wheel-zoom-gate";
@@ -101,7 +102,7 @@ function useFlowElements(model: AttackPathGraphModel, narrow: boolean, activeEdg
     return {
       id: node.id, type: "attackPathNode", position: layout.positions.get(node.id)!,
       width: layout.nodeWidth, height: layout.nodeHeight, handles,
-      ariaLabel: `${node.label}, ${node.typeLabel}${node.findings.length ? `, ${node.findings.length} findings` : ""}`,
+      ariaLabel: `${node.label}, ${node.typeLabel}${node.aggregate ? `, ${node.aggregate.issue_count} findings` : ""}`,
       data: { node, vertical, ...handlers },
     };
   }), [handlers, inset, layout, model.nodes]);
@@ -120,7 +121,8 @@ function AttackPathCanvas({ graph, attackPath, narrow, context, onNodeSelect, on
   const [activeEdge, setActiveEdge] = useState<string | null>(null);
   const markerPrefix = `apg${useId().replaceAll(":", "")}`;
   const wheelGate = useWheelZoomGate();
-  const model = useMemo(() => buildAttackPathGraphModel(graph, attackPath, { expandedGroups, context }), [attackPath, context, expandedGroups, graph]);
+  const nodeAggregates = useGraphNodeAggregates(graph.scan_id, attackPath.hops, graph.snapshot_generation);
+  const model = useMemo(() => buildAttackPathGraphModel(graph, attackPath, { expandedGroups, context, nodeAggregates }), [attackPath, context, expandedGroups, graph, nodeAggregates]);
   const onExpandGroup = useCallback((id: string) => setExpandedGroups(current => new Set([...current, id])), []);
   const handlers = useMemo(() => ({ onOpenFindings, onExpandGroup }), [onExpandGroup, onOpenFindings]);
   // Motion carries direction once, when a path is chosen; the arrowheads carry it in the static view.

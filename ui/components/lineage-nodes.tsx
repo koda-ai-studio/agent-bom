@@ -896,9 +896,9 @@ const DETAIL_RENDERERS: Record<
 };
 
 function AdaptiveLineageNode({ data }: { data: LineageNodeData }) {
-  if (data.rollup) return <GraphScopeNode item={data.rollup} identityContext={data.identityContext} compact={data.rollupCompact} dimmed={data.dimmed} highlighted={data.highlighted} />;
-  if (data.renderBand === "cluster") return <ClusterBubbleNode data={data} />;
-  if (data.renderBand === "summary") return <SummaryNode data={data} />;
+  if (data.rollup && !data.semanticLayout) return <GraphScopeNode item={data.rollup} identityContext={data.identityContext} compact={data.rollupCompact} dimmed={data.dimmed} highlighted={data.highlighted} />;
+  if (data.renderBand === "cluster" && !data.semanticLayout) return <ClusterBubbleNode data={data} />;
+  if (data.renderBand === "summary" && !data.semanticLayout) return <SummaryNode data={data} />;
   const Renderer = DETAIL_RENDERERS[data.nodeType] ?? SummaryNode;
   return <Renderer data={data} />;
 }

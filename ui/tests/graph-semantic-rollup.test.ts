@@ -52,3 +52,17 @@ it("never collapses an explicit selected-path finding hop", () => {
   const result = cloudFindingDisclosure([owner, { ...finding, data: { ...finding.data, semanticPathIndex: 1 } }], [], new Set(), () => undefined, true);
   expect(result.nodes.find(n => n.id === finding.id)?.hidden).not.toBe(true);
 });
+
+import { buildRollupFlowGraph } from "@/lib/graph-rollup-view";
+it("lays out roll-up entries by their backend layer and preserves their aggregate", () => {
+  const entries = [
+    { ...owner.data.rollup!, id: "tool", semantic_layer: "tool" },
+    { ...owner.data.rollup!, id: "entry", semantic_layer: "user" },
+    { ...owner.data.rollup!, id: "agent", semantic_layer: "orchestration" },
+  ];
+  const result = buildRollupFlowGraph(entries);
+  expect(result.nodes.find(node => node.id === "entry")!.position.x).toBe(0);
+  expect(result.nodes.find(node => node.id === "agent")!.position.x).toBeLessThan(result.nodes.find(node => node.id === "tool")!.position.x);
+  expect(result.nodes.every(node => node.data.semanticLayout)).toBe(true);
+  expect(result.nodes[0]!.data.rollup?.aggregate).toEqual(owner.data.rollup!.aggregate);
+});

@@ -47,29 +47,17 @@ export function NodeName({ label, className }: { label: string; className: strin
   );
 }
 
-/** Counts per severity in the model's worst-first order, e.g. "1 critical, 1 medium". */
-function severityBreakdown(findings: PathGraphNode["findings"]): [string, number][] {
-  const counts = new Map<string, number>();
-  for (const { severity } of findings) counts.set(RATED.has(severity) ? severity : "unrated", (counts.get(RATED.has(severity) ? severity : "unrated") ?? 0) + 1);
-  return [...counts];
-}
-
 function FindingBadge({ node, onOpen }: { node: PathGraphNode; onOpen: AttackPathNodeData["onOpenFindings"] }) {
-  const count = node.findings.length;
-  const worst = node.findings[0]!.severity;
-  const breakdown = severityBreakdown(node.findings);
-  const [topSeverity, topCount] = breakdown[0]!;
-  const rest = count - topCount;
-  const summary = breakdown.map(([severity, n]) => `${n} ${severity}`).join(", ");
-  const label = `${count} ${count === 1 ? "finding" : "findings"} on ${node.label}, worst ${RATED.has(worst) ? worst : "unrated"} (${summary}). Open findings`;
-  return (
-    <button type="button" aria-label={label} title={label.replace(". Open findings", "")} data-severity={worst} data-node-badge="findings"
-      onClick={event => { event.stopPropagation(); onOpen(node.id, node.findings.map(finding => finding.id)); }}
-      className="nodrag nopan absolute left-[calc(100%-12px)] -top-4 z-10 inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-full border px-1.5 text-[13px] font-semibold tabular-nums shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--focus-ring)]"
-      style={severityStyle(worst)}>
-      <Bug className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />{`${topCount} ${topSeverity}`}{rest > 0 ? <span className="font-medium opacity-80">{` +${rest}`}</span> : null}
-    </button>
-  );
+  const aggregate = node.aggregate;
+  if (!aggregate) return null;
+  const { issue_count: count, worst_severity: worst } = aggregate;
+  const label = `Findings (${count}) on ${node.label}, worst ${worst}`;
+  const className = "nodrag nopan absolute left-[calc(100%-12px)] -top-4 z-10 inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-full border px-1.5 text-[13px] font-semibold tabular-nums shadow-sm";
+  const content = <><Bug className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />Findings ({count})</>;
+  return node.findings.length ? <button type="button" aria-label={`${label}. Open loaded findings`} title={label} data-severity={worst} data-node-badge="findings"
+    onClick={event => { event.stopPropagation(); onOpen(node.id, node.findings.map(finding => finding.id)); }}
+    className={className} style={severityStyle(worst)}>{content}</button>
+    : <span aria-label={label} title={label} data-severity={worst} data-node-badge="findings" className={className} style={severityStyle(worst)}>{content}</span>;
 }
 
 function Markers({ markers }: { markers: NodeContextMarker[] }) {
@@ -117,8 +105,10 @@ export function AttackPathGraphNode({ data }: NodeProps<AttackPathFlowNode>) {
         style={tint ? { backgroundImage: `linear-gradient(color-mix(in srgb, ${tint} ${spine ? 24 : 12}%, transparent), color-mix(in srgb, ${tint} ${spine ? 24 : 12}%, transparent))` } : undefined}>
         <Icon className="h-7 w-7" aria-hidden="true" />
         <Markers markers={node.markers} />
-        {node.findings.length > 0 && <FindingBadge node={node} onOpen={data.onOpenFindings} />}
+        {node.isKev && <span className="absolute -bottom-2 rounded border border-red-500 bg-surface px-1 text-xs text-red-700 dark:text-red-300">KEV</span>}
+        <FindingBadge node={node} onOpen={data.onOpenFindings} />
       </div>
+      {!!node.aggregate?.exposed_count && <span className="text-xs text-ink-secondary">{node.aggregate.exposed_count} exposed entities</span>}
       {/* Below the glyph no line ever runs, so the whole name block takes clicks. */}
       <div data-node-label className="pointer-events-auto w-full flex-1 pt-2">
       <NodeName label={node.label} className={`${NAME} ${spine ? "text-foreground" : "text-ink-secondary"}`} />
@@ -138,7 +128,7 @@ function GroupNode({ data }: { data: AttackPathNodeData }) {
       <Handles vertical={vertical} />
       <div data-node-glyph className="pointer-events-auto relative mt-1.5 flex h-14 w-14 items-center justify-center rounded-full border border-dashed border-outline-strong bg-surface-elevated text-foreground">
         <Layers className="h-5 w-5" aria-hidden="true" />
-        {node.findings.length > 0 && <FindingBadge node={node} onOpen={data.onOpenFindings} />}
+        <FindingBadge node={node} onOpen={data.onOpenFindings} />
       </div>
       <NodeName label={node.label} className={`mt-2 ${NAME} text-ink-secondary`} />
       <button type="button" aria-label={`Expand ${node.label}`}
