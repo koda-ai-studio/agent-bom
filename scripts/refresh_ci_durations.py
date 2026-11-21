@@ -3,9 +3,10 @@
 
 Sources, from one run of the suite (each module must appear in only one source):
 
-* ``--log``: a CI job log of ``pytest -v -n N`` with GitHub's per-line
-  timestamps. Each worker's gap between consecutive results is charged to the
-  module of the test that ended it, so setup and teardown cost is included.
+* ``--log``: a CI job log of ``pytest -v -n N`` (or a serial ``pytest -v``)
+  with GitHub's per-line timestamps. Each worker's gap between consecutive
+  results is charged to the module of the test that ended it, so setup and
+  teardown cost is included.
   Download with ``gh api --allow-escape-sequences repos/OWNER/REPO/actions/jobs/JOB_ID/logs``.
 * ``--junit``: a ``pytest --junitxml`` report; case times are summed per module.
 
@@ -28,11 +29,12 @@ from pathlib import Path
 
 DEFAULT_OUTPUT = Path(__file__).resolve().parent.parent / "tests" / ".ci-durations.json"
 _TIMESTAMP = r"(?P<ts>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?)Z"
-_SESSION_START = re.compile(_TIMESTAMP + r" \d+ workers \[\d+ items?\]")
+_SESSION_START = re.compile(_TIMESTAMP + r" (?:\d+ workers \[\d+ items?\]|collected \d+ items?)")
 _ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 _RESULT = re.compile(
     _TIMESTAMP + r" \[(?P<worker>gw\d+)\] \[\s*\d+%\] (?:PASSED|FAILED|SKIPPED|XFAIL|XPASS|ERROR) (?P<module>[^\s:]+\.py)::"
 )
+_SERIAL_RESULT = re.compile(_TIMESTAMP + r" (?P<module>[^\s:]+\.py)::\S+ (?:PASSED|FAILED|SKIPPED|XFAIL|XPASS|ERROR)\b.*\[\s*\d+%\]\s*$")
 
 
 def _parse_time(value: str) -> datetime:
@@ -52,13 +54,14 @@ def seconds_from_log(path: Path) -> dict[str, float]:
             if match:
                 start = _parse_time(match["ts"])
             continue
-        result = _RESULT.search(line)
+        result = _RESULT.search(line) or _SERIAL_RESULT.search(line)
         if result:
+            worker = result.groupdict().get("worker") or "serial"
             ended = _parse_time(result["ts"])
-            seconds[result["module"]] += max((ended - last.get(result["worker"], start)).total_seconds(), 0.0)
-            last[result["worker"]] = ended
+            seconds[result["module"]] += max((ended - last.get(worker, start)).total_seconds(), 0.0)
+            last[worker] = ended
     if start is None:
-        raise SystemExit(f"{path}: no 'N workers [M items]' line; expected a pytest -v -n N log")
+        raise SystemExit(f"{path}: no 'N workers [M items]' or 'collected N items' line; expected a pytest -v log")
     return dict(seconds)
 
 

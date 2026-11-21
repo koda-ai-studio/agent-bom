@@ -40,6 +40,23 @@ def test_log_colour_codes_do_not_hide_results(tmp_path: Path) -> None:
     assert seconds_from_log(log) == pytest.approx({"tests/test_a.py": 5.0, "tests/api/test_b.py": 6.5})
 
 
+SERIAL_LOG = """\
+2026-10-23T04:44:20.0000000Z ============================= test session starts ==============================
+2026-10-23T04:44:21.0000000Z collected 5 items / 1 deselected / 4 selected
+2026-10-23T04:44:23.0000000Z tests/test_a.py::test_one PASSED                                    [ 25%]
+2026-10-23T04:44:24.5000000Z tests/test_a.py::test_two SKIPPED (no live database)                 [ 50%]
+2026-10-23T04:44:28.5000000Z tests/api/test_b.py::test_three[postgres] FAILED                    [ 75%]
+2026-10-23T04:44:29.0000000Z tests/api/test_b.py::test_four ERROR                                [100%]
+"""
+
+
+def test_serial_log_charges_each_gap_to_the_test_that_ended_it(tmp_path: Path) -> None:
+    log = tmp_path / "serial.log"
+    log.write_text(SERIAL_LOG, encoding="utf-8")
+
+    assert seconds_from_log(log) == pytest.approx({"tests/test_a.py": 3.5, "tests/api/test_b.py": 4.5})
+
+
 def test_log_without_a_session_start_is_rejected(tmp_path: Path) -> None:
     log = tmp_path / "shard.log"
     log.write_text("2026-10-23T04:44:23.1000000Z [gw0] [ 25%] PASSED tests/test_a.py::test_one\n", encoding="utf-8")

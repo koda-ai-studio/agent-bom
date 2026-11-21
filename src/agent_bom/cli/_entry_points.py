@@ -31,6 +31,7 @@ from typing import Any
 
 import click
 
+from agent_bom.cli._connect_links import detected_login_files, source_link, terraform_command
 from agent_bom.cli._connect_sources import _CONNECT_FIELDS, _CONNECT_SOURCES, _ConnectSource
 
 # ---------------------------------------------------------------------------
@@ -55,13 +56,13 @@ def _render_connect_guidance(con: object, source: _ConnectSource) -> None:
         "[bold]1. Provision the read-only grant[/bold] [dim]— pick one path based on your rights[/dim]",
         "   [bold]CLI[/bold]",
         f"   [cyan]{source.cli_hint}[/cyan]",
-        f"   [dim]Recipe + policy: {source.provision_path}[/dim]",
+        f"   [dim]Recipe + policy: {source_link(source.provision_path)}[/dim]",
         "   [bold]CloudShell / console[/bold]",
         f"   [cyan]{source.cloudshell_hint}[/cyan]",
         *(
             [
-                "   [bold]Terraform[/bold] [dim](when IaC owns apply rights)[/dim]",
-                f"   [cyan]terraform -chdir={source.terraform_module} init && terraform -chdir={source.terraform_module} apply[/cyan]",
+                "   [bold]Terraform[/bold] [dim](when IaC owns apply rights; run in an empty directory)[/dim]",
+                f"   [cyan]{terraform_command(source.terraform_module)}[/cyan]",
             ]
             if source.terraform_module
             else []
@@ -84,12 +85,12 @@ def _render_connect_guidance(con: object, source: _ConnectSource) -> None:
             ]
         )
 
-    detected = _detected_cred_vars(source)
+    detected = _detected_cred_vars(source) + detected_login_files(source.name)
     if detected:
-        body_lines.extend(["", f"[green]Credentials detected:[/green] {', '.join(detected)}"])
+        body_lines.extend(["", f"[green]Credentials detected:[/green] {', '.join(detected)} [dim](not verified)[/dim]"])
     else:
         expected = ", ".join(source.cred_env_vars)
-        body_lines.extend(["", f"[yellow]No credentials detected.[/yellow] Set one of: [dim]{expected}[/dim]"])
+        body_lines.extend(["", f"[yellow]No credentials detected.[/yellow] Log in with the provider CLI or set: [dim]{expected}[/dim]"])
 
     render_connect_card(
         con,  # type: ignore[arg-type]
