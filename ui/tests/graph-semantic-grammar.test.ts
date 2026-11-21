@@ -213,3 +213,11 @@ it("reserves compact rows for uniquely owned package context while keeping full 
   expect(Math.abs(children[0]!.position.y - children[1]!.position.y)).toBe(156);
   expect(children.every(child => child.position.y >= 240)).toBe(true);
 });
+
+it("routes owner-to-subrow links around the same column through its outside ports", () => {
+  const nodes = [node("server", "server"), node("package", "package")];
+  const result = semanticGraphLayout(nodes, [{ id: "dependency", source: "server", target: "package", data: { relationship: "depends_on" } }], ["server"]);
+  expect(result.edges[0]!.sourceHandle).toBeNull();
+  expect(result.edges[0]!.targetHandle).toBe("context");
+  expect(result.nodes[1]!.position.x).toBe(result.nodes[0]!.position.x);
+});
