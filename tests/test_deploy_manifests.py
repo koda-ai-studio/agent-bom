@@ -340,8 +340,8 @@ def test_ci_pipeline_validates_helm_profiles():
     """CI should render the shipped Helm profiles instead of trusting docs alone."""
     workflow = yaml.safe_load((Path(__file__).parent.parent / ".github" / "workflows" / "ci.yml").read_text())
     jobs = workflow["jobs"]
-    assert "helm-profiles" in jobs
-    job = jobs["helm-profiles"]
+    assert "lint" in jobs
+    job = jobs["lint"]
     step_runs = [step.get("run", "") for step in job["steps"] if isinstance(step, dict)]
     assert any("scripts/validate_helm_profiles.py" in run for run in step_runs)
 

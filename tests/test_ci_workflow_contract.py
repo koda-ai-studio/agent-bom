@@ -162,8 +162,12 @@ def test_required_ci_contexts_use_docs_only_fast_paths_without_disappearing() ->
 
 def test_non_required_heavy_jobs_are_path_gated() -> None:
     jobs = _ci()["jobs"]
-    assert "needs.changes.outputs.helm == 'true'" in jobs["helm-profiles"]["if"]
-    assert "needs.changes.result != 'success'" in jobs["helm-profiles"]["if"]
+    assert "needs.changes.outputs.helm == 'true'" in next(
+        step["if"] for step in jobs["lint"]["steps"] if step.get("name") == "Render shipped Helm profiles"
+    )
+    assert "needs.changes.result != 'success'" in next(
+        step["if"] for step in jobs["lint"]["steps"] if step.get("name") == "Render shipped Helm profiles"
+    )
 
 
 def test_enterprise_demo_contract_is_gated_and_packaged() -> None:
@@ -244,7 +248,7 @@ def test_main_ui_smoke_covers_every_ui_classifier_surface() -> None:
 
 def test_path_gated_jobs_fail_closed_when_classifier_fails() -> None:
     jobs = _ci()["jobs"]
-    for name in ("docs-strict", "ui", "ui-e2e", "ui-e2e-smoke", "ui-container-smoke", "endpoint-packaging", "test-alpine"):
+    for name in ("ui-unit", "ui", "ui-e2e", "ui-e2e-smoke", "ui-container-smoke", "endpoint-packaging", "test-alpine"):
         condition = jobs[name]["if"]
         assert "needs.changes.result != 'success'" in condition
 
@@ -252,7 +256,7 @@ def test_path_gated_jobs_fail_closed_when_classifier_fails() -> None:
 def test_path_gated_jobs_remain_cancellable() -> None:
     jobs = _ci()["jobs"]
     for name in (
-        "docs-strict",
+        "ui-unit",
         "ui",
         "endpoint-packaging",
         "test",
@@ -696,7 +700,7 @@ def test_correctness_gate_rejects_a_failed_lane_that_the_event_does_not_require(
 def test_ui_validation_and_e2e_run_in_separate_jobs() -> None:
     jobs = _ci()["jobs"]
     fast = {step.get("name") for step in jobs["ui"]["steps"]}
-    assert {"UI lint", "UI tests", "Graph schema codegen — Python ↔ TypeScript drift gate"} <= fast
+    assert {"UI lint", "Graph schema codegen — Python ↔ TypeScript drift gate"} <= fast
     assert "UI E2E" not in fast
     assert "UI container smoke test" not in fast
 
@@ -1181,13 +1185,15 @@ def test_required_context_rejects_missing_or_failed_compatibility_proof() -> Non
     base = {**os.environ, "CORE_RESULT": "success", "DOCKER_RESULT": "skipped", "DOCKER_REQUIRED": "false"}
     for required in ("true", "false"):
         for outcome in ("success", "skipped", "failure", "cancelled"):
-            for lane in ("ALPINE", "UI_E2E", "MCP_IMAGES", "API_IMAGE"):
+            for lane in ("ALPINE", "UI_E2E", "UI_UNIT", "MCP_IMAGES", "API_IMAGE"):
                 env = {
                     **base,
                     "ALPINE_REQUIRED": "false",
                     "ALPINE_RESULT": "skipped",
                     "UI_E2E_REQUIRED": "false",
                     "UI_E2E_RESULT": "skipped",
+                    "UI_UNIT_REQUIRED": "false",
+                    "UI_UNIT_RESULT": "skipped",
                     "MCP_IMAGES_REQUIRED": "false",
                     "MCP_IMAGES_RESULT": "skipped",
                     "API_IMAGE_REQUIRED": "false",
@@ -1560,7 +1566,7 @@ def test_release_ui_context_aggregates_every_playwright_shard() -> None:
     assert shard["strategy"]["matrix"]["shard"] == list(range(1, UI_E2E_SHARDS + 1))
     assert shard["name"] == f"UI E2E shard (${{{{ matrix.shard }}}}/{UI_E2E_SHARDS})"
     e2e = next(step for step in shard["steps"] if step.get("name") == "UI E2E")
-    assert e2e["run"].strip().endswith(f"npm run test:e2e -- --shard=${{{{ matrix.shard }}}}/{UI_E2E_SHARDS}")
+    assert e2e["run"].strip().endswith(f"npm run test:e2e -- --fully-parallel --shard=${{{{ matrix.shard }}}}/{UI_E2E_SHARDS}")
     names = [step.get("name") for step in shard["steps"]]
     assert names.index("UI production build") < names.index("UI E2E")
     assert "UI container smoke test" not in names
@@ -1639,15 +1645,13 @@ QUEUE_LANES = (
     "security",
     "lint",
     "build",
-    "docs-strict",
+    "ui-unit",
     "ui",
     "ui-export",
     "ui-e2e-shard",
     "html-report-browser",
     "ui-container-smoke",
     "ui-e2e",
-    "compose-contract",
-    "helm-profiles",
     "endpoint-packaging",
     "graph-performance",
     "output-scale-performance",
