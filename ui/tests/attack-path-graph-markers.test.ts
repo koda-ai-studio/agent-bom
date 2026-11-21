@@ -14,7 +14,7 @@ describe("node context markers from the stored risk context", () => {
   it("uses the canonical data classification without deriving crown-jewel status", () => {
     expect(kinds({ data_classification: "phi" })).toEqual(["sensitive"]);
     expect(nodeContextMarkers({ data_classification: "phi" })[0]!.label).toBe("Sensitive data: phi (recorded)");
-    expect(kinds(context({ data_sensitivity: "phi", crown_jewel: true }))).toEqual([]);
+    expect(kinds(context({ data_sensitivity: "phi", crown_jewel: true }))).toEqual(["sensitive"]);
     expect(kinds({ data_classification: "none" })).toEqual([]);
     expect(kinds({ crown_jewel: true })).toEqual([]);
   });
