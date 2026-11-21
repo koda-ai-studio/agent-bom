@@ -31,7 +31,7 @@ def _scan(tmp_path: Path, content: str) -> list:
 def test_misconfigured_azure_corpus_fires_every_azure_rule() -> None:
     fired = _rules(FIXTURES / "synthetic_azure_misconfig.tf")
     assert AZURE_RULES <= set(fired), sorted(AZURE_RULES - set(fired))
-    assert fired["TF-SEC-101"] == 3  # legacy flag, v4 flag, public container
+    assert fired["TF-SEC-101"] == 2  # linked account/container coalesce; unrelated v4 account stays
     assert fired["TF-SEC-104"] == 4  # standalone rule + 3 inline rules
     assert fired["TF-SEC-111"] == 2  # both SQL servers lack an auditing policy
 
