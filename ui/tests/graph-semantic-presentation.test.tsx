@@ -85,3 +85,14 @@ it("keeps badges outside the glyph baseline and omits an unassessed default zero
   expect(container.querySelector("[data-semantic-badges]")).toHaveClass("absolute");
   expect(container.querySelector("[data-semantic-risk]")).toBeNull();
 });
+
+it("keeps zoom-compensated badge rows below the glyph and its two-line label", () => {
+  const Renderer = lineageNodeTypes.containerNode;
+  const { container } = render(<ReactFlowProvider><Renderer data={{ label: "Workload", nodeType: "container", semanticLayout: true,
+    riskScore: 8, attributes: { admin_equivalent: true, data_classification: "restricted" } }} /></ReactFlowProvider>);
+  const glyph = container.querySelector('.graph-entity-glyph')!;
+  const name = container.querySelector('[data-semantic-name]')!;
+  const badges = container.querySelector('[data-semantic-badges]')!;
+  expect(Boolean(glyph.compareDocumentPosition(badges) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+  expect(Boolean(name.compareDocumentPosition(badges) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+});

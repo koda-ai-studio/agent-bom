@@ -244,9 +244,8 @@ function NodeCard({
     ? undefined : subtitle;
   return (
     <div title={[graphNodeTooltip(data), data.evidenceFlowContext, ring?.description, ...(data.readingConnections ?? []).map(summary => `${summary.relationship === "hosts" ? "Hosts" : "Contains"} ${summary.label} in this view`)].filter(Boolean).join(" · ")} data-graph-entity="true" data-evidence-flow={data.evidenceFlow || undefined} data-finding-owner={data.readingOwner} data-rollup-container={isRollupContainer ? "true" : undefined}
-      style={{ width: "var(--graph-node-card-width, 220px)", ...(data.semanticLayout ? { paddingTop: 72 } : {}) }}
+      style={{ width: "var(--graph-node-card-width, 220px)" }}
       className={`relative flex w-[220px] flex-col items-center text-center transition-opacity ${data.dimmed ? "opacity-25" : ""}`}>
-      {data.semanticLayout && <GraphAttributeBadges data={data} />}
       <div ref={glyphRef} data-image-subrow={data.imageSubrow || undefined} data-severity-ring={severity} style={{ width: data.imageSubrow ? 40 : "var(--graph-node-glyph-size, 72px)", height: data.imageSubrow ? 40 : "var(--graph-node-glyph-size, 72px)" }} className={`graph-entity-glyph relative mb-3 flex h-[72px] w-[72px] items-center justify-center rounded-full border-2 shadow-sm ${
         isRollupContainer ? "border-outline-strong bg-surface-elevated" : `${borderClass} ${bgClass}`
       } ${data.highlighted ? `ring-2 ring-offset-4 ring-offset-[var(--surface)] ${ringClass}` : ""}`}>
@@ -282,6 +281,7 @@ function NodeCard({
         </span>
         {data.occurrenceRole && <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} data-testid="graph-occurrence-role" className="whitespace-nowrap rounded border border-outline-strong px-1 text-xs font-medium uppercase tracking-wide text-ink-secondary">{data.occurrenceRole}</span>}
       </NodeBadgeRow>
+      {data.semanticLayout && <GraphAttributeBadges data={data} />}
       {repository && !repository.source && <span className="text-xs text-ink-secondary" style={{ fontSize: "var(--graph-node-meta-size, 12px)" }}>{repository.host}</span>}
       {!data.evidenceFlow && data.identityContext && <p data-testid="graph-identity-context" className="mt-1 max-w-full break-words text-xs text-ink-secondary" style={{ fontSize: "var(--graph-node-meta-size, 12px)" }}>{data.identityContext}</p>}
 
