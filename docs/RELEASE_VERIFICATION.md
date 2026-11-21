@@ -455,7 +455,7 @@ npm install -g clawhub@latest
 clawhub login --token "$CLAWHUB_TOKEN" --no-browser
 clawhub publish integrations/openclaw/scan \
   --slug agent-bom-scan --name "agent-bom scan" \
-  --version "0.115.4"
+  --version "0.115.5"
 ```
 
 Release automation uses the same official `clawhub` CLI flow, not a custom
@@ -498,7 +498,7 @@ deploy and pass the build test, then create and publish the Glama release.
 
 ```bash
 python scripts/check_glama_listing.py \
-  --expected 0.115.4
+  --expected 0.115.5
 ```
 
 ---
@@ -557,8 +557,8 @@ current source version on main. API and MCP images do not share mutable tags.
 Tag push triggers the full pipeline automatically:
 
 ```bash
-git tag v0.115.4
-git push origin v0.115.4
+git tag v0.115.5
+git push origin v0.115.5
 ```
 
 This triggers:
