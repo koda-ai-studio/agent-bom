@@ -96,3 +96,21 @@ it("keeps zoom-compensated badge rows below the glyph and its two-line label", (
   expect(Boolean(glyph.compareDocumentPosition(badges) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
   expect(Boolean(name.compareDocumentPosition(badges) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
 });
+
+it.each(["package", "finding", "runtime_evidence"])("renders owned %s context as a compact sub-row without changing its backend badges", semanticLayer => {
+  const Renderer = lineageNodeTypes.packageNode;
+  const { container } = render(<ReactFlowProvider><Renderer data={{ label: "Recorded context", nodeType: "package", semanticLayout: true,
+    semanticLayer, semanticOwner: "workload", attributes: { data_classification: "restricted" } }} /></ReactFlowProvider>);
+  expect(container.querySelector('[data-graph-subrow="workload"]')).not.toBeNull();
+  expect(container.querySelector('.graph-entity-glyph')).toHaveStyle({ width: "40px", height: "40px" });
+  expect(container.querySelector('[data-semantic-name]')).toHaveClass("col-start-2");
+  expect(container.querySelector('[data-semantic-badges]')).toHaveTextContent("Sensitive data");
+});
+
+it("retains a full glyph for a package explicitly retained on the selected spine", () => {
+  const Renderer = lineageNodeTypes.packageNode;
+  const { container } = render(<ReactFlowProvider><Renderer data={{ label: "Selected package", nodeType: "package", semanticLayout: true,
+    semanticLayer: "package", semanticPathIndex: 2 }} /></ReactFlowProvider>);
+  expect(container.querySelector('[data-graph-subrow]')).toBeNull();
+  expect(container.querySelector('.graph-entity-glyph')).not.toHaveStyle({ width: "40px" });
+});

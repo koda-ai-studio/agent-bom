@@ -203,3 +203,13 @@ it("keeps off-path package dependencies below their recorded owner in the select
   graph.edges.push({ ...graph.edges.find(edge => edge.target === "pkg:urllib3")!, id: "shared-dependency", source: "server:github" });
   expect(buildAttackPathGraphModel(graph, selected).nodes.find(node => node.id === "pkg:urllib3")?.semanticOwner).toBeUndefined();
 });
+
+it("reserves compact rows for uniquely owned package context while keeping full cards clear", () => {
+  const nodes = [node("server", "server"), node("package-a", "package"), node("package-b", "package")];
+  const edges = nodes.slice(1).map(n => ({ id: n.id, source: "server", target: n.id, data: { relationship: "contains" } }));
+  const result = semanticGraphLayout(nodes, edges, ["server"]);
+  const children = result.nodes.slice(1);
+  expect(children.every(child => child.style?.minHeight === 132)).toBe(true);
+  expect(Math.abs(children[0]!.position.y - children[1]!.position.y)).toBe(156);
+  expect(children.every(child => child.position.y >= 240)).toBe(true);
+});

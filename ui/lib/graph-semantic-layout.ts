@@ -47,14 +47,16 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
     if (!seen.has(owner)) columns.set(id, columns.get(owner)!);
   }
   const positions = new Map<string, { x: number; y: number }>();
-  const occupied = new Map<number, number[]>();
+  const rowHeight = (id: string) => owners.has(id) ? 132 : 216;
+  const occupied = new Map<number, { y: number; height: number }[]>();
   const place = (id: string, desired: number) => {
     const column = columns.get(id)!;
     const used = occupied.get(column) ?? [];
+    const height = rowHeight(id), gap = height + 24;
     const choices = [desired];
-    for (let step = 1; step <= nodes.length; step++) choices.push(desired + step * SEMANTIC_ROW_GAP, desired - step * SEMANTIC_ROW_GAP);
-    const y = choices.find(value => used.every(other => Math.abs(other - value) >= SEMANTIC_ROW_GAP)) ?? desired;
-    occupied.set(column, [...used, y]); positions.set(id, { x: column * SEMANTIC_COLUMN_GAP, y });
+    for (let step = 1; step <= nodes.length; step++) choices.push(desired + step * gap, desired - step * gap);
+    const y = choices.find(value => used.every(other => value >= other.y + other.height + 24 || value + height + 24 <= other.y)) ?? desired;
+    occupied.set(column, [...used, { y, height }]); positions.set(id, { x: column * SEMANTIC_COLUMN_GAP, y });
   };
   for (const id of primary) if (columns.has(id)) place(id, 0);
   const pending = visible.filter(node => !onPath.has(node.id)).sort((a, b) => columns.get(a.id)! - columns.get(b.id)! || a.id.localeCompare(b.id));
@@ -77,13 +79,13 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
   for (let pass = 0; pass < owned.length; pass++) for (const node of owned) {
     if (positions.has(node.id)) continue;
     const owner = positions.get(owners.get(node.id)!);
-    if (owner) place(node.id, owner.y + SEMANTIC_ROW_GAP);
+    if (owner) place(node.id, owner.y + rowHeight(owners.get(node.id)!) + 24);
   }
   for (const node of owned) if (!positions.has(node.id)) place(node.id, SEMANTIC_ROW_GAP);
   const pathPairs = new Set(primary.slice(1).map((id, index) => `${primary[index]}\u0000${id}`));
   return {
     nodes: nodes.map(node => ({ ...node, position: positions.get(node.id) ?? node.position,
-      style: { ...node.style, width: 240, minHeight: 216, "--graph-node-card-width": "240px" },
+      style: { ...node.style, width: 240, minHeight: rowHeight(node.id), "--graph-node-card-width": "240px" },
       data: { ...node.data, evidenceFlow: true, semanticLayout: true,
         ...(onPath.has(node.id) ? { semanticPathIndex: primary.indexOf(node.id) } : {}), renderBand: "detail" as const,
         readingLabel: node.data.readingLabel ?? assetServiceLabel({ nodeType: node.data.nodeType, entityType: node.data.entityType, attributes: node.data.attributes, provider: node.data.dimensions?.cloud_provider }) ?? assetKindLabel({ nodeType: node.data.nodeType, entityType: node.data.entityType, attributes: node.data.attributes }),
