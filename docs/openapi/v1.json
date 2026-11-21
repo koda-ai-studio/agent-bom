@@ -26644,6 +26644,76 @@
         "title": "GraphNhiGovernanceResponse",
         "type": "object"
       },
+      "GraphNodeAggregate": {
+        "additionalProperties": true,
+        "properties": {
+          "aggregate": {
+            "$ref": "#/components/schemas/GraphRollupAggregate"
+          },
+          "node_id": {
+            "title": "Node Id",
+            "type": "string"
+          },
+          "semantic_layer": {
+            "title": "Semantic Layer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "node_id",
+          "semantic_layer",
+          "aggregate"
+        ],
+        "title": "GraphNodeAggregate",
+        "type": "object"
+      },
+      "GraphNodeAggregatesResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "aggregates": {
+            "items": {
+              "$ref": "#/components/schemas/GraphNodeAggregate"
+            },
+            "title": "Aggregates",
+            "type": "array"
+          },
+          "missing_node_ids": {
+            "description": "Requested ids not in the snapshot.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing Node Ids",
+            "type": "array"
+          },
+          "scan_id": {
+            "title": "Scan Id",
+            "type": "string"
+          },
+          "snapshot_generation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Generation"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scan_id",
+          "tenant_id",
+          "aggregates",
+          "missing_node_ids"
+        ],
+        "title": "GraphNodeAggregatesResponse",
+        "type": "object"
+      },
       "GraphNodeContextResponse": {
         "additionalProperties": true,
         "properties": {
@@ -27742,6 +27812,80 @@
           "roots"
         ],
         "title": "GraphQueryRequest",
+        "type": "object"
+      },
+      "GraphRollupAggregate": {
+        "additionalProperties": true,
+        "description": "The containment aggregate a roll-up entry carries for its node.",
+        "properties": {
+          "by_type": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By Type",
+            "type": "object"
+          },
+          "descendant_count": {
+            "title": "Descendant Count",
+            "type": "integer"
+          },
+          "exposed_count": {
+            "description": "Internet-exposed nodes in the node's containment scope.",
+            "title": "Exposed Count",
+            "type": "integer"
+          },
+          "finding_occurrence_count": {
+            "title": "Finding Occurrence Count",
+            "type": "integer"
+          },
+          "internet_exposed": {
+            "title": "Internet Exposed",
+            "type": "boolean"
+          },
+          "issue_count": {
+            "description": "Distinct open issues in the node's containment scope.",
+            "title": "Issue Count",
+            "type": "integer"
+          },
+          "severity_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "description": "Open issues per severity, the same histogram as the roll-up.",
+            "title": "Severity Counts",
+            "type": "object"
+          },
+          "toxic_combo": {
+            "title": "Toxic Combo",
+            "type": "boolean"
+          },
+          "toxic_count": {
+            "title": "Toxic Count",
+            "type": "integer"
+          },
+          "worst_severity": {
+            "title": "Worst Severity",
+            "type": "string"
+          },
+          "worst_severity_rank": {
+            "title": "Worst Severity Rank",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "descendant_count",
+          "by_type",
+          "severity_counts",
+          "issue_count",
+          "finding_occurrence_count",
+          "worst_severity",
+          "worst_severity_rank",
+          "internet_exposed",
+          "toxic_combo",
+          "exposed_count",
+          "toxic_count"
+        ],
+        "title": "GraphRollupAggregate",
         "type": "object"
       },
       "GraphRollupEdge": {
@@ -73919,6 +74063,101 @@
           }
         },
         "summary": "Get Nhi Governance",
+        "tags": [
+          "graph"
+        ]
+      }
+    },
+    "/v1/graph/node-aggregates": {
+      "get": {
+        "description": "Each node's roll-up aggregate (issue_count, worst_severity, exposed_count, ...) and semantic layer.",
+        "operationId": "get_graph_node_aggregates_v1_graph_node_aggregates_get",
+        "parameters": [
+          {
+            "description": "Node ids to aggregate (at most 25), e.g. a selected path's hops",
+            "in": "query",
+            "name": "node_id",
+            "required": true,
+            "schema": {
+              "description": "Node ids to aggregate (at most 25), e.g. a selected path's hops",
+              "items": {
+                "type": "string"
+              },
+              "title": "Node Id",
+              "type": "array"
+            }
+          },
+          {
+            "description": "Scan snapshot ID; latest if omitted",
+            "in": "query",
+            "name": "scan_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Scan snapshot ID; latest if omitted",
+              "title": "Scan Id"
+            }
+          },
+          {
+            "description": "Read revision the caller pinned",
+            "in": "query",
+            "name": "snapshot_generation",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Read revision the caller pinned",
+              "title": "Snapshot Generation"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphNodeAggregatesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)"
+          }
+        },
+        "summary": "Get Graph Node Aggregates",
         "tags": [
           "graph"
         ]

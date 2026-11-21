@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
+import { routeNodeAggregates, withSemanticLayer } from "./helpers/graph-rollup-mocks";
 
 // Non-empty fixture with two observed paths so the security graph page can
 // prove that queue selection updates the in-place graph and evidence panel.
@@ -520,6 +521,7 @@ async function routeCockpit(
   await page.route("**/v1/graph?**", async (route) => {
     await route.fulfill({ contentType: "application/json", body: JSON.stringify(graph) });
   });
+  await routeNodeAggregates(page);
   await page.route("**/v1/graph/rollup?**", async (route) => {
     if (options.rollupDelayMs) {
       await new Promise((resolve) => setTimeout(resolve, options.rollupDelayMs));
@@ -532,7 +534,7 @@ async function routeCockpit(
         created_at: createdAt,
         mode: "rollup",
         filters: {},
-        top_level: rollupItems,
+        top_level: rollupItems.map(withSemanticLayer),
         // The server aggregates every non-containment edge onto the containers
         // its endpoints roll up into, so a collapsed estate arrives as a
         // topology. This fixture used to omit the key entirely, which made the

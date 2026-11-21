@@ -4871,6 +4871,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/graph/node-aggregates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Graph Node Aggregates
+         * @description Each node's roll-up aggregate (issue_count, worst_severity, exposed_count, ...) and semantic layer.
+         */
+        get: operations["get_graph_node_aggregates_v1_graph_node_aggregates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/graph/node-context": {
         parameters: {
             query?: never;
@@ -18641,6 +18661,34 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** GraphNodeAggregate */
+        GraphNodeAggregate: {
+            aggregate: components["schemas"]["GraphRollupAggregate"];
+            /** Node Id */
+            node_id: string;
+            /** Semantic Layer */
+            semantic_layer: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphNodeAggregatesResponse */
+        GraphNodeAggregatesResponse: {
+            /** Aggregates */
+            aggregates: components["schemas"]["GraphNodeAggregate"][];
+            /**
+             * Missing Node Ids
+             * @description Requested ids not in the snapshot.
+             */
+            missing_node_ids: string[];
+            /** Scan Id */
+            scan_id: string;
+            /** Snapshot Generation */
+            snapshot_generation?: string | null;
+            /** Tenant Id */
+            tenant_id: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** GraphNodeContextResponse */
         GraphNodeContextResponse: {
             /** Completeness */
@@ -19047,6 +19095,49 @@ export interface components {
              * @default false
              */
             traversable_only: boolean;
+        };
+        /**
+         * GraphRollupAggregate
+         * @description The containment aggregate a roll-up entry carries for its node.
+         */
+        GraphRollupAggregate: {
+            /** By Type */
+            by_type: {
+                [key: string]: number;
+            };
+            /** Descendant Count */
+            descendant_count: number;
+            /**
+             * Exposed Count
+             * @description Internet-exposed nodes in the node's containment scope.
+             */
+            exposed_count: number;
+            /** Finding Occurrence Count */
+            finding_occurrence_count: number;
+            /** Internet Exposed */
+            internet_exposed: boolean;
+            /**
+             * Issue Count
+             * @description Distinct open issues in the node's containment scope.
+             */
+            issue_count: number;
+            /**
+             * Severity Counts
+             * @description Open issues per severity, the same histogram as the roll-up.
+             */
+            severity_counts: {
+                [key: string]: number;
+            };
+            /** Toxic Combo */
+            toxic_combo: boolean;
+            /** Toxic Count */
+            toxic_count: number;
+            /** Worst Severity */
+            worst_severity: string;
+            /** Worst Severity Rank */
+            worst_severity_rank: number;
+        } & {
+            [key: string]: unknown;
         };
         /**
          * GraphRollupEdge
@@ -38458,6 +38549,51 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GraphNhiGovernanceResponse"];
+                };
+            };
+            /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE) */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_graph_node_aggregates_v1_graph_node_aggregates_get: {
+        parameters: {
+            query: {
+                /** @description Node ids to aggregate (at most 25), e.g. a selected path's hops */
+                node_id: string[];
+                /** @description Scan snapshot ID; latest if omitted */
+                scan_id?: string | null;
+                /** @description Read revision the caller pinned */
+                snapshot_generation?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GraphNodeAggregatesResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */

@@ -38,6 +38,7 @@ from agent_bom.graph.rollup_edges import descendants as _descendants
 from agent_bom.graph.rollup_edges import edge_count_metadata as _edge_count_metadata
 from agent_bom.graph.rollup_issues import ISSUE_SEVERITY_BASIS, FindingFacts, IssueTally, build_finding_index
 from agent_bom.graph.rollup_parents import drop_fallback_provider_parents, drop_redundant_parents
+from agent_bom.graph.semantic_layer import node_payload, semantic_layer
 from agent_bom.graph.types import EntityType, RelationshipType
 
 # Severity buckets reported in every roll-up histogram, worst → least.
@@ -214,12 +215,14 @@ class RollupContainer:
     context: dict[str, str] = field(default_factory=dict)
     cloud_provider: str = ""
     cloud_provider_basis: str = ""
+    semantic_layer: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "label": self.label,
             "entity_type": self.entity_type,
+            "semantic_layer": self.semantic_layer,
             "severity": self.severity,
             "is_container": self.is_container,
             "has_children": self.has_children,
@@ -266,6 +269,7 @@ def _entry(
         direct_child_count=len(direct),
         aggregate=aggregate,
         context=_instance_context(node, graph),
+        semantic_layer=semantic_layer(node),
         **_provider_fields(node),
     )
 
@@ -699,6 +703,7 @@ def drill_down(
             "id": parent.id,
             "label": parent.label,
             "entity_type": _node_type_value(parent),
+            "semantic_layer": semantic_layer(parent),
             "severity": parent.severity or "",
             **_provider_fields(parent),
         },
@@ -785,7 +790,7 @@ def attack_path_view(
             path_edges.append(edge.to_dict())
     path_edges.sort(key=lambda e: (e["source"], e["target"], e["relationship"]))
 
-    path_nodes = [graph.nodes[nid].to_dict() for nid in path_node_ids]
+    path_nodes = [node_payload(graph.nodes[nid]) for nid in path_node_ids]
 
     # Everything not on a path is collapsed into the standard CONTAINS roll-up so
     # the operator still has the estate context, just not the hairball.

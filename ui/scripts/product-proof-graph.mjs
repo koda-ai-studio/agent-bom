@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { CREATED_AT } from "./product-proof-fixtures.mjs";
+import layerByEntityType from "../tests/fixtures/product-proof-layers.json" with { type: "json" };
 
 const UI_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 
@@ -40,6 +41,8 @@ export function node(id, entityType, label, severity = "none", riskScore = 0, at
     first_seen: CREATED_AT,
     last_seen: CREATED_AT,
     attributes,
+    // The layer the API stamps on every node: a recorded layer, else the backend legend's layer for the kind.
+    semantic_layer: attributes.semantic_layer ?? layerByEntityType[entityType] ?? "asset",
     compliance_tags: attributes.compliance_tags ?? [],
     data_sources: attributes.data_sources ?? ["demo-scan", "gateway-runtime", "fleet-sync"],
     dimensions: {
@@ -326,9 +329,11 @@ export function graphScenarioComparison(graph = buildGraph()) {
     assumption: scenario.assumptions[0],
   });
   proposedNode.status = "proposed";
-  // The upgrade removes the advisory hop; every derived number below follows from that one edge.
-  const removedEdge = "pkg:next->cve:next:vulnerable_to";
-  const proposedEdges = graph.edges.filter((item) => item.id !== removedEdge);
+  // The rebuilt portal depends on the fixed release instead of 15.2.2; the advisory stays true of
+  // 15.2.2, which is simply no longer deployed. Every derived number below follows from that swap.
+  const removedEdge = "container:copilot-portal->pkg:next:depends_on";
+  const addedEdge = edge("container:copilot-portal", proposedNode.id, "depends_on", 1, { evidence_state: "proposed" });
+  const proposedEdges = [...graph.edges.filter((item) => item.id !== removedEdge), addedEdge];
   const proposedNodes = [...graph.nodes, proposedNode];
   const modeledPaths = graph.attack_paths.filter((item) => hopsAreConnected(proposedEdges, item.hops));
   const touchedPaths = graph.attack_paths.filter((item) => !modeledPaths.includes(item));
@@ -358,8 +363,8 @@ export function graphScenarioComparison(graph = buildGraph()) {
     difference: {
       nodes_added: [proposedNode.id],
       nodes_removed: [],
-      nodes_changed: ["pkg:next"],
-      edges_added: [],
+      nodes_changed: ["container:copilot-portal"],
+      edges_added: [addedEdge.id],
       edges_removed: [removedEdge],
       touched_observed_path_count: touchedPaths.length,
       touched_observed_path_ids: touchedPaths.map((item) => `${item.source}->${item.target}`),
