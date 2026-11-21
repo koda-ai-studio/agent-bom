@@ -898,12 +898,13 @@ jobs:
           }
 
   # Browser E2E split across runners. Playwright --shard partitions the
-  # suite (each shard serves its own standalone build: a 70 s parallel build
-  # is cheaper in wall-clock than a serial build job plus artifact transfer).
+  # suite by test count, in file order (each shard serves its own standalone
+  # build: a 70 s parallel build is cheaper in wall-clock than a serial build
+  # job plus artifact transfer). Eight shards keep the slowest near four minutes.
   # ui-e2e below keeps the required "UI E2E and container smoke" name.
   # Post-merge only; PRs run ui-e2e-smoke.
   ui-e2e-shard:
-    name: UI E2E shard (${{ matrix.shard }}/4)
+    name: UI E2E shard (${{ matrix.shard }}/8)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: changes
@@ -915,7 +916,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
     permissions:
       contents: read
     steps:
@@ -958,7 +959,7 @@ jobs:
           GRAPH_SCAN_ARTIFACT: ""
         run: |
           cd ui
-          npm run test:e2e -- --shard=${{ matrix.shard }}/4
+          npm run test:e2e -- --shard=${{ matrix.shard }}/8
 
       - name: Retain UI failure diagnostics
         if: ${{ failure() || cancelled() }}
@@ -1495,9 +1496,10 @@ jobs:
 
   # Full correctness on 3.13 for a merge group (never a pull_request event),
   # in parallel. scripts/pytest_ci_plan.py assigns every test module to
-  # exactly one shard, so the shards together run the full suite. Eight
-  # shards keep the queue near ten minutes: the demo-estate module fills one
-  # three-worker shard on its own.
+  # exactly one shard, so the shards together run the full suite. Sixteen
+  # shards keep each one near three minutes, so the queue can merge in about
+  # five; the demo-estate bootstrap suites are split into modules that each
+  # fit one shard.
   test-shard:
     name: Full correctness shard (${{ matrix.shard }}, Python 3.13)
     runs-on: ubuntu-latest
@@ -1512,7 +1514,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -1526,14 +1528,19 @@ jobs:
       - name: Run full correctness shard
         run: |
           set -euo pipefail
-          mapfile -t TESTS < <(uv run python scripts/pytest_ci_plan.py shard --index "${{ matrix.shard }}" --total 8)
+          mapfile -t TESTS < <(uv run python scripts/pytest_ci_plan.py shard --index "${{ matrix.shard }}" --total 16)
           if [ "${#TESTS[@]}" -eq 0 ]; then
             echo "::error::shard ${{ matrix.shard }} selected no test modules" >&2
             exit 1
           fi
           WORKERS=$(uv run python scripts/ci_pytest_workers.py "${TESTS[@]}")
-          echo "Shard ${{ matrix.shard }}/8: ${#TESTS[@]} test modules, ${WORKERS} workers"
-          uv run pytest "${TESTS[@]}" -v --tb=short --durations=50 -m "not network and not slow and not graph_performance" -n "$WORKERS" --dist worksteal
+          echo "Shard ${{ matrix.shard }}/16: ${#TESTS[@]} test modules, ${WORKERS} workers"
+          # pytest re-collects the tests package once per module argument, which
+          # cost 90-170 s per shard. Collect the root once and let
+          # tests/_ci_selection.py ignore every module outside this shard.
+          SELECTION=$(mktemp)
+          printf '%s\n' "${TESTS[@]}" > "$SELECTION"
+          AGENT_BOM_PYTEST_SELECTION="$SELECTION" uv run pytest tests -v --tb=short --durations=50 -m "not network and not slow and not graph_performance" -n "$WORKERS" --dist worksteal
 
       # Smoke is skipped when these shards run; keep its isolated timing gates.
       - name: Run isolated graph and findings read budgets
@@ -1716,16 +1723,17 @@ jobs:
           uv run pytest tests/test_image_keyless_verification.py -q
 
   postgres-integration:
-    name: Postgres Integration Contract (${{ matrix.selection }})
+    name: Postgres Integration Contract (${{ matrix.partition }}/4)
     runs-on: ubuntu-latest
     timeout-minutes: 12
-    # The full bootstrap/storage module dominates one serial run. Complementary
-    # selections keep every test, with a separate database per runner so DDL,
-    # role changes and shared ledgers never race across partitions.
+    # The suites run serially against one database, so they are split across
+    # runners: scripts/pytest_ci_plan.py assigns every listed suite to exactly
+    # one partition, balanced by tests/.ci-postgres-durations.json. Each runner
+    # has its own database, so DDL, role changes and shared ledgers never race.
     strategy:
       fail-fast: false
       matrix:
-        selection: [test_postgres_integration, not test_postgres_integration]
+        partition: [0, 1, 2, 3]
     needs: changes
     # Relevant PRs and every main/nightly/manual run prove live Postgres/RLS.
     if: ${{ !cancelled() && needs.changes.outputs.queue_proven != 'true' && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.postgres != 'false') }}
@@ -1976,141 +1984,150 @@ jobs:
         # this job nor its EXCLUDED map, which records why each exclusion
         # (currently only a wall-clock throughput benchmark) stays out.
         run: |
-          uv run pytest -n 0 -q --tb=short --durations=15 -k "${{ matrix.selection }}" \
-            tests/test_postgres_integration.py \
-            tests/test_postgres_ai_assessments.py \
-            tests/test_postgres_tenant_session_round_trips.py \
-            tests/api/test_finding_lifecycle_sequences.py \
-            tests/api/test_finding_durable_lifecycle.py \
-            tests/api/test_resolved_finding_identity.py \
-            tests/api/test_push_replay_after_retention.py \
-            tests/api/test_push_non_finite_numbers.py \
-            tests/test_postgres_tenant_upsert_stores.py \
-            tests/test_postgres_role_connection_limits_live.py \
-            tests/test_job_result_codec.py \
-            tests/test_graph_snapshot_ownership.py \
-            tests/test_current_graph_assembly_postgres.py \
-            tests/test_graph_agent_architecture_postgres.py \
-            tests/test_graph_retention_live_postgres.py \
-            tests/test_graph_diff_aliases.py \
-            tests/test_graph_cluster_rows_stores.py \
-            tests/test_graph_node_roles_stores.py \
-            tests/test_graph_cluster_map_stored_paths.py \
-            tests/test_graph_stored_path_readers.py \
-            tests/test_postgres_alembic_ledger.py \
-            tests/test_postgres_graph_snapshot_paths.py \
-            tests/test_report_jobs_postgres.py \
-            tests/test_export_destination_postgres.py \
-            tests/test_export_schedule_postgres.py \
-            tests/cloud/test_side_scan_postgres_contract.py \
-            tests/test_graph_adjacency_page.py \
-            tests/test_graph_cross_vendor_index.py \
-            tests/test_graph_page_edge_budget_postgres.py \
-            tests/test_graph_snapshot_stats_cache_postgres.py \
-            tests/test_vex_graph_severity_counts_postgres.py \
-            tests/test_postgres_gateway_activity.py \
-            tests/test_postgres_gateway_delivery.py \
-            tests/test_trace_collection_postgres.py \
-            tests/test_trace_collection_recovery.py \
-            tests/test_postgres_agent_lifecycle.py \
-            tests/test_postgres_agent_identity_tenant_key.py \
-            tests/api/test_operator_api_keys.py \
-            tests/api/test_iac_tenant_exceptions.py \
-            tests/api/test_job_detail_reads.py \
-            tests/test_tenant_key_invariant.py \
-            tests/test_postgres_mcp_results.py \
-            tests/test_mcp_postgres_tenant_rls.py \
-            tests/test_postgres_operator_advisory_store.py \
-            tests/test_postgres_advisory_findings.py \
-            tests/test_endpoint_connector_postgres.py \
-            tests/test_postgres_schema.py \
-            tests/test_postgres_migrations.py \
-            tests/test_migration_import_boundary.py \
-            tests/test_postgres_scan_snapshot.py \
-            tests/test_postgres_finding_history.py \
-            tests/test_postgres_governance_audit.py \
-            tests/test_postgres_connection_rls_guard.py \
-            tests/test_audit_chain_concurrency.py \
-            tests/test_audit_checkpoint_backfill_4294.py \
-            tests/test_audit_reads_bind_their_tenant.py \
-            tests/test_fleet_agents_tenant_scoped_key.py \
-            tests/test_hub_ingest_atomic.py \
-            tests/test_finding_model_integrity.py \
-            tests/test_hub_ingest_replica_postgres.py \
-            tests/test_hub_overview_cache.py \
-            tests/test_hub_truthful_counts.py \
-            tests/test_hub_cve_intel_concurrency.py \
-            tests/test_hub_cve_link_repair.py \
-            tests/test_kev_catalog.py \
-            tests/test_partition_maintenance.py \
-            tests/test_graph_traversal_budget_honesty.py \
-            tests/test_graph_traverse_subgraph_completeness.py \
-            tests/test_self_posture_postgres.py \
-            tests/test_tenant_quota_store.py \
-            tests/test_leader_lock_postgres.py \
-            tests/test_postgres_upgrade_catchup_live.py \
-            tests/test_tenant_graph_retention_store.py \
-            tests/test_storage_sql.py \
-            tests/test_jit_grant_tenant_boundary.py \
-            tests/test_identity_policy_tenant_boundary.py \
-            tests/test_findings_sql_read_contract.py \
-            tests/test_findings_sql_backfill.py \
-            tests/test_findings_current_sql_contract.py \
-            tests/test_jobs_tenant_key_contract.py \
-            tests/test_jobs_dispatch_postgres.py \
-            tests/test_push_ingest_dispatch_postgres.py \
-            tests/test_postgres_idempotency_nonblocking.py \
-            tests/test_findings_cursor_keyset_parity.py \
-            tests/api/test_api_hosted_invitations.py \
-            tests/api/test_authenticated_tenant_backends.py \
-            tests/api/test_push_evidence_hardening.py \
-            tests/api/test_push_replacement_scope.py \
-            tests/api/test_session_authorization_backends.py \
-            tests/api/test_store_backed_build_persist.py \
-            tests/api/test_suppression_approval_boundary.py \
-            tests/cloud/test_runtime_workload_evidence_store.py \
-            tests/graph/test_authorization_action_receipts.py \
-            tests/graph/test_graph_build_workspace_postgres.py \
-            tests/graph/test_permission_derivation_receipts.py \
-            tests/graph/test_store_backed_unified_graph_postgres.py \
-            tests/test_campaign_evidence_reconciliation.py \
-            tests/test_cloud_connection_database_scan.py \
-            tests/test_compliance_recovery_import.py \
-            tests/test_connection_broker_database.py \
-            tests/test_control_plane_imports.py \
-            tests/test_db_content_scan.py \
-            tests/test_db_role_preflight_live.py \
-            tests/test_dspm_findings.py \
-            tests/test_exposure_path_query_scope.py \
-            tests/test_finding_graph_parity.py \
-            tests/test_governance_recovery_import.py \
-            tests/test_graph_backend_semantics.py \
-            tests/test_graph_correlation_source_preservation.py \
-            tests/test_graph_observation_scope.py \
-            tests/test_graph_runtime_occurrence_identity.py \
-            tests/test_graph_store_port_contract.py \
-            tests/test_hub_observations_runway_live.py \
-            tests/test_policy_audit_migration_live.py \
-            tests/test_postgres_audit_startup.py \
-            tests/test_postgres_identity_counts.py \
-            tests/test_postgres_inventory_snapshot.py \
-            tests/test_postgres_job_evidence_revision.py \
-            tests/test_postgres_job_payload_cache.py \
-            tests/test_postgres_migrated_graph_parity.py \
-            tests/test_current_graph_postgres_copy.py \
-            tests/test_current_graph_postgres_serve_previous.py \
-            tests/test_postgres_graph_analyze.py \
-            tests/test_postgres_graph_bulk_write.py \
-            tests/test_postgres_observation_utc.py \
-            tests/test_postgres_registry_stores.py \
-            tests/test_registry_import.py \
-            tests/test_runtime_recovery_import.py \
-            tests/test_runtime_trace_revision_retention.py \
-            tests/test_scim_recovery_import.py \
-            tests/test_trace_explorer_session_pages.py \
-            tests/test_graph_asset_canonicalization.py \
-            tests/test_graph_node_aliases.py \
+          set -euo pipefail
+          SUITES=(
+            tests/test_postgres_integration.py
+            tests/test_postgres_ai_assessments.py
+            tests/test_postgres_tenant_session_round_trips.py
+            tests/api/test_finding_lifecycle_sequences.py
+            tests/api/test_finding_durable_lifecycle.py
+            tests/api/test_resolved_finding_identity.py
+            tests/api/test_push_replay_after_retention.py
+            tests/api/test_push_non_finite_numbers.py
+            tests/test_postgres_tenant_upsert_stores.py
+            tests/test_postgres_role_connection_limits_live.py
+            tests/test_job_result_codec.py
+            tests/test_graph_snapshot_ownership.py
+            tests/test_current_graph_assembly_postgres.py
+            tests/test_graph_agent_architecture_postgres.py
+            tests/test_graph_retention_live_postgres.py
+            tests/test_graph_diff_aliases.py
+            tests/test_graph_cluster_rows_stores.py
+            tests/test_graph_node_roles_stores.py
+            tests/test_graph_cluster_map_stored_paths.py
+            tests/test_graph_stored_path_readers.py
+            tests/test_postgres_alembic_ledger.py
+            tests/test_postgres_graph_snapshot_paths.py
+            tests/test_report_jobs_postgres.py
+            tests/test_export_destination_postgres.py
+            tests/test_export_schedule_postgres.py
+            tests/cloud/test_side_scan_postgres_contract.py
+            tests/test_graph_adjacency_page.py
+            tests/test_graph_cross_vendor_index.py
+            tests/test_graph_page_edge_budget_postgres.py
+            tests/test_graph_snapshot_stats_cache_postgres.py
+            tests/test_vex_graph_severity_counts_postgres.py
+            tests/test_postgres_gateway_activity.py
+            tests/test_postgres_gateway_delivery.py
+            tests/test_trace_collection_postgres.py
+            tests/test_trace_collection_recovery.py
+            tests/test_postgres_agent_lifecycle.py
+            tests/test_postgres_agent_identity_tenant_key.py
+            tests/api/test_operator_api_keys.py
+            tests/api/test_iac_tenant_exceptions.py
+            tests/api/test_job_detail_reads.py
+            tests/test_tenant_key_invariant.py
+            tests/test_postgres_mcp_results.py
+            tests/test_mcp_postgres_tenant_rls.py
+            tests/test_postgres_operator_advisory_store.py
+            tests/test_postgres_advisory_findings.py
+            tests/test_endpoint_connector_postgres.py
+            tests/test_postgres_schema.py
+            tests/test_postgres_migrations.py
+            tests/test_migration_import_boundary.py
+            tests/test_postgres_scan_snapshot.py
+            tests/test_postgres_finding_history.py
+            tests/test_postgres_governance_audit.py
+            tests/test_postgres_connection_rls_guard.py
+            tests/test_audit_chain_concurrency.py
+            tests/test_audit_checkpoint_backfill_4294.py
+            tests/test_audit_reads_bind_their_tenant.py
+            tests/test_fleet_agents_tenant_scoped_key.py
+            tests/test_hub_ingest_atomic.py
+            tests/test_finding_model_integrity.py
+            tests/test_hub_ingest_replica_postgres.py
+            tests/test_hub_overview_cache.py
+            tests/test_hub_truthful_counts.py
+            tests/test_hub_cve_intel_concurrency.py
+            tests/test_hub_cve_link_repair.py
+            tests/test_kev_catalog.py
+            tests/test_partition_maintenance.py
+            tests/test_graph_traversal_budget_honesty.py
+            tests/test_graph_traverse_subgraph_completeness.py
+            tests/test_self_posture_postgres.py
+            tests/test_tenant_quota_store.py
+            tests/test_leader_lock_postgres.py
+            tests/test_postgres_upgrade_catchup_live.py
+            tests/test_tenant_graph_retention_store.py
+            tests/test_storage_sql.py
+            tests/test_jit_grant_tenant_boundary.py
+            tests/test_identity_policy_tenant_boundary.py
+            tests/test_findings_sql_read_contract.py
+            tests/test_findings_sql_backfill.py
+            tests/test_findings_current_sql_contract.py
+            tests/test_jobs_tenant_key_contract.py
+            tests/test_jobs_dispatch_postgres.py
+            tests/test_push_ingest_dispatch_postgres.py
+            tests/test_postgres_idempotency_nonblocking.py
+            tests/test_findings_cursor_keyset_parity.py
+            tests/api/test_api_hosted_invitations.py
+            tests/api/test_authenticated_tenant_backends.py
+            tests/api/test_push_evidence_hardening.py
+            tests/api/test_push_replacement_scope.py
+            tests/api/test_session_authorization_backends.py
+            tests/api/test_store_backed_build_persist.py
+            tests/api/test_suppression_approval_boundary.py
+            tests/cloud/test_runtime_workload_evidence_store.py
+            tests/graph/test_authorization_action_receipts.py
+            tests/graph/test_graph_build_workspace_postgres.py
+            tests/graph/test_permission_derivation_receipts.py
+            tests/graph/test_store_backed_unified_graph_postgres.py
+            tests/test_campaign_evidence_reconciliation.py
+            tests/test_cloud_connection_database_scan.py
+            tests/test_compliance_recovery_import.py
+            tests/test_connection_broker_database.py
+            tests/test_control_plane_imports.py
+            tests/test_db_content_scan.py
+            tests/test_db_role_preflight_live.py
+            tests/test_dspm_findings.py
+            tests/test_exposure_path_query_scope.py
+            tests/test_finding_graph_parity.py
+            tests/test_governance_recovery_import.py
+            tests/test_graph_backend_semantics.py
+            tests/test_graph_correlation_source_preservation.py
+            tests/test_graph_observation_scope.py
+            tests/test_graph_runtime_occurrence_identity.py
+            tests/test_graph_store_port_contract.py
+            tests/test_hub_observations_runway_live.py
+            tests/test_policy_audit_migration_live.py
+            tests/test_postgres_audit_startup.py
+            tests/test_postgres_identity_counts.py
+            tests/test_postgres_inventory_snapshot.py
+            tests/test_postgres_job_evidence_revision.py
+            tests/test_postgres_job_payload_cache.py
+            tests/test_postgres_migrated_graph_parity.py
+            tests/test_current_graph_postgres_copy.py
+            tests/test_current_graph_postgres_serve_previous.py
+            tests/test_postgres_graph_analyze.py
+            tests/test_postgres_graph_bulk_write.py
+            tests/test_postgres_observation_utc.py
+            tests/test_postgres_registry_stores.py
+            tests/test_registry_import.py
+            tests/test_runtime_recovery_import.py
+            tests/test_runtime_trace_revision_retention.py
+            tests/test_scim_recovery_import.py
+            tests/test_trace_explorer_session_pages.py
+            tests/test_graph_asset_canonicalization.py
+            tests/test_graph_node_aliases.py
             tests/test_graph_alias_boundaries.py
+          )
+          mapfile -t TESTS < <(uv run python scripts/pytest_ci_plan.py shard --index "${{ matrix.partition }}" --total 4 --durations tests/.ci-postgres-durations.json --files "${SUITES[@]}")
+          if [ "${#TESTS[@]}" -eq 0 ]; then
+            echo "::error::Postgres partition ${{ matrix.partition }} selected no suites" >&2
+            exit 1
+          fi
+          echo "Postgres partition ${{ matrix.partition }}/4: ${#TESTS[@]} suites"
+          uv run pytest -n 0 -v --tb=short --durations=15 "${TESTS[@]}"
 
   # 3b. Alpine/musl compatibility test
   # Runs the test suite inside an Alpine Linux container (musl libc) to catch
