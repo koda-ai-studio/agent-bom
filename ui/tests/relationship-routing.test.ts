@@ -5,6 +5,18 @@ import { relationshipPath } from "@/lib/relationship-routing";
 const edge = { source: "finding", target: "data", sourceX: 72, sourceY: 36, targetX: 672, targetY: 36,
   sourcePosition: Position.Right, targetPosition: Position.Left };
 
+function samples(path: string) {
+  const values = path.match(/-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi)!.map(Number);
+  const points: { x: number; y: number }[] = [];
+  for (let index = 0; index < values.length - 2; index += 6) for (let step = 0; step <= 200; step++) {
+    const t = step / 200, u = 1 - t;
+    const at = (axis: number) => u ** 3 * values[index + axis]! + 3 * u ** 2 * t * values[index + axis + 2]!
+      + 3 * u * t ** 2 * values[index + axis + 4]! + t ** 3 * values[index + axis + 6]!;
+    points.push({ x: at(0), y: at(1) });
+  }
+  return points;
+}
+
 describe("relationship routing", () => {
   it("keeps an unobstructed relationship on its direct curve", () => {
     expect(relationshipPath(edge, [])[2]).toBe(36);
@@ -27,36 +39,42 @@ describe("relationship routing", () => {
   it("preserves vertical and reverse-direction curves", () => {
     const obstacles = [{ id: "endpoint", x: 260, y: 0, width: 220, height: 180 }];
     const vertical = { ...edge, sourcePosition: Position.Bottom, targetPosition: Position.Top };
-    expect(relationshipPath(vertical, obstacles)).toEqual(relationshipPath(vertical, []));
+    const verticalPoints = samples(relationshipPath(vertical, obstacles)[0]);
+    expect(verticalPoints[0]).toEqual({ x: 72, y: 36 });
+    expect(verticalPoints.at(-1)).toEqual({ x: 672, y: 36 });
+    expect(verticalPoints.some(point => point.x > 260 && point.x < 480 && point.y > 0 && point.y < 180)).toBe(false);
     const reverse = { ...edge, sourceX: 672, targetX: 72, sourcePosition: Position.Left, targetPosition: Position.Right };
-    expect(relationshipPath(reverse, obstacles)).toEqual(relationshipPath(reverse, []));
+    const reversePoints = samples(relationshipPath(reverse, obstacles)[0]);
+    expect(reversePoints[0]).toEqual({ x: 672, y: 36 });
+    expect(reversePoints.at(-1)).toEqual({ x: 72, y: 36 });
+    expect(reversePoints.some(point => point.x > 260 && point.x < 480 && point.y > 0 && point.y < 180)).toBe(false);
   });
   it("places a serpentine row turn outside the wider node label column", () => {
     const turn = { ...edge, targetX: 72, targetY: 256, targetPosition: Position.Right };
     const route = relationshipPath(turn, [{ id: "finding", x: 0, y: 0, width: 220, height: 180 }]);
     expect(route[1]).toBeGreaterThan(240);
-    expect(route[2]).toBe(146);
+    expect(route[2]).toBeGreaterThan(turn.sourceY);
+    expect(route[2]).toBeLessThan(turn.targetY);
   });
   it("separates captions for shared-source routes branching above and below", () => {
     const obstacles = [{ id: "middle", x: 260, y: 0, width: 220, height: 180 }];
     const above = relationshipPath({ ...edge, sourceY: 100, targetY: 36 }, obstacles);
     const below = relationshipPath({ ...edge, sourceY: 100, targetY: 164 }, obstacles);
-    expect(Math.abs(above[1] - below[1])).toBeGreaterThan(100);
+    expect(Math.hypot(above[1] - below[1], above[2] - below[2])).toBeGreaterThan(100);
   });
   it("excludes the relationship endpoints from obstacles", () => {
     expect(relationshipPath(edge, [{ id: "finding", x: 0, y: 0, width: 220, height: 180 }])[2]).toBe(36);
   });
 });
 
-it("turns into a clear lane in the space before the card in the way, with right-angle runs", () => {
-  const [path, , laneY] = relationshipPath(edge, [{ id: "middle", x: 260, y: 0, width: 220, height: 180 }]);
-  expect(path).not.toMatch(/C/);
-  expect(laneY).toBeLessThan(0);
-  const points = [...path.matchAll(/(-?\d+(?:\.\d+)?)[ ,](-?\d+(?:\.\d+)?)/g)].map(match => ({ x: Number(match[1]), y: Number(match[2]) }));
-  // The first point on the lane is reached after leaving the source and before the card begins.
-  const onLane = points.find(point => point.y === laneY)!;
-  expect(onLane.x).toBeGreaterThan(edge.sourceX);
-  expect(onLane.x).toBeLessThan(260);
+it("curves into a clear gap before entering an intervening card", () => {
+  const [path, , labelY] = relationshipPath(edge, [{ id: "middle", x: 260, y: 0, width: 220, height: 180 }]);
+  expect(path).toMatch(/C/);
+  expect(path).not.toMatch(/[LQ]/);
+  expect(labelY).toBeLessThan(0);
+  const points = samples(path);
+  expect(points.some(point => point.x > 244 && point.x < 496 && point.y > -12 && point.y < 192)).toBe(false);
+  expect(points.find(point => point.y < -12)!.x).toBeLessThan(260);
 });
 
 it("uses a clear sibling gap before routing outside the node envelope", () => {
