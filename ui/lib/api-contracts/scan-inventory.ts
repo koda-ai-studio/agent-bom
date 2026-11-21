@@ -217,6 +217,7 @@ export interface GraphCorrelationRun {
       node_count?: number | undefined;
       edge_count?: number | undefined;
       attack_path_count?: number | undefined;
+      attack_paths?: import("@/lib/graph-snapshot-metrics").GraphAttackPathCounts | undefined;
       exposure_path_count?: number | undefined;
     } | undefined;
     analysis_bounds?: Record<string, unknown> | undefined;

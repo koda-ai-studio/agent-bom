@@ -19,18 +19,29 @@ export function graphConnectionPreview<N extends Node<LineageNodeData>, E extend
   const compare = (a: N, b: N) => rank(a) - rank(b) || a.data.label.localeCompare(b.data.label) || a.id.localeCompare(b.id);
   // Include every loaded node in the picker, including disconnected components.
   const roots = nodes.filter(node => !isClusterPillNode(node)).sort(compare);
-  const root = roots.find(node => node.id === rootId) ?? roots.find(node => neighbors.get(node.id)!.size) ?? roots[0];
+  const spine = rootId ? [] : nodes.filter(node => typeof node.data.semanticPathIndex === "number")
+    .sort((a, b) => a.data.semanticPathIndex! - b.data.semanticPathIndex!);
+  const root = roots.find(node => node.id === rootId) ?? spine[0] ?? roots.find(node => neighbors.get(node.id)!.size) ?? roots[0];
   if (!root) return null;
-  const selected = new Set([root.id]);
-  const queue = [root.id];
-  const budget = Math.max(1, Math.min(6, Math.floor(limit) || 6));
-  while (queue.length && selected.size < budget) {
-    const next = [...neighbors.get(queue.shift()!)!].map(id => byId.get(id)!).sort(compare);
-    for (const node of next) {
-      if (selected.has(node.id)) continue;
-      selected.add(node.id); queue.push(node.id);
-      if (selected.size >= budget) break;
+  const selected = new Set(spine.length ? spine.map(node => node.id) : [root.id]);
+  let frontier = [...selected];
+  // A long explicit path is never clipped at its terminal finding.
+  const budget = Math.max(selected.size, Math.max(1, Math.min(12, Math.floor(limit) || 6)));
+  while (frontier.length && selected.size < budget) {
+    const lists = frontier.map(id => [...neighbors.get(id)!].map(id => byId.get(id)!).sort(compare));
+    const next: string[] = [];
+    let added = true;
+    while (added && selected.size < budget) {
+      added = false;
+      for (const list of lists) {
+        while (list.length && selected.has(list[0]!.id)) list.shift();
+        const node = list.shift();
+        if (!node) continue;
+        selected.add(node.id); next.push(node.id); added = true;
+        if (selected.size >= budget) break;
+      }
     }
+    frontier = next;
   }
   return { root, roots, nodes: nodes.filter(node => selected.has(node.id)),
     edges: edges.filter(edge => selected.has(edge.source) && selected.has(edge.target)),

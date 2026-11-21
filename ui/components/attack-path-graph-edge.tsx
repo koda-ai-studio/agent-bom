@@ -1,10 +1,12 @@
 "use client";
 
-import { BaseEdge, EdgeLabelRenderer, useStore, type Edge, type EdgeProps } from "@xyflow/react";
+import { BaseEdge, EdgeLabelRenderer, Position, useStore, type Edge, type EdgeProps } from "@xyflow/react";
 
 import type { AttackPathDirection } from "@/lib/attack-path-graph-layout";
 import type { EdgeEvidenceStyle, PathGraphEdge } from "@/lib/attack-path-graph-model";
-import { routeLabelPoint, routePath, type Point } from "@/lib/attack-path-graph-routes";
+import type { Point } from "@/lib/attack-path-graph-routes";
+import { relationshipPath } from "@/lib/relationship-routing";
+import { RELATIONSHIP_COLOR_MAP } from "@/lib/graph-schema";
 import type { HopTrace } from "@/lib/attack-path-trace";
 
 /** One hop of the single entry-to-target trace drawn when a path is selected; absent under reduced motion. */
@@ -27,6 +29,7 @@ export function edgeStroke(onPath: boolean): string {
 }
 
 export function AttackPathGraphEdge({ id, data }: EdgeProps<AttackPathFlowEdge>) {
+  const nodes = useStore(state => state.nodes);
   if (!data) return null;
   const { edge, active, markerPrefix, direction, route, trace } = data;
   const style = LINE_STYLE[edge.evidence];
@@ -36,21 +39,28 @@ export function AttackPathGraphEdge({ id, data }: EdgeProps<AttackPathFlowEdge>)
   const ends = edge.bidirectional
     ? { markerStart: `url(#${markerPrefix}-dot-${kind})`, markerEnd: `url(#${markerPrefix}-dot-${kind})` }
     : { markerEnd: `url(#${markerPrefix}-${kind})` };
-  const label = routeLabelPoint(route);
+  const first = route[0]!, last = route.at(-1)!;
+  const backwards = first.x > last.x;
+  const [path, labelX, labelY] = relationshipPath({ source: edge.source, target: edge.target,
+    sourceX: first.x, sourceY: first.y, targetX: last.x, targetY: last.y,
+    sourcePosition: backwards ? Position.Left : Position.Right, targetPosition: backwards ? Position.Right : Position.Left,
+  }, nodes.filter(node => !node.hidden).map(node => ({ id: node.id, ...node.position,
+    width: node.measured?.width ?? node.width ?? 152, height: node.measured?.height ?? node.height ?? 136 })));
+  const label = { x: labelX, y: labelY };
   // A selected-path hop names its relationship on the line at all times: above it on a row (lines that turn
   // into branch rows leave below it) and beside it on a phone column. A branch names its own on hover or focus.
   const transform = direction === "TB"
     ? `translate(10px, -50%) translate(${label.x}px, ${label.y}px)`
     : `translate(-50%, -100%) translate(${label.x}px, ${label.y - 4}px)`;
   return <>
-    <BaseEdge id={id} path={routePath(route)} interactionWidth={18} data-line-style={style.name} data-two-way={edge.bidirectional || undefined} {...ends}
+    <BaseEdge id={id} path={path} interactionWidth={18} data-line-style={style.name} data-two-way={edge.bidirectional || undefined} {...ends}
       style={{
-        stroke: stroke.color,
+        stroke: RELATIONSHIP_COLOR_MAP[edge.relationship] ?? "var(--text-secondary)",
         strokeWidth: stroke.width + (active ? 0.75 : 0),
         strokeDasharray: style.dash,
         strokeLinecap: style.name === "dotted" ? "round" : undefined,
       }} />
-    {trace && <path key={trace.key} data-path-trace={trace.index} d={routePath(route)} pathLength={1} aria-hidden="true"
+    {trace && <path key={trace.key} data-path-trace={trace.index} d={path} pathLength={1} aria-hidden="true"
       className="attack-path-trace" style={{ animationDuration: `${trace.duration}ms`, animationDelay: `${trace.delay}ms` }} />}
     {(active || edge.onPath) && <EdgeName active={active} transform={transform}
       text={`${edge.relationshipLabel}${active && edge.bidirectional ? " · two-way" : ""}`}
@@ -78,10 +88,10 @@ export function AttackPathArrowDefs({ prefix }: { prefix: string }) {
         {(["path", "branch"] as const).map(kind => (
           <g key={kind}>
             <marker id={`${prefix}-${kind}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-              <path d="M0,0 L10,5 L0,10 z" style={{ fill: edgeStroke(kind === "path") }} />
+              <path d="M0,0 L10,5 L0,10 z" style={{ fill: "context-stroke" }} />
             </marker>
             <marker id={`${prefix}-dot-${kind}`} viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5">
-              <circle cx="5" cy="5" r="4" style={{ fill: edgeStroke(kind === "path") }} />
+              <circle cx="5" cy="5" r="4" style={{ fill: "context-stroke" }} />
             </marker>
           </g>
         ))}

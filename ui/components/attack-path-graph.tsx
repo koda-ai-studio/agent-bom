@@ -23,7 +23,7 @@ import { BACKGROUND_GAP, CONTROLS_CLASS } from "@/lib/graph-utils";
 export type AttackPathGraphProps = {
   graph: UnifiedGraphData;
   attackPath: AttackPath;
-  /** Phones stack the path top to bottom. */
+  /** Phones scroll the same left-to-right path at a readable scale. */
   narrow: boolean;
   onNodeSelect: (nodeId: string) => void;
   onEdgeSelect: (edge: { id: string; source: string; target: string; relationship: string }) => void;
@@ -92,7 +92,8 @@ function useFlowElements(model: AttackPathGraphModel, narrow: boolean, activeEdg
   const routes = useMemo(() => routeAttackPathEdges(model, layout), [layout, model]);
   const inset = glyphInsetX(layout.nodeWidth);
   const nodes = useMemo<AttackPathFlowNode[]>(() => model.nodes.map(node => {
-    const handles = narrow
+    const vertical = layout.direction === "TB";
+    const handles = vertical
       ? [{ type: "target" as const, position: Position.Top, x: layout.nodeWidth / 2, y: 0, width: 1, height: 1, id: null },
         { type: "source" as const, position: Position.Bottom, x: layout.nodeWidth / 2, y: layout.nodeHeight, width: 1, height: 1, id: null }]
       : [{ type: "target" as const, position: Position.Left, x: inset, y: GLYPH_CENTER_Y, width: 1, height: 1, id: null },
@@ -101,9 +102,9 @@ function useFlowElements(model: AttackPathGraphModel, narrow: boolean, activeEdg
       id: node.id, type: "attackPathNode", position: layout.positions.get(node.id)!,
       width: layout.nodeWidth, height: layout.nodeHeight, handles,
       ariaLabel: `${node.label}, ${node.typeLabel}${node.findings.length ? `, ${node.findings.length} findings` : ""}`,
-      data: { node, vertical: narrow, ...handlers },
+      data: { node, vertical, ...handlers },
     };
-  }), [handlers, inset, layout, model.nodes, narrow]);
+  }), [handlers, inset, layout, model.nodes]);
   const labels = useMemo(() => new Map(model.nodes.map(node => [node.id, node.label])), [model.nodes]);
   const traces = useMemo(() => traceKey ? traceByEdge(model, traceKey) : null, [model, traceKey]);
   const edges = useMemo<AttackPathFlowEdge[]>(() => model.edges.map(edge => ({

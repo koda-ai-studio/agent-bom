@@ -44,7 +44,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
   const {
     reactFlow, graphViewport, narrowViewport, canvasLayoutAspect, session, authLoading, canvasPage, setCanvasPage,
     snapshots, selectedScanId, graphData, selectedScenarioId, scenarioExpanded, scenarioState, scenarioComparison,
-    attackPathQueue, attackPathQueueScanId, loadingSnapshots, error, selectedNodeDetail, graphDiff, driftLensActive,
+    attackPathQueueScanId, loadingSnapshots, error, selectedNodeDetail, graphDiff, driftLensActive,
     setDriftLensActive, driftFilter, setDriftFilter, evidenceLensActive, evidenceFilter, selectedNode, setSelectedNode,
     selectedNodeId, setSelectedNodeId, selectedRelationship, setSelectedRelationship, selectedAttackPathKey,
     requestedAttackPathKeyRef, investigationMode, reachabilitySummary, mobileGraphView, investigationDirection,
@@ -141,11 +141,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
     rollupDisplayEdges,
     narrowViewport,
   ]);
-  const snapshotAttackPathCount = resolveSnapshotAttackPathCount({
-    pageTotal: attackPathQueue?.pagination.total,
-    statsTotal: graphData?.stats.attack_path_count,
-    returnedPaths: flow.summary?.attackPaths ?? 0,
-  });
+  const snapshotAttackPathCount = resolveSnapshotAttackPathCount(graphData?.stats.attack_paths);
 
   const queueSettled = attackPathQueueScanId === selectedScanId;
   const awaitingAutoFocus = !initializedFocus && !seededFromUrlRef.current && !investigationMode &&

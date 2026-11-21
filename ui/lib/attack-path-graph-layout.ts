@@ -1,4 +1,4 @@
-import { Graph, layout } from "@dagrejs/dagre";
+import { semanticColumns } from "@/lib/graph-semantic-columns";
 
 import type { AttackPathGraphModel } from "@/lib/attack-path-graph-model";
 import { ATTACK_PATH_FIT_PADDING } from "@/lib/attack-path-graph-viewport";
@@ -36,17 +36,10 @@ export const ATTACK_PATH_CANVAS_BOUNDS = { min: 240, max: 640 } as const;
  */
 const SPACING = { LR: { rank: 48, lane: 32 }, TB: { rank: 40, lane: 20 } } as const;
 
-/** Layer per node from dagre's ranking, re-indexed 0..n along the reading direction. */
-function rankColumns(model: AttackPathGraphModel, direction: AttackPathDirection): Map<string, number> {
-  const graph = new Graph({ multigraph: true });
-  graph.setGraph({ rankdir: direction, ranksep: 40, nodesep: 20, ranker: "network-simplex" });
-  graph.setDefaultEdgeLabel(() => ({}));
-  for (const node of model.nodes) graph.setNode(node.id, { width: PATH_NODE.width, height: PATH_NODE.height });
-  for (const edge of model.edges) graph.setEdge(edge.source, edge.target, { weight: edge.onPath ? 8 : 1, minlen: 1 }, edge.id);
-  layout(graph);
-  const main = (id: string) => Math.round(direction === "LR" ? graph.node(id).x : graph.node(id).y);
-  const ranks = [...new Set(model.nodes.map(node => main(node.id)))].sort((a, b) => a - b);
-  return new Map(model.nodes.map(node => [node.id, ranks.indexOf(main(node.id))]));
+/** The same backend-layer columns as the estate canvas, with the selected spine retained. */
+function rankColumns(model: AttackPathGraphModel): Map<string, number> {
+  return semanticColumns(model.nodes.map(node => ({ id: node.id, data: { entityType: node.entityType, semanticLayer: node.semanticLayer } })),
+    model.edges.map(edge => ({ ...edge, data: { relationship: edge.relationship } })), model.pathNodeIds);
 }
 
 /**
@@ -76,7 +69,7 @@ function assignLanes(model: AttackPathGraphModel, columns: Map<string, number>):
       return { id, key: Math.max(mean, 0.5) };
     });
     keyed.sort((a, b) => a.key - b.key || a.id.localeCompare(b.id));
-    keyed.forEach((item, index) => lanes.set(item.id, index + 1));
+    keyed.forEach((item, index) => lanes.set(item.id, (Math.floor(index / 2) + 1) * (index % 2 ? -1 : 1)));
   }
   return lanes;
 }
@@ -85,9 +78,12 @@ function assignLanes(model: AttackPathGraphModel, columns: Map<string, number>):
  * Layered DAG: the selected path is one straight line, every node sits in its
  * dagre layer, and branches take lanes above and below the path.
  */
-export function layoutAttackPathGraph(model: AttackPathGraphModel, direction: AttackPathDirection): AttackPathLayout {
+export function layoutAttackPathGraph(model: AttackPathGraphModel, _requestedDirection: AttackPathDirection): AttackPathLayout {
+  void _requestedDirection;
+  // Mobile framing scrolls the same spine; it does not change the grammar.
+  const direction: AttackPathDirection = "LR";
   const spacing = SPACING[direction];
-  const columns = rankColumns(model, direction);
+  const columns = rankColumns(model);
   const lanes = assignLanes(model, columns);
   const minLane = Math.min(0, ...lanes.values());
   const maxLane = Math.max(0, ...lanes.values());

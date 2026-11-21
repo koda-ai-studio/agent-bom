@@ -18,6 +18,7 @@ import {
 import { api, formatDate, type GraphCorrelationRun, type GraphSnapshot } from "@/lib/api";
 import { userFacingApiErrorMessage } from "@/lib/api-errors";
 import { nowForRelativeTime } from "@/lib/relative-clock";
+import { readAttackPathCounts } from "@/lib/graph-snapshot-metrics";
 
 const DEFAULT_MAX_AGE_HOURS = 24 * 7;
 
@@ -204,7 +205,10 @@ export function GraphCorrelationWorkflow({
   }
 
   const conflicts = run?.result_manifest.correlation_merge?.conflict_count ?? 0;
-  const attackPaths = run?.result_manifest.output?.attack_path_count ?? 0;
+  const pathCounts = readAttackPathCounts(run?.result_manifest.output?.attack_paths);
+  const attackPaths = pathCounts?.retained_count ?? null;
+  const hasAttackPaths = attackPaths !== null && attackPaths > 0;
+  const pathSummary = pathCounts ? `${pathCounts.retained_count} retained path${pathCounts.retained_count === 1 ? "" : "s"} · ${pathCounts.assessed_count} assessed` : "Attack path count unavailable";
   const isComplete = run?.status === "complete";
   const isFailed = run?.status === "failed";
   const hasRuntimeReceipt = run?.input_manifest.some((receipt) => sourceLabel(receipt.source_kinds, receipt.scan_id) === "Runtime") ?? false;
@@ -214,7 +218,7 @@ export function GraphCorrelationWorkflow({
     { done: run?.input_manifest.some((receipt) => (receipt.node_count ?? 0) > 0) ?? eligible.length > 0, detail: "Inventory" },
     { done: receiptCount >= 2, detail: receiptCount > 0 ? `${receiptCount} receipts` : "Evidence" },
     { done: isComplete, detail: isFailed ? "Failed" : run?.status ?? "Exact IDs" },
-    { done: isComplete && attackPaths > 0, detail: isComplete ? `${attackPaths} paths` : "Paths" },
+    { done: isComplete && hasAttackPaths, detail: isComplete ? pathSummary : "Paths" },
     { done: false, detail: hasRuntimeReceipt ? "Observed; block opt-in" : "Opt-in runtime" },
   ];
   const activeFreshnessBound = run?.max_age_hours ?? maxAgeHours;
@@ -272,10 +276,10 @@ export function GraphCorrelationWorkflow({
               <p className="gc-decision-state">
                 {isComplete ? <CheckCircle2 className="h-4 w-4" /> : isFailed ? <AlertTriangle className="h-4 w-4 text-red-500" /> : <Loader2 className="h-4 w-4 animate-spin text-sky-500" />}
                 {isComplete
-                  ? `${attackPaths} retained path${attackPaths === 1 ? "" : "s"} across ${receiptCount} sources`
+                  ? `${pathSummary} across ${receiptCount} sources`
                   : isFailed ? "Correlation failed" : `Correlation ${run.status}`}
               </p>
-              {isComplete && attackPaths > 0 && boundOutcome ? (
+              {isComplete && hasAttackPaths && boundOutcome ? (
                 <div className="gc-outcome" aria-label="Prioritized path">
                   <h3 className="gc-heading">{boundOutcome.source} → {boundOutcome.target}</h3>
                   <p className="gc-preview-summary-copy">{boundOutcome.summary}</p>
@@ -333,7 +337,7 @@ export function GraphCorrelationWorkflow({
                   Review exposure candidates
                 </a>
               ) : null}
-              {isComplete && attackPaths > 0 && run.output_scan_id && !boundOutcome ? (
+              {isComplete && hasAttackPaths && run.output_scan_id && !boundOutcome ? (
                 <button data-testid="correlation-open-path" type="button" onClick={() => onOpenSnapshot(run.output_scan_id)} className="gc-open-path">
                   Open top path
                 </button>
@@ -497,7 +501,7 @@ export function GraphCorrelationWorkflow({
 
           {isComplete ? (
             <p className="gc-run-summary">
-              {conflicts} conflicting field set{conflicts === 1 ? "" : "s"} retained · {attackPaths} confirmed attack paths · bounded analysis recorded
+              {conflicts} conflicting field set{conflicts === 1 ? "" : "s"} retained · {pathSummary} · bounded analysis recorded
             </p>
           ) : null}
         </div>

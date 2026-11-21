@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+import { withFindingDrilldowns } from "@/lib/graph-finding-disclosure";
 import { Background, MiniMap, ReactFlow } from "@xyflow/react";
 import { GraphCanvasAutoFit } from "@/components/graph-canvas-auto-fit";
 import { LegibleFitControls } from "@/components/graph-legible-controls";
@@ -28,6 +30,7 @@ export function GraphFlowCanvas({ page, flowView }: { page: GraphPageModel; flow
   const roomyOverview = displayEdges.some(edge => edge.data?.roomyOverview === true);
   // Layout changes glide once (never while dragging or capturing); the camera frames the final positions.
   const motion = useAnimatedLayout(measuredDisplay.nodes, captureMode || presentation.editing, narrowViewport ? "narrow" : "wide", `${compactLayoutKey}:${flowView.kind}:${disclosed.key}`);
+  const nodes = useMemo(() => withFindingDrilldowns(motion.nodes, page.drillIntoRollup), [motion.nodes, page.drillIntoRollup]);
   return (
             <ReactFlow
               style={{ ...readableGraphNodeStyle(graphViewport.zoom, Boolean(investigationContext) || roomyOverview, (roomyOverview || Boolean(investigationContext) && compactInvestigationTopology) && !narrowViewport, displayNodes.length),
@@ -35,7 +38,7 @@ export function GraphFlowCanvas({ page, flowView }: { page: GraphPageModel; flow
                 ...(disclosed.available && !narrowViewport ? { "--graph-node-glyph-size": disclosedGlyphSize(graphViewport.zoom, displayNodes.length) } : {}) }}
               className={selectedScenarioId ? "scenario-context-canvas" : undefined}
               key={captureMode ? `lineage-capture:${scenarioExpanded ? "full" : "context"}` : `${presentation.storageKey}:${flowView.kind}:${presentation.restoredSavedState ? "restored" : "initial"}:${scenarioExpanded ? "full" : "context"}`}
-              nodes={motion.nodes}
+              nodes={nodes}
               edges={quieted.edges}
               nodeTypes={lineageNodeTypesAdaptive}
               edgeTypes={relationshipEdgeTypes}
@@ -63,7 +66,7 @@ export function GraphFlowCanvas({ page, flowView }: { page: GraphPageModel; flow
                 rollupActive: rollupNavigationActive,
                 nodesInitialized,
               })}
-              defaultEdgeOptions={{ type: "smoothstep" }}
+              defaultEdgeOptions={{ type: "relationship" }}
               proOptions={{ hideAttribution: true }}
               onEdgeClick={(_event, edge) => edge.data?.displayOnly ? flowView.inspectDisplayEdge(edge) : inspectRelationship(edge)}
               onKeyDownCapture={event => {

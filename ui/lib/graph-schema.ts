@@ -228,6 +228,8 @@ export type UnifiedNode = Pick<GraphApiSchemas["GraphNodeRecord"],
   "attributes" | "compliance_tags" | "data_sources"
 > & {
   category_uid?: GraphApiSchemas["GraphNodeRecord"]["category_uid"];
+  /** Canonical layer stamped by graph API projections. */
+  semantic_layer?: string | null | undefined;
   class_uid?: GraphApiSchemas["GraphNodeRecord"]["class_uid"];
   type_uid?: GraphApiSchemas["GraphNodeRecord"]["type_uid"];
   severity_id?: GraphApiSchemas["GraphNodeRecord"]["severity_id"];
@@ -397,6 +399,7 @@ export interface GraphStats {
   severity_basis?: "graph_nodes";
   relationship_types: Record<string, number>;
   attack_path_count: number;
+  attack_paths?: import("@/lib/graph-snapshot-metrics").GraphAttackPathCounts | undefined;
   interaction_risk_count: number;
   max_attack_path_risk: number;
   highest_interaction_risk: number;

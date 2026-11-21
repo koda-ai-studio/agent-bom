@@ -17,7 +17,7 @@ export function GraphConnectionPreviewControls({ preview, expanded, onRoot, onEx
       </label>
       <div className="flex min-w-0 gap-2">
         <button className="graph-page-action graph-action-compact whitespace-nowrap" onClick={onExplore}>Explore these</button>
-        <button className="graph-page-action graph-action-compact whitespace-nowrap" onClick={() => onExpanded(true)}>Show full map ({preview.totalNodes})</button>
+        <button className="graph-page-action graph-action-compact whitespace-nowrap" onClick={() => onExpanded(true)}>Show more connections ({preview.totalNodes} nodes)</button>
       </div>
     </>}
   </div>;

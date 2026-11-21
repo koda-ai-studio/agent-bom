@@ -27,6 +27,8 @@ export type PathGraphNode = {
   label: string;
   typeLabel: string;
   entityType: string;
+  dimensions?: UnifiedNode["dimensions"] | undefined;
+  semanticLayer?: string | null | undefined;
   findings: PathGraphFinding[];
   markers: NodeContextMarker[];
   /** Collapsed sibling groups only. */
@@ -192,7 +194,7 @@ export function buildAttackPathGraphModel(
 ): AttackPathGraphModel {
   if (options.context) graph = withContext(graph, options.context);
   const nodes = new Map(graph.nodes.map(node => [node.id, node]));
-  const pathNodeIds = assetHops(path, nodes);
+  const pathNodeIds = [...new Set(path.hops)].filter(id => nodes.has(id));
   const selectedHops = new Set(pathNodeIds);
   const draft: Draft = { nodes: new Set(pathNodeIds), edges: new Map(), onPath: new Set() };
   addPathEdges(draft, pathNodeIds, path, graph.edges, true);
@@ -244,7 +246,7 @@ export function buildAttackPathGraphModel(
     const node = nodes.get(id)!;
     const index = pathNodeIds.indexOf(id);
     return {
-      id, kind: "entity", label: node.entity_type === "agent" ? formatInventoryAgentLabel(node.label || id) : node.label || id, entityType: node.entity_type, typeLabel: assetTypeLabel(node),
+      id, kind: "entity", label: node.entity_type === "agent" ? formatInventoryAgentLabel(node.label || id) : node.label || id, entityType: node.entity_type, dimensions: node.dimensions, semanticLayer: node.semantic_layer, typeLabel: assetTypeLabel(node),
       role: index < 0 ? "branch" : index === 0 && lastIndex > 0 ? "entry" : index === lastIndex ? "target" : "path",
       findings: findingsFor(id, graph, nodes, drawnFindings),
       markers: nodeContextMarkers(node.attributes ?? {}),
@@ -311,6 +313,6 @@ export function attackPathEvidenceGraph(
   const edges = graph.edges.filter(edge => ids.has(edge.source) && ids.has(edge.target));
   return {
     ...graph, nodes, edges, attack_paths: [path], interaction_risks: [],
-    stats: { ...graph.stats, total_nodes: nodes.length, total_edges: edges.length, attack_path_count: 1, interaction_risk_count: 0 },
+    stats: { ...graph.stats, total_nodes: nodes.length, total_edges: edges.length, interaction_risk_count: 0 },
   };
 }

@@ -10,6 +10,9 @@ import type { Edge, Node } from "@xyflow/react";
  * so a preview stacks down the narrow frame instead of running off its side.
  */
 export function hopColumnLayout<N extends Node>(nodes: N[], edges: readonly Edge[], rootId: string, { columnGap, rowGap, vertical = false }: { columnGap: number; rowGap: number; vertical?: boolean }): N[] {
+  // A semantic canvas has already applied the shared grammar. Preview and
+  // mobile framing must not rotate its spine or replace layers with BFS hops.
+  if (nodes.every(node => node.data.semanticLayout === true)) return nodes;
   const ids = new Set(nodes.map(node => node.id));
   const neighbours = new Map<string, string[]>();
   for (const edge of edges) {

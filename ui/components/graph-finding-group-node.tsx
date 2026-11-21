@@ -24,6 +24,6 @@ export function GraphFindingGroupNode({ data }: { data: LineageNodeData }) {
       </button></GraphCountHint>
     </div>
     <span style={{ fontSize: "var(--graph-node-label-size, 18px)" }} className="text-base font-semibold text-foreground">Findings</span>
-    <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className="text-sm text-muted-foreground">Click to expand · {count} loaded</span>
+    <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className="text-sm text-muted-foreground">Click to explore · {count} findings</span>
   </div>;
 }

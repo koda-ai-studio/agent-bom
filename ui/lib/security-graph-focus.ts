@@ -157,7 +157,6 @@ export function buildFocusedGraphData(
       ...graph.stats,
       total_nodes: nodes.length,
       total_edges: edges.length,
-      attack_path_count: 1,
       interaction_risk_count: 0,
     },
   };

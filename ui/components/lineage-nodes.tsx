@@ -1,5 +1,7 @@
 "use client";
 
+import { GraphAttributeBadges } from "@/components/graph-attribute-badges";
+import { SegmentedLabel } from "@/components/graph-segmented-label";
 import { canvasCaption } from "@/lib/graph-canvas-caption";
 import { GraphFindingGroupNode } from "@/components/graph-finding-group-node";
 import { agentExecutionCaption, type AgentContext } from "@/lib/graph-agent-context";
@@ -14,7 +16,6 @@ import { mcpNodeCaption } from "@/lib/graph-mcp-caption";
 import { GraphCountHint } from "@/components/graph-count-hint";
 import { GraphPackageGlyph } from "@/components/graph-package-glyph";
 import { GraphProviderMark } from "@/components/graph-provider-mark";
-import { SegmentedLabel } from "@/components/graph-segmented-label";
 import { entitySource } from "@/lib/agent-source";
 import { NodeBadgeRow } from "@/components/graph-node-badges";
 import { ASSET_KINDS, assetKindLabel } from "@/lib/asset-icon-registry";
@@ -45,6 +46,9 @@ export type RuntimeEvidenceTier = "static_scan" | "runtime_observed" | "runtime_
 
 export type LineageNodeData = {
   label: string;
+  semanticPathIndex?: number | undefined;
+  semanticLayout?: boolean | undefined;
+  semanticOwner?: string | undefined;
   evidenceFlow?: boolean;
   /** A reading caveat a flow adds to the card's caption, such as an unmounted token. */
   flowNote?: string | undefined;
@@ -78,6 +82,11 @@ export type LineageNodeData = {
   identityContext?: string | undefined;
   agentContext?: AgentContext | undefined;
   dimensions?: import("@/lib/graph-schema").NodeDimensions | undefined;
+  semanticLayer?: string | null | undefined;
+  semanticLayerIssue?: string | undefined;
+  imageSubrow?: boolean | undefined;
+  evidenceSources?: string[] | undefined;
+  onExploreFindings?: (() => void) | undefined;
   complianceTags?: string[] | undefined;
   attributes?: Record<string, unknown> | undefined;
   neighborCount?: number | undefined;
@@ -236,7 +245,8 @@ function NodeCard({
     <div title={[graphNodeTooltip(data), data.evidenceFlowContext, ring?.description, ...(data.readingConnections ?? []).map(summary => `${summary.relationship === "hosts" ? "Hosts" : "Contains"} ${summary.label} in this view`)].filter(Boolean).join(" · ")} data-graph-entity="true" data-evidence-flow={data.evidenceFlow || undefined} data-finding-owner={data.readingOwner} data-rollup-container={isRollupContainer ? "true" : undefined}
       style={{ width: "var(--graph-node-card-width, 220px)" }}
       className={`relative flex w-[220px] flex-col items-center text-center transition-opacity ${data.dimmed ? "opacity-25" : ""}`}>
-      <div ref={glyphRef} data-severity-ring={severity} style={{ width: "var(--graph-node-glyph-size, 72px)", height: "var(--graph-node-glyph-size, 72px)" }} className={`graph-entity-glyph relative mb-3 flex h-[72px] w-[72px] items-center justify-center rounded-full border-2 shadow-sm ${
+      {data.semanticLayout && <GraphAttributeBadges data={data} />}
+      <div ref={glyphRef} data-image-subrow={data.imageSubrow || undefined} data-severity-ring={severity} style={{ width: data.imageSubrow ? 40 : "var(--graph-node-glyph-size, 72px)", height: data.imageSubrow ? 40 : "var(--graph-node-glyph-size, 72px)" }} className={`graph-entity-glyph relative mb-3 flex h-[72px] w-[72px] items-center justify-center rounded-full border-2 shadow-sm ${
         isRollupContainer ? "border-outline-strong bg-surface-elevated" : `${borderClass} ${bgClass}`
       } ${data.highlighted ? `ring-2 ring-offset-4 ring-offset-[var(--surface)] ${ringClass}` : ""}`}>
         {severity && <span className="sr-only" data-finding-severity={severity}>{`${severity} severity`}</span>}
@@ -260,11 +270,13 @@ function NodeCard({
         {data.heldConnections ? <span data-testid="graph-held-connections" title={`${data.heldConnections} more ${data.heldConnections === 1 ? "connection" : "connections"} not drawn`} style={{ fontSize: "var(--graph-node-meta-size, 12px)" }}
           className="absolute -bottom-1 -right-2 rounded-full border border-outline bg-surface px-1.5 font-medium leading-snug text-ink-secondary">+{data.heldConnections}<span className="sr-only"> more connections not drawn</span></span> : null}
       </div>
-      <SegmentedLabel caption text={caption?.title ?? (repository?.slug || shortTitle.text)} className="mb-1 line-clamp-3 w-full min-w-0 text-lg font-semibold leading-[1.2] text-foreground" style={{ fontSize: "var(--graph-node-label-size, 18px)" }} />
+      {data.semanticLayout
+        ? <span data-semantic-name title={displayTitle} className="mb-1 block w-full min-w-0 truncate text-lg font-semibold leading-[1.2] text-foreground" style={{ fontSize: "var(--graph-node-label-size, 18px)" }}>{displayTitle}</span>
+        : <SegmentedLabel caption text={caption?.title ?? (repository?.slug || shortTitle.text)} className="mb-1 line-clamp-3 w-full min-w-0 text-lg font-semibold leading-[1.2] text-foreground" style={{ fontSize: "var(--graph-node-label-size, 18px)" }} />}
       {shortTitle.shortened && !caption && !repository && <span className="sr-only">{displayTitle}</span>}
       {/* The vendor mark names the provider; a second text chip would repeat it. */}
       <NodeBadgeRow badges={badges}>
-        <span data-graph-caption data-entity-role style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className="text-xs text-ink-secondary">
+        <span data-graph-caption data-entity-role style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className={data.semanticLayout ? "block w-full truncate text-xs text-ink-secondary" : "text-xs text-ink-secondary"}>
           {(data.nodeType === "misconfiguration" && data.attributes?.finding_kind === "iac" ? "IaC finding" : caption?.meta) ?? data.readingLabel ?? (repository ? "Repository" : data.nodeType === "agent" ? (data.agentType ? topologyAgentTypeLabel(data.agentType) : "Agent") : assetKindLabel({ entityType: data.entityType, nodeType: data.nodeType, attributes: data.attributes, provider: data.dimensions?.cloud_provider }))}
         </span>
         {data.occurrenceRole && <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} data-testid="graph-occurrence-role" className="whitespace-nowrap rounded border border-outline-strong px-1 text-xs font-medium uppercase tracking-wide text-ink-secondary">{data.occurrenceRole}</span>}
