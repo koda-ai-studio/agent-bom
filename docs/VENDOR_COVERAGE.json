@@ -129,7 +129,7 @@
       }
     },
     {
-      "detail": "Terraform: AWS 50, Azure 12, GCP 11 rules (CIS ids per provider); other families: CFN 19, COMPOSE 11, DBT-SEC 18, DOCKER 25, DOCKERD 8, GHA 4, HELM 15, IAM 3, K8S 34, TF-AI 10",
+      "detail": "Terraform: AWS 50, Azure 13, GCP 12 rules (CIS ids per provider); other families: CFN 19, COMPOSE 11, DBT-SEC 18, DOCKER 25, DOCKERD 8, GHA 4, HELM 15, IAM 3, K8S 34, TF-AI 10",
       "id": "iac",
       "sources": [
         {
@@ -160,12 +160,11 @@
         },
         "terraform": {
           "aws": 50,
-          "azure": 12,
-          "gcp": 11
+          "azure": 13,
+          "gcp": 12
         },
         "terraform_rule_ids": {
           "aws": [
-            "TF-SEC-001",
             "TF-SEC-002",
             "TF-SEC-003",
             "TF-SEC-004",
@@ -214,7 +213,8 @@
             "TF-SEC-048",
             "TF-SEC-049",
             "TF-SEC-050",
-            "TF-SEC-051"
+            "TF-SEC-051",
+            "TF-SEC-052"
           ],
           "azure": [
             "TF-SEC-101",
@@ -228,7 +228,8 @@
             "TF-SEC-109",
             "TF-SEC-110",
             "TF-SEC-111",
-            "TF-SEC-112"
+            "TF-SEC-112",
+            "TF-SEC-113"
           ],
           "gcp": [
             "TF-SEC-201",
@@ -241,7 +242,8 @@
             "TF-SEC-208",
             "TF-SEC-209",
             "TF-SEC-210",
-            "TF-SEC-211"
+            "TF-SEC-211",
+            "TF-SEC-212"
           ]
         }
       }
@@ -326,7 +328,7 @@
       }
     },
     {
-      "detail": "Terraform AWS 50 / Azure 12 / GCP 11; CloudFormation 19 (AWS)",
+      "detail": "Terraform AWS 50 / Azure 13 / GCP 12; CloudFormation 19 (AWS)",
       "id": "cloud_posture_static",
       "sources": [
         {
@@ -341,8 +343,8 @@
         "cloudformation": 19,
         "terraform": {
           "aws": 50,
-          "azure": 12,
-          "gcp": 11
+          "azure": 13,
+          "gcp": 12
         }
       }
     },
@@ -3386,7 +3388,7 @@
         },
         {
           "family": "TF-SEC",
-          "rule_count": 73
+          "rule_count": 75
         }
       ],
       "note": "Distinct rule-id literals per prefix.",

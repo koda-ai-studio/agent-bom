@@ -24,7 +24,7 @@ def tmp_tf(tmp_path: Path):
 
 
 class TestS3Encryption:
-    """TF-SEC-001: S3 bucket without encryption."""
+    """S3 implicit SSE-S3 must not be reported as missing encryption."""
 
     def test_no_encryption(self, tmp_tf):
         content = """\
@@ -35,8 +35,7 @@ resource "aws_s3_bucket" "data" {
 """
         findings = scan_terraform_security(tmp_tf(content))
         tf001 = [f for f in findings if f.rule_id == "TF-SEC-001"]
-        assert len(tf001) == 1
-        assert tf001[0].severity == "high"
+        assert tf001 == []
 
     def test_with_encryption_ok(self, tmp_tf):
         content = """\

@@ -86,9 +86,12 @@ class TestConnect:
         assert r.exit_code == 0
         assert "deploy/terraform/connect-snowflake" in r.output
 
-    def test_connect_reports_no_credentials_when_unset(self, monkeypatch):
+    def test_connect_reports_no_credentials_when_unset(self, monkeypatch, tmp_path):
         from agent_bom.cli import main
 
+        monkeypatch.setenv("HOME", str(tmp_path))
+        monkeypatch.delenv("AWS_SHARED_CREDENTIALS_FILE", raising=False)
+        monkeypatch.delenv("AWS_CONFIG_FILE", raising=False)
         for var in ("AWS_PROFILE", "AWS_ACCESS_KEY_ID", "AWS_ROLE_ARN", "AWS_WEB_IDENTITY_TOKEN_FILE"):
             monkeypatch.delenv(var, raising=False)
         r = _runner().invoke(main, ["connect", "aws"])

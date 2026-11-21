@@ -8,11 +8,6 @@ from agent_bom.iac.models import IaCFinding
 from agent_bom.iac.terraform_security_common import PITR_ENABLED_RE, TfResource, extract_block
 
 _PUBLIC_ACL_RE = re.compile(r'\bacl\s*=\s*"(public-read|public-read-write)"', re.IGNORECASE)
-_ENCRYPTION_CONFIG_RE = re.compile(r"server_side_encryption_configuration\s*\{", re.IGNORECASE)
-
-# TF-SEC-001: encryption configured on the separate resource (AWS provider v4+)
-_SSE_RESOURCE_RE = re.compile(r'resource\s+"aws_s3_bucket_server_side_encryption_configuration"\s+"[^"]+"\s*\{', re.IGNORECASE)
-
 # TF-SEC-018: DynamoDB PITR
 _PITR_RE = re.compile(r"point_in_time_recovery\s*\{", re.IGNORECASE)
 
@@ -33,30 +28,13 @@ _S3_LOGGING_RE = re.compile(r"logging\s*\{", re.IGNORECASE)
 _EBS_ENCRYPTED_TRUE_RE = re.compile(r"encrypted\s*=\s*true", re.IGNORECASE)
 
 
-def tf_sec_001_002(res: TfResource) -> list[IaCFinding]:
-    """TF-SEC-001 + TF-SEC-002: S3 bucket checks."""
+def tf_sec_002(res: TfResource) -> list[IaCFinding]:
+    """TF-SEC-002: public ACL; TF-SEC-001 retired for automatic SSE-S3."""
     rname, block, block_start_line, rel_path = res.rname, res.block, res.block_start_line, res.rel_path
     findings: list[IaCFinding] = []
-    sse_targets, sse_unresolved = _bucket_targets(_SSE_RESOURCE_RE, res.content)
-    encrypted_separately = rname in sse_targets or sse_unresolved
-    if not _ENCRYPTION_CONFIG_RE.search(block) and not encrypted_separately:
-        findings.append(
-            IaCFinding(
-                rule_id="TF-SEC-001",
-                severity="high",
-                title="S3 bucket without encryption",
-                message=(
-                    f"S3 bucket '{rname}' does not have "
-                    "server_side_encryption_configuration. Enable SSE-S3 "
-                    "or SSE-KMS to encrypt data at rest."
-                ),
-                file_path=rel_path,
-                line_number=block_start_line,
-                category="terraform",
-                compliance=["CIS-AWS-2.1.1", "NIST-SC-28"],
-            )
-        )
-
+    # S3 automatically encrypts new uploads with SSE-S3 since January 5, 2023.
+    # Missing explicit Terraform SSE configuration does not imply unencrypted data.
+    # https://docs.aws.amazon.com/AmazonS3/latest/userguide/default-encryption-faq.html
     acl_m = _PUBLIC_ACL_RE.search(block)
     if acl_m:
         findings.append(

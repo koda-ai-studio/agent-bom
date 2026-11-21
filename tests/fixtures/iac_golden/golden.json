@@ -7131,26 +7131,6 @@
    "attack_techniques": [],
    "category": "terraform",
    "compliance": [
-    "CIS-AWS-2.1.1",
-    "NIST-SC-28"
-   ],
-   "file_path": "terraform/harvested_10c86a04f25963f4.tf",
-   "line_number": 1,
-   "message": "S3 bucket 'data' does not have server_side_encryption_configuration. Enable SSE-S3 or SSE-KMS to encrypt data at rest.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource": null,
-   "resource_type": null,
-   "rule_id": "TF-SEC-001",
-   "severity": "high",
-   "suppression": null,
-   "title": "S3 bucket without encryption"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "terraform",
-   "compliance": [
     "CIS-AWS-2.1.3",
     "NIST-CP-9"
    ],
@@ -7691,26 +7671,6 @@
    "attack_techniques": [],
    "category": "terraform",
    "compliance": [
-    "CIS-AWS-2.1.1",
-    "NIST-SC-28"
-   ],
-   "file_path": "terraform/harvested_375d40b6093cb4fd.tf",
-   "line_number": 1,
-   "message": "S3 bucket 'b' does not have server_side_encryption_configuration. Enable SSE-S3 or SSE-KMS to encrypt data at rest.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource": null,
-   "resource_type": null,
-   "rule_id": "TF-SEC-001",
-   "severity": "high",
-   "suppression": null,
-   "title": "S3 bucket without encryption"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "terraform",
-   "compliance": [
     "CIS-AWS-2.1.2",
     "NIST-AC-3"
    ],
@@ -7811,26 +7771,6 @@
   }
  ],
  "terraform/harvested_395db0657df31f7f.tf": [
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "terraform",
-   "compliance": [
-    "CIS-AWS-2.1.1",
-    "NIST-SC-28"
-   ],
-   "file_path": "terraform/harvested_395db0657df31f7f.tf",
-   "line_number": 1,
-   "message": "S3 bucket 'b' does not have server_side_encryption_configuration. Enable SSE-S3 or SSE-KMS to encrypt data at rest.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource": null,
-   "resource_type": null,
-   "rule_id": "TF-SEC-001",
-   "severity": "high",
-   "suppression": null,
-   "title": "S3 bucket without encryption"
-  },
   {
    "atlas_techniques": [],
    "attack_techniques": [],
@@ -8002,26 +7942,6 @@
    "attack_techniques": [],
    "category": "terraform",
    "compliance": [
-    "CIS-AWS-2.1.1",
-    "NIST-SC-28"
-   ],
-   "file_path": "terraform/harvested_3e6399ef4a2d3498.tf",
-   "line_number": 1,
-   "message": "S3 bucket 'data' does not have server_side_encryption_configuration. Enable SSE-S3 or SSE-KMS to encrypt data at rest.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource": null,
-   "resource_type": null,
-   "rule_id": "TF-SEC-001",
-   "severity": "high",
-   "suppression": null,
-   "title": "S3 bucket without encryption"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "terraform",
-   "compliance": [
     "CIS-AWS-2.1.3",
     "NIST-CP-9"
    ],
@@ -8143,26 +8063,6 @@
   }
  ],
  "terraform/harvested_4645a1e335e1baef.tf": [
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "terraform",
-   "compliance": [
-    "CIS-AWS-2.1.1",
-    "NIST-SC-28"
-   ],
-   "file_path": "terraform/harvested_4645a1e335e1baef.tf",
-   "line_number": 1,
-   "message": "S3 bucket 'b' does not have server_side_encryption_configuration. Enable SSE-S3 or SSE-KMS to encrypt data at rest.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource": null,
-   "resource_type": null,
-   "rule_id": "TF-SEC-001",
-   "severity": "high",
-   "suppression": null,
-   "title": "S3 bucket without encryption"
-  },
   {
    "atlas_techniques": [],
    "attack_techniques": [],
@@ -8404,26 +8304,6 @@
    "attack_techniques": [],
    "category": "terraform",
    "compliance": [
-    "CIS-AWS-2.1.1",
-    "NIST-SC-28"
-   ],
-   "file_path": "terraform/harvested_628032f0f3527d3e.tf",
-   "line_number": 2,
-   "message": "S3 bucket 'logs' does not have server_side_encryption_configuration. Enable SSE-S3 or SSE-KMS to encrypt data at rest.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource": null,
-   "resource_type": null,
-   "rule_id": "TF-SEC-001",
-   "severity": "high",
-   "suppression": null,
-   "title": "S3 bucket without encryption"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "terraform",
-   "compliance": [
     "CIS-AWS-2.1.2",
     "NIST-AC-3"
    ],
@@ -8526,26 +8406,6 @@
  "terraform/harvested_6571afc823ac4df5.tf": [],
  "terraform/harvested_673cf31381a47e1b.tf": [],
  "terraform/harvested_68becc9071ad3a6e.tf": [
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "terraform",
-   "compliance": [
-    "CIS-AWS-2.1.1",
-    "NIST-SC-28"
-   ],
-   "file_path": "terraform/harvested_68becc9071ad3a6e.tf",
-   "line_number": 1,
-   "message": "S3 bucket 'data' does not have server_side_encryption_configuration. Enable SSE-S3 or SSE-KMS to encrypt data at rest.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource": null,
-   "resource_type": null,
-   "rule_id": "TF-SEC-001",
-   "severity": "high",
-   "suppression": null,
-   "title": "S3 bucket without encryption"
-  },
   {
    "atlas_techniques": [],
    "attack_techniques": [],
@@ -9626,26 +9486,6 @@
    "attack_techniques": [],
    "category": "terraform",
    "compliance": [
-    "CIS-AWS-2.1.1",
-    "NIST-SC-28"
-   ],
-   "file_path": "terraform/harvested_f89e154540a7e084.tf",
-   "line_number": 1,
-   "message": "S3 bucket 'data' does not have server_side_encryption_configuration. Enable SSE-S3 or SSE-KMS to encrypt data at rest.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource": null,
-   "resource_type": null,
-   "rule_id": "TF-SEC-001",
-   "severity": "high",
-   "suppression": null,
-   "title": "S3 bucket without encryption"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "terraform",
-   "compliance": [
     "CIS-AWS-2.1.2",
     "NIST-AC-3"
    ],
@@ -9731,26 +9571,6 @@
    "attack_techniques": [],
    "category": "terraform",
    "compliance": [
-    "CIS-AWS-2.1.1",
-    "NIST-SC-28"
-   ],
-   "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 1,
-   "message": "S3 bucket 'bad_bucket' does not have server_side_encryption_configuration. Enable SSE-S3 or SSE-KMS to encrypt data at rest.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource": null,
-   "resource_type": null,
-   "rule_id": "TF-SEC-001",
-   "severity": "high",
-   "suppression": null,
-   "title": "S3 bucket without encryption"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "terraform",
-   "compliance": [
     "CIS-AWS-2.1.2",
     "NIST-AC-3"
    ],
@@ -9825,26 +9645,6 @@
    "severity": "low",
    "suppression": null,
    "title": "S3 bucket logging not enabled"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "terraform",
-   "compliance": [
-    "CIS-AWS-2.1.1",
-    "NIST-SC-28"
-   ],
-   "file_path": "terraform/synthetic_all_rules_bad.tf",
-   "line_number": 9,
-   "message": "S3 bucket 'no_versioning' does not have server_side_encryption_configuration. Enable SSE-S3 or SSE-KMS to encrypt data at rest.",
-   "remediation": "",
-   "repository_relative_path": null,
-   "resource": null,
-   "resource_type": null,
-   "rule_id": "TF-SEC-001",
-   "severity": "high",
-   "suppression": null,
-   "title": "S3 bucket without encryption"
   },
   {
    "atlas_techniques": [],
@@ -11429,26 +11229,6 @@
    "attack_techniques": [],
    "category": "terraform",
    "compliance": [
-    "CIS-Azure-3.7",
-    "NIST-AC-3"
-   ],
-   "file_path": "terraform/synthetic_azure_misconfig.tf",
-   "line_number": 11,
-   "message": "Resource 'logs' (azurerm_storage_account) sets allow_blob_public_access = true, which lets anonymous internet clients read blobs in public containers. Public storage is a top cloud breach vector.",
-   "remediation": "Set allow_nested_items_to_be_public = false (allow_blob_public_access on azurerm v3) and keep containers private.",
-   "repository_relative_path": null,
-   "resource": null,
-   "resource_type": null,
-   "rule_id": "TF-SEC-101",
-   "severity": "critical",
-   "suppression": null,
-   "title": "Azure storage allows anonymous public blob access"
-  },
-  {
-   "atlas_techniques": [],
-   "attack_techniques": [],
-   "category": "terraform",
-   "compliance": [
     "CIS-Azure-3.1",
     "NIST-SC-8"
    ],
@@ -12449,6 +12229,223 @@
    "severity": "medium",
    "suppression": null,
    "title": "GCP subnetwork without VPC flow logs"
+  }
+ ],
+ "terraform/three_cloud.tf": [
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "NIST-AC-6",
+    "NIST-CM-7"
+   ],
+   "file_path": "terraform/three_cloud.tf",
+   "line_number": 1,
+   "message": "ECS task definition 'agent' does not specify a non-root user. Running containers as root increases the blast radius of container escapes. Set a non-root user in the container definition.",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-038",
+   "severity": "high",
+   "suppression": null,
+   "title": "ECS task definition running as root"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "NIST-IA-5"
+   ],
+   "file_path": "terraform/three_cloud.tf",
+   "line_number": 3,
+   "message": "Resource 'agent' configures OPENAI_API_KEY through a plain environment value. This is unsafe even for placeholders; the value is intentionally omitted.",
+   "remediation": "Use ECS secrets, Azure secret_name, or Cloud Run value_source.secret_key_ref instead of a plain value.",
+   "repository_relative_path": null,
+   "resource": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-052",
+   "severity": "high",
+   "suppression": null,
+   "title": "Model API key in plain runtime environment"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "NIST-IA-5"
+   ],
+   "file_path": "terraform/three_cloud.tf",
+   "line_number": 11,
+   "message": "Resource 'agent' configures ANTHROPIC_API_KEY through a plain environment value. This is unsafe even for placeholders; the value is intentionally omitted.",
+   "remediation": "Use ECS secrets, Azure secret_name, or Cloud Run value_source.secret_key_ref instead of a plain value.",
+   "repository_relative_path": null,
+   "resource": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-052",
+   "severity": "high",
+   "suppression": null,
+   "title": "Model API key in plain runtime environment"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "NIST-IA-5",
+    "NIST-SC-28"
+   ],
+   "file_path": "terraform/three_cloud.tf",
+   "line_number": 32,
+   "message": "Resource 'agent' (google_cloud_run_v2_service) sets 'secret' to a literal value. The value lands in version control and Terraform state. Pass it from a sensitive variable, random_password, or a secrets manager reference.",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-051",
+   "severity": "critical",
+   "suppression": null,
+   "title": "Hardcoded secret in Terraform resource"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "NIST-IA-5"
+   ],
+   "file_path": "terraform/three_cloud.tf",
+   "line_number": 25,
+   "message": "Resource 'agent' configures GEMINI_API_KEY through a plain environment value. This is unsafe even for placeholders; the value is intentionally omitted.",
+   "remediation": "Use ECS secrets, Azure secret_name, or Cloud Run value_source.secret_key_ref instead of a plain value.",
+   "repository_relative_path": null,
+   "resource": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-052",
+   "severity": "high",
+   "suppression": null,
+   "title": "Model API key in plain runtime environment"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "NIST-AC-6"
+   ],
+   "file_path": "terraform/three_cloud.tf",
+   "line_number": 41,
+   "message": "Project IAM resource 'admin' grants roles/storage.admin at project scope.",
+   "remediation": "Grant only task-specific permissions at the narrowest resource scope.",
+   "repository_relative_path": null,
+   "resource": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-212",
+   "severity": "high",
+   "suppression": null,
+   "title": "Over-broad GCP project role"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "NIST-AC-6"
+   ],
+   "file_path": "terraform/three_cloud.tf",
+   "line_number": 48,
+   "message": "Role assignment 'broad' grants Contributor across a resource group or subscription.",
+   "remediation": "Use a task-specific role at the narrowest resource scope.",
+   "repository_relative_path": null,
+   "resource": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-113",
+   "severity": "high",
+   "suppression": null,
+   "title": "Broad Azure role at resource-group or subscription scope"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-Azure-3.7",
+    "NIST-AC-3"
+   ],
+   "file_path": "terraform/three_cloud.tf",
+   "line_number": 59,
+   "message": "Resource 'training' (azurerm_storage_container) sets container_access_type = \"blob\", which lets anonymous internet clients read blobs in public containers. Public storage is a top cloud breach vector.",
+   "remediation": "Set allow_nested_items_to_be_public = false (allow_blob_public_access on azurerm v3) and keep containers private.",
+   "repository_relative_path": null,
+   "resource": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-101",
+   "severity": "critical",
+   "suppression": null,
+   "title": "Azure storage allows anonymous public blob access"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-AWS-2.1.3",
+    "NIST-CP-9"
+   ],
+   "file_path": "terraform/three_cloud.tf",
+   "line_number": 61,
+   "message": "S3 bucket 'default_encryption' does not have a versioning block. Enable versioning to protect against accidental deletion and enable recovery.",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-021",
+   "severity": "low",
+   "suppression": null,
+   "title": "S3 bucket versioning not enabled"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-AWS-2.1.5",
+    "NIST-AC-3"
+   ],
+   "file_path": "terraform/three_cloud.tf",
+   "line_number": 61,
+   "message": "S3 bucket 'default_encryption' does not have an associated aws_s3_bucket_public_access_block resource in this file. Add a public access block to prevent public bucket exposure.",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-022",
+   "severity": "high",
+   "suppression": null,
+   "title": "S3 bucket public access block missing"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-AWS-3.6",
+    "NIST-AU-2"
+   ],
+   "file_path": "terraform/three_cloud.tf",
+   "line_number": 61,
+   "message": "S3 bucket 'default_encryption' does not have a logging block. Enable server access logging to track requests for security auditing.",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-023",
+   "severity": "low",
+   "suppression": null,
+   "title": "S3 bucket logging not enabled"
   }
  ]
 }

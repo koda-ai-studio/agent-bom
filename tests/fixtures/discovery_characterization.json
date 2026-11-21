@@ -206,11 +206,11 @@
    "",
    "  ✓ <ROOT>/project/Dockerfile: 4 finding(s) (1 high, 1 medium, 2 low)",
    "  ✓ <ROOT>/project/.github/workflows/ci.yml: 2 finding(s) (1 medium, 1 low)",
-   "  ✓ <ROOT>/project/main.tf: 5 finding(s) (1 critical, 2 high, 2 low)",
+   "  ✓ <ROOT>/project/main.tf: 4 finding(s) (1 critical, 1 high, 2 low)",
    "  ✓ <ROOT>/project/deploy.yaml: 9 finding(s) (1 critical, 1 high, 5 medium, 2 low)",
    "",
    "╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-   "│                                                            IaC Misconfigurations — 20 finding(s)                                                             │",
+   "│                                                            IaC Misconfigurations — 19 finding(s)                                                             │",
    "│ ┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ │",
    "│ ┃    Sev     ┃ Rule         ┃ Finding                                                                   ┃ File                                             ┃ │",
    "│ ┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩ │",
@@ -235,9 +235,6 @@
    "│ │ 🔴 CRITIC… │ TF-SEC-002   │ S3 bucket with public ACL                                                 │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' has acl = \"public-read\". Public S3 buckets are a top cloud  │                                                  │ │",
    "│ │            │              │ breach vector. Use private ACL and bucket policies instead.               │                                                  │ │",
-   "│ │  🟠 HIGH   │ TF-SEC-001   │ S3 bucket without encryption                                              │ main.tf:1                                        │ │",
-   "│ │            │              │ S3 bucket 'b' does not have server_side_encryption_configuration. Enable  │                                                  │ │",
-   "│ │            │              │ SSE-S3 or SSE-KMS to encrypt data at rest.                                │                                                  │ │",
    "│ │  🟠 HIGH   │ TF-SEC-022   │ S3 bucket public access block missing                                     │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' does not have an associated                                 │                                                  │ │",
    "│ │            │              │ aws_s3_bucket_public_access_block resource in this file. Add a public     │                                                  │ │",
@@ -280,7 +277,7 @@
    "│ │            │              │ Container 'c' in 'p' has no readinessProbe. Without a readiness probe,    │                                                  │ │",
    "│ │            │              │ traffic is sent to pods before they are ready to serve requests.          │                                                  │ │",
    "│ └────────────┴──────────────┴───────────────────────────────────────────────────────────────────────────┴──────────────────────────────────────────────────┘ │",
-   "╰──────────────────────────────────────────────────────────── 2 critical · 4 high · scan complete ─────────────────────────────────────────────────────────────╯",
+   "╰──────────────────────────────────────────────────────────── 2 critical · 3 high · scan complete ─────────────────────────────────────────────────────────────╯",
    "",
    "Kubernetes workloads declared in manifests",
    "  ✓ 1 workload(s) in 1 namespace(s): 1 image(s) (0 pinned to a running digest), 1 service account(s), 0 RBAC grant(s), 0 referenced secret(s)"
@@ -409,23 +406,6 @@
       "rule_id": "TF-SEC-002",
       "severity": "critical",
       "title": "S3 bucket with public ACL"
-     },
-     {
-      "attack_techniques": [
-       "T1530"
-      ],
-      "category": "terraform",
-      "compliance": [
-       "CIS-AWS-2.1.1",
-       "NIST-SC-28"
-      ],
-      "file_path": "main.tf",
-      "line_number": 1,
-      "message": "S3 bucket 'b' does not have server_side_encryption_configuration. Enable SSE-S3 or SSE-KMS to encrypt data at rest.",
-      "remediation": "",
-      "rule_id": "TF-SEC-001",
-      "severity": "high",
-      "title": "S3 bucket without encryption"
      },
      {
       "attack_techniques": [
@@ -681,7 +661,7 @@
      }
     ],
     "suppressed": [],
-    "total": 20
+    "total": 19
    },
    "project_inventory_data": null,
    "prompt_scan_data": null,
@@ -1019,11 +999,11 @@
    "",
    "  ✓ <ROOT>/project/Dockerfile: 4 finding(s) (1 high, 1 medium, 2 low)",
    "  ✓ <ROOT>/project/.github/workflows/ci.yml: 2 finding(s) (1 medium, 1 low)",
-   "  ✓ <ROOT>/project/main.tf: 5 finding(s) (1 critical, 2 high, 2 low)",
+   "  ✓ <ROOT>/project/main.tf: 4 finding(s) (1 critical, 1 high, 2 low)",
    "  ✓ <ROOT>/project/deploy.yaml: 9 finding(s) (1 critical, 1 high, 5 medium, 2 low)",
    "",
    "╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-   "│                                                            IaC Misconfigurations — 20 finding(s)                                                             │",
+   "│                                                            IaC Misconfigurations — 19 finding(s)                                                             │",
    "│ ┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ │",
    "│ ┃    Sev     ┃ Rule         ┃ Finding                                                                   ┃ File                                             ┃ │",
    "│ ┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩ │",
@@ -1048,9 +1028,6 @@
    "│ │ 🔴 CRITIC… │ TF-SEC-002   │ S3 bucket with public ACL                                                 │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' has acl = \"public-read\". Public S3 buckets are a top cloud  │                                                  │ │",
    "│ │            │              │ breach vector. Use private ACL and bucket policies instead.               │                                                  │ │",
-   "│ │  🟠 HIGH   │ TF-SEC-001   │ S3 bucket without encryption                                              │ main.tf:1                                        │ │",
-   "│ │            │              │ S3 bucket 'b' does not have server_side_encryption_configuration. Enable  │                                                  │ │",
-   "│ │            │              │ SSE-S3 or SSE-KMS to encrypt data at rest.                                │                                                  │ │",
    "│ │  🟠 HIGH   │ TF-SEC-022   │ S3 bucket public access block missing                                     │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' does not have an associated                                 │                                                  │ │",
    "│ │            │              │ aws_s3_bucket_public_access_block resource in this file. Add a public     │                                                  │ │",
@@ -1093,7 +1070,7 @@
    "│ │            │              │ Container 'c' in 'p' has no readinessProbe. Without a readiness probe,    │                                                  │ │",
    "│ │            │              │ traffic is sent to pods before they are ready to serve requests.          │                                                  │ │",
    "│ └────────────┴──────────────┴───────────────────────────────────────────────────────────────────────────┴──────────────────────────────────────────────────┘ │",
-   "╰──────────────────────────────────────────────────────────── 2 critical · 4 high · scan complete ─────────────────────────────────────────────────────────────╯",
+   "╰──────────────────────────────────────────────────────────── 2 critical · 3 high · scan complete ─────────────────────────────────────────────────────────────╯",
    "",
    "Kubernetes workloads declared in manifests",
    "  ✓ 1 workload(s) in 1 namespace(s): 1 image(s) (0 pinned to a running digest), 1 service account(s), 0 RBAC grant(s), 0 referenced secret(s)"
@@ -1222,23 +1199,6 @@
       "rule_id": "TF-SEC-002",
       "severity": "critical",
       "title": "S3 bucket with public ACL"
-     },
-     {
-      "attack_techniques": [
-       "T1530"
-      ],
-      "category": "terraform",
-      "compliance": [
-       "CIS-AWS-2.1.1",
-       "NIST-SC-28"
-      ],
-      "file_path": "main.tf",
-      "line_number": 1,
-      "message": "S3 bucket 'b' does not have server_side_encryption_configuration. Enable SSE-S3 or SSE-KMS to encrypt data at rest.",
-      "remediation": "",
-      "rule_id": "TF-SEC-001",
-      "severity": "high",
-      "title": "S3 bucket without encryption"
      },
      {
       "attack_techniques": [
@@ -1494,7 +1454,7 @@
      }
     ],
     "suppressed": [],
-    "total": 20
+    "total": 19
    },
    "project_inventory_data": null,
    "prompt_scan_data": null,
@@ -2205,7 +2165,7 @@
    "",
    "  ✓ <ROOT>/project/Dockerfile: 4 finding(s) (1 high, 1 medium, 2 low)",
    "  ✓ <ROOT>/project/.github/workflows/ci.yml: 2 finding(s) (1 medium, 1 low)",
-   "  ✓ <ROOT>/project/main.tf: 5 finding(s) (1 critical, 2 high, 2 low)",
+   "  ✓ <ROOT>/project/main.tf: 4 finding(s) (1 critical, 1 high, 2 low)",
    "  ✓ <ROOT>/project/deploy.yaml: 9 finding(s) (1 critical, 1 high, 5 medium, 2 low)",
    "",
    "  Scanner capability",
@@ -2255,7 +2215,7 @@
    "  —  iam-policy         no targets",
    "",
    "╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-   "│                                                            IaC Misconfigurations — 20 finding(s)                                                             │",
+   "│                                                            IaC Misconfigurations — 19 finding(s)                                                             │",
    "│ ┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ │",
    "│ ┃    Sev     ┃ Rule         ┃ Finding                                                                   ┃ File                                             ┃ │",
    "│ ┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩ │",
@@ -2280,9 +2240,6 @@
    "│ │ 🔴 CRITIC… │ TF-SEC-002   │ S3 bucket with public ACL                                                 │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' has acl = \"public-read\". Public S3 buckets are a top cloud  │                                                  │ │",
    "│ │            │              │ breach vector. Use private ACL and bucket policies instead.               │                                                  │ │",
-   "│ │  🟠 HIGH   │ TF-SEC-001   │ S3 bucket without encryption                                              │ main.tf:1                                        │ │",
-   "│ │            │              │ S3 bucket 'b' does not have server_side_encryption_configuration. Enable  │                                                  │ │",
-   "│ │            │              │ SSE-S3 or SSE-KMS to encrypt data at rest.                                │                                                  │ │",
    "│ │  🟠 HIGH   │ TF-SEC-022   │ S3 bucket public access block missing                                     │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' does not have an associated                                 │                                                  │ │",
    "│ │            │              │ aws_s3_bucket_public_access_block resource in this file. Add a public     │                                                  │ │",
@@ -2325,7 +2282,7 @@
    "│ │            │              │ Container 'c' in 'p' has no readinessProbe. Without a readiness probe,    │                                                  │ │",
    "│ │            │              │ traffic is sent to pods before they are ready to serve requests.          │                                                  │ │",
    "│ └────────────┴──────────────┴───────────────────────────────────────────────────────────────────────────┴──────────────────────────────────────────────────┘ │",
-   "╰──────────────────────────────────────────────────────────── 2 critical · 4 high · scan complete ─────────────────────────────────────────────────────────────╯",
+   "╰──────────────────────────────────────────────────────────── 2 critical · 3 high · scan complete ─────────────────────────────────────────────────────────────╯",
    "",
    "Kubernetes workloads declared in manifests",
    "  ✓ 1 workload(s) in 1 namespace(s): 1 image(s) (0 pinned to a running digest), 1 service account(s), 0 RBAC grant(s), 0 referenced secret(s)"
@@ -2540,23 +2497,6 @@
       "rule_id": "TF-SEC-002",
       "severity": "critical",
       "title": "S3 bucket with public ACL"
-     },
-     {
-      "attack_techniques": [
-       "T1530"
-      ],
-      "category": "terraform",
-      "compliance": [
-       "CIS-AWS-2.1.1",
-       "NIST-SC-28"
-      ],
-      "file_path": "main.tf",
-      "line_number": 1,
-      "message": "S3 bucket 'b' does not have server_side_encryption_configuration. Enable SSE-S3 or SSE-KMS to encrypt data at rest.",
-      "remediation": "",
-      "rule_id": "TF-SEC-001",
-      "severity": "high",
-      "title": "S3 bucket without encryption"
      },
      {
       "attack_techniques": [
@@ -2812,7 +2752,7 @@
      }
     ],
     "suppressed": [],
-    "total": 20
+    "total": 19
    },
    "project_inventory_data": {
     "advisory_depth_pct": 0,
@@ -3263,19 +3203,16 @@
    "",
    "Scanning 1 path(s) for IaC misconfigurations...",
    "",
-   "  ✓ <ROOT>/project/main.tf: 5 finding(s) (1 critical, 2 high, 2 low)",
+   "  ✓ <ROOT>/project/main.tf: 4 finding(s) (1 critical, 1 high, 2 low)",
    "",
    "╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮",
-   "│                                                             IaC Misconfigurations — 5 finding(s)                                                             │",
+   "│                                                             IaC Misconfigurations — 4 finding(s)                                                             │",
    "│ ┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ │",
    "│ ┃    Sev     ┃ Rule         ┃ Finding                                                                   ┃ File                                             ┃ │",
    "│ ┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩ │",
    "│ │ 🔴 CRITIC… │ TF-SEC-002   │ S3 bucket with public ACL                                                 │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' has acl = \"public-read\". Public S3 buckets are a top cloud  │                                                  │ │",
    "│ │            │              │ breach vector. Use private ACL and bucket policies instead.               │                                                  │ │",
-   "│ │  🟠 HIGH   │ TF-SEC-001   │ S3 bucket without encryption                                              │ main.tf:1                                        │ │",
-   "│ │            │              │ S3 bucket 'b' does not have server_side_encryption_configuration. Enable  │                                                  │ │",
-   "│ │            │              │ SSE-S3 or SSE-KMS to encrypt data at rest.                                │                                                  │ │",
    "│ │  🟠 HIGH   │ TF-SEC-022   │ S3 bucket public access block missing                                     │ main.tf:1                                        │ │",
    "│ │            │              │ S3 bucket 'b' does not have an associated                                 │                                                  │ │",
    "│ │            │              │ aws_s3_bucket_public_access_block resource in this file. Add a public     │                                                  │ │",
@@ -3287,7 +3224,7 @@
    "│ │            │              │ S3 bucket 'b' does not have a logging block. Enable server access logging │                                                  │ │",
    "│ │            │              │ to track requests for security auditing.                                  │                                                  │ │",
    "│ └────────────┴──────────────┴───────────────────────────────────────────────────────────────────────────┴──────────────────────────────────────────────────┘ │",
-   "╰──────────────────────────────────────────────────────────── 1 critical · 2 high · scan complete ─────────────────────────────────────────────────────────────╯"
+   "╰──────────────────────────────────────────────────────────── 1 critical · 1 high · scan complete ─────────────────────────────────────────────────────────────╯"
   ],
   "context": {
    "_browser_ext_results": null,
@@ -3320,23 +3257,6 @@
       "rule_id": "TF-SEC-002",
       "severity": "critical",
       "title": "S3 bucket with public ACL"
-     },
-     {
-      "attack_techniques": [
-       "T1530"
-      ],
-      "category": "terraform",
-      "compliance": [
-       "CIS-AWS-2.1.1",
-       "NIST-SC-28"
-      ],
-      "file_path": "main.tf",
-      "line_number": 1,
-      "message": "S3 bucket 'b' does not have server_side_encryption_configuration. Enable SSE-S3 or SSE-KMS to encrypt data at rest.",
-      "remediation": "",
-      "rule_id": "TF-SEC-001",
-      "severity": "high",
-      "title": "S3 bucket without encryption"
      },
      {
       "attack_techniques": [
@@ -3393,7 +3313,7 @@
      }
     ],
     "suppressed": [],
-    "total": 5
+    "total": 4
    },
    "project_inventory_data": {
     "advisory_depth_pct": 0,

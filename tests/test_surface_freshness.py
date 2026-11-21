@@ -1580,6 +1580,7 @@ def test_glama_empty_directory_api_needs_exact_schema_contract(monkeypatch, caps
     if mismatch:
         assert payload["status"] == "stale"
         assert "public API exposes 0 tools; expected 1" in payload["error"]
+        assert "Glama public Schema page: input schema differs for tool: scan" in payload["error"]
     else:
         assert payload["status"] == "fresh_degraded"
         assert payload["inventory_source"] == "schema-state"
