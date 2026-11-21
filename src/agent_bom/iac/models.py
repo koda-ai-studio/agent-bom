@@ -75,7 +75,7 @@ class IaCResourceRef:
 class IaCFinding:
     """A single IaC misconfiguration finding."""
 
-    rule_id: str  # e.g. "DOCKER-001", "K8S-001", "TF-SEC-001"
+    rule_id: str  # e.g. "DOCKER-001", "K8S-001", "TF-SEC-002"
     severity: str  # critical, high, medium, low
     title: str  # Short description
     message: str  # Detailed explanation with fix guidance

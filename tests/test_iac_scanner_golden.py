@@ -71,7 +71,7 @@ def test_iac_golden_corpus_fires_every_rule() -> None:
     fired = {f["rule_id"] for findings in expected.values() for f in findings}
     tf_rules = _declared_rule_ids("terraform_security", r'rule_id="(TF-SEC-\d+)"')
     k8s_rules = _declared_rule_ids("kubernetes", r'rule_id="(K8S-\d+)"')
-    assert len(tf_rules) == 73  # 50 AWS (TF-SEC-008 retired, TF-SEC-051 added) + 12 Azure (1xx) + 11 GCP (2xx)
+    assert len(tf_rules) == 75  # retire 001; add runtime key (052), Azure role (113), GCP role (212)
     assert len(k8s_rules) == 34
     assert tf_rules | k8s_rules <= fired
     assert len(expected) >= 140
