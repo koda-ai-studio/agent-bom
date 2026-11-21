@@ -38,8 +38,12 @@ const SPACING = { LR: { rank: 48, lane: 32 }, TB: { rank: 40, lane: 20 } } as co
 
 /** The same backend-layer columns as the estate canvas, with the selected spine retained. */
 function rankColumns(model: AttackPathGraphModel): Map<string, number> {
-  return semanticColumns(model.nodes.map(node => ({ id: node.id, data: { entityType: node.entityType, semanticLayer: node.semanticLayer } })),
+  const columns = semanticColumns(model.nodes.map(node => ({ id: node.id, data: { entityType: node.entityType, semanticLayer: node.semanticLayer } })),
     model.edges.map(edge => ({ ...edge, data: { relationship: edge.relationship } })), model.pathNodeIds);
+  for (let pass = 0; pass < model.nodes.length; pass++) for (const node of model.nodes) {
+    if (node.semanticOwner && columns.has(node.semanticOwner)) columns.set(node.id, columns.get(node.semanticOwner)!);
+  }
+  return columns;
 }
 
 /**
@@ -58,7 +62,7 @@ function assignLanes(model: AttackPathGraphModel, columns: Map<string, number>):
   }
   const byColumn = new Map<number, string[]>();
   for (const node of model.nodes) {
-    if (lanes.has(node.id)) continue;
+    if (lanes.has(node.id) || node.semanticOwner) continue;
     const column = columns.get(node.id)!;
     byColumn.set(column, [...(byColumn.get(column) ?? []), node.id]);
   }
@@ -71,6 +75,13 @@ function assignLanes(model: AttackPathGraphModel, columns: Map<string, number>):
     keyed.sort((a, b) => a.key - b.key || a.id.localeCompare(b.id));
     keyed.forEach((item, index) => lanes.set(item.id, (Math.floor(index / 2) + 1) * (index % 2 ? -1 : 1)));
   }
+  for (let pass = 0; pass < model.nodes.length; pass++) for (const node of model.nodes) {
+    if (!node.semanticOwner || lanes.has(node.id) || !lanes.has(node.semanticOwner)) continue;
+    let lane = lanes.get(node.semanticOwner)! + 1;
+    while (model.nodes.some(other => columns.get(other.id) === columns.get(node.id) && lanes.get(other.id) === lane)) lane++;
+    lanes.set(node.id, lane);
+  }
+  for (const node of model.nodes) if (!lanes.has(node.id)) lanes.set(node.id, 1);
   return lanes;
 }
 

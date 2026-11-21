@@ -90,3 +90,10 @@ describe("interactive React Flow surface contract", () => {
     expect(source(path)).toContain('localMode: session?.recommended_ui_mode === "no_auth"');
   });
 });
+
+ it("fits proposed scenarios after measured layout settles with one camera owner", () => {
+ const content = source("components/graph-flow-canvas.tsx");
+ expect(content).toContain("fitView={false}");
+ expect(content).toContain("enabled={!layoutPending && !motion.animating}");
+ expect(content).toContain("${selectedScenarioId ??");
+ });

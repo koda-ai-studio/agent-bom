@@ -2,7 +2,7 @@ import type { Edge, Node } from "@xyflow/react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { semanticGraphLayout, SEMANTIC_COLUMN_GAP, SEMANTIC_ROW_GAP } from "@/lib/graph-semantic-layout";
 
-export const MCP_FLOW_FOOTPRINT = { width: 240, height: 180, cardMaxHeight: 180, column: SEMANTIC_COLUMN_GAP, row: SEMANTIC_ROW_GAP };
+export const MCP_FLOW_FOOTPRINT = { width: 240, height: 216, cardMaxHeight: 216, column: SEMANTIC_COLUMN_GAP, row: SEMANTIC_ROW_GAP };
 export const mcpEvidenceFlow = semanticGraphLayout;
 
 /** Recorded upstream evidence for a finding, including reverse `affects` edges.

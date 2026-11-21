@@ -1,3 +1,5 @@
+import { workloadImageContext } from "@/lib/graph-workload-image";
+import { internetExposure, INTERNET_ANCHOR_ID } from "@/lib/graph-internet-context";
 import type { GraphNodeAggregate } from "@/lib/graph-node-aggregates";
 import { graphEdgeEvidence } from "@/lib/graph-edge-evidence";
 import type { AttackPath, UnifiedEdge, UnifiedGraphData, UnifiedNode } from "@/lib/graph-schema";
@@ -24,6 +26,10 @@ export type PathGraphFinding = { id: string; label: string; severity: string };
 export type PathGraphNode = {
   id: string;
   kind: "entity" | "group";
+  displayOnly?: boolean;
+  semanticOwner?: string | undefined;
+  imageSubrow?: boolean | undefined;
+  evidenceSources?: string[] | undefined;
   role: "entry" | "path" | "target" | "branch";
   label: string;
   typeLabel: string;
@@ -202,9 +208,32 @@ export function buildAttackPathGraphModel(
   const selectedHops = new Set(pathNodeIds);
   const draft: Draft = { nodes: new Set(pathNodeIds), edges: new Map(), onPath: new Set() };
   addPathEdges(draft, pathNodeIds, path, graph.edges, true);
+  const images = workloadImageContext(graph.nodes.map(node => ({ id: node.id, data: { entityType: node.entity_type } })),
+    graph.edges.map(edge => ({ source: edge.source, target: edge.target, data: { relationship: edge.relationship, evidence: edge.evidence } })));
+  const contextOwners = new Map<string, string>();
+  for (const edge of graph.edges) {
+    if (edge.relationship !== "runs" || !selectedHops.has(edge.source) || nodes.get(edge.source)?.entity_type !== "container"
+      || nodes.get(edge.target)?.entity_type !== "container") continue;
+    draft.nodes.add(edge.target); draft.edges.set(edge.id, edge);
+    if (!selectedHops.has(edge.target) && images.owners.get(edge.target) === edge.source) contextOwners.set(edge.target, edge.source);
+  }
+  for (const edge of graph.edges) if (edge.relationship === "contains" && images.owners.has(edge.source)
+    && draft.nodes.has(edge.source) && nodes.get(edge.target)?.semantic_layer === "package" && draft.nodes.size < 12) {
+    draft.nodes.add(edge.target); draft.edges.set(edge.id, edge);
+    if (!selectedHops.has(edge.target)) contextOwners.set(edge.target, edge.source);
+  }
+
 
   const connected = connectedPaths(graph, path, selectedHops, nodes);
-  const drawnPaths = connected.slice(0, MAX_CONNECTED_PATHS);
+  const drawnPaths: typeof connected = [];
+  const visibleIds = new Set(draft.nodes);
+  for (const candidate of connected) {
+    if (drawnPaths.length >= MAX_CONNECTED_PATHS) break;
+    const ids = new Set([...visibleIds, ...candidate.hops]);
+    if (ids.size > 12) continue;
+    drawnPaths.push(candidate);
+    for (const id of candidate.hops) visibleIds.add(id);
+  }
   for (const { other, hops } of drawnPaths) {
     hops.forEach(id => draft.nodes.add(id));
     addPathEdges(draft, hops, other, graph.edges, false);
@@ -252,6 +281,7 @@ export function buildAttackPathGraphModel(
     return {
       id, kind: "entity", label: node.entity_type === "agent" ? formatInventoryAgentLabel(node.label || id) : node.label || id, entityType: node.entity_type, dimensions: node.dimensions, semanticLayer: node.semantic_layer, typeLabel: assetTypeLabel(node),
       role: index < 0 ? "branch" : index === 0 && lastIndex > 0 ? "entry" : index === lastIndex ? "target" : "path",
+      semanticOwner: contextOwners.get(id), imageSubrow: contextOwners.has(id) && images.owners.has(id), evidenceSources: images.sources.get(id),
       aggregate: options.nodeAggregates?.get(id)?.aggregate,
       isKev: FINDING_ENTITY_TYPES.has(node.entity_type) && node.attributes?.is_kev === true,
       findings: findingsFor(id, graph, nodes, drawnFindings),
@@ -295,6 +325,18 @@ export function buildAttackPathGraphModel(
       ...base, evidence: weakest,
       relationshipLabel: existing && existing.relationship !== edge.relationship ? "Recorded relationships" : base.relationshipLabel,
     });
+  }
+  if (internetExposure(nodes.get(pathNodeIds[0] ?? "")?.attributes) === true) {
+    let id = INTERNET_ANCHOR_ID;
+    while (nodes.has(id)) id += ":context";
+    const sourceId = pathNodeIds[0]!;
+    const source = entityNodes.find(node => node.id === sourceId);
+    if (source?.role === "entry") source.role = "path";
+    entityNodes.unshift({ id, kind: "entity", displayOnly: true, role: "entry", label: "Internet",
+      typeLabel: "Exposure context", entityType: "external_boundary", semanticLayer: "user", findings: [], markers: [] });
+    edges.unshift({ id: `${id}:${sourceId}`, source: id, target: sourceId, relationship: "exposed_to",
+      relationshipLabel: "Internet-exposed", evidence: "inferred", onPath: false, bidirectional: false });
+    pathNodeIds.unshift(id);
   }
   return {
     nodes: [...entityNodes, ...collapsed],

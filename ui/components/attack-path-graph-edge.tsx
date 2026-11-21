@@ -1,17 +1,17 @@
 "use client";
 
-import { BaseEdge, EdgeLabelRenderer, Position, useStore, type Edge, type EdgeProps } from "@xyflow/react";
+import { BaseEdge, EdgeLabelRenderer, useStore, type Edge, type EdgeProps } from "@xyflow/react";
 
 import type { AttackPathDirection } from "@/lib/attack-path-graph-layout";
 import type { EdgeEvidenceStyle, PathGraphEdge } from "@/lib/attack-path-graph-model";
-import type { Point } from "@/lib/attack-path-graph-routes";
+import { relationshipLaneFor } from "@/lib/relationship-lanes";
 import { relationshipPath } from "@/lib/relationship-routing";
 import { RELATIONSHIP_COLOR_MAP } from "@/lib/graph-schema";
 import type { HopTrace } from "@/lib/attack-path-trace";
 
 /** One hop of the single entry-to-target trace drawn when a path is selected; absent under reduced motion. */
 export type EdgeTrace = HopTrace & { index: number; key: string };
-export type AttackPathEdgeData = { edge: PathGraphEdge; active: boolean; markerPrefix: string; direction: AttackPathDirection; route: Point[]; trace?: EdgeTrace | null };
+export type AttackPathEdgeData = { edge: PathGraphEdge; active: boolean; markerPrefix: string; direction: AttackPathDirection; trace?: EdgeTrace | null };
 export type AttackPathFlowEdge = Edge<AttackPathEdgeData, "attackPathEdge">;
 
 export const LINE_STYLE: Record<EdgeEvidenceStyle, { name: "solid" | "dashed" | "dotted"; dash?: string }> = {
@@ -28,10 +28,12 @@ export function edgeStroke(onPath: boolean): string {
   return (onPath ? PATH_STROKE.selected : PATH_STROKE.connected).color;
 }
 
-export function AttackPathGraphEdge({ id, data }: EdgeProps<AttackPathFlowEdge>) {
+export function AttackPathGraphEdge(props: EdgeProps<AttackPathFlowEdge>) {
+  const { id, data } = props;
+  const edges = useStore(state => state.edges);
   const nodes = useStore(state => state.nodes);
   if (!data) return null;
-  const { edge, active, markerPrefix, direction, route, trace } = data;
+  const { edge, active, markerPrefix, direction, trace } = data;
   const style = LINE_STYLE[edge.evidence];
   const stroke = edge.onPath ? PATH_STROKE.selected : PATH_STROKE.connected;
   const kind = edge.onPath ? "path" : "branch";
@@ -39,13 +41,10 @@ export function AttackPathGraphEdge({ id, data }: EdgeProps<AttackPathFlowEdge>)
   const ends = edge.bidirectional
     ? { markerStart: `url(#${markerPrefix}-dot-${kind})`, markerEnd: `url(#${markerPrefix}-dot-${kind})` }
     : { markerEnd: `url(#${markerPrefix}-${kind})` };
-  const first = route[0]!, last = route.at(-1)!;
-  const backwards = first.x > last.x;
-  const [path, labelX, labelY] = relationshipPath({ source: edge.source, target: edge.target,
-    sourceX: first.x, sourceY: first.y, targetX: last.x, targetY: last.y,
-    sourcePosition: backwards ? Position.Left : Position.Right, targetPosition: backwards ? Position.Right : Position.Left,
-  }, nodes.filter(node => !node.hidden).map(node => ({ id: node.id, ...node.position,
-    width: node.measured?.width ?? node.width ?? 152, height: node.measured?.height ?? node.height ?? 136 })));
+  const lane = relationshipLaneFor(id, edges, nodeId => nodes.find(node => node.id === nodeId)?.position.y,
+    nodeId => nodes.find(node => node.id === nodeId)?.position.x);
+  const [path, labelX, labelY] = relationshipPath(props, nodes.filter(node => !node.hidden).map(node => ({ id: node.id, ...node.position,
+    width: node.measured?.width ?? node.width ?? 152, height: node.measured?.height ?? node.height ?? 136 })), lane);
   const label = { x: labelX, y: labelY };
   // A selected-path hop names its relationship on the line at all times: above it on a row (lines that turn
   // into branch rows leave below it) and beside it on a phone column. A branch names its own on hover or focus.
@@ -64,7 +63,7 @@ export function AttackPathGraphEdge({ id, data }: EdgeProps<AttackPathFlowEdge>)
       className="attack-path-trace" style={{ animationDuration: `${trace.duration}ms`, animationDelay: `${trace.delay}ms` }} />}
     {(active || edge.onPath) && <EdgeName active={active} transform={transform}
       text={`${edge.relationshipLabel}${active && edge.bidirectional ? " · two-way" : ""}`}
-      room={direction === "TB" || active ? 0 : Math.abs(route.at(-1)!.x - route[0]!.x) - 12} />}
+      room={direction === "TB" || active ? 0 : Math.abs(props.targetX - props.sourceX) - 12} />}
   </>;
 }
 

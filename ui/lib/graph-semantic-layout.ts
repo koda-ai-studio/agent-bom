@@ -1,3 +1,4 @@
+import { assetKindLabel, assetServiceLabel } from "@/lib/asset-icon-registry";
 import type { Edge, Node } from "@xyflow/react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { semanticColumns, semanticLayer } from "@/lib/graph-semantic-columns";
@@ -29,6 +30,7 @@ function contextOwners(nodes: Node<LineageNodeData>[], edges: Edge[], primary: R
 export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[], selectedPath?: readonly string[]) {
   ({ nodes, edges } = withInternetAnchor(nodes, edges));
   const visible = nodes.filter(node => !node.hidden);
+  const byId = new Map(nodes.map(node => [node.id, node]));
   let primary = selectedPath ?? visible.filter(node => typeof node.data.semanticPathIndex === "number")
     .sort((a, b) => a.data.semanticPathIndex! - b.data.semanticPathIndex!).map(node => node.id);
   if (primary.length && primary[0] !== INTERNET_ANCHOR_ID
@@ -81,16 +83,23 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
   const pathPairs = new Set(primary.slice(1).map((id, index) => `${primary[index]}\u0000${id}`));
   return {
     nodes: nodes.map(node => ({ ...node, position: positions.get(node.id) ?? node.position,
-      style: { ...node.style, width: 240, minHeight: 180, "--graph-node-card-width": "240px" },
-      data: { ...node.data, evidenceFlow: true, semanticLayout: true, semanticOwner: owners.get(node.id), readingOwner: semanticLayer(node) === "finding" ? owners.get(node.id) : undefined,
+      style: { ...node.style, width: 240, minHeight: 216, "--graph-node-card-width": "240px" },
+      data: { ...node.data, evidenceFlow: true, semanticLayout: true, renderBand: "detail" as const,
+        readingLabel: node.data.readingLabel ?? assetServiceLabel({ nodeType: node.data.nodeType, entityType: node.data.entityType, attributes: node.data.attributes, provider: node.data.dimensions?.cloud_provider }) ?? assetKindLabel({ nodeType: node.data.nodeType, entityType: node.data.entityType, attributes: node.data.attributes }),
+        readingFinding: semanticLayer(node) === "finding",
+        evidenceFlowContext: node.data.evidenceFlowContext ?? (semanticLayer(node) === "mcp_server" ? (() => {
+          const clients = [...new Set(edges.filter(edge => edge.target === node.id && edge.data?.relationship === "uses"
+            && byId.get(edge.source)?.data.semanticLayer === "orchestration").map(edge => byId.get(edge.source)!.data.label))].sort();
+          return clients.length ? `Client: ${clients.join(", ")}` : "Client link not recorded";
+        })() : undefined), semanticOwner: owners.get(node.id), readingOwner: semanticLayer(node) === "finding" ? owners.get(node.id) : undefined,
         imageSubrow: images.owners.has(node.id) && !onPath.has(node.id), evidenceSources: images.sources.get(node.id),
         semanticLayerIssue: semanticLayer(node) === null ? "Semantic layer unavailable" : undefined,
         highlighted: node.data.highlighted || onPath.has(node.id) } })),
     edges: edges.map((edge): Edge => {
       const from = positions.get(edge.source), to = positions.get(edge.target);
       const reverse = from && to && from.x > to.x;
-      return { ...edge, type: "relationship", ...(reverse ? { sourceHandle: "context", targetHandle: "context" } : {}),
-        data: { ...edge.data, semanticLayout: true, individualLabel: true, directionEmphasis: true,
+      return { ...edge, type: "relationship", sourceHandle: reverse ? "context" : null, targetHandle: reverse ? "context" : null,
+        data: { ...edge.data, semanticLayout: true, individualLabel: true, directionEmphasis: true, quietLabel: true,
           pathEmphasis: pathPairs.has(`${edge.source}\u0000${edge.target}`) || edge.data?.pathEmphasis === true } };
     }),
   };

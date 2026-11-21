@@ -315,7 +315,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
 
   const aggregated = useMemo(
     () => {
-      if (rollupNavigationActive) {
+      if (rollupNavigationActive || flow.nodes.every(node => Boolean(node.data.semanticLayer))) {
         return {
           nodes: flow.nodes,
           edges: flow.edges,
@@ -398,7 +398,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
   const compactGroupedTopology = aggregated.clusters.size > 0 && aggregated.nodes.length <= 6;
   const compactMobileTopology = narrowViewport && !selectedAttackPath &&
     !rollupNavigationActive && compactGroupedTopology;
-  const graphLayoutKind = (compactMobileTopology && !investigationMode || previewActive && narrowViewport) ? "dagre" : selectedAttackPath || selectedScenarioId || rollupNavigationActive || investigationMode || previewActive ? "dagre-lr" : "asset-hierarchy";
+  const graphLayoutKind = "asset-hierarchy";
   // "Show more" reads against the root's recorded degree, when the detail read was complete.
   const rootConnections = useMemo(() => {
     const detail = selectedNodeDetail?.response;
@@ -500,8 +500,8 @@ export function useGraphCanvasModel(page: GraphPageData) {
     },
     layoutInput.layoutRequired && !rollupDecisionActive && !rollupCanvasPending && !rollupCanvasFailed,
   );
-  const layoutEdges = useMemo(() => restoreInvestigationEdges(layoutInput.edges, rankedLayoutEdges, graphLayoutKind === "dagre"),
-    [layoutInput.edges, rankedLayoutEdges, graphLayoutKind]);
+  const layoutEdges = useMemo(() => restoreInvestigationEdges(layoutInput.edges, rankedLayoutEdges, false),
+    [layoutInput.edges, rankedLayoutEdges]);
   const selectedEvidenceHopCount = selectedAttackPath
     ? Math.max(0, selectedAttackPath.hops.length - 1)
     : 0;
@@ -712,7 +712,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
     scope: presentationScope,
     // Keep the saved-layout identity stable across the responsive default.
     // Explicit personal positions and viewport remain authoritative on resize.
-    layout: displayNodes.some(node => node.data.evidenceFlow) ? "mcp-evidence-flow-v2" : graphLayoutKind === "asset-hierarchy" ? "evidence-flow-v1" : "dagre-lr",
+    layout: "backend-semantic-layers",
     enabled: !captureMode && !authLoading && Boolean(session),
     ownerActive: Boolean(session),
     localMode: session?.recommended_ui_mode === "no_auth",

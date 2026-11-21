@@ -1,7 +1,7 @@
 "use client";
 
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
-import { Bug, Layers } from "lucide-react";
+import { Bug, Layers, Globe } from "lucide-react";
 import { Fragment, type CSSProperties } from "react";
 
 import { entityIcon } from "@/lib/entity-icons";
@@ -78,14 +78,17 @@ function Markers({ markers }: { markers: NodeContextMarker[] }) {
   );
 }
 
-function Handles({ vertical }: { vertical: boolean }) {
+function Handles({ vertical, small = false }: { vertical: boolean; small?: boolean }) {
+  const inset = GLYPH_INSET_X + (small ? 8 : 0);
   const hidden = "!h-1 !w-1 !min-h-0 !min-w-0 !border-0 !bg-transparent";
   return vertical ? <>
     <Handle type="target" position={Position.Top} className={hidden} />
     <Handle type="source" position={Position.Bottom} className={hidden} />
   </> : <>
-    <Handle type="target" position={Position.Left} className={hidden} style={{ top: GLYPH_CENTER_Y, left: GLYPH_INSET_X }} />
-    <Handle type="source" position={Position.Right} className={hidden} style={{ top: GLYPH_CENTER_Y, right: GLYPH_INSET_X }} />
+    <Handle id="context" type="source" position={Position.Left} className={hidden} style={{ top: GLYPH_CENTER_Y, left: inset }} />
+    <Handle id="context" type="target" position={Position.Right} className={hidden} style={{ top: GLYPH_CENTER_Y, right: inset }} />
+    <Handle type="target" position={Position.Left} className={hidden} style={{ top: GLYPH_CENTER_Y, left: inset }} />
+    <Handle type="source" position={Position.Right} className={hidden} style={{ top: GLYPH_CENTER_Y, right: inset }} />
   </>;
 }
 
@@ -93,15 +96,15 @@ export function AttackPathGraphNode({ data }: NodeProps<AttackPathFlowNode>) {
   const { node, vertical } = data;
   if (node.kind === "group") return <GroupNode data={data} />;
   const lineageType = lineageNodeTypeForEntity(node.entityType);
-  const Icon = entityIcon(lineageType ?? undefined);
+  const Icon = node.displayOnly ? Globe : entityIcon(lineageType ?? undefined);
   const tint = lineageType ? NODE_COLOR_MAP[lineageType] : undefined;
   const spine = node.role !== "branch";
   const caption = ROLE_CAPTION[node.role];
   return (
     <div data-testid={`attack-path-node-${node.id}`} data-role={node.role} title={`${node.label} · ${node.typeLabel}`}
       style={BOX} className="pointer-events-none flex flex-col items-center text-center">
-      <Handles vertical={vertical} />
-      <div data-node-glyph className={`pointer-events-auto relative mt-1.5 flex h-14 w-14 items-center justify-center rounded-full bg-surface-elevated text-foreground ${spine ? "border-[2.5px] border-[color:var(--accent)]" : "border border-outline"}`}
+      <Handles vertical={vertical} small={Boolean(node.imageSubrow)} />
+      <div data-node-glyph className={`pointer-events-auto relative flex ${node.imageSubrow ? "mt-3.5 h-10 w-10 mb-2" : "mt-1.5 h-14 w-14"} items-center justify-center rounded-full bg-surface-elevated text-foreground ${spine ? "border-[2.5px] border-[color:var(--accent)]" : "border border-outline"}`}
         style={tint ? { backgroundImage: `linear-gradient(color-mix(in srgb, ${tint} ${spine ? 24 : 12}%, transparent), color-mix(in srgb, ${tint} ${spine ? 24 : 12}%, transparent))` } : undefined}>
         <Icon className="h-7 w-7" aria-hidden="true" />
         <Markers markers={node.markers} />
@@ -109,6 +112,7 @@ export function AttackPathGraphNode({ data }: NodeProps<AttackPathFlowNode>) {
         <FindingBadge node={node} onOpen={data.onOpenFindings} />
       </div>
       {!!node.aggregate?.exposed_count && <span className="text-xs text-ink-secondary">{node.aggregate.exposed_count} exposed entities</span>}
+      {node.evidenceSources?.length ? <span className="flex flex-wrap justify-center gap-1 text-xs text-ink-secondary">{node.evidenceSources.map(source => <span key={source} className="rounded border border-outline px-1">{source}</span>)}</span> : null}
       {/* Below the glyph no line ever runs, so the whole name block takes clicks. */}
       <div data-node-label className="pointer-events-auto w-full flex-1 pt-2">
       <NodeName label={node.label} className={`${NAME} ${spine ? "text-foreground" : "text-ink-secondary"}`} />
@@ -125,7 +129,7 @@ function GroupNode({ data }: { data: AttackPathNodeData }) {
   return (
     <div data-testid={`attack-path-node-${node.id}`} data-role="group" title={`${node.label} share this connection`}
       style={BOX} className="pointer-events-none flex flex-col items-center text-center">
-      <Handles vertical={vertical} />
+      <Handles vertical={vertical} small={Boolean(node.imageSubrow)} />
       <div data-node-glyph className="pointer-events-auto relative mt-1.5 flex h-14 w-14 items-center justify-center rounded-full border border-dashed border-outline-strong bg-surface-elevated text-foreground">
         <Layers className="h-5 w-5" aria-hidden="true" />
         <FindingBadge node={node} onOpen={data.onOpenFindings} />

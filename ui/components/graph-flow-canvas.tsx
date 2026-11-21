@@ -21,7 +21,7 @@ import type { useInvestigationFlowView } from "@/hooks/use-investigation-flow-vi
 export function GraphFlowCanvas({ page, flowView }: { page: GraphPageModel; flowView: ReturnType<typeof useInvestigationFlowView> }) {
   const {
     graphViewport, investigationContext, narrowViewport, compactInvestigationTopology, selectedScenarioId, captureMode, presentation, scenarioExpanded,
-    manualCamera, selectedAttackPath, viewportOptions, initialViewportOptions, displayNodes, displayEdges, rollupNavigationActive, nodesInitialized, inspectRelationship,
+    manualCamera, selectedAttackPath, displayNodes, displayEdges, rollupNavigationActive, nodesInitialized, inspectRelationship,
     onNodeClick, onNodeMouseEnter, onNodeMouseLeave, fitGeneration, setSelectedRelationship, setSelectedNode, setSelectedNodeId, setHoveredNodeId, setPinnedFocusId,
     setReachabilitySummary, setReachabilityError, setBlastRadius, setBlastError, connectionPreview, previewExpanded, graphNavigationMount, selectedNodeId, layoutPending,
     compactLayoutKey, investigationMode, selectedNode, selectedRelationship, setCanvasLayoutAspect, fitVisible, minimapExpanded, showMiniMap, canvasLens,
@@ -45,8 +45,7 @@ export function GraphFlowCanvas({ page, flowView }: { page: GraphPageModel; flow
               // Ordinary views have one camera owner: GraphCanvasAutoFit.
               // A concurrent animated initial fit can resize LOD cards after
               // the measured fit has settled, leaving the root offscreen.
-              fitView={Boolean(selectedScenarioId) && !manualCamera && !presentation.hasSavedState && !presentation.restoredSavedState}
-              fitViewOptions={manualCamera ? viewportOptions : initialViewportOptions}
+              fitView={false}
               defaultViewport={presentation.restoredViewport ?? presentation.viewport}
               minZoom={0.05}
               maxZoom={2.5}
@@ -109,8 +108,8 @@ export function GraphFlowCanvas({ page, flowView }: { page: GraphPageModel; flow
                 navigationIds={selectedAttackPath?.hops ?? flowView.navigationIds}
                 primaryIds={selectedAttackPath?.hops ?? (selectedNodeId ? undefined : flowView.flow.primaryPath)}
                 primaryZoom={flowView.primaryZoom}
-                enabled={!layoutPending && !motion.animating && !selectedScenarioId}
-                layoutKey={`${compactLayoutKey}:${flowView.kind}:${disclosed.key}`}
+                enabled={!layoutPending && !motion.animating}
+                layoutKey={`${compactLayoutKey}:${flowView.kind}:${disclosed.key}:${selectedScenarioId ?? "estate"}`}
                 anchorId={selectedNodeId ?? investigationMode?.rootId ?? flowView.anchorId}
                 inspector={Boolean(selectedNode || selectedRelationship) && !narrowViewport}
                 preserveViewport={manualCamera || flowView.kind === "auto" && presentation.restoredSavedState}

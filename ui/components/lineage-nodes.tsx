@@ -243,7 +243,7 @@ function NodeCard({
     ? undefined : subtitle;
   return (
     <div title={[graphNodeTooltip(data), data.evidenceFlowContext, ring?.description, ...(data.readingConnections ?? []).map(summary => `${summary.relationship === "hosts" ? "Hosts" : "Contains"} ${summary.label} in this view`)].filter(Boolean).join(" · ")} data-graph-entity="true" data-evidence-flow={data.evidenceFlow || undefined} data-finding-owner={data.readingOwner} data-rollup-container={isRollupContainer ? "true" : undefined}
-      style={{ width: "var(--graph-node-card-width, 220px)" }}
+      style={{ width: "var(--graph-node-card-width, 220px)", ...(data.semanticLayout ? { paddingTop: 72 } : {}) }}
       className={`relative flex w-[220px] flex-col items-center text-center transition-opacity ${data.dimmed ? "opacity-25" : ""}`}>
       {data.semanticLayout && <GraphAttributeBadges data={data} />}
       <div ref={glyphRef} data-image-subrow={data.imageSubrow || undefined} data-severity-ring={severity} style={{ width: data.imageSubrow ? 40 : "var(--graph-node-glyph-size, 72px)", height: data.imageSubrow ? 40 : "var(--graph-node-glyph-size, 72px)" }} className={`graph-entity-glyph relative mb-3 flex h-[72px] w-[72px] items-center justify-center rounded-full border-2 shadow-sm ${

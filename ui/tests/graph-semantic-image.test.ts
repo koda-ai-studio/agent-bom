@@ -60,3 +60,21 @@ it("keeps image packages in the owner's final column after spine placement", () 
   expect(x("package")).toBe(x("image"));
   expect(x("image")).toBe(x("workload"));
 });
+
+import { buildAttackPathGraphModel } from "@/lib/attack-path-graph-model";
+import { layoutAttackPathGraph } from "@/lib/attack-path-graph-layout";
+it("retains the correlated image below a selected workload with its source chips", () => {
+  const { graph, selected } = branchingFixture();
+  const workload = { ...graph.nodes[0]!, id: "workload", entity_type: "container", semantic_layer: "app" };
+  const image = { ...workload, id: "image", label: "sha256:image" };
+  const target = { ...graph.nodes[0]!, id: "asset", entity_type: "data_store", semantic_layer: "asset" };
+  const links = [{ ...graph.edges[0]!, id: "runs", source: "workload", target: "image", relationship: "runs", evidence: runs.data!.evidence as Record<string, unknown> },
+    { ...graph.edges[0]!, id: "access", source: "workload", target: "asset", relationship: "can_access" }];
+  const model = buildAttackPathGraphModel({ ...graph, nodes: [workload, image, target], edges: links, attack_paths: [] }, { ...selected, hops: ["workload", "asset"], edges: ["access"] });
+  const chip = model.nodes.find(node => node.id === "image");
+  expect(chip?.imageSubrow).toBe(true);
+  expect(chip?.evidenceSources).toEqual(["sbom"]);
+  const positions = layoutAttackPathGraph(model, "LR").positions;
+  expect(positions.get("image")!.x).toBe(positions.get("workload")!.x);
+  expect(positions.get("image")!.y).toBeGreaterThan(positions.get("workload")!.y);
+});

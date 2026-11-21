@@ -1,9 +1,6 @@
-import type { Edge, Node } from "@xyflow/react";
-import type { LineageNodeData } from "@/components/lineage-nodes";
-
 /** Render only the backend's typed runs link. No digest matching or identity
  * correlation is performed in the browser. Shared images remain shared nodes. */
-export function workloadImageContext(nodes: Node<LineageNodeData>[], edges: Edge[]) {
+export function workloadImageContext(nodes: readonly { id: string; data: { entityType?: string | undefined } }[], edges: readonly { source: string; target: string; hidden?: boolean | undefined; data?: Record<string, unknown> | undefined }[]) {
   const byId = new Map(nodes.map(node => [node.id, node]));
   const parents = new Map<string, Set<string>>(), sources = new Map<string, Set<string>>();
   const addSources = (id: string, values: unknown) => {

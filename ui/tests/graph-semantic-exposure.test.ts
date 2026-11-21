@@ -33,3 +33,15 @@ it("starts a selected exposed spine at the display anchor without duplicating it
   expect(repeated.nodes).toHaveLength(3);
   expect(repeated.edges).toHaveLength(2);
 });
+
+import { buildAttackPathGraphModel } from "@/lib/attack-path-graph-model";
+import { branchingFixture } from "./fixtures/attack-path-graph-fixture";
+it("shows a display-only Internet anchor on a selected exposed path", () => {
+  const { graph, selected } = branchingFixture();
+  const source = graph.nodes.find(node => node.id === selected.hops[0])!;
+  source.attributes = { ...source.attributes, risk_context: { internet_exposed: true } };
+  const model = buildAttackPathGraphModel(graph, selected);
+  expect(model.nodes.find(node => node.label === "Internet")?.displayOnly).toBe(true);
+  expect(model.edges.find(edge => edge.source === "display:internet")?.onPath).toBe(false);
+  expect(model.pathNodeIds[0]).toBe("display:internet");
+});

@@ -13,7 +13,7 @@ import { useElementWidth } from "@/hooks/use-element-width";
 import { activateGraphNodeFromKeyboard } from "@/lib/graph-keyboard-selection";
 import { useWheelZoomGate, WheelZoomHint } from "@/hooks/use-wheel-zoom-gate";
 import { NARROW_MIN_ZOOM, PATH_DESKTOP_MIN_ZOOM, attackPathCanvasHeight, attackPathCanvasWidth, layoutAttackPathGraph, type AttackPathLayout } from "@/lib/attack-path-graph-layout";
-import { GLYPH_CENTER_Y, glyphInsetX, routeAttackPathEdges } from "@/lib/attack-path-graph-routes";
+import { GLYPH_CENTER_Y, glyphInsetX } from "@/lib/attack-path-graph-routes";
 import { attackPathViewport } from "@/lib/attack-path-graph-viewport";
 import { pathTraceTiming } from "@/lib/attack-path-trace";
 import { prefersReducedMotion } from "@/lib/reduced-motion";
@@ -90,29 +90,32 @@ function traceByEdge(model: AttackPathGraphModel, key: string): Map<string, Edge
 function useFlowElements(model: AttackPathGraphModel, narrow: boolean, activeEdge: string | null, markerPrefix: string,
   handlers: { onOpenFindings: AttackPathGraphProps["onOpenFindings"]; onExpandGroup: (id: string) => void }, traceKey: string | null) {
   const layout = useMemo(() => layoutAttackPathGraph(model, narrow ? "TB" : "LR"), [model, narrow]);
-  const routes = useMemo(() => routeAttackPathEdges(model, layout), [layout, model]);
-  const inset = glyphInsetX(layout.nodeWidth);
   const nodes = useMemo<AttackPathFlowNode[]>(() => model.nodes.map(node => {
     const vertical = layout.direction === "TB";
+    const inset = glyphInsetX(layout.nodeWidth) + (node.imageSubrow ? 8 : 0);
     const handles = vertical
       ? [{ type: "target" as const, position: Position.Top, x: layout.nodeWidth / 2, y: 0, width: 1, height: 1, id: null },
         { type: "source" as const, position: Position.Bottom, x: layout.nodeWidth / 2, y: layout.nodeHeight, width: 1, height: 1, id: null }]
       : [{ type: "target" as const, position: Position.Left, x: inset, y: GLYPH_CENTER_Y, width: 1, height: 1, id: null },
-        { type: "source" as const, position: Position.Right, x: layout.nodeWidth - inset, y: GLYPH_CENTER_Y, width: 1, height: 1, id: null }];
+        { type: "source" as const, position: Position.Right, x: layout.nodeWidth - inset, y: GLYPH_CENTER_Y, width: 1, height: 1, id: null },
+        { type: "source" as const, position: Position.Left, x: inset, y: GLYPH_CENTER_Y, width: 1, height: 1, id: "context" },
+        { type: "target" as const, position: Position.Right, x: layout.nodeWidth - inset, y: GLYPH_CENTER_Y, width: 1, height: 1, id: "context" }];
     return {
       id: node.id, type: "attackPathNode", position: layout.positions.get(node.id)!,
       width: layout.nodeWidth, height: layout.nodeHeight, handles,
       ariaLabel: `${node.label}, ${node.typeLabel}${node.aggregate ? `, ${node.aggregate.issue_count} findings` : ""}`,
       data: { node, vertical, ...handlers },
     };
-  }), [handlers, inset, layout, model.nodes]);
+  }), [handlers, layout, model.nodes]);
   const labels = useMemo(() => new Map(model.nodes.map(node => [node.id, node.label])), [model.nodes]);
   const traces = useMemo(() => traceKey ? traceByEdge(model, traceKey) : null, [model, traceKey]);
   const edges = useMemo<AttackPathFlowEdge[]>(() => model.edges.map(edge => ({
     id: edge.id, source: edge.source, target: edge.target, type: "attackPathEdge",
+    sourceHandle: layout.positions.get(edge.source)!.x > layout.positions.get(edge.target)!.x ? "context" : null,
+    targetHandle: layout.positions.get(edge.source)!.x > layout.positions.get(edge.target)!.x ? "context" : null,
     ariaLabel: `${labels.get(edge.source)} ${edge.relationshipLabel.toLowerCase()} ${labels.get(edge.target)}`,
-    data: { edge, active: edge.id === activeEdge, markerPrefix, direction: layout.direction, route: routes.get(edge.id)!, trace: traces?.get(edge.id) ?? null },
-  })), [activeEdge, labels, layout.direction, markerPrefix, model.edges, routes, traces]);
+    data: { edge, active: edge.id === activeEdge, markerPrefix, direction: layout.direction, trace: traces?.get(edge.id) ?? null },
+  })), [activeEdge, labels, layout, markerPrefix, model.edges, traces]);
   return { layout, nodes, edges };
 }
 
@@ -160,7 +163,7 @@ function AttackPathCanvas({ graph, attackPath, narrow, context, onNodeSelect, on
         minZoom={OVERVIEW_MIN_ZOOM} maxZoom={2}
         zoomOnScroll={wheelGate.armed} preventScrolling={wheelGate.armed} zoomOnPinch panOnDrag={!narrow}
         nodesDraggable={false} nodesConnectable={false} nodesFocusable edgesFocusable elementsSelectable deleteKeyCode={null}
-        onNodeClick={(_, node) => onNodeSelect(node.id)}
+        onNodeClick={(_, node) => { if (!node.data.node.displayOnly) onNodeSelect(node.id); }}
         onEdgeClick={(_, edge) => openEdge(edge)}
         onEdgeMouseEnter={(_, edge) => setActiveEdge(edge.id)}
         onEdgeMouseLeave={() => setActiveEdge(null)}
