@@ -84,6 +84,12 @@ function Handles({ vertical, small = false }: { vertical: boolean; small?: boole
   return vertical ? <>
     <Handle type="target" position={Position.Top} className={hidden} />
     <Handle type="source" position={Position.Bottom} className={hidden} />
+    <Handle id="reverse" type="source" position={Position.Top} className={hidden} />
+    <Handle id="reverse" type="target" position={Position.Bottom} className={hidden} />
+    {[Position.Left, Position.Right].map(position => <Fragment key={position}>
+      <Handle id={`context-${position}`} type="source" position={position} className={hidden} style={{ top: GLYPH_CENTER_Y, [position]: inset }} />
+      <Handle id={`context-${position}`} type="target" position={position} className={hidden} style={{ top: GLYPH_CENTER_Y, [position]: inset }} />
+    </Fragment>)}
   </> : <>
     <Handle id="context" type="source" position={Position.Left} className={hidden} style={{ top: GLYPH_CENTER_Y, left: inset }} />
     <Handle id="context" type="target" position={Position.Right} className={hidden} style={{ top: GLYPH_CENTER_Y, right: inset }} />
@@ -103,8 +109,8 @@ export function AttackPathGraphNode({ data }: NodeProps<AttackPathFlowNode>) {
   return (
     <div data-testid={`attack-path-node-${node.id}`} data-role={node.role} title={`${node.label} · ${node.typeLabel}`}
       style={BOX} className="pointer-events-none flex flex-col items-center text-center">
-      <Handles vertical={vertical} small={Boolean(node.imageSubrow)} />
-      <div data-node-glyph className={`pointer-events-auto relative flex ${node.imageSubrow ? "mt-3.5 h-10 w-10 mb-2" : "mt-1.5 h-14 w-14"} items-center justify-center rounded-full bg-surface-elevated text-foreground ${spine ? "border-[2.5px] border-[color:var(--accent)]" : "border border-outline"}`}
+      <Handles vertical={vertical} />
+      <div data-node-glyph className={`pointer-events-auto relative flex mt-1.5 h-14 w-14 items-center justify-center rounded-full bg-surface-elevated text-foreground ${spine ? "border-[2.5px] border-[color:var(--accent)]" : "border border-outline"}`}
         style={tint ? { backgroundImage: `linear-gradient(color-mix(in srgb, ${tint} ${spine ? 24 : 12}%, transparent), color-mix(in srgb, ${tint} ${spine ? 24 : 12}%, transparent))` } : undefined}>
         <Icon className="h-7 w-7" aria-hidden="true" />
         <Markers markers={node.markers} />
@@ -129,7 +135,7 @@ function GroupNode({ data }: { data: AttackPathNodeData }) {
   return (
     <div data-testid={`attack-path-node-${node.id}`} data-role="group" title={`${node.label} share this connection`}
       style={BOX} className="pointer-events-none flex flex-col items-center text-center">
-      <Handles vertical={vertical} small={Boolean(node.imageSubrow)} />
+      <Handles vertical={vertical} />
       <div data-node-glyph className="pointer-events-auto relative mt-1.5 flex h-14 w-14 items-center justify-center rounded-full border border-dashed border-outline-strong bg-surface-elevated text-foreground">
         <Layers className="h-5 w-5" aria-hidden="true" />
         <FindingBadge node={node} onOpen={data.onOpenFindings} />

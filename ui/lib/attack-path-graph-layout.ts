@@ -85,13 +85,38 @@ function assignLanes(model: AttackPathGraphModel, columns: Map<string, number>):
   return lanes;
 }
 
+/** A phone reads the supplied path vertically; context occupies one adjacent
+ * column, with additional rows instead of an off-screen third column. */
+function portraitPathLayout(model: AttackPathGraphModel): AttackPathLayout {
+  const columns = rankColumns(model), positions = new Map<string, { x: number; y: number }>();
+  const lanes = new Map<string, number>();
+  const spine = model.pathNodeIds.filter(id => model.nodes.some(node => node.id === id));
+  const spineSet = new Set(spine), groups = new Map<string, string[]>();
+  for (const node of model.nodes) {
+    if (spineSet.has(node.id)) continue;
+    const owner = node.semanticOwner && spineSet.has(node.semanticOwner) ? node.semanticOwner
+      : spine.find(id => model.edges.some(edge => edge.source === id && edge.target === node.id || edge.target === id && edge.source === node.id)) ?? spine.at(-1) ?? "";
+    groups.set(owner, [...(groups.get(owner) ?? []), node.id]);
+  }
+  let y = 0;
+  for (const id of spine.length ? spine : [""]) {
+    if (id) { positions.set(id, { x: 8, y }); lanes.set(id, 0); }
+    const context = groups.get(id) ?? [];
+    context.forEach((child, index) => { positions.set(child, { x: 172, y: y + index * 168 }); lanes.set(child, 1); });
+    y += Math.max(1, context.length) * 168;
+  }
+  return { direction: "TB", positions, columns, lanes, minLane: 0, maxLane: groups.size ? 1 : 0,
+    rankGap: 32, laneGap: 12, margin: 8, width: groups.size ? 332 : 168,
+    height: Math.max(136, y - 32), nodeWidth: PATH_NODE.width, nodeHeight: PATH_NODE.height };
+}
+
 /**
  * Layered DAG: the selected path is one straight line, every node sits in its
  * dagre layer, and branches take lanes above and below the path.
  */
 export function layoutAttackPathGraph(model: AttackPathGraphModel, _requestedDirection: AttackPathDirection): AttackPathLayout {
-  void _requestedDirection;
-  // Mobile framing scrolls the same spine; it does not change the grammar.
+  if (_requestedDirection === "TB") return portraitPathLayout(model);
+  // Desktop preserves the backend semantic columns.
   const direction: AttackPathDirection = "LR";
   const spacing = SPACING[direction];
   const columns = rankColumns(model);
@@ -126,7 +151,7 @@ export function layoutAttackPathGraph(model: AttackPathGraphModel, _requestedDir
 }
 
 /** Phones keep text readable: the column fits the width down to where 15px names are 11px, then the page scrolls. */
-export const NARROW_MIN_ZOOM = legibleZoomForText(15);
+export const NARROW_MIN_ZOOM = Math.max(legibleZoomForText(15), 48 / 56);
 /** The path graph's desktop floor: its 15px names stay at least about 11px on screen. */
 export const PATH_DESKTOP_MIN_ZOOM = 0.75;
 
@@ -140,8 +165,8 @@ function fittedZoom(layout: Pick<AttackPathLayout, "width">, containerWidth: num
  * A phone never hides a node: a graph wider than the frame at the legible floor gets a wider
  * canvas that scrolls sideways. A desktop canvas always matches its frame.
  */
-export function attackPathCanvasWidth(layout: Pick<AttackPathLayout, "width">, narrow: boolean, containerWidth: number): number {
-  if (!narrow || !(containerWidth > 0)) return containerWidth;
+export function attackPathCanvasWidth(layout: Pick<AttackPathLayout, "width"> & Partial<Pick<AttackPathLayout, "direction">>, narrow: boolean, containerWidth: number): number {
+  if (!narrow || layout.direction === "TB" || !(containerWidth > 0)) return containerWidth;
   const needed = layout.width * NARROW_MIN_ZOOM + ATTACK_PATH_FIT_PADDING.left + ATTACK_PATH_FIT_PADDING.right + FINDING_BADGE_OVERHANG;
   return Math.max(containerWidth, Math.ceil(needed));
 }

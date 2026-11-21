@@ -24,7 +24,7 @@ import { BACKGROUND_GAP, CONTROLS_CLASS } from "@/lib/graph-utils";
 export type AttackPathGraphProps = {
   graph: UnifiedGraphData;
   attackPath: AttackPath;
-  /** Phones scroll the same left-to-right path at a readable scale. */
+  /** Phones read the supplied path vertically with adjacent context. */
   narrow: boolean;
   onNodeSelect: (nodeId: string) => void;
   onEdgeSelect: (edge: { id: string; source: string; target: string; relationship: string }) => void;
@@ -87,15 +87,28 @@ function traceByEdge(model: AttackPathGraphModel, key: string): Map<string, Edge
   return new Map(hops.map((edge, index) => [edge.id, { ...timing[index]!, index, key }]));
 }
 
+function pathEdgeHandles(layout: AttackPathLayout, source: string, target: string) {
+  const from = layout.positions.get(source)!, to = layout.positions.get(target)!;
+  if (layout.direction === "TB") {
+    if (from.x !== to.x) return { sourceHandle: from.x < to.x ? "context-right" : "context-left", targetHandle: from.x < to.x ? "context-left" : "context-right" };
+    return { sourceHandle: from.y > to.y ? "reverse" : null, targetHandle: from.y > to.y ? "reverse" : null };
+  }
+  return { sourceHandle: from.x > to.x ? "context" : null, targetHandle: from.x > to.x ? "context" : null };
+}
+
 function useFlowElements(model: AttackPathGraphModel, narrow: boolean, activeEdge: string | null, markerPrefix: string,
   handlers: { onOpenFindings: AttackPathGraphProps["onOpenFindings"]; onExpandGroup: (id: string) => void }, traceKey: string | null) {
   const layout = useMemo(() => layoutAttackPathGraph(model, narrow ? "TB" : "LR"), [model, narrow]);
   const nodes = useMemo<AttackPathFlowNode[]>(() => model.nodes.map(node => {
     const vertical = layout.direction === "TB";
-    const inset = glyphInsetX(layout.nodeWidth) + (node.imageSubrow ? 8 : 0);
+    const inset = glyphInsetX(layout.nodeWidth);
     const handles = vertical
       ? [{ type: "target" as const, position: Position.Top, x: layout.nodeWidth / 2, y: 0, width: 1, height: 1, id: null },
-        { type: "source" as const, position: Position.Bottom, x: layout.nodeWidth / 2, y: layout.nodeHeight, width: 1, height: 1, id: null }]
+        { type: "source" as const, position: Position.Bottom, x: layout.nodeWidth / 2, y: layout.nodeHeight, width: 1, height: 1, id: null },
+        { type: "source" as const, position: Position.Top, x: layout.nodeWidth / 2, y: 0, width: 1, height: 1, id: "reverse" },
+        { type: "target" as const, position: Position.Bottom, x: layout.nodeWidth / 2, y: layout.nodeHeight, width: 1, height: 1, id: "reverse" },
+        ...([Position.Left, Position.Right] as const).flatMap(position => (["source", "target"] as const).map(type => ({ type, position,
+          x: position === Position.Left ? inset : layout.nodeWidth - inset, y: GLYPH_CENTER_Y, width: 1, height: 1, id: `context-${position}` })))]
       : [{ type: "target" as const, position: Position.Left, x: inset, y: GLYPH_CENTER_Y, width: 1, height: 1, id: null },
         { type: "source" as const, position: Position.Right, x: layout.nodeWidth - inset, y: GLYPH_CENTER_Y, width: 1, height: 1, id: null },
         { type: "source" as const, position: Position.Left, x: inset, y: GLYPH_CENTER_Y, width: 1, height: 1, id: "context" },
@@ -111,8 +124,7 @@ function useFlowElements(model: AttackPathGraphModel, narrow: boolean, activeEdg
   const traces = useMemo(() => traceKey ? traceByEdge(model, traceKey) : null, [model, traceKey]);
   const edges = useMemo<AttackPathFlowEdge[]>(() => model.edges.map(edge => ({
     id: edge.id, source: edge.source, target: edge.target, type: "attackPathEdge",
-    sourceHandle: layout.positions.get(edge.source)!.x > layout.positions.get(edge.target)!.x ? "context" : null,
-    targetHandle: layout.positions.get(edge.source)!.x > layout.positions.get(edge.target)!.x ? "context" : null,
+    ...pathEdgeHandles(layout, edge.source, edge.target),
     ariaLabel: `${labels.get(edge.source)} ${edge.relationshipLabel.toLowerCase()} ${labels.get(edge.target)}`,
     data: { edge, active: edge.id === activeEdge, markerPrefix, direction: layout.direction, trace: traces?.get(edge.id) ?? null },
   })), [activeEdge, labels, layout, markerPrefix, model.edges, traces]);
@@ -175,9 +187,6 @@ function AttackPathCanvas({ graph, attackPath, narrow, context, onNodeSelect, on
       </ReactFlow>
     </div>
     </div>
-    {narrow && frameWidth > 0 && canvasWidth > frameWidth && <p role="note" className="border-t border-outline bg-surface px-3 pt-2 text-xs text-ink-secondary">
-      Scroll sideways for the rest of the graph.
-    </p>}
     {model.connectedPathCount > 0 && <p className="border-t border-outline bg-surface px-3 pt-2 text-xs text-ink-secondary">
       Branches show {model.connectedPathCount - model.omittedConnectedPaths} other recorded {model.connectedPathCount - model.omittedConnectedPaths === 1 ? "path that shares" : "paths that share"} a node or relationship with this path
       {model.omittedConnectedPaths > 0 ? `; ${model.omittedConnectedPaths} lower-risk connected ${model.omittedConnectedPaths === 1 ? "path is" : "paths are"} not drawn` : ""}.

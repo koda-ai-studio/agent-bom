@@ -44,7 +44,7 @@ export function AttackPathGraphEdge(props: EdgeProps<AttackPathFlowEdge>) {
   const lane = relationshipLaneFor(id, edges, nodeId => nodes.find(node => node.id === nodeId)?.position.y,
     nodeId => nodes.find(node => node.id === nodeId)?.position.x);
   const [path, labelX, labelY] = relationshipPath(props, nodes.filter(node => !node.hidden).map(node => ({ id: node.id, ...node.position,
-    width: node.measured?.width ?? node.width ?? 152, height: node.measured?.height ?? node.height ?? 136 })), lane);
+    width: node.measured?.width ?? node.width ?? 152, height: node.measured?.height ?? node.height ?? 136 })), direction === "TB" ? undefined : lane);
   const label = { x: labelX, y: labelY };
   // A selected-path hop names its relationship on the line at all times: above it on a row (lines that turn
   // into branch rows leave below it) and beside it on a phone column. A branch names its own on hover or focus.

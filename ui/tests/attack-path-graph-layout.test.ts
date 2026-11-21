@@ -137,3 +137,24 @@ describe("attack path graph layout", () => {
     expect(attackPathCanvasWidth(small, true, 358)).toBeGreaterThan(358);
   });
 });
+
+it("opens the complete phone path as a vertical spine with adjacent context and no sideways canvas", () => {
+  const { graph, selected } = branchingFixture();
+  const model = buildAttackPathGraphModel(graph, selected);
+  const layout = layoutAttackPathGraph(model, "TB");
+  expect(layout.direction).toBe("TB");
+  const spine = model.pathNodeIds.map(id => layout.positions.get(id)!);
+  expect(new Set(spine.map(p => p.x)).size).toBe(1);
+  expect(spine.map(p => p.y)).toEqual([...spine.map(p => p.y)].sort((a, b) => a - b));
+  expect(layout.width).toBeLessThanOrEqual(336);
+  expect(attackPathCanvasWidth(layout, true, 358)).toBe(358);
+  const height = attackPathCanvasHeight(layout, true, 358);
+  const viewport = attackPathViewport(layout, model.pathNodeIds, { width: 358, height }, NARROW_MIN_ZOOM);
+  expect(viewport.hiddenNodeIds).toEqual([]);
+  expect(viewport.zoom * 56).toBeGreaterThanOrEqual(48);
+  const points = [...layout.positions.values()];
+  for (let i = 0; i < points.length; i++) for (const b of points.slice(i + 1)) {
+    const a = points[i]!;
+    expect(a.x + layout.nodeWidth <= b.x || b.x + layout.nodeWidth <= a.x || a.y + layout.nodeHeight <= b.y || b.y + layout.nodeHeight <= a.y).toBe(true);
+  }
+});
