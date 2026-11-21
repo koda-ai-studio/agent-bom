@@ -102,7 +102,7 @@ it.each(["package", "finding", "runtime_evidence"])("renders owned %s context as
   const { container } = render(<ReactFlowProvider><Renderer data={{ label: "Recorded context", nodeType: "package", semanticLayout: true,
     semanticLayer, semanticOwner: "workload", attributes: { data_classification: "restricted" } }} /></ReactFlowProvider>);
   expect(container.querySelector('[data-graph-subrow="workload"]')).not.toBeNull();
-  expect(container.querySelector('.graph-entity-glyph')).toHaveStyle({ width: "40px", height: "40px" });
+  expect(container.querySelector('.graph-entity-glyph')).toHaveStyle({ width: "var(--graph-context-glyph-size, 48px)", height: "var(--graph-context-glyph-size, 48px)" });
   expect(container.querySelector('[data-semantic-name]')).toHaveClass("col-start-2");
   expect(container.querySelector('[data-semantic-badges]')).toHaveTextContent("Sensitive data");
 });
@@ -112,5 +112,5 @@ it("retains a full glyph for a package explicitly retained on the selected spine
   const { container } = render(<ReactFlowProvider><Renderer data={{ label: "Selected package", nodeType: "package", semanticLayout: true,
     semanticLayer: "package", semanticPathIndex: 2 }} /></ReactFlowProvider>);
   expect(container.querySelector('[data-graph-subrow]')).toBeNull();
-  expect(container.querySelector('.graph-entity-glyph')).not.toHaveStyle({ width: "40px" });
+  expect(container.querySelector('.graph-entity-glyph')).not.toHaveStyle({ width: "var(--graph-context-glyph-size, 48px)" });
 });
