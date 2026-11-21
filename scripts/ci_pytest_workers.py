@@ -6,7 +6,8 @@ Hosted ubuntu-latest runners for public repositories have 4 vCPUs and 16 GB
 Ordinary selections use every core. A full demo-estate rebuild peaks at about
 3.1 GB RSS per worker, and a worker that runs only demo-estate bootstrap tests
 grows to about 4.1 GB, so four such workers would exhaust a 16 GB runner.
-Selections containing that module are capped at three workers (about 12.3 GB).
+Selections containing one of the per-test-seed bootstrap modules are capped at
+three workers (about 12.3 GB).
 """
 
 from __future__ import annotations
@@ -16,7 +17,14 @@ import sys
 from collections.abc import Iterable
 from pathlib import PurePosixPath
 
-MEMORY_HEAVY_MODULES = frozenset({"tests/test_demo_estate_bootstrap.py"})
+MEMORY_HEAVY_MODULES = frozenset(
+    {
+        "tests/test_demo_estate_bootstrap.py",
+        "tests/test_demo_estate_bootstrap_lifecycle.py",
+        "tests/test_demo_estate_bootstrap_live_feeds.py",
+        "tests/test_demo_estate_bootstrap_rollover.py",
+    }
+)
 MEMORY_HEAVY_WORKER_CAP = 3
 
 
