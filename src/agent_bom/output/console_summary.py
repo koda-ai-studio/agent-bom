@@ -47,6 +47,7 @@ def print_summary(report: AIBOMReport) -> None:
     table.add_row("MCP servers", str(report.total_servers))
     table.add_row("Total packages", str(report.total_packages))
     table.add_row("Vulnerabilities", str(report.total_vulnerabilities))
+    table.add_row("Possibly affected (review required)", str(report.total_possibly_affected))
     # Scope-labelled: ``critical_vulns`` counts blast radii, so a critical
     # non-CVE finding (malicious package, CIS FAIL, toxic combination) is not in
     # it. The posture headline a few lines below counts every finding category,
@@ -442,6 +443,7 @@ def _append_posture_inventory(
     if vex_suppressed_count:
         vuln_label += f" ({vex_suppressed_count} suppressed by VEX)"
     lines.append(f"  [bold]Vulnerabilities[/bold]   {vuln_label}")
+    lines.append(f"  [bold]Possibly affected[/bold] {report.total_possibly_affected} (review required)")
 
 
 def _append_posture_details(

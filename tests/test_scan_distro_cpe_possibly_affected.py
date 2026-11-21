@@ -274,3 +274,65 @@ def test_terminal_shows_possibly_affected_section(nvd_db, monkeypatch) -> None:
     assert "CVE-2026-109618" in text and "php8.2-cli 8.2.29-1~deb12u1" in text
     assert "verify against the distribution's advisory" in text
     assert "not counted as vulnerabilities" in text
+
+
+def test_possibly_affected_count_is_separate_and_deduplicated(nvd_db, monkeypatch) -> None:
+    from agent_bom.output import to_json
+    from agent_bom.output.cyclonedx_fmt import to_cyclonedx
+    from agent_bom.output.markdown import to_markdown
+
+    report = _scanned_report(nvd_db, monkeypatch)
+    assert report.total_possibly_affected == 2
+    doc = to_json(report)
+    assert doc["summary"]["total_possibly_affected"] == 2
+    assert doc["summary"]["total_vulnerabilities"] == 0
+    assert "| Possibly affected (review required) | 2 |" in to_markdown(report)
+    properties = {p["name"]: p["value"] for p in to_cyclonedx(report)["metadata"]["properties"]}
+    assert properties["agent-bom:total-possibly-affected"] == "2"
+
+
+def test_cli_summary_labels_possibly_affected_count(nvd_db, monkeypatch) -> None:
+    from rich.console import Console
+
+    from agent_bom import output
+    from agent_bom.output.console_summary import print_summary
+
+    report = _scanned_report(nvd_db, monkeypatch)
+    console = Console(record=True, width=200)
+    monkeypatch.setattr(output, "console", console)
+    print_summary(report)
+    text = console.export_text()
+    assert re.search(r"Possibly affected \(review required\)\s+2", text)
+
+
+def test_push_recomputes_possible_count_from_package_evidence(nvd_db, monkeypatch) -> None:
+    from agent_bom.api.models import PushPayload
+    from agent_bom.api.push_evidence import normalize_pushed_report
+    from agent_bom.output import to_json
+
+    doc = to_json(_scanned_report(nvd_db, monkeypatch))
+    doc["summary"]["total_possibly_affected"] = 999
+    normalized = normalize_pushed_report(PushPayload.model_validate(doc), fallback_scan_id="possible-count")
+    assert normalized["summary"]["total_possibly_affected"] == 2
+    assert normalized["summary"]["total_vulnerabilities"] == 0
+
+
+def test_possible_count_survives_export_metadata(nvd_db, monkeypatch) -> None:
+    from agent_bom.output.html import to_html
+    from agent_bom.output.sarif import to_sarif
+
+    report = _scanned_report(nvd_db, monkeypatch)
+    assert to_sarif(report)["runs"][0]["properties"]["total_possibly_affected"] == 2
+    html = to_html(report)
+    assert re.search(r'stat-value[^>]*>2</div><div class="stat-label">Possibly affected', html)
+
+
+def test_csv_carries_labeled_possible_count(nvd_db, monkeypatch) -> None:
+    import csv
+    import io
+
+    from agent_bom.output.csv_fmt import to_csv
+
+    rows = list(csv.DictReader(io.StringIO(to_csv(_scanned_report(nvd_db, monkeypatch)).lstrip("\ufeff"))))
+    assert rows
+    assert {row.get("total_possibly_affected") for row in rows} == {"2"}

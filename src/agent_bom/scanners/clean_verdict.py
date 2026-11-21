@@ -12,6 +12,7 @@ from types import SimpleNamespace
 from typing import Any
 
 from agent_bom.coverage import record_scan_note
+from agent_bom.domain.possibly_affected import count_possibly_affected
 from agent_bom.evidence.scan_run import ScanOutcome, effective_scan_run
 from agent_bom.scanners.state import peek_coverage_warnings, peek_scan_performance, peek_scan_warnings
 
@@ -47,6 +48,8 @@ def zero_findings_verdict(agents: list[Any]) -> str:
         return "  [yellow]No vulnerabilities confirmed; coverage gaps limit this assessment[/yellow]"
     if suppressed := suppressed_unfixed_os_findings():
         return f"  [yellow]{no_fixable_vulnerabilities_line(suppressed)}[/yellow]"
+    if count := count_possibly_affected(agents):
+        return f"  [yellow]0 vulnerabilities confirmed; {count} possibly affected (review required)[/yellow]"
     return "  [green]✓ No known vulnerabilities found[/green]"
 
 

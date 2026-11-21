@@ -87,6 +87,22 @@ describe("ScanResultView cloud evidence", () => {
     });
   });
 
+  it("labels possible advisories beside zero vulnerabilities", async () => {
+    apiMock.getScanDashboard.mockResolvedValue({
+      job_id: "scan-cloud-1", status: "done", created_at: "2026-06-27T00:00:00Z",
+      request: {}, progress: [], result: {
+        agents: [], blast_radius: [], summary: {
+          total_agents: 1, total_mcp_servers: 0, total_packages: 1,
+          total_vulnerabilities: 0, total_possibly_affected: 2, critical_findings: 0,
+        },
+      },
+    });
+    render(<ScanResultView id="scan-cloud-1" />);
+    const label = await screen.findByText("Possibly affected · review required");
+    expect(label.parentElement).toHaveTextContent("2");
+    expect(screen.getByText("Vulnerabilities").parentElement).toHaveTextContent("0");
+  });
+
   it("renders persisted cloud inventory and CIS evidence even without attack-path findings", async () => {
     render(<ScanResultView id="scan-cloud-1" />);
 

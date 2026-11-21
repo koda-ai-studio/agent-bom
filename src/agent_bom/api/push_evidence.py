@@ -10,6 +10,7 @@ from agent_bom.api.models import PushPayload, ScanJob, ScanRequest
 from agent_bom.api.posture_recompute import compute_posture_scorecard_from_result
 from agent_bom.api.push_models import normalize_push_coverage
 from agent_bom.domain.mcp_model import server_dict_counts_as_mcp_server
+from agent_bom.domain.possibly_affected import count_possibly_affected
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
 from agent_bom.output.json_fmt import _build_finding_summary
 from agent_bom.output.report_compaction import compact_report_sections
@@ -142,6 +143,7 @@ def derive_push_summary(report: dict) -> None:
         ),
         "unique_packages": len(package_keys),
         "total_vulnerabilities": len(vuln_ids),
+        "total_possibly_affected": count_possibly_affected(agents),
         "total_findings": len(findings),
         "critical_findings": finding_summary["by_severity"]["critical"],
         "critical_unified_findings": finding_summary["by_severity"]["critical"],

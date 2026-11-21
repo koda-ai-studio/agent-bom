@@ -10,6 +10,8 @@ export interface Summary {
   total_servers: number;
   total_packages: number;
   total_vulnerabilities: number;
+  /** Distinct advisory/package pairs requiring review; absent on older reports. */
+  total_possibly_affected?: number;
   critical_findings: number;
   high_findings: number;
   medium_findings: number;

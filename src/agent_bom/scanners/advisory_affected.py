@@ -371,7 +371,7 @@ def _alias_records(conn: sqlite3.Connection, advisory_id: str) -> list[sqlite3.R
     # A stale record aliasing several CVEs (a fused upstream group) keeps its own ranges but is
     # never followed to another CVE's records, as in the scanner (self_consistent_aliases).
     records = {str(row[0]): row for row in [*own, *naming]}
-    named = {alias for row in records.values() for alias in self_consistent_aliases(str(row[0]), _split_aliases(row[3]))}
+    named = {alias for row in records.values() for alias in self_consistent_aliases(str(row[0]), _split_aliases(row[3]), matched=False)}
     missing = sorted(spelling for alias in named for spelling in _id_spellings(alias) if spelling not in records)[:_MAX_ALIAS_RECORDS]
     if missing:
         marks = ",".join("?" * len(missing))
@@ -474,7 +474,7 @@ def feed_advisory_from_db(conn: sqlite3.Connection, advisory_id: str) -> Operato
     # and alias records (a GHSA copy of a CVE) are consulted only when the primary rates nothing.
     severity, severity_source, cvss_score = feed_severity(records)
     identities = [str(record[0]) for record in records] + [
-        alias for record in records for alias in self_consistent_aliases(str(record[0]), _split_aliases(record[3]))
+        alias for record in records for alias in self_consistent_aliases(str(record[0]), _split_aliases(record[3]), matched=False)
     ]
     aliases = list(dict.fromkeys(identity for identity in identities if identity != vuln_id))
     return OperatorAdvisory.model_construct(

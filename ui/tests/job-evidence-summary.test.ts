@@ -17,3 +17,8 @@ describe("jobEvidenceSummary", () => {
     expect(jobEvidenceSummary(job(undefined))).toBe("Evidence metrics unavailable");
   });
 });
+
+it("keeps possible advisories separate from a zero confirmed count", () => {
+  const text = jobEvidenceSummary(job({ total_findings: 0, total_vulnerabilities: 0, total_possibly_affected: 2, total_packages: 1 } as JobListItem["summary"]));
+  expect(text).toBe("0 findings · 2 possibly affected (review required) · 1 packages");
+});

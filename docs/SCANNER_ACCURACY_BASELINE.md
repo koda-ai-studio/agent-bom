@@ -41,3 +41,17 @@ suppression evidence states. `needs_review` is a non-suppressing triage state
 for low-confidence or declaration-only findings. These states must remain
 visible in audit trails and release evidence, but suppressing states should not
 inflate active-risk counts.
+
+### Reading possibly affected counts
+
+Run `agent-bom scan --project . -f json -o scan.json`, then inspect
+`summary.total_vulnerabilities` and `summary.total_possibly_affected` separately.
+The second count is distinct advisory/package identity pairs requiring review;
+it excludes duplicate package observations and does not increase severity totals
+or trigger `--fail-on-severity`. Review the `possibly_affected` rows, confirm the
+installed version and relevant distribution advisory, then rescan. Older stored
+reports without this count show it as unavailable in the dashboard.
+
+Candidate alias lookup can ignore unrelated stale fused aliases without making
+the scan partial. Matched advisory warnings and actual advisory-data coverage
+gaps still affect completeness; a zero confirmed count does not erase them.

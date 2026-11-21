@@ -840,6 +840,7 @@ def _cyclonedx_document(report: AIBOMReport, spec_version: str, scan_run: Any, c
                 {"name": "agent-bom:canonical-id-schema-version", "value": CANONICAL_ID_SCHEMA_VERSION},
                 {"name": "agent-bom:total-mcp-servers", "value": str(report.total_servers)},
                 {"name": "agent-bom:total-vulnerabilities", "value": str(report.total_vulnerabilities)},
+                {"name": "agent-bom:total-possibly-affected", "value": str(report.total_possibly_affected)},
                 {"name": "agent-bom:ml-models", "value": str(len(report.model_provenance) + len(report.model_files))},
                 {"name": "agent-bom:scan-outcome", "value": scan_run.outcome.value},
                 {"name": "agent-bom:scan-issue-count", "value": str(len(scan_run.issues))},
@@ -847,8 +848,7 @@ def _cyclonedx_document(report: AIBOMReport, spec_version: str, scan_run: Any, c
         },
         "components": components,
         "dependencies": dependencies,
-        # CDX 1.7 defines `formulation` as a top-level BOM array, not a metadata
-        # field — placing it under metadata fails strict 1.7 schema validation.
+        # CDX 1.7 requires `formulation` at the BOM root; nesting it under metadata fails schema validation.
         "formulation": [{"components": [{"type": "application", "name": "agent-bom", "version": __version__}]}],
     }
 
