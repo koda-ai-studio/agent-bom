@@ -66,3 +66,12 @@ it("lays out roll-up entries by their backend layer and preserves their aggregat
   expect(result.nodes.every(node => node.data.semanticLayout)).toBe(true);
   expect(result.nodes[0]!.data.rollup?.aggregate).toEqual(owner.data.rollup!.aggregate);
 });
+
+it("uses the same backend aggregate for a bounded raw context's Findings group", () => {
+  const aggregate = { ...owner.data.rollup!.aggregate, issue_count: 41, finding_occurrence_count: 41 };
+  const rawOwner = { ...owner, data: { ...owner.data, rollup: undefined, findingAggregate: aggregate } };
+  const result = cloudFindingDisclosure([rawOwner, finding], [], new Set(), () => undefined, true);
+  const group = result.nodes.find(node => node.type === "findingGroupNode")!;
+  expect(group.data.readingFindings?.count).toBe(41);
+  expect(group.data.findingAggregate).toBe(aggregate);
+});

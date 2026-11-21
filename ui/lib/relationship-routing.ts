@@ -135,12 +135,14 @@ function endpointGuards(edge: Endpoints, boxes: Obstacle[], lane?: RelationshipL
 
 /** Every source-target pair owns a cubic curve and distinct endpoint offsets.
  * No shared horizontal/vertical trunk can imply a relationship to another source. */
-export function relationshipPath(edge: Endpoints, obstacles: Obstacle[], lane?: RelationshipLane): [string, number, number] {
+export function relationshipPath(edge: Endpoints, obstacles: Obstacle[], lane?: RelationshipLane, clearance = 16): [string, number, number] {
   const [path, x, y] = getBezierPath({ ...edge,
     sourceY: edge.sourceY + (lane?.source ?? 0), targetY: edge.targetY + (lane?.target ?? 0),
     curvature: 0.25 + Math.abs(lane?.channel ?? 0) * 0.025,
   });
-  const blockers = [...obstacles.filter(box => box.id !== edge.source && box.id !== edge.target), ...endpointGuards(edge, obstacles, lane)];
+  const blockers = [...obstacles.filter(box => box.id !== edge.source && box.id !== edge.target), ...endpointGuards(edge, obstacles, lane)]
+    .map(box => ({ ...box, x: box.x + 16 - clearance, y: box.y + 16 - clearance, width: box.width - 2 * (16 - clearance), height: box.height - 2 * (16 - clearance) }))
+    .filter(box => box.width > 0 && box.height > 0);
   if (!blockers.length || obstacles.length > ROUTED_NODE_LIMIT) return [path, x, y];
   const numbers = path.match(/-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi)!.map(Number);
   const original = Array.from({ length: 4 }, (_, index) => [numbers[index * 2]!, numbers[index * 2 + 1]!] as Point) as Cubic;
@@ -152,7 +154,7 @@ export function relationshipPath(edge: Endpoints, obstacles: Obstacle[], lane?: 
       const points = obstacleWaypoints(portExit(original[0], edge.sourcePosition), portExit(original[3], edge.targetPosition), blockers, lane?.channel ?? 0);
       if (points) curves = smoothWaypoints([original[0], ...points, original[3]], blockers);
     }
-    if (!curves) return [path, x, y];
+    if (!curves) return clearance === 16 ? relationshipPath(edge, obstacles, lane, 8) : [path, x, y];
     const label = cubicPoint(curves[Math.floor(curves.length / 2)]!, 0.5);
     return [`M${original[0].join(",")} ${curves.map(part => `C${part.slice(1).map(point => point.join(",")).join(" ")}`).join(" ")}`, ...label];
   }

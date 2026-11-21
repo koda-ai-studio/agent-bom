@@ -1,5 +1,7 @@
 "use client";
 
+import { useGraphNodeAggregates, withGraphNodeAggregates } from "@/lib/graph-node-aggregates";
+
 import { decodeGraphInvestigationParams } from "@/lib/attack-paths";
 import { graphConnectionPreview } from "@/lib/graph-connection-preview";
 import { clusterMapEligible } from "@/lib/graph-cluster-map";
@@ -597,9 +599,12 @@ export function useGraphCanvasModel(page: GraphPageData) {
       setDriftFilter("all");
     }
   }, [lensDiff, setDriftFilter, setDriftLensActive]);
-  const displayNodes = useMemo(() => lensDisplayNodes({
+  const visibleContext = useMemo(() => lensDisplayNodes({
     nodes: baseDisplayNodes, driftEngaged: driftLensEngaged, driftIndex, driftFilter, evidenceActive: evidenceLensActive, evidenceFilter,
   }), [baseDisplayNodes, driftIndex, driftLensEngaged, driftFilter, evidenceLensActive, evidenceFilter]);
+  const contextAggregates = useGraphNodeAggregates(graphData?.scan_id,
+    selectedAttackPath ? [] : visibleContext.filter(node => !node.hidden && !node.data.rollup && !node.data.displayOnly).map(node => node.id), graphData?.snapshot_generation);
+  const displayNodes = useMemo(() => withGraphNodeAggregates(visibleContext, contextAggregates), [visibleContext, contextAggregates]);
   const drift = useMemo(() => driftTally(baseDisplayNodes, driftIndex), [baseDisplayNodes, driftIndex]);
   const evidenceCounts = useMemo(() => evidenceTally(baseDisplayNodes), [baseDisplayNodes]);
   const compressedGroupCount = aggregatedClusterNodes.length;

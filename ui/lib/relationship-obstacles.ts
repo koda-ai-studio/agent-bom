@@ -23,10 +23,10 @@ function blocked(a: Point, b: Point, box: Box, padding = 16): boolean {
  * Bounded by the caller's canvas node limit; no topology or evidence is changed. */
 export function obstacleWaypoints(start: Point, end: Point, boxes: Box[], channel = 0): Point[] | null {
   const margin = 32 + Math.min(12, Math.abs(channel) * 2);
-  const corners: Point[] = boxes.flatMap(box => [
-    [box.x - margin, box.y - margin], [box.x + box.width + margin, box.y - margin],
-    [box.x - margin, box.y + box.height + margin], [box.x + box.width + margin, box.y + box.height + margin],
-  ] as Point[]).filter(point => !boxes.some(box => blocked(point, point, box)));
+  const corners: Point[] = [margin, 20].flatMap(clearance => boxes.flatMap(box => [
+    [box.x - clearance, box.y - clearance], [box.x + box.width + clearance, box.y - clearance],
+    [box.x - clearance, box.y + box.height + clearance], [box.x + box.width + clearance, box.y + box.height + clearance],
+  ] as Point[])).filter(point => !boxes.some(box => blocked(point, point, box)));
   const points = [start, end, ...corners];
   const distances = points.map(() => Infinity), previous = points.map(() => -1), visited = new Set<number>();
   distances[0] = 0;

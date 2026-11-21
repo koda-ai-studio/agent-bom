@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from "react";
 import type { components } from "@/lib/api-schema.generated";
+import type { Node } from "@xyflow/react";
+import type { LineageNodeData } from "@/components/lineage-nodes";
 import { get } from "@/lib/api-transport";
 
 export type GraphNodeAggregate = components["schemas"]["GraphNodeAggregate"];
 type Response = components["schemas"]["GraphNodeAggregatesResponse"];
 const EMPTY: ReadonlyMap<string, GraphNodeAggregate> = new Map();
 
-/** One bounded read per selected path. Missing or stale records have no badge. */
+/** One bounded read per selected path or visible context. Missing or stale records have no badge. */
 export function useGraphNodeAggregates(scanId: string | undefined, hops: readonly string[], generation?: string): ReadonlyMap<string, GraphNodeAggregate> {
   const ids = [...new Set(hops)];
   const params = new URLSearchParams();
@@ -30,4 +32,13 @@ export function useGraphNodeAggregates(scanId: string | undefined, hops: readonl
     return () => controller.abort();
   }, [generation, key, scanId]);
   return key && loaded?.key === key ? loaded.rows : EMPTY;
+}
+
+/** Missing records never become locally counted badges. */
+export function withGraphNodeAggregates(nodes: Node<LineageNodeData>[], records: ReadonlyMap<string, GraphNodeAggregate>): Node<LineageNodeData>[] {
+  return nodes.map(node => {
+    const record = records.get(node.id);
+    return record ? { ...node, data: { ...node.data, findingAggregate: record.aggregate,
+      semanticLayer: record.semantic_layer } } : node;
+  });
 }

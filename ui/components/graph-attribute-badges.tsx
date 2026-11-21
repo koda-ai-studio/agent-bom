@@ -13,7 +13,7 @@ export function graphSemanticRiskLabel(score: number | undefined, assessment: un
 /** Attribute markers and finding counts are backend facts, not extra entities. */
 export function GraphAttributeBadges({ data }: { data: LineageNodeData }) {
   const markers = nodeContextMarkers(data.attributes ?? {});
-  const aggregate = data.rollup?.aggregate;
+  const aggregate = data.findingAggregate ?? data.rollup?.aggregate;
   const count = aggregate?.issue_count;
   const exposed = typeof aggregate?.exposed_count === "number" ? aggregate.exposed_count : 0;
   const risk = typeof data.riskScore === "number" && Number.isFinite(data.riskScore) && (data.riskScore !== 0 || nodeRiskAssessment(data.riskAssessment).status === "assessed") ? graphSemanticRiskLabel(data.riskScore, data.riskAssessment) : null;

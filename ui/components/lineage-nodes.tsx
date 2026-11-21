@@ -83,6 +83,7 @@ export type LineageNodeData = {
   agentContext?: AgentContext | undefined;
   dimensions?: import("@/lib/graph-schema").NodeDimensions | undefined;
   semanticLayer?: string | null | undefined;
+  findingAggregate?: import("@/lib/graph-node-aggregates").GraphNodeAggregate["aggregate"] | undefined;
   semanticLayerIssue?: string | undefined;
   imageSubrow?: boolean | undefined;
   evidenceSources?: string[] | undefined;
