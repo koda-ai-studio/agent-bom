@@ -81,7 +81,7 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     // Never choose a phone camera for a desktop-sized mounted canvas.
     if (canvas && canvas.clientWidth > 0 && Math.abs(width - canvas.clientWidth) > 2) return;
     const nodes = getNodes().filter(node => !node.hidden);
-    const anchor = nodes.find(node => node.id === anchorId) ?? nodes[0];
+    const anchor = nodes.find(node => node.id === anchorId) ?? nodes.find(node => !node.id.startsWith("display:")) ?? nodes[0];
     const frameSize = graphAdaptiveFrame({
       bounds: getNodesBounds(nodes), width, inspector, nodeCount: nodes.length, boundedPreview,
       availableHeight: windowHeight - spaceAbove - 24 - (width < 640 ? PHONE_NAVIGATOR_HEIGHT : 0),

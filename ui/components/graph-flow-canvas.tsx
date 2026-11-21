@@ -110,7 +110,7 @@ export function GraphFlowCanvas({ page, flowView }: { page: GraphPageModel; flow
                 primaryZoom={flowView.primaryZoom}
                 enabled={!layoutPending && !motion.animating}
                 layoutKey={`${compactLayoutKey}:${flowView.kind}:${disclosed.key}:${selectedScenarioId ?? "estate"}`}
-                anchorId={selectedNodeId ?? investigationMode?.rootId ?? flowView.anchorId}
+                anchorId={selectedNodeId ?? investigationMode?.rootId ?? (flowView.anchorId?.startsWith("display:") ? undefined : flowView.anchorId)}
                 inspector={Boolean(selectedNode || selectedRelationship) && !narrowViewport}
                 preserveViewport={manualCamera || flowView.kind === "auto" && presentation.restoredSavedState}
                 onLayoutAspect={setCanvasLayoutAspect}
