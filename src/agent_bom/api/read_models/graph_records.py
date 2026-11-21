@@ -40,6 +40,12 @@ class GraphNodeProvenance(ReadModel):
     execution: str
 
 
+_SEMANTIC_LAYER_DESCRIPTION = (
+    "The node's GraphSemanticLayer: a layer the producer recorded, else the one its entity_type maps to "
+    "(the /v1/graph/schema legend). Present on every node a graph route serializes."
+)
+
+
 class GraphLeanNodeRecord(ReadModel):
     """The ``GET /v1/graph`` default node: identity, risk and the attributes that name and badge it."""
 
@@ -49,6 +55,7 @@ class GraphLeanNodeRecord(ReadModel):
     severity: str
     risk_score: float
     status: str
+    semantic_layer: str | None = Field(default=None, description=_SEMANTIC_LAYER_DESCRIPTION)
     attributes: dict[str, Any] = Field(description="Only the naming and badge attributes; /v1/graph/node/{node_id} has them all.")
     context: Literal[True] | None = None
 
@@ -84,6 +91,7 @@ class GraphCanvasNodeRecord(GraphAgentRecord):
     """Fields retained by the compact canvas projection."""
 
     entity_type: str
+    semantic_layer: str | None = Field(default=None, description=_SEMANTIC_LAYER_DESCRIPTION)
     attributes: dict[str, Any]
     compliance_tags: list[str]
     dimensions: GraphNodeDimensions

@@ -444,13 +444,13 @@ def _assert_product_screenshots_current(expected_version: str, *, check_capture_
 
     required = {
         "dashboard-live.png",
-        "dashboard-paths-live.png",
+        "dashboard-frameworks-live.png",
         "mesh-live.png",
         "security-graph-live.png",
         "correlation-receipts-live.png",
         "correlation-path-live.png",
         "lineage-graph-live.png",
-        "dependency-map-live.png",
+        "findings-queue-live.png",
         "remediation-live.png",
     }
     screenshots = manifest.get("screenshots")

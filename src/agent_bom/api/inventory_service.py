@@ -26,6 +26,7 @@ from agent_bom.graph.adjacency_page import SnapshotGenerationMismatchError
 from agent_bom.graph.completeness import graph_completeness
 from agent_bom.graph.node_roles import INVENTORY_FACET_NAMES, ROLES, node_role
 from agent_bom.graph.ocsf import FINDING_ENTITY_TYPES
+from agent_bom.graph.semantic_layer import node_payload
 from agent_bom.security import sanitize_error
 
 # Findings are not assets. The inventory covers every non-finding entity type.
@@ -568,8 +569,8 @@ async def build_asset_detail(
         "scan_id": context["scan_id"],
         "snapshot_generation": context["snapshot_generation"],
         "asset": asset_row(node),
-        "node": node.to_dict(),
-        "nodes": [endpoint.to_dict() for endpoint in context["nodes"]],
+        "node": node_payload(node),
+        "nodes": [node_payload(endpoint) for endpoint in context["nodes"]],
         "edges_out": [edge.to_dict() for edge in edges_out],
         "edges_in": [edge.to_dict() for edge in edges_in],
         "neighbors": sorted({edge.target for edge in edges_out}),

@@ -11,6 +11,7 @@ from typing import Annotated, Any, Literal
 from pydantic import BaseModel, Field, RootModel, ValidationInfo, WithJsonSchema, field_validator
 
 from agent_bom.api.read_models._base import ReadModel, ReadResponse
+from agent_bom.api.read_models.graph_path_counts import GraphPageStats
 from agent_bom.api.read_models.graph_records import (
     GraphAgentRecord,
     GraphAttackPathRecord,
@@ -85,7 +86,7 @@ class GraphPageResponse(ReadResponse):
     attack_paths: list[GraphAttackPathRecord | GraphLeanAttackPathRecord]
     attack_campaigns: list[Row] | None = None
     interaction_risks: list[Row]
-    stats: Row
+    stats: GraphPageStats
     pagination: GraphPagination
     completeness: GraphNodePageCompleteness
     attack_path_pagination: GraphBoundedPage | None = None

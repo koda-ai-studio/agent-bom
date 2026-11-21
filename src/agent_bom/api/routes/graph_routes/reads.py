@@ -38,6 +38,7 @@ from agent_bom.graph import SEVERITY_RANK
 from agent_bom.graph.adjacency_page import SnapshotGenerationMismatchError
 from agent_bom.graph.completeness import graph_completeness
 from agent_bom.graph.semantic_clusters import SEMANTIC_CLUSTER_KINDS
+from agent_bom.graph.semantic_layer import node_payload
 from agent_bom.graph.view_payloads import _semantic_cluster_payload
 from agent_bom.security import sanitize_error
 
@@ -161,7 +162,7 @@ async def search_graph(
             "compliance_prefixes": sorted(prefix_filters) if prefix_filters else [],
             "data_sources": sorted(data_source_filters) if data_source_filters else [],
         },
-        "results": [n.to_dict() for n in results],
+        "results": [node_payload(n) for n in results],
         "pagination": {
             "total": total,
             "offset": offset,
@@ -334,7 +335,7 @@ async def get_graph_node(
         "scan_id": identity[0] if identity else scan_id or "",
         "tenant_id": tenant_id,
         "snapshot_generation": identity[1] if identity else None,
-        "node": node_context["node"].to_dict(),
+        "node": node_payload(node_context["node"]),
         "edges_out": [edge.to_dict() for edge in node_context["edges_out"]],
         "edges_in": [edge.to_dict() for edge in node_context["edges_in"]],
         "neighbors": node_context["neighbors"],
@@ -428,8 +429,8 @@ async def get_graph_incident_edges(
         "found": True,
         "direction": direction,
         "limit": limit,
-        "node": page["node"].to_dict(),
-        "nodes": [node.to_dict() for node in page["nodes"]],
+        "node": node_payload(page["node"]),
+        "nodes": [node_payload(node) for node in page["nodes"]],
         "edges": [edge.to_dict() for edge in page["edges"]],
         "next_cursor": page["next_cursor"],
         "completeness": page["completeness"],

@@ -123,7 +123,7 @@ Current PNG inventory:
 | File | What it shows | Where it lives in the README |
 |---|---|---|
 | `dashboard-live.png` | Packaged Next.js posture, unique findings, coverage, and operations overview | Product views |
-| `dashboard-paths-live.png` | Packaged Next.js exposure paths, recent scans, and activity | Product views |
+| `dashboard-frameworks-live.png` | Overview compliance and control-framework evidence | Product views |
 | `mesh-live.png` | Focused agent → MCP server → package → finding path | Product views |
 | `security-graph-live.png` | Fix-first attack-path queue with export controls and remediation handoff | Product views |
 | `lineage-graph-live.png` | Focused filtered attack-path lineage across agent, MCP, package, and finding nodes | Product views |
@@ -131,7 +131,7 @@ Current PNG inventory:
 | `inventory-live.png` | Unified cross-source asset inventory with explicit evidence coverage | Product views |
 | `fleet-state-live.png` | Fleet lifecycle review state with owner, environment, trust factors, and quarantine context | Product views |
 | `gateway-policies-live.png` | Runtime gateway posture with enforcement, firewall decisions, policy rules, and bound agents | Product views |
-| `dependency-map-live.png` | Findings queue with seeded package and fictional vulnerability evidence | Product views |
+| `findings-queue-live.png` | Findings queue with seeded package and fictional vulnerability evidence | Product views |
 | `remediation-live.png` | Fix-first remediation surface | Product views |
 
 Public README, Docker Hub, and marketplace screenshots should not duplicate the

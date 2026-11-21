@@ -18,9 +18,9 @@ from packageurl import PackageURL
 
 from agent_bom.core.severity import SEVERITY_RANK
 from agent_bom.graph import correlation_scope as _scope
-from agent_bom.graph.agent_context import annotate_agent_context
 from agent_bom.graph.asset_identity import IdentityKey
 from agent_bom.graph.container import UnifiedGraph
+from agent_bom.graph.correlation_finish import finish_correlated_graph
 from agent_bom.graph.correlation_scope import CORRELATION_IDENTITY_VERSION, merged_identity_version, runtime_stable_identity
 from agent_bom.graph.correlation_scope import exact_attribute_identity as _exact_attribute_identity
 from agent_bom.graph.correlation_scope import identity_digest as _digest
@@ -663,7 +663,7 @@ def merge_graph_snapshots(
     snapshots: Sequence[CorrelationSnapshot],
     created_at: str = "",
 ) -> CorrelationMergeResult:
-    """Merge selected immutable snapshots without inventing cross-source edges."""
+    """Merge selected immutable snapshots; the only cross-source edge added is a digest-proven ``runs``."""
     if len(snapshots) < 2:
         raise ValueError("Correlation requires at least 2 graph snapshots")
     if len(snapshots) > 32:
@@ -714,7 +714,7 @@ def merge_graph_snapshots(
             )
         )
 
-    annotate_agent_context(output)
+    finish_correlated_graph(output)
     manifest = {
         "schema_version": "agent-bom.graph-correlation.v1",
         "identity_version": CORRELATION_IDENTITY_VERSION,

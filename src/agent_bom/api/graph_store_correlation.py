@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
 __all__ = ["GraphStoreProtocol", "SQLiteGraphCorrelationMixin"]
@@ -17,6 +17,7 @@ from agent_bom.graph import (
 )
 from agent_bom.graph.correlation import CorrelationRunStatus, GraphCorrelationRun
 from agent_bom.graph.ports import GraphStoreProtocol as GraphStoreProtocol
+from agent_bom.graph.snapshot_paths import SnapshotPath, prepare_snapshot_paths
 
 
 class SQLiteGraphCorrelationMixin(SQLiteGraphSnapshotMixin):
@@ -32,6 +33,7 @@ class SQLiteGraphCorrelationMixin(SQLiteGraphSnapshotMixin):
         manifest_sha256: str,
         completed_at: str = "",
         execution_owner: str = "",
+        snapshot_paths: Sequence[SnapshotPath] | None = None,
     ) -> GraphCorrelationRun:
         from agent_bom.graph.correlation import validate_correlation_output_manifest
 
@@ -49,6 +51,8 @@ class SQLiteGraphCorrelationMixin(SQLiteGraphSnapshotMixin):
                 nodes=graph.nodes.values(),
                 edges=graph.edges,
                 attack_paths=graph.attack_paths,
+                # Indexed like any scan snapshot, so the queue and node-page totals match the receipt.
+                snapshot_paths=prepare_snapshot_paths(graph) if snapshot_paths is None else snapshot_paths,
                 interaction_risks=graph.interaction_risks,
                 analysis_status=graph.analysis_status,
                 snapshot_kind="correlation",

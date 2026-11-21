@@ -179,7 +179,7 @@
         "framework": "langgraph",
         "harness_id": "71eb6165-3288-5bba-97d3-8c384f9a9d8b",
         "harness_kind": "StateGraph",
-        "label": "builder",
+        "label": "builder · langgraph_supervisor",
         "layer_count": 4,
         "layers": [
           {
@@ -528,7 +528,7 @@
         "framework": "langgraph",
         "harness_id": "e5d8bceb-6c89-562e-b971-96029701bd33",
         "harness_kind": "StateGraph",
-        "label": "builder",
+        "label": "builder · langgraph_tool_team",
         "layer_count": 3,
         "layers": [
           {

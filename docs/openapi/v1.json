@@ -21967,6 +21967,39 @@
         "title": "GraphAgentsResponse",
         "type": "object"
       },
+      "GraphAttackPathCounts": {
+        "additionalProperties": true,
+        "description": "The one attack-path count every surface reports for a snapshot.",
+        "properties": {
+          "assessed_count": {
+            "description": "Candidates the analyzers evaluated before deduplication, caps and exclusions; never below retained_count.",
+            "title": "Assessed Count",
+            "type": "integer"
+          },
+          "basis": {
+            "description": "derived: the snapshot path index; persisted: stored path rows; served: the count the payload reported.",
+            "enum": [
+              "derived_graph_paths",
+              "persisted_graph_paths",
+              "served_graph_paths"
+            ],
+            "title": "Basis",
+            "type": "string"
+          },
+          "retained_count": {
+            "description": "The attack-path queue's snapshot total; ``attack_path_count`` equals it.",
+            "title": "Retained Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "retained_count",
+          "assessed_count",
+          "basis"
+        ],
+        "title": "GraphAttackPathCounts",
+        "type": "object"
+      },
       "GraphAttackPathRecord": {
         "additionalProperties": true,
         "description": "Serialized attack path; recorded reachability never implies execution.",
@@ -22395,6 +22428,18 @@
           "risk_score": {
             "title": "Risk Score",
             "type": "number"
+          },
+          "semantic_layer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The node's GraphSemanticLayer: a layer the producer recorded, else the one its entity_type maps to (the /v1/graph/schema legend). Present on every node a graph route serializes.",
+            "title": "Semantic Layer"
           },
           "severity": {
             "title": "Severity",
@@ -23938,6 +23983,196 @@
         "title": "GraphCorrelationList",
         "type": "object"
       },
+      "GraphCorrelationOutput": {
+        "additionalProperties": true,
+        "description": "The output graph a completed correlation receipt binds.",
+        "properties": {
+          "attack_path_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attack Path Count"
+          },
+          "attack_paths": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GraphAttackPathCounts"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "edge_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edge Count"
+          },
+          "graph_digest_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Graph Digest Sha256"
+          },
+          "node_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Node Count"
+          },
+          "scan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Id"
+          }
+        },
+        "title": "GraphCorrelationOutput",
+        "type": "object"
+      },
+      "GraphCorrelationResultManifest": {
+        "additionalProperties": true,
+        "description": "A correlation run's receipt; empty until the run completes.",
+        "properties": {
+          "analysis_bounds": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Merge limits plus each analyzer's completion status.",
+            "title": "Analysis Bounds"
+          },
+          "correlation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correlation Id"
+          },
+          "correlation_merge": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Node and edge conflict counts from the merge.",
+            "title": "Correlation Merge"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "freshness_policy": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "max_age_hours and allow_stale the run used.",
+            "title": "Freshness Policy"
+          },
+          "input_snapshots": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The source snapshots the run merged, in merge order.",
+            "title": "Input Snapshots"
+          },
+          "output": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GraphCorrelationOutput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schema Version"
+          },
+          "tenant_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Id"
+          }
+        },
+        "title": "GraphCorrelationResultManifest",
+        "type": "object"
+      },
       "GraphCorrelationRunResponse": {
         "additionalProperties": true,
         "properties": {
@@ -23990,9 +24225,7 @@
             "type": "string"
           },
           "result_manifest": {
-            "additionalProperties": true,
-            "title": "Result Manifest",
-            "type": "object"
+            "$ref": "#/components/schemas/GraphCorrelationResultManifest"
           },
           "started_at": {
             "title": "Started At",
@@ -26257,6 +26490,18 @@
             "title": "Risk Score",
             "type": "number"
           },
+          "semantic_layer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The node's GraphSemanticLayer: a layer the producer recorded, else the one its entity_type maps to (the /v1/graph/schema legend). Present on every node a graph route serializes.",
+            "title": "Semantic Layer"
+          },
           "severity": {
             "title": "Severity",
             "type": "string"
@@ -26868,6 +27113,18 @@
             "title": "Risk Score",
             "type": "number"
           },
+          "semantic_layer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The node's GraphSemanticLayer: a layer the producer recorded, else the one its entity_type maps to (the /v1/graph/schema legend). Present on every node a graph route serializes.",
+            "title": "Semantic Layer"
+          },
           "severity": {
             "title": "Severity",
             "type": "string"
@@ -27104,9 +27361,7 @@
             "title": "Snapshot Generation"
           },
           "stats": {
-            "additionalProperties": true,
-            "title": "Stats",
-            "type": "object"
+            "$ref": "#/components/schemas/GraphPageStats"
           },
           "tenant_id": {
             "title": "Tenant Id",
@@ -27142,6 +27397,35 @@
           "completeness"
         ],
         "title": "GraphPageResponse",
+        "type": "object"
+      },
+      "GraphPageStats": {
+        "additionalProperties": true,
+        "description": "``GET /v1/graph`` stats: counts and analysis status, plus the typed attack-path count.",
+        "properties": {
+          "attack_path_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attack Path Count"
+          },
+          "attack_paths": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GraphAttackPathCounts"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "GraphPageStats",
         "type": "object"
       },
       "GraphPagination": {
@@ -69610,7 +69894,7 @@
             }
           },
           {
-            "description": "``full`` (the default in 0.115; ``summary`` becomes the default in 0.116.0) returns the whole node, edge and path records. ``summary`` (alias ``lean``) returns each node's id, entity_type, label, severity, risk_score, status and the attributes that name and badge it; each edge's endpoints, relationship, direction, weight, traversable and confidence (its id is relationship:source:target); and a summary of each embedded attack path. Full attributes and evidence_provenance come from /v1/graph/node/{node_id}, complete paths from /v1/graph/attack-paths. ``canvas`` returns the graph page's projection.",
+            "description": "``full`` (the default in 0.115; ``summary`` becomes the default in 0.116.0) returns the whole node, edge and path records. ``summary`` (alias ``lean``) returns each node's id, entity_type, label, severity, risk_score, status, semantic_layer and the attributes that name and badge it; each edge's endpoints, relationship, direction, weight, traversable and confidence (its id is relationship:source:target); and a summary of each embedded attack path. Full attributes and evidence_provenance come from /v1/graph/node/{node_id}, complete paths from /v1/graph/attack-paths. ``canvas`` returns the graph page's projection.",
             "in": "query",
             "name": "view",
             "required": false,
@@ -69629,7 +69913,7 @@
                   "type": "null"
                 }
               ],
-              "description": "``full`` (the default in 0.115; ``summary`` becomes the default in 0.116.0) returns the whole node, edge and path records. ``summary`` (alias ``lean``) returns each node's id, entity_type, label, severity, risk_score, status and the attributes that name and badge it; each edge's endpoints, relationship, direction, weight, traversable and confidence (its id is relationship:source:target); and a summary of each embedded attack path. Full attributes and evidence_provenance come from /v1/graph/node/{node_id}, complete paths from /v1/graph/attack-paths. ``canvas`` returns the graph page's projection.",
+              "description": "``full`` (the default in 0.115; ``summary`` becomes the default in 0.116.0) returns the whole node, edge and path records. ``summary`` (alias ``lean``) returns each node's id, entity_type, label, severity, risk_score, status, semantic_layer and the attributes that name and badge it; each edge's endpoints, relationship, direction, weight, traversable and confidence (its id is relationship:source:target); and a summary of each embedded attack path. Full attributes and evidence_provenance come from /v1/graph/node/{node_id}, complete paths from /v1/graph/attack-paths. ``canvas`` returns the graph page's projection.",
               "title": "View"
             }
           },

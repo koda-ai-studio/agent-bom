@@ -504,11 +504,12 @@ Emitted by: —
 
 ## `runs`
 
-Class `structural` · directed · traversable · required evidence `source`, `tier` · 3 pairs
+Class `structural` · directed · traversable · required evidence `source`, `tier` · 4 pairs
 
 - `ci_job` → `agent`, `server`, `tool`
+- `container` → `container`
 
-Emitted by: `graph/ci_graph_overlay.py`
+Emitted by: `graph/ci_graph_overlay.py`, `graph/workload_image_runs.py`
 
 ## `scoped_to`
 

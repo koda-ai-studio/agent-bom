@@ -85,9 +85,13 @@ def _holds(edge: UnifiedEdge, nodes: dict[str, UnifiedNode]) -> bool:
     if not edge.traversable:
         return False
     spec = relationship_spec(_rel_value(edge))
+    source = nodes.get(edge.source)
+    if spec is not None and spec.rel is RelationshipType.RUNS:
+        # A workload holds the image it runs; a CI job running a tool holds nothing.
+        target = nodes.get(edge.target)
+        return source is not None and target is not None and _kind(source) == _kind(target) == EntityType.CONTAINER.value
     if spec is None or not (spec.traversal_class is TraversalClass.DEPENDENCY or spec.rel is RelationshipType.CONTAINS):
         return False
-    source = nodes.get(edge.source)
     return source is not None and _kind(source) not in _SCOPE_KINDS
 
 

@@ -16,7 +16,7 @@ Entity types in the cloud, infrastructure and data domain and the relationships 
 | `api_gateway` |  | protects |  |  | protects |  |  |  |  | protects |
 | `cloud_resource` |  | contains<br/>depends_on<br/>hosts<br/>part_of<br/>protects |  |  | protects<br/>stores | stores |  |  |  | protects |
 | `cluster` |  |  |  | contains |  |  |  |  |  | contains |
-| `container` |  | hosted_on | hosted_on<br/>part_of | contains<br/>depends_on<br/>hosted_on |  |  | part_of | hosted_on<br/>part_of | serves_model |  |
+| `container` |  | hosted_on | hosted_on<br/>part_of | contains<br/>depends_on<br/>hosted_on<br/>runs |  |  | part_of | hosted_on<br/>part_of | serves_model |  |
 | `data_store` |  | depends_on |  |  | contains<br/>depends_on<br/>stores | stores |  |  |  |  |
 | `environment` | contains | contains<br/>hosts | contains | contains | contains | contains |  |  | contains |  |
 | `fleet` |  | hosts |  | contains |  |  |  |  |  |  |
@@ -69,6 +69,7 @@ Not drawn, because they can connect almost any two types: `correlates_with`, `po
 | `possibly_correlates_with` | `correlation` | no | `cloud_resource`, `cluster`, `container`, `data_store` | `cloud_resource`, `cluster`, `container`, `data_store` |
 | `protects` | `governance` | no | `api_gateway`, `cloud_resource` | `cloud_resource`, `data_store`, `resource` |
 | `recorded_activity` | `correlation` | no | `resource` | `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `model`, `resource` |
+| `runs` | `structural` | yes | `container` | `container` |
 | `serves_model` | `dependency` | yes | `container` | `model` |
 | `stores` | `structural` | yes | `cloud_resource`, `data_store`, `resource` | `data_store`, `dataset` |
 | `trace_step` | `runtime` | yes | `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `model` | `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `model` |

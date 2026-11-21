@@ -221,10 +221,12 @@ def test_reference_lab_container_and_sbom_cve_occurrence_gets_paths() -> None:
     graph = _lab_graph()
     vuln = "vulnerability:sbom:cve-2023-4863"
     chains = sorted(tuple(path.hops) for path in _paths_to(graph, vuln))
+    # The workload reaches the SBOM image's package through the digest-proven ``runs`` hop;
+    # the image is held by it, so it is not a separate entry.
     assert chains == [
-        ("container:iac:reference-api", "package:iac:pillow", vuln),
-        ("container:sbom:reference-api", "package:iac:pillow", vuln),
-        ("source:pinned-package", "package:iac:pillow", vuln),
+        ("agent:model:reference-workload", "server:mcp:document-review", "package:mcp:pillow", vuln),
+        ("container:iac:reference-api", "container:sbom:reference-api", "package:mcp:pillow", vuln),
+        ("source:pinned-package", "package:mcp:pillow", vuln),
     ]
     for path in _paths_to(graph, vuln):
         assert path.finding_ids == ["reference-finding-cve-2023-4863"]

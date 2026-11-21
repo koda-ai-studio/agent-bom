@@ -4,7 +4,9 @@
  * `langgraph_supervisor`, `langgraph_tool_team` and `crewai_hierarchical`
  * framework fixtures, paged two harnesses at a time. Three findings were
  * attached with `vulnerable_to` edges, as the API tests do, so the overlay
- * has something to show. Nothing below is hand-written.
+ * has something to show. Nothing below is hand-written except the two
+ * LangGraph harness labels: both fixtures name their graph variable `builder`,
+ * so each harness label carries its fixture directory to stay distinct.
  */
 import raw from "./agent-architecture.json";
 

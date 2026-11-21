@@ -212,7 +212,15 @@ _SPECS: tuple[RelationshipSpec, ...] = (
     ),
     _spec(R.IMPORTS, T.DEPENDENCY, "code_topology", (E.SOURCE_FILE, E.CODE_MODULE), (E.EXTERNAL_IMPORT, E.CODE_MODULE, E.PACKAGE)),
     _spec(R.DEFINES, T.STRUCTURAL, "code_topology", (E.SOURCE_FILE,), (E.CODE_MODULE, E.TOOL, E.CI_JOB)),
-    _spec(R.RUNS, T.STRUCTURAL, "code_topology", (E.CI_JOB,), (E.TOOL, E.SERVER, E.AGENT)),
+    _spec(
+        R.RUNS,
+        T.STRUCTURAL,
+        "code_topology",
+        (E.CI_JOB,),
+        (E.TOOL, E.SERVER, E.AGENT),
+        # A workload runs the image whose digest it pins (graph.workload_image_runs).
+        extra=((E.CONTAINER, E.CONTAINER),),
+    ),
     _spec(R.CONFIGURES, T.STRUCTURAL, "code_topology", (E.CONFIG_FILE,), (E.AGENT, E.SERVER, E.CI_JOB, E.TOOL)),
     _spec(
         R.AFFECTS,

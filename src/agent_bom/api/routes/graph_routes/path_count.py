@@ -16,6 +16,7 @@ from typing import Any
 
 from agent_bom.api.graph_generation import snapshot_fingerprint
 from agent_bom.api.routes.graph_routes import _runtime
+from agent_bom.graph.attack_path_counts import DERIVED, PERSISTED, attack_paths_summary
 
 _CacheKey = tuple[str, str, str, str]
 _Entry = tuple[int, float, bool]
@@ -121,4 +122,21 @@ async def node_page_stats(
     return await with_queue_path_count(stats, graph_store, tenant=tenant, scan_id=scan_id, generation=generation)
 
 
-__all__ = ["clear", "node_page_stats", "remember_queue_total", "with_queue_path_count"]
+_BASIS_BY_COUNT_BASIS = {"queue_total": DERIVED, "persisted_paths": PERSISTED}
+
+
+def with_attack_paths_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    """``stats.attack_paths``: the reconciled ``attack_path_count`` as ``retained_count``, plus what was assessed."""
+    stats = payload.get("stats")
+    if not isinstance(stats, dict) or "attack_path_count" not in stats:
+        return payload
+    basis = _BASIS_BY_COUNT_BASIS.get(str(stats.get("attack_path_count_basis") or ""), "served_graph_paths")
+    summary = attack_paths_summary(
+        retained_count=int(stats.get("attack_path_count") or 0),
+        basis=basis,
+        analysis_status=stats.get("analysis_status") if isinstance(stats.get("analysis_status"), dict) else None,
+    )
+    return {**payload, "stats": {**stats, "attack_paths": summary}}
+
+
+__all__ = ["clear", "node_page_stats", "remember_queue_total", "with_attack_paths_summary", "with_queue_path_count"]

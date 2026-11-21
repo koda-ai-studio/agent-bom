@@ -16872,6 +16872,30 @@ export interface components {
             [key: string]: unknown;
         };
         /**
+         * GraphAttackPathCounts
+         * @description The one attack-path count every surface reports for a snapshot.
+         */
+        GraphAttackPathCounts: {
+            /**
+             * Assessed Count
+             * @description Candidates the analyzers evaluated before deduplication, caps and exclusions; never below retained_count.
+             */
+            assessed_count: number;
+            /**
+             * Basis
+             * @description derived: the snapshot path index; persisted: stored path rows; served: the count the payload reported.
+             * @enum {string}
+             */
+            basis: "derived_graph_paths" | "persisted_graph_paths" | "served_graph_paths";
+            /**
+             * Retained Count
+             * @description The attack-path queue's snapshot total; ``attack_path_count`` equals it.
+             */
+            retained_count: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
          * GraphAttackPathRecord
          * @description Serialized attack path; recorded reachability never implies execution.
          */
@@ -17049,6 +17073,11 @@ export interface components {
             risk_assessment: components["schemas"]["GraphNodeRiskAssessment"];
             /** Risk Score */
             risk_score: number;
+            /**
+             * Semantic Layer
+             * @description The node's GraphSemanticLayer: a layer the producer recorded, else the one its entity_type maps to (the /v1/graph/schema legend). Present on every node a graph route serializes.
+             */
+            semantic_layer?: string | null;
             /** Severity */
             severity: string;
             /** Status */
@@ -17632,6 +17661,70 @@ export interface components {
                 [key: string]: unknown;
             }[];
         };
+        /**
+         * GraphCorrelationOutput
+         * @description The output graph a completed correlation receipt binds.
+         */
+        GraphCorrelationOutput: {
+            /** Attack Path Count */
+            attack_path_count?: number | null;
+            attack_paths?: components["schemas"]["GraphAttackPathCounts"] | null;
+            /** Edge Count */
+            edge_count?: number | null;
+            /** Graph Digest Sha256 */
+            graph_digest_sha256?: string | null;
+            /** Node Count */
+            node_count?: number | null;
+            /** Scan Id */
+            scan_id?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * GraphCorrelationResultManifest
+         * @description A correlation run's receipt; empty until the run completes.
+         */
+        GraphCorrelationResultManifest: {
+            /**
+             * Analysis Bounds
+             * @description Merge limits plus each analyzer's completion status.
+             */
+            analysis_bounds?: {
+                [key: string]: unknown;
+            } | null;
+            /** Correlation Id */
+            correlation_id?: string | null;
+            /**
+             * Correlation Merge
+             * @description Node and edge conflict counts from the merge.
+             */
+            correlation_merge?: {
+                [key: string]: unknown;
+            } | null;
+            /** Created At */
+            created_at?: string | null;
+            /**
+             * Freshness Policy
+             * @description max_age_hours and allow_stale the run used.
+             */
+            freshness_policy?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Input Snapshots
+             * @description The source snapshots the run merged, in merge order.
+             */
+            input_snapshots?: {
+                [key: string]: unknown;
+            }[] | null;
+            output?: components["schemas"]["GraphCorrelationOutput"] | null;
+            /** Schema Version */
+            schema_version?: string | null;
+            /** Tenant Id */
+            tenant_id?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
         /** GraphCorrelationRunResponse */
         GraphCorrelationRunResponse: {
             /** Allow Stale */
@@ -17658,10 +17751,7 @@ export interface components {
             name: string;
             /** Output Scan Id */
             output_scan_id: string;
-            /** Result Manifest */
-            result_manifest: {
-                [key: string]: unknown;
-            };
+            result_manifest: components["schemas"]["GraphCorrelationResultManifest"];
             /** Started At */
             started_at: string;
             /** Status */
@@ -18485,6 +18575,11 @@ export interface components {
             label: string;
             /** Risk Score */
             risk_score: number;
+            /**
+             * Semantic Layer
+             * @description The node's GraphSemanticLayer: a layer the producer recorded, else the one its entity_type maps to (the /v1/graph/schema legend). Present on every node a graph route serializes.
+             */
+            semantic_layer?: string | null;
             /** Severity */
             severity: string;
             /** Status */
@@ -18714,6 +18809,11 @@ export interface components {
             risk_assessment: components["schemas"]["GraphNodeRiskAssessment"];
             /** Risk Score */
             risk_score: number;
+            /**
+             * Semantic Layer
+             * @description The node's GraphSemanticLayer: a layer the producer recorded, else the one its entity_type maps to (the /v1/graph/schema legend). Present on every node a graph route serializes.
+             */
+            semantic_layer?: string | null;
             /** Severity */
             severity: string;
             /** Severity Id */
@@ -18778,10 +18878,7 @@ export interface components {
             scan_id: string;
             /** Snapshot Generation */
             snapshot_generation?: string | null;
-            /** Stats */
-            stats: {
-                [key: string]: unknown;
-            };
+            stats: components["schemas"]["GraphPageStats"];
             /** Tenant Id */
             tenant_id: string;
             /**
@@ -18789,6 +18886,17 @@ export interface components {
              * @description The projection served; absent on view=full (the default).
              */
             view?: ("summary" | "canvas") | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * GraphPageStats
+         * @description ``GET /v1/graph`` stats: counts and analysis status, plus the typed attack-path count.
+         */
+        GraphPageStats: {
+            /** Attack Path Count */
+            attack_path_count?: number | null;
+            attack_paths?: components["schemas"]["GraphAttackPathCounts"] | null;
         } & {
             [key: string]: unknown;
         };
@@ -36709,7 +36817,7 @@ export interface operations {
                 offset?: number;
                 /** @description Max nodes to return */
                 limit?: number;
-                /** @description ``full`` (the default in 0.115; ``summary`` becomes the default in 0.116.0) returns the whole node, edge and path records. ``summary`` (alias ``lean``) returns each node's id, entity_type, label, severity, risk_score, status and the attributes that name and badge it; each edge's endpoints, relationship, direction, weight, traversable and confidence (its id is relationship:source:target); and a summary of each embedded attack path. Full attributes and evidence_provenance come from /v1/graph/node/{node_id}, complete paths from /v1/graph/attack-paths. ``canvas`` returns the graph page's projection. */
+                /** @description ``full`` (the default in 0.115; ``summary`` becomes the default in 0.116.0) returns the whole node, edge and path records. ``summary`` (alias ``lean``) returns each node's id, entity_type, label, severity, risk_score, status, semantic_layer and the attributes that name and badge it; each edge's endpoints, relationship, direction, weight, traversable and confidence (its id is relationship:source:target); and a summary of each embedded attack path. Full attributes and evidence_provenance come from /v1/graph/node/{node_id}, complete paths from /v1/graph/attack-paths. ``canvas`` returns the graph page's projection. */
                 view?: ("full" | "summary" | "lean" | "canvas") | null;
                 /** @description Comma-separated additions to the summary view (and selects it when no view is given): ``attributes`` returns whole node and edge records, ``paths`` whole attack-path records. Both together equal ``view=full``. Not valid with ``view=canvas``. */
                 include?: string | null;

@@ -4,6 +4,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
+import { OFFSCREEN_NODES_TEXT, widenUntilNoNodesOffscreen } from "./product-proof-fit.mjs";
+
 const UI_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const ROUTE = "/v1/graph/agent-architecture";
 const PAGE = "/agents/architecture?capture=1";
@@ -27,12 +29,15 @@ export async function installAgentArchitectureRoutes(page) {
 
 const assertions = {
   expectedText: ["Agent architecture", "supervisor", "1 unresolved route", "Observed runtime paths are not available yet"],
-  rejectedText: [/Loading agent architecture/i],
+  rejectedText: [/Loading agent architecture/i, OFFSCREEN_NODES_TEXT],
   expectedApiPaths: [ROUTE],
 };
 
-// A desktop capture ends below the harness card when the canvas is shorter than the viewport.
-const HARNESS_FIT = { selector: 'main section[aria-label^="Harness "]', min: 480, pad: 32 };
+// A desktop capture ends just below the harness card: shorter than the viewport
+// for a short harness, taller (up to `max`) when the layered tree runs past it.
+export const HARNESS_FIT = { selector: 'main section[aria-label^="Harness "]', min: 480, pad: 32, max: 1800 };
+// A flow runs left to right, so it gets the width it needs instead of panning.
+export const FLOW_WIDTH = { step: 160, max: 2400 };
 
 /** Layered (dark), flow (light) and phone (dark) captures through the shared capture helper. */
 export async function captureAgentArchitecture({ capture, newCapturePage }) {
@@ -50,7 +55,7 @@ export async function captureAgentArchitecture({ capture, newCapturePage }) {
     await ready(target);
     await target.getByRole("button", { name: "Flow", exact: true }).click();
     await target.locator('[data-testid="architecture-canvas"][data-layout="flow"] .react-flow__node').first().waitFor({ state: "visible", timeout: 20_000 });
-    await target.waitForTimeout(400);
+    await widenUntilNoNodesOffscreen(target, FLOW_WIDTH);
   }, { ...assertions, expectedText: [...assertions.expectedText, "End of research_builder"], minGraphNodes: 11, maxGraphNodes: 11, minGraphEdges: 11, maxGraphEdges: 11, fitContentHeight: HARNESS_FIT });
   await lightPage.close();
 

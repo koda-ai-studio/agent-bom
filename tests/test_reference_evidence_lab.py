@@ -72,8 +72,9 @@ def test_reference_lab_preserves_source_receipts_and_evidence_boundaries() -> No
     capture = payload["capture_fixture"]
     assert capture["graph"]["scan_id"] == payload["correlation"]["output_scan_id"]
     assert capture["graph"]["attack_paths"] == [path]
-    # The modeled identity path plus one card per holder of the image/SBOM CVE
-    # occurrence (IaC container, SBOM container, pinned manifest).
+    # The modeled identity path plus one card per entry holding the image/SBOM CVE
+    # occurrence: the workload via its MCP server, the IaC workload (which runs the
+    # SBOM image by digest, so the image is not a separate entry) and the pinned manifest.
     cards = capture["fix_first"]["cards"]
     # Every card is a recorded graph path, so each is likely: never confirmed without
     # function-level or runtime evidence. An occurrence whose applicability was never
@@ -81,11 +82,11 @@ def test_reference_lab_preserves_source_receipts_and_evidence_boundaries() -> No
     # CVE occurrences come before the modeled identity path to customer records.
     # Path ids are source::target::hops::relationships; match the target segment.
     identity_cards = [card for card in cards if card["id"].split("::")[1] == "data-store:reference-customer-records"]
-    cve_cards = [card for card in cards if card["title"] == "CVE-2023-4863"]
+    cve_cards = [card for card in cards if card["title"].startswith("CVE-2023-4863")]
     assert len(identity_cards) == 1 and len(cve_cards) == len(cards) - 1
     assert sorted(card["id"].split("::")[0] for card in cve_cards) == [
+        "agent:model:reference-workload",
         "container:iac:reference-api",
-        "container:sbom:reference-api",
         "source:pinned-package",
     ]
     assert all(card["attack_path"]["reachability"] == "likely" for card in cards)
@@ -185,3 +186,35 @@ def test_reference_lab_local_session_contains_real_before_after_scans(tmp_path):
     )
     assert repeat.returncode != 0
     assert (destination / "local-session.json").read_bytes() == original
+
+
+def test_reference_lab_links_the_invoked_tool_to_the_vulnerable_package() -> None:
+    payload = json.loads(OUTPUT.read_text(encoding="utf-8"))
+    graph = payload["capture_fixture"]["graph"]
+    nodes = {node["id"]: node for node in graph["nodes"]}
+    top = payload["capture_fixture"]["fix_first"]["cards"][0]
+    hops = top["attack_path"]["hops"]
+    assert [nodes[hop]["entity_type"] for hop in hops] == ["agent", "server", "package", "vulnerability"]
+    assert [nodes[hop]["label"] for hop in hops[1:]] == ["document-review MCP", "pillow@9.0.0", "CVE-2023-4863"]
+    assert top["affected"]["tools"] == ["render_untrusted_image"]
+    assert top["attack_path"]["vuln_ids"] == ["CVE-2023-4863"]
+    invoked = [edge for edge in graph["edges"] if edge["relationship"] == "invoked"]
+    provided = [edge for edge in graph["edges"] if edge["relationship"] == "provides_tool"]
+    assert len(invoked) == 1 and len(provided) == 1 and invoked[0]["target"] == provided[0]["target"]
+    assert provided[0]["source"] == hops[1] and invoked[0]["source"] == hops[0]
+    server_package = [
+        edge
+        for edge in graph["edges"]
+        if nodes[edge["source"]]["entity_type"] == "server" and nodes[edge["target"]]["entity_type"] == "package"
+    ]
+    assert len(server_package) == 1 and server_package[0]["relationship"] == "depends_on"
+    assert server_package[0]["evidence"]["image_digest"] == payload["container_digest"]
+
+
+def test_reference_lab_marks_internet_entry_and_sensitive_data() -> None:
+    payload = json.loads(OUTPUT.read_text(encoding="utf-8"))
+    nodes = payload["capture_fixture"]["graph"]["nodes"]
+    public = [node for node in nodes if node["attributes"].get("internet_exposed") is True]
+    assert [node["id"] for node in public] == ["service:reference-api"]
+    store = next(node for node in nodes if node["entity_type"] == "data_store")
+    assert store["attributes"]["data_classification"] == "restricted"

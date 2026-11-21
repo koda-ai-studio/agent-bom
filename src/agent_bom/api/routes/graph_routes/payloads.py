@@ -21,6 +21,7 @@ from agent_bom.api.routes.graph_routes.params import (
     _boundary_edge_count,
     _joined_edges,
 )
+from agent_bom.api.routes.graph_routes.path_count import with_attack_paths_summary
 from agent_bom.graph import AttackPath, EntityType, UnifiedEdge, UnifiedGraph, UnifiedNode
 from agent_bom.graph.analysis import analysis_status_map_to_dict
 from agent_bom.graph.attack_path_queue import path_population
@@ -29,6 +30,7 @@ from agent_bom.graph.interaction_risk_ids import interaction_risk_agent_ids
 from agent_bom.graph.path_derivation import _build_edge_lookup, _derived_attack_paths
 from agent_bom.graph.remediation_priorities import remediation_priorities
 from agent_bom.graph.scope import GraphScopeKind, select_observed_scope
+from agent_bom.graph.semantic_layer import node_payload, node_payloads
 from agent_bom.graph.snapshot_paths import resolve_snapshot_attack_paths
 
 logger = logging.getLogger("agent_bom.api.routes.graph")
@@ -45,6 +47,7 @@ def _encoded_graph_response(payload: dict[str, Any], projection: GraphProjection
     payload = project_graph_payload(payload, projection)
     if str(payload.get("scan_id", "")).startswith("current-estate:"):
         payload = {**payload, "evidence_scope": "current_estate"}
+    payload = with_attack_paths_summary(payload)
     if isinstance(stats := payload.get("stats"), dict) and "severity_counts" in stats:
         # Node severities, not issue or occurrence counts; the label keeps clients from reading them as either.
         payload = {**payload, "stats": {"severity_basis": "graph_nodes", **stats}}
@@ -137,7 +140,7 @@ def _filtered_graph_response(graph: UnifiedGraph, *, offset: int, limit: int) ->
         "scan_id": graph.scan_id,
         "tenant_id": graph.tenant_id,
         "created_at": graph.created_at,
-        "nodes": [n.to_dict() for n in paged_nodes],
+        "nodes": [node_payload(n) for n in paged_nodes],
         "edges": [e.to_dict() for e in paged_edges],
         "attack_paths": attack_paths,
         "attack_campaigns": [c.to_dict() for c in graph.attack_campaigns],
@@ -308,7 +311,7 @@ def _serialize_attack_path_queue(
         "scan_id": scan_id,
         "tenant_id": tenant,
         "created_at": created_at,
-        "nodes": [node.to_dict() for node in nodes],
+        "nodes": [node_payload(node) for node in nodes],
         "edges": [edge.to_dict() for edge in path_edges],
         "attack_paths": with_rank_fields(
             paths,
@@ -364,7 +367,7 @@ def _governance_graph_payload(
     for edge in keep_edges:
         keep_ids.add(edge.source)
         keep_ids.add(edge.target)
-    nodes = [graph.nodes[nid].to_dict() for nid in keep_ids if nid in graph.nodes][:node_limit]
+    nodes = [node_payload(graph.nodes[nid]) for nid in keep_ids if nid in graph.nodes][:node_limit]
     node_id_window = {n["id"] for n in nodes}
     candidate_edges = [e for e in keep_edges if e.source in node_id_window and e.target in node_id_window]
     edges = candidate_edges[:edge_limit]
@@ -449,7 +452,7 @@ def _scoped_graph_response(
             "observed": selected.observed,
             "basis": selected.basis,
         },
-        "nodes": [node.to_dict() for node in scoped.nodes.values()],
+        "nodes": [node_payload(node) for node in scoped.nodes.values()],
         "edges": [edge.to_dict() for edge in scoped.edges],
         "stats": scoped.stats(),
         "completeness": {
@@ -518,7 +521,7 @@ def _encode_node_page(
         "tenant_id": tenant,
         "created_at": created_at,
         "collection_coverage": snapshot_stats.get("collection_coverage", {"status": "unknown"}),
-        "nodes": [*(n.to_dict() for n in paged_nodes), *({**n.to_dict(), "context": True} for n in response_nodes[len(paged_nodes) :])],
+        "nodes": node_payloads(response_nodes, context_from=len(paged_nodes)),
         "edges": [e.to_dict() for e in response_edges],
         "attack_paths": _serialize_attack_path_batch(
             embedded_paths,

@@ -33,7 +33,7 @@ E, R = EntityType, RelationshipType
 MAX_TARGETS_PER_IDENTITY = 25
 ANALYZER = "workload_pivot_paths"
 MAX_PATHS = 500
-_HOLD = frozenset({R.DEPENDS_ON.value, R.CONTAINS.value})
+_HOLD = frozenset({R.DEPENDS_ON.value, R.CONTAINS.value, R.RUNS.value})
 _REACH = frozenset({R.CAN_ACCESS.value, R.HAS_PERMISSION.value})
 _IDENTITIES = frozenset({E.SERVICE_ACCOUNT, E.ROLE, E.SERVICE_PRINCIPAL, E.MANAGED_IDENTITY})
 _VERDICT_ORDER = ("confirmed", "likely", "unknown")
@@ -58,6 +58,10 @@ def _content_node(node: UnifiedNode | None) -> bool:
     if node is None:
         return False
     return node.entity_type == E.PACKAGE or (node.entity_type == E.CONTAINER and node.attributes.get("container_kind") == "image")
+
+
+def _runs_image(edge: UnifiedEdge, target: UnifiedNode | None) -> bool:
+    return _rel_value(edge) == R.RUNS.value and target is not None and target.entity_type == E.CONTAINER
 
 
 def _record(foothold: _Foothold, edge: UnifiedEdge, vuln: UnifiedNode) -> None:
@@ -85,7 +89,7 @@ def _foothold(graph: UnifiedGraph, workload_id: str, outgoing: Mapping[str, list
                 rel = _rel_value(edge)
                 if rel == R.VULNERABLE_TO.value and target is not None and target.entity_type == E.VULNERABILITY and node_id != workload_id:
                     _record(foothold, edge, target)
-                elif rel in _HOLD and edge.traversable and edge.target not in seen and _content_node(target):
+                elif rel in _HOLD and edge.traversable and edge.target not in seen and (_content_node(target) or _runs_image(edge, target)):
                     seen.add(edge.target)
                     following.append(edge.target)
         frontier = following

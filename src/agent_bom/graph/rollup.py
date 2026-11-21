@@ -182,6 +182,10 @@ def _bucket_for(severity: str) -> str:
 
 def _is_exposed(node: UnifiedNode) -> bool:
     attrs = node.attributes or {}
+    context = attrs.get("risk_context")
+    # The risk-context verdict folds every provider spelling (``publicly_accessible``, ``is_public``, ...).
+    if isinstance(context, dict) and context.get("internet_exposed") is True:
+        return True
     return bool(attrs) and any(coerce_truthy(attrs[key]) for key in _EXPOSED_ATTRS if key in attrs)
 
 

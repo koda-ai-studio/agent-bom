@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Iterable, Mapping, NoReturn, Protocol, cast
+from typing import TYPE_CHECKING, Any, Iterable, Mapping, NoReturn, Protocol, Sequence, cast
 
 from agent_bom.api.storage.neptune_results import normalize_neptune_result as _normalize_result
 from agent_bom.core.graph_backend_errors import NeptuneGraphStoreConfigError as NeptuneGraphStoreConfigError
@@ -27,6 +27,7 @@ from agent_bom.graph.severity_floor import node_passes_severity_floor
 if TYPE_CHECKING:
     from agent_bom.graph.correlation import CorrelationRunStatus, GraphCorrelationRun
     from agent_bom.graph.delta_digest import PriorSnapshotDigest
+    from agent_bom.graph.snapshot_paths import SnapshotPath
 
 __all__ = ["NeptuneGraphStoreError"]  # fmt: skip
 
@@ -355,6 +356,7 @@ class NeptuneGraphStore:
         manifest_sha256: str,
         completed_at: str = "",
         execution_owner: str = "",
+        snapshot_paths: Sequence[SnapshotPath] | None = None,
     ) -> "GraphCorrelationRun":
         self._unsupported("complete_correlation_run")
 

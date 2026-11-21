@@ -192,7 +192,7 @@
     },
     {
       "presentation": "dark desktop",
-      "path": "dashboard-paths-live.png",
+      "path": "dashboard-frameworks-live.png",
       "page": "/?capture=1",
       "scope": "Expanded Overview assessment summary with four priority frameworks and risk mappings collapsed at 1440 by 900",
       "visible_version": "0.115.5",
@@ -459,7 +459,7 @@
     },
     {
       "presentation": "dark desktop",
-      "path": "dependency-map-live.png",
+      "path": "findings-queue-live.png",
       "page": "/findings?capture=1",
       "scope": "Findings queue with seeded package and CVE evidence from the demo estate",
       "visible_version": "0.115.5",

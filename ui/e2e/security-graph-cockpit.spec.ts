@@ -2133,7 +2133,7 @@ for (const width of [1440, 1920]) for (const theme of ["light", "dark"]) {
     await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
     await routeCockpit(page, undefined, { referenceGraph: true });
     await page.goto(`/graph?scan=${scanId}&rollup=0&capture=1&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`);
-    await expect(page.locator(".react-flow__node")).toHaveCount(10);
+    await expect(page.locator(".react-flow__node")).toHaveCount(11);
     await page.locator(".react-flow__controls-fitview").click();
     await page.waitForLoadState("networkidle");
     await page.screenshot({ path: testInfo.outputPath("reference-captions.png"), fullPage: true });
