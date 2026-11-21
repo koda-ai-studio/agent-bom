@@ -171,3 +171,34 @@ def test_script_is_stdlib_only() -> None:
     import sys
 
     assert imported <= set(sys.stdlib_module_names) | {"__future__"}, imported
+
+
+def test_amend_folds_late_fragments_into_the_newest_untagged_section(tmp_path: Path) -> None:
+    module = _module()
+    prepared = CHANGELOG.replace(
+        "## [1.2.0] - 2026-01-01\n",
+        "## [1.3.0] - 2026-02-02\n\n### Fixed\n- Prepared fix.\n\n### CI\n- Prepared CI.\n\n## [1.2.0] - 2026-01-01\n",
+    )
+    changelog, fragments = _layout(tmp_path, {"late.md": "### Fixed\n- Late fix.\n\n### Added\n- Late feature.\n"}, prepared)
+
+    assert _run(module, changelog, fragments, "--version", "1.3.0", "--amend") == 0
+
+    text = changelog.read_text(encoding="utf-8")
+    section = text.split("## [1.3.0] - 2026-02-02\n", 1)[1].split("## [1.2.0]", 1)[0]
+    assert section == ("\n### Added\n- Late feature.\n\n### Fixed\n- Prepared fix.\n- Late fix.\n\n### CI\n- Prepared CI.\n\n")
+    assert text.count("## [1.3.0]") == 1
+    assert "### Fixed\n- Older fix." in text
+    assert sorted(path.name for path in fragments.iterdir()) == ["README.md"]
+
+
+@pytest.mark.parametrize("version", ["1.2.0", "9.9.9"])
+def test_amend_only_touches_the_newest_release_section(tmp_path: Path, version: str) -> None:
+    module = _module()
+    prepared = CHANGELOG.replace(
+        "## [1.2.0] - 2026-01-01\n", "## [1.3.0] - 2026-02-02\n\n### Fixed\n- Prepared.\n\n## [1.2.0] - 2026-01-01\n"
+    )
+    changelog, fragments = _layout(tmp_path, {"x.md": "### Fixed\n- Late.\n"}, prepared)
+
+    assert _run(module, changelog, fragments, "--version", version, "--amend") == 1
+    assert changelog.read_text(encoding="utf-8") == prepared
+    assert (fragments / "x.md").exists()
