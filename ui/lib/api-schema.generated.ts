@@ -17049,6 +17049,11 @@ export interface components {
             risk_assessment: components["schemas"]["GraphNodeRiskAssessment"];
             /** Risk Score */
             risk_score: number;
+            /**
+             * Semantic Layer
+             * @description The node's GraphSemanticLayer: a layer the producer recorded, else the one its entity_type maps to (the /v1/graph/schema legend). Present on every node a graph route serializes.
+             */
+            semantic_layer?: string | null;
             /** Severity */
             severity: string;
             /** Status */
@@ -18485,6 +18490,11 @@ export interface components {
             label: string;
             /** Risk Score */
             risk_score: number;
+            /**
+             * Semantic Layer
+             * @description The node's GraphSemanticLayer: a layer the producer recorded, else the one its entity_type maps to (the /v1/graph/schema legend). Present on every node a graph route serializes.
+             */
+            semantic_layer?: string | null;
             /** Severity */
             severity: string;
             /** Status */
@@ -18714,6 +18724,11 @@ export interface components {
             risk_assessment: components["schemas"]["GraphNodeRiskAssessment"];
             /** Risk Score */
             risk_score: number;
+            /**
+             * Semantic Layer
+             * @description The node's GraphSemanticLayer: a layer the producer recorded, else the one its entity_type maps to (the /v1/graph/schema legend). Present on every node a graph route serializes.
+             */
+            semantic_layer?: string | null;
             /** Severity */
             severity: string;
             /** Severity Id */
@@ -36709,7 +36724,7 @@ export interface operations {
                 offset?: number;
                 /** @description Max nodes to return */
                 limit?: number;
-                /** @description ``full`` (the default in 0.115; ``summary`` becomes the default in 0.116.0) returns the whole node, edge and path records. ``summary`` (alias ``lean``) returns each node's id, entity_type, label, severity, risk_score, status and the attributes that name and badge it; each edge's endpoints, relationship, direction, weight, traversable and confidence (its id is relationship:source:target); and a summary of each embedded attack path. Full attributes and evidence_provenance come from /v1/graph/node/{node_id}, complete paths from /v1/graph/attack-paths. ``canvas`` returns the graph page's projection. */
+                /** @description ``full`` (the default in 0.115; ``summary`` becomes the default in 0.116.0) returns the whole node, edge and path records. ``summary`` (alias ``lean``) returns each node's id, entity_type, label, severity, risk_score, status, semantic_layer and the attributes that name and badge it; each edge's endpoints, relationship, direction, weight, traversable and confidence (its id is relationship:source:target); and a summary of each embedded attack path. Full attributes and evidence_provenance come from /v1/graph/node/{node_id}, complete paths from /v1/graph/attack-paths. ``canvas`` returns the graph page's projection. */
                 view?: ("full" | "summary" | "lean" | "canvas") | null;
                 /** @description Comma-separated additions to the summary view (and selects it when no view is given): ``attributes`` returns whole node and edge records, ``paths`` whole attack-path records. Both together equal ``view=full``. Not valid with ``view=canvas``. */
                 include?: string | null;

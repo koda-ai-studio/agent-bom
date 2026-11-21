@@ -25,6 +25,7 @@ from agent_bom.api.routes.graph_routes.lean_view import (
 from agent_bom.api.server import app
 from agent_bom.api.stores import set_graph_store
 from agent_bom.graph import AttackPath, EntityType, RelationshipType, UnifiedEdge, UnifiedGraph, UnifiedNode
+from agent_bom.graph.semantic_layer import node_payload
 from tests.test_graph_api import _RecordingGraphStore
 
 UI = pathlib.Path(__file__).resolve().parents[2] / "ui"
@@ -111,6 +112,7 @@ def test_summary_view_is_the_lean_projection(recording_graph_store, extra) -> No
         "severity": "high",
         "risk_score": 7.5,
         "status": agent["status"],
+        "semantic_layer": "orchestration",
         "attributes": {"agent_type": "claude-desktop"},
     }
     for edge in body["edges"]:
@@ -164,7 +166,7 @@ def test_full_and_include_both_return_the_previous_default(recording_graph_store
     assert "view" not in body
     graph = recording_graph_store.graph
     assert {node["id"]: {k: v for k, v in node.items() if k != "context"} for node in body["nodes"]} == {
-        node_id: node.to_dict() for node_id, node in graph.nodes.items() if node_id in {n["id"] for n in body["nodes"]}
+        node_id: node_payload(node) for node_id, node in graph.nodes.items() if node_id in {n["id"] for n in body["nodes"]}
     }
     assert all("evidence_provenance" in node and "source_id" in edge for node, edge in zip(body["nodes"], body["edges"]))
 

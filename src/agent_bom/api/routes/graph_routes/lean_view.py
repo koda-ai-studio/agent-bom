@@ -21,7 +21,8 @@ GRAPH_INCLUDES: tuple[GraphInclude, ...] = ("attributes", "paths")
 
 GRAPH_VIEW_DESCRIPTION = (
     "``full`` (the default in 0.115; ``summary`` becomes the default in 0.116.0) returns the whole node, edge and "
-    "path records. ``summary`` (alias ``lean``) returns each node's id, entity_type, label, severity, risk_score, status and the "
+    "path records. ``summary`` (alias ``lean``) returns each node's id, entity_type, label, severity, risk_score, status, "
+    "semantic_layer and the "
     "attributes that name and badge it; each edge's endpoints, relationship, direction, weight, traversable "
     "and confidence (its id is relationship:source:target); and a summary of each embedded attack path. "
     "Full attributes and evidence_provenance come from /v1/graph/node/{node_id}, complete paths from "
@@ -33,7 +34,7 @@ GRAPH_INCLUDE_DESCRIPTION = (
     "whole attack-path records. Both together equal ``view=full``. Not valid with ``view=canvas``."
 )
 
-LEAN_NODE_FIELDS = ("id", "entity_type", "label", "severity", "risk_score", "status", "attributes")
+LEAN_NODE_FIELDS = ("id", "entity_type", "label", "severity", "risk_score", "status", "semantic_layer", "attributes")
 # What names a node, picks its icon and badges it: display name, kind, ecosystem, provider and place.
 LEAN_NODE_ATTRIBUTES = (
     "display_name",
@@ -55,6 +56,8 @@ LEAN_NODE_ATTRIBUTES = (
     "cloud_provider",
     "environment",
     "region",
+    # Canonical internet exposure; ``_lean_node`` folds in the risk-context verdict.
+    "internet_exposed",
 )
 # No ``id``: an edge's id is always ``{relationship}:{source}:{target}``, a third of a lean edge's bytes.
 LEAN_EDGE_FIELDS = ("source", "target", "relationship", "direction", "weight", "traversable", "confidence")
@@ -110,9 +113,22 @@ def _lean_node(node: dict[str, Any]) -> dict[str, Any]:
     slim["attributes"] = (
         {key: value for key, value in attributes.items() if key in _LEAN_ATTRIBUTE_SET} if isinstance(attributes, dict) else {}
     )
+    exposure = _exposure_verdict(attributes) if isinstance(attributes, dict) else None
+    if exposure is not None:
+        slim["attributes"]["internet_exposed"] = exposure
     if node.get("context") is True:
         slim["context"] = True
     return slim
+
+
+def _exposure_verdict(attributes: dict[str, Any]) -> bool | None:
+    """The risk-context verdict (every provider spelling folded in), else the recorded flag."""
+    context = attributes.get("risk_context")
+    verdict = context.get("internet_exposed") if isinstance(context, dict) else None
+    if isinstance(verdict, bool):
+        return verdict
+    recorded = attributes.get("internet_exposed")
+    return recorded if isinstance(recorded, bool) else None
 
 
 def _lean_edge(edge: dict[str, Any]) -> dict[str, Any]:

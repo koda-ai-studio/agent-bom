@@ -1,3 +1,4 @@
 ### Fixed
 
 - Link a workload to the image whose digest it pins with one evidenced `runs` edge, so an IaC deployment and an SBOM/image scan of the same digest correlate; packages stay under the image and the image is no longer a second attack-path entry for the same CVE occurrence.
+- Every node a graph route serializes now carries `semantic_layer` (recorded layer, else the kind's legend layer), and the summary view keeps `attributes.internet_exposed`, folding in the risk-context verdict, so the graph can group and badge nodes from the API alone.

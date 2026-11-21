@@ -17,7 +17,6 @@ from itertools import groupby
 from pathlib import Path
 from typing import Any
 
-from agent_bom.graph.agent_context import annotate_agent_context
 from agent_bom.graph.asset_identity import IdentityKey
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.correlation import (
@@ -31,11 +30,11 @@ from agent_bom.graph.correlation import (
     _relationship_value,
     correlation_identity,
 )
+from agent_bom.graph.correlation_finish import finish_correlated_graph
 from agent_bom.graph.correlation_scope import CORRELATION_IDENTITY_VERSION, strong_member_identities, strong_member_keys
 from agent_bom.graph.correlation_scope import timestamp_instant as _timestamp_instant
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import UnifiedNode
-from agent_bom.graph.workload_image_runs import link_workload_images
 
 _WRITE_BATCH_SIZE = 1000
 
@@ -451,8 +450,7 @@ class CorrelationMergeWorkspace:
             if edge.provenance.get("correlation", {}).get("conflict_fields"):
                 edge_conflicts += 1
             output.add_edge(edge)
-        link_workload_images(output)
-        annotate_agent_context(output)
+        finish_correlated_graph(output)
         ordered_snapshots = sorted(
             self._snapshots.values(),
             key=lambda item: (_timestamp_instant(str(item["created_at"])), str(item["scan_id"])),

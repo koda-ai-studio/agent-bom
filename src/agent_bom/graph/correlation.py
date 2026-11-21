@@ -18,9 +18,9 @@ from packageurl import PackageURL
 
 from agent_bom.core.severity import SEVERITY_RANK
 from agent_bom.graph import correlation_scope as _scope
-from agent_bom.graph.agent_context import annotate_agent_context
 from agent_bom.graph.asset_identity import IdentityKey
 from agent_bom.graph.container import UnifiedGraph
+from agent_bom.graph.correlation_finish import finish_correlated_graph
 from agent_bom.graph.correlation_scope import CORRELATION_IDENTITY_VERSION, merged_identity_version, runtime_stable_identity
 from agent_bom.graph.correlation_scope import exact_attribute_identity as _exact_attribute_identity
 from agent_bom.graph.correlation_scope import identity_digest as _digest
@@ -36,7 +36,6 @@ from agent_bom.graph.node import NodeDimensions, UnifiedNode
 from agent_bom.graph.security_assertions import resolve_security_assertions
 from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.graph.util import _now_iso
-from agent_bom.graph.workload_image_runs import link_workload_images
 
 _EMPTY_VALUES: tuple[Any, ...] = (None, "", [], {})
 _SHA256_RE = re.compile(r"sha256:[0-9a-f]{64}")
@@ -715,8 +714,7 @@ def merge_graph_snapshots(
             )
         )
 
-    link_workload_images(output)
-    annotate_agent_context(output)
+    finish_correlated_graph(output)
     manifest = {
         "schema_version": "agent-bom.graph-correlation.v1",
         "identity_version": CORRELATION_IDENTITY_VERSION,
