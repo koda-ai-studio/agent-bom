@@ -32,6 +32,13 @@ def test_secret_options_are_never_repeated():
     assert "--image registry.example/app:1" in typed
 
 
+def test_typed_push_key_is_repeated_as_its_environment_variable():
+    typed = _typed("--push-url", "https://cp.example/v1/results/push", "--push-api-key", "abk_live_value")
+    assert "abk_live_value" not in typed
+    assert typed.endswith('--push-api-key "$AGENT_BOM_PUSH_API_KEY"')
+    assert "--push-url https://cp.example/v1/results/push" in typed
+
+
 def test_bare_scan_repeats_nothing():
     assert _typed() == ""
 
