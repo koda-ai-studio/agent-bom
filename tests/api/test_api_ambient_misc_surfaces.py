@@ -11,6 +11,8 @@
 
 from __future__ import annotations
 
+import sys
+import types
 from collections.abc import Iterator
 from types import SimpleNamespace
 from typing import Any
@@ -171,7 +173,14 @@ def test_unknown_connector_is_still_404(client: TestClient, health_calls: list) 
 
 @pytest.fixture
 def hub(monkeypatch: pytest.MonkeyPatch) -> list[Any]:
-    import huggingface_hub
+    # A stub module, so these tests run without the optional huggingface extra installed.
+    huggingface_hub = types.ModuleType("huggingface_hub")
+    hub_utils = types.ModuleType("huggingface_hub.utils")
+    hub_utils.GatedRepoError = type("GatedRepoError", (Exception,), {})
+    hub_utils.RepositoryNotFoundError = type("RepositoryNotFoundError", (Exception,), {})
+    huggingface_hub.utils = hub_utils
+    monkeypatch.setitem(sys.modules, "huggingface_hub", huggingface_hub)
+    monkeypatch.setitem(sys.modules, "huggingface_hub.utils", hub_utils)
 
     tokens: list[Any] = []
 
@@ -182,7 +191,7 @@ def hub(monkeypatch: pytest.MonkeyPatch) -> list[Any]:
         def model_info(self, *_: Any, **__: Any) -> Any:
             return SimpleNamespace(gated=False, private=False, siblings=[], card_data=None, cardData=None, safetensors=None)
 
-    monkeypatch.setattr(huggingface_hub, "HfApi", _Api)
+    huggingface_hub.HfApi = _Api
     monkeypatch.setenv("HF_TOKEN", "hf_placeholder_for_test")
     return tokens
 

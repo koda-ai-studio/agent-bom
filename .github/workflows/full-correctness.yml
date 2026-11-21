@@ -51,10 +51,14 @@ jobs:
             exit 1
           fi
           WORKERS=$(uv run python scripts/ci_pytest_workers.py "${TESTS[@]}")
+          # Collect the test root once; tests/_ci_selection.py keeps only this
+          # shard's modules (one argument per module re-collects the package each time).
+          export AGENT_BOM_PYTEST_SELECTION="$(mktemp)"
+          printf '%s\n' "${TESTS[@]}" > "$AGENT_BOM_PYTEST_SELECTION"
           if [ "${{ matrix.python-version }}" = "3.11" ]; then
-            uv run pytest "${TESTS[@]}" -q --tb=short --durations=50 --cov=agent_bom --cov-report= --cov-fail-under=0 -m "not network and not slow and not graph_performance" -n "$WORKERS" --dist worksteal
+            uv run pytest tests -q --tb=short --durations=50 --cov=agent_bom --cov-report= --cov-fail-under=0 -m "not network and not slow and not graph_performance" -n "$WORKERS" --dist worksteal
           else
-            uv run pytest "${TESTS[@]}" -v --tb=short --durations=50 -m "not network and not slow and not graph_performance" -n "$WORKERS" --dist worksteal
+            uv run pytest tests -v --tb=short --durations=50 -m "not network and not slow and not graph_performance" -n "$WORKERS" --dist worksteal
           fi
 
       - name: Preserve successful coverage shard
