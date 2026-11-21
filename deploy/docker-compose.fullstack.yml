@@ -44,7 +44,7 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
-    image: agentbom/agent-bom:0.115.4
+    image: agentbom/agent-bom:0.115.5
     group_add:
       - "${AGENT_BOM_SECRETS_GID:-65534}"
     working_dir: /opt/agent-bom
@@ -73,7 +73,7 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
-    image: agentbom/agent-bom:0.115.4
+    image: agentbom/agent-bom:0.115.5
     group_add:
       - "${AGENT_BOM_SECRETS_GID:-65534}"
     restart: unless-stopped
@@ -158,7 +158,7 @@ services:
     build:
       context: ../ui/
       dockerfile: Dockerfile
-    image: agentbom/agent-bom-ui:0.115.4
+    image: agentbom/agent-bom-ui:0.115.5
     restart: unless-stopped
     environment:
       # The browser same-origins to this UI; the UI's Node server proxies
