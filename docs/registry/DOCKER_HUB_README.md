@@ -248,7 +248,7 @@ Dashboard overview:
 
 Attack paths and exposure:
 
-![agent-bom dashboard attack paths and exposure](https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/docs/images/dashboard-paths-live.png)
+![agent-bom overview control-framework evidence](https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/docs/images/dashboard-frameworks-live.png)
 
 Focused agent mesh graph:
 

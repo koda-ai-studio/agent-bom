@@ -87,7 +87,7 @@ deterministic public screenshot set.
 | Asset | Page | Required scope | Rationale |
 |---|---|---|---|
 | `dashboard-live.png` | `/?capture=1` (Overview) | Posture grade, unique findings breakdown, scope and freshness; secondary sections collapsed | Compact command-center frame |
-| `dashboard-paths-live.png` | `/?capture=1` (Overview) | Expanded Compliance & frameworks and Findings by security area | Readable framework evidence frame |
+| `dashboard-frameworks-live.png` | `/?capture=1` (Overview) | Expanded Compliance & frameworks and Findings by security area | Readable framework evidence frame |
 | `cloud-accounts-live.png` | `/connections?capture=1` | Connections header and provider gallery across cloud, code, AI, and data | Onboarding surface |
 | `new-scan-live.png` | `/scan?capture=1` | New Scan modes — connected account, ad-hoc, public repo URL | Scan scope clarity |
 | `mesh-live.png` | `/mesh?capture=1` | Capture-mode scopes developer-copilot + sre-runbook-agent on shared filesystem MCP with path focus off and labeled edges | README mesh proof must differ from lineage: multi-agent shared server, not the same single CVE chain |
@@ -109,7 +109,7 @@ deterministic public screenshot set.
 | `inventory-live.png` | `/inventory?capture=1` | Unified asset-kind roll-up with coverage language and non-empty package, MCP, agent, identity, container, and code cards | The Discover journey must show the cross-source inventory rather than one narrow collector |
 | `fleet-state-live.png` | `/fleet?capture=1` | Expanded quarantined agent row with owner, environment, and enforcement state | Shows environment and lifecycle state as control-plane evidence instead of implying the local scan alone owns review state |
 | `identity-audit-live.png` | `/audit?capture=1` | Identity-resource posture summary with auth, key, and tenant-quota panels | Shows the visible IAM posture frame from the deterministic capture fixture |
-| `dependency-map-live.png` | `/findings?capture=1` | Capture findings queue with seeded package and CVE evidence | Proves package/CVE posture from the same seeded demo estate |
+| `findings-queue-live.png` | `/findings?capture=1` | Capture findings queue with seeded package and CVE evidence | Proves package/CVE posture from the same seeded demo estate |
 | `remediation-live.png` | `/remediation` | All frameworks tab | Shows the full prioritized fix list |
 
 ### Dashboard layout (current)
@@ -120,7 +120,7 @@ as two dashboard frames rather than one stitched full-page export:
 
 1. `dashboard-live.png`
    Compact Overview — posture grade, unique findings, scope, and freshness
-2. `dashboard-paths-live.png`
+2. `dashboard-frameworks-live.png`
    Expanded Compliance & frameworks and Findings by security area
 3. `cloud-accounts-live.png`
    Connected evidence sources with provider catalog

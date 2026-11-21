@@ -22,7 +22,7 @@ PR clearly explains why an asset is unchanged.
 | Asset | Required proof |
 |---|---|
 | `dashboard-live.png` | Overview top frame with visible version, posture grade, unique findings, scan coverage, and operational lanes. |
-| `dashboard-paths-live.png` | Overview with Compliance & frameworks and Findings by security area expanded. |
+| `dashboard-frameworks-live.png` | Overview with Compliance & frameworks and Findings by security area expanded. |
 | `mesh-live.png` | Focused active agent → MCP server → package → finding path with title, legend, and no large empty canvas. |
 | `security-graph-live.png` | Prioritized attack path with graph evidence export and remediation handoff. |
 | `lineage-graph-live.png` | Focused filtered attack-path lineage across agent, MCP server, package, and finding nodes. |
@@ -33,7 +33,7 @@ PR clearly explains why an asset is unchanged.
 | `fleet-state-live.png` | Fleet lifecycle review state with owner, environment, trust factors, and quarantine context. |
 | `gateway-policies-live.png` | Runtime gateway posture with enforcement, firewall decisions, policy rules, and bound agents. |
 | `identity-audit-live.png` | Auth, key lifecycle, tenant boundaries, and audit log evidence without overflowing cards. |
-| `dependency-map-live.png` | Findings queue with seeded package and fictional vulnerability evidence. |
+| `findings-queue-live.png` | Findings queue with seeded package and fictional vulnerability evidence. |
 | `remediation-live.png` | Fix-first remediation table with prioritized packages and framework context. |
 
 ## Manifest
