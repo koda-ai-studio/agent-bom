@@ -1548,12 +1548,14 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
     "category": "code_topology",
     "direction": "directed",
     "source_types": [
-      "ci_job"
+      "ci_job",
+      "container"
     ],
     "target_types": [
       "tool",
       "server",
-      "agent"
+      "agent",
+      "container"
     ],
     "traversable": true,
     "traversal_class": "structural"

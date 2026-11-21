@@ -24060,6 +24060,83 @@
         "additionalProperties": true,
         "description": "A correlation run's receipt; empty until the run completes.",
         "properties": {
+          "analysis_bounds": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Merge limits plus each analyzer's completion status.",
+            "title": "Analysis Bounds"
+          },
+          "correlation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correlation Id"
+          },
+          "correlation_merge": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Node and edge conflict counts from the merge.",
+            "title": "Correlation Merge"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "freshness_policy": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "max_age_hours and allow_stale the run used.",
+            "title": "Freshness Policy"
+          },
+          "input_snapshots": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The source snapshots the run merged, in merge order.",
+            "title": "Input Snapshots"
+          },
           "output": {
             "anyOf": [
               {
@@ -24080,6 +24157,17 @@
               }
             ],
             "title": "Schema Version"
+          },
+          "tenant_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Id"
           }
         },
         "title": "GraphCorrelationResultManifest",

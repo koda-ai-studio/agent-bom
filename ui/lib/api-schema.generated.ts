@@ -17685,9 +17685,43 @@ export interface components {
          * @description A correlation run's receipt; empty until the run completes.
          */
         GraphCorrelationResultManifest: {
+            /**
+             * Analysis Bounds
+             * @description Merge limits plus each analyzer's completion status.
+             */
+            analysis_bounds?: {
+                [key: string]: unknown;
+            } | null;
+            /** Correlation Id */
+            correlation_id?: string | null;
+            /**
+             * Correlation Merge
+             * @description Node and edge conflict counts from the merge.
+             */
+            correlation_merge?: {
+                [key: string]: unknown;
+            } | null;
+            /** Created At */
+            created_at?: string | null;
+            /**
+             * Freshness Policy
+             * @description max_age_hours and allow_stale the run used.
+             */
+            freshness_policy?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Input Snapshots
+             * @description The source snapshots the run merged, in merge order.
+             */
+            input_snapshots?: {
+                [key: string]: unknown;
+            }[] | null;
             output?: components["schemas"]["GraphCorrelationOutput"] | null;
             /** Schema Version */
             schema_version?: string | null;
+            /** Tenant Id */
+            tenant_id?: string | null;
         } & {
             [key: string]: unknown;
         };

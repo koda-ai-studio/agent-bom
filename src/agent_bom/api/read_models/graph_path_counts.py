@@ -6,7 +6,7 @@ count block is typed, so existing clients keep every field they read today.
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import Field
 
@@ -47,6 +47,13 @@ class GraphCorrelationResultManifest(ReadModel):
     """A correlation run's receipt; empty until the run completes."""
 
     schema_version: str | None = None
+    correlation_id: str | None = None
+    tenant_id: str | None = None
+    created_at: str | None = None
+    freshness_policy: dict[str, Any] | None = Field(default=None, description="max_age_hours and allow_stale the run used.")
+    input_snapshots: list[dict[str, Any]] | None = Field(default=None, description="The source snapshots the run merged, in merge order.")
+    correlation_merge: dict[str, Any] | None = Field(default=None, description="Node and edge conflict counts from the merge.")
+    analysis_bounds: dict[str, Any] | None = Field(default=None, description="Merge limits plus each analyzer's completion status.")
     output: GraphCorrelationOutput | None = None
 
 

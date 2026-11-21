@@ -16,7 +16,7 @@ Entity types grouped into domains by each type's semantic layer (`graph/containe
 | AI and agents | `agent`, `application`, `blueprint`, `eval_suite`, `framework`, `server`, `tool`, `tool_call` | 23 | 36 | [ERD and relationships](data-model/domains/ai.md) |
 | Code and supply chain | `ci_job`, `code_module`, `config_file`, `directory`, `external_import`, `package`, `source_file` | 7 | 14 | [ERD and relationships](data-model/domains/supply.md) |
 | Findings | `drift_incident`, `misconfiguration`, `vulnerability` | 1 | 9 | [ERD and relationships](data-model/domains/findings.md) |
-| Cloud, infrastructure and data | `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `environment`, `fleet`, `model`, `provider`, `resource` | 13 | 26 | [ERD and relationships](data-model/domains/cloud.md) |
+| Cloud, infrastructure and data | `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `environment`, `fleet`, `model`, `provider`, `resource` | 14 | 26 | [ERD and relationships](data-model/domains/cloud.md) |
 | Identity and access | `access_grant`, `access_policy`, `account`, `credential`, `credential_ref`, `federated_identity`, `group`, `managed_identity`, `org`, `policy`, `role`, `service_account`, `service_principal`, `user` | 17 | 25 | [ERD and relationships](data-model/domains/identity.md) |
 
 ## Entities
@@ -118,7 +118,7 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | `reaches_tool` | `authority` | inventory | directed | yes | `agent`, `credential` | `tool` | 2 | FU, CR | 2 (+1 demo) |
 | `recorded_activity` | `correlation` | runtime | directed | no | `agent`, `federated_identity`, `managed_identity`, `resource`, `role`, `server` (+4 more) | `access_policy`, `agent`, `api_gateway`, `application`, `ci_job`, `cloud_resource` (+19 more) | 250 | — | 1 |
 | `remediates` | `finding` | vulnerability | directed | no | `package` | `misconfiguration`, `vulnerability` | 2 | — | 0 |
-| `runs` | `structural` | code_topology | directed | yes | `ci_job` | `agent`, `server`, `tool` | 3 | — | 1 |
+| `runs` | `structural` | code_topology | directed | yes | `ci_job`, `container` | `agent`, `container`, `server`, `tool` | 4 | — | 2 |
 | `scoped_to` | `governance` | governance | directed | yes | `access_grant`, `drift_incident`, `managed_identity` | `tool` | 3 | FU | 1 |
 | `serves_model` | `dependency` | inventory | directed | yes | `agent`, `container`, `framework`, `server` | `model` | 4 | — | 2 |
 | `shares_cred` | `correlation` | lateral_movement | bidirectional | no | `agent` | `agent` | 1 | — | 0 |
