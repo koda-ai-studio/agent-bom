@@ -27,8 +27,14 @@ describe("relationship lanes", () => {
       sourcePosition: Position.Right, targetPosition: Position.Left };
     const [path] = relationshipPath(edge, [upper, lower], { source: 14, target: -14 });
     expect(path).toContain("C");
-    const alongRow = pairs(path).filter(point => point.x > edge.sourceX + 14 && Math.abs(point.y - edge.sourceY) < 6);
-    expect(alongRow).toEqual([]);
+    const points = pairs(path);
+    expect(points[0]!.y).toBe(edge.sourceY + 14);
+    // A Bezier control point is not a point on the rendered line. Reject a
+    // shared horizontal segment, while allowing an isolated crossing.
+    for (let i = 0; i + 3 < points.length; i += 3) {
+      const curve = points.slice(i, i + 4);
+      expect(curve.every(point => Math.abs(point.y - edge.sourceY) < 6)).toBe(false);
+    }
   });
 
   it("keeps a detour lane clear of a card that only partly overlaps the corridor", () => {
