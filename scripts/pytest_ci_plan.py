@@ -19,6 +19,11 @@ import math
 from pathlib import Path
 from typing import Iterable
 
+if __package__:
+    from .ci_shard_balance import balance_shards as _balance
+else:
+    from ci_shard_balance import balance_shards as _balance
+
 AUTHORIZATION_SOURCES = frozenset(
     {
         "src/agent_bom/rbac.py",
@@ -297,17 +302,6 @@ def estimate_seconds(files: Iterable[Path], durations: dict[Path, float]) -> dic
     return {path: durations[path] if path in durations else path.stat().st_size * rate for path in files}
 
 
-def _balance(weights: dict[Path, float], *, total: int) -> list[list[Path]]:
-    """Longest-processing-time first: each module goes to the least-loaded shard."""
-    shards: list[list[Path]] = [[] for _ in range(total)]
-    loads = [0.0] * total
-    for path in sorted(weights, key=lambda item: (-weights[item], item.as_posix())):
-        index = min(range(total), key=lambda candidate: (loads[candidate], candidate))
-        shards[index].append(path)
-        loads[index] += weights[path]
-    return [sorted(shard) for shard in shards]
-
-
 def plan_shards(files: Iterable[Path], *, total: int, durations: dict[Path, float] | None = None) -> list[list[Path]]:
     """Balance measured module seconds; without measurements, isolate the demo suite and balance bytes."""
     if total < 1:
@@ -315,7 +309,7 @@ def plan_shards(files: Iterable[Path], *, total: int, durations: dict[Path, floa
 
     files = sorted(set(files))
     if durations and any(path in durations for path in files):
-        return _balance(estimate_seconds(files, durations), total=total)
+        return _balance(estimate_seconds(files, durations), total=total, capacity_aware=True)
 
     # Byte-size fallback: the demo rebuild module is small on disk but slow, so
     # reserve one runner rather than stacking other suites behind it.
