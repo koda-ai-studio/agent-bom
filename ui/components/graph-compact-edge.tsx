@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { BaseEdge, EdgeLabelRenderer, Position, useInternalNode, useStore, type EdgeProps } from "@xyflow/react";
-import { RelationshipBadge, qualifiedLabel } from "@/components/relationship-edge";
+import { RelationshipBadge } from "@/components/relationship-edge";
 import { edgeFamily, edgeFamilyColor, edgeIsDashed } from "@/lib/graph-edge-family";
 import { relationshipEdgeLabelText } from "@/lib/graph-utils";
 
@@ -15,15 +15,16 @@ function control(point: Point, position: Position, offset: number): Point {
   return { x: point.x, y: point.y + offset };
 }
 
-type LanePoint = { dx: number; dy: number };
+type LanePoint = { dx: number; dy: number; half?: number };
 const isLane = (value: unknown): value is LanePoint[] => Array.isArray(value) && value.every(p => typeof p?.dx === "number" && typeof p?.dy === "number");
 
 /** A link that skips ranks runs level through each reserved lane slot, joined by
  * horizontal-tangent curves: one smooth line that never cuts a neighbouring card. */
 function laneCurve(source: Point, target: Point, lane: LanePoint[], sourceCentreX: number) {
-  const half = Math.abs(source.x - sourceCentreX), direction = Math.sign(target.x - source.x) || 1;
+  const glyphHalf = Math.abs(source.x - sourceCentreX), direction = Math.sign(target.x - source.x) || 1;
+  // The lane holds its slot's whole card width, so it only turns in the gaps between cards.
   const slots = lane.flatMap(p => {
-    const x = sourceCentreX + p.dx, y = source.y + p.dy;
+    const x = sourceCentreX + p.dx, y = source.y + p.dy, half = p.half ?? glyphHalf;
     return [{ x: x - direction * half, y }, { x: x + direction * half, y }];
   });
   const points = [source, ...slots, target];
@@ -52,12 +53,13 @@ export function compactEdgeCurve(props: Pick<EdgeProps, "sourceX" | "sourceY" | 
   return { path: `M ${source.x},${source.y} C ${c1.x},${c1.y} ${c2.x},${c2.y} ${target.x},${target.y}`, mid };
 }
 
-function InspectLabel({ id, at, relationship, text, data }: { id: string; at: Point; relationship: string; text: React.ReactNode; data: EdgeProps["data"] }) {
+/** An inspected link names its relationship and evidence in full. */
+function InspectLabel({ id, at, relationship, text }: { id: string; at: Point; relationship: string; text: React.ReactNode }) {
   const zoom = useStore(state => state.transform[2]);
   return <EdgeLabelRenderer>
     <div data-edge-id={id} data-inspecting="true" className="nodrag nopan graph-relationship-label"
       style={{ position: "absolute", transform: `translate(-50%, -50%) translate(${at.x}px, ${at.y}px)`, fontSize: 12.5 / Math.max(zoom, 0.16), pointerEvents: "none", whiteSpace: "nowrap" }}>
-      <RelationshipBadge relationship={relationship}>{qualifiedLabel(relationship, text, data)}</RelationshipBadge>
+      <RelationshipBadge relationship={relationship}>{text}</RelationshipBadge>
     </div>
   </EdgeLabelRenderer>;
 }
@@ -91,6 +93,6 @@ export function CompactRelationshipEdge(props: EdgeProps) {
       {...(props.markerStart ? { markerStart: props.markerStart } : {})}
       {...(props.markerEnd ? { markerEnd: props.markerEnd } : {})}
       {...(props.interactionWidth !== undefined ? { interactionWidth: props.interactionWidth } : {})} />
-    {text != null && <InspectLabel id={props.id} at={mid} relationship={relationship} text={text} data={props.data} />}
+    {text != null && <InspectLabel id={props.id} at={mid} relationship={relationship} text={text} />}
   </g>;
 }

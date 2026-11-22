@@ -8,29 +8,39 @@
 export const COMPACT_RANK_GAP = 240;
 export const COMPACT_ROW_GAP = 180;
 /** Layout-unit width of a compact node box; the name truncates inside it. */
-export const COMPACT_NODE_WIDTH = 200;
+export const COMPACT_NODE_WIDTH = 180;
 
 type Link = { id?: string; source: string; target: string };
 export type PackItem = { id: string; desired: number; fixed?: boolean };
 type Point = { x: number; y: number };
 
+/** Clear space between two lanes, and between a lane and a card's row. */
+export const COMPACT_LANE_GAP = 48;
+export const COMPACT_LANE_CLEARANCE = 120;
+
 /** Ordered items keep their order and a minimum gap, settling as close to
- * their desired rows as the gap allows; a fixed item stays on row zero. */
-export function packRank(items: readonly PackItem[], gap: number): Map<string, number> {
+ * their desired rows as the gap allows; a fixed item stays on row zero.
+ * `lane` items are link lanes, which need less room than a card. */
+export function packRank(items: readonly (PackItem & { lane?: boolean })[], gap: number): Map<string, number> {
   const out = new Map<string, number>();
+  const between = (a: { lane?: boolean } | undefined, b: { lane?: boolean } | undefined) =>
+    a?.lane && b?.lane ? COMPACT_LANE_GAP : a?.lane || b?.lane ? Math.min(gap, COMPACT_LANE_CLEARANCE) : gap;
   const spine = items.findIndex(item => item.fixed);
-  const spread = (list: readonly PackItem[], floor?: (i: number) => number) => {
-    const desired = list.map((item, i) => floor ? Math.max(item.desired, floor(i)) : item.desired);
+  const spread = (list: readonly (PackItem & { lane?: boolean })[], anchor?: PackItem & { lane?: boolean }) => {
+    const floor: number[] = [];
+    list.forEach((item, i) => floor.push(anchor ? (i ? floor[i - 1]! : 0) + between(i ? list[i - 1] : anchor, item) : -Infinity));
+    const desired = list.map((item, i) => Math.max(item.desired, floor[i]!));
     const forward: number[] = [], backward: number[] = [];
-    desired.forEach((d, i) => forward.push(i ? Math.max(d, forward[i - 1]! + gap) : d));
-    for (let i = desired.length - 1; i >= 0; i--) backward[i] = i === desired.length - 1 ? desired[i]! : Math.min(desired[i]!, backward[i + 1]! - gap);
-    return list.map((item, i) => [item.id, Math.max((forward[i]! + backward[i]!) / 2, floor ? floor(i) : -Infinity)] as const);
+    desired.forEach((d, i) => forward.push(i ? Math.max(d, forward[i - 1]! + between(list[i - 1], list[i])) : d));
+    for (let i = desired.length - 1; i >= 0; i--) backward[i] = i === desired.length - 1 ? desired[i]! : Math.min(desired[i]!, backward[i + 1]! - between(list[i], list[i + 1]));
+    return list.map((item, i) => [item.id, Math.max((forward[i]! + backward[i]!) / 2, floor[i]!)] as const);
   };
   if (spine < 0) { for (const [id, y] of spread(items)) out.set(id, y); return out; }
-  out.set(items[spine]!.id, 0);
-  for (const [id, y] of spread(items.slice(spine + 1), i => (i + 1) * gap)) out.set(id, y);
+  const fixed = items[spine]!;
+  out.set(fixed.id, 0);
+  for (const [id, y] of spread(items.slice(spine + 1), fixed)) out.set(id, y);
   const above = items.slice(0, spine).reverse().map(item => ({ ...item, desired: -item.desired }));
-  for (const [id, y] of spread(above, i => (i + 1) * gap)) out.set(id, y === 0 ? 0 : -y);
+  for (const [id, y] of spread(above, fixed)) out.set(id, y === 0 ? 0 : -y);
   return out;
 }
 
@@ -106,7 +116,7 @@ function rankGap(ranks: number[][]) {
 /** A link spanning several ranks reserves a lane slot in every rank it crosses,
  * so its curve never runs through a node standing in between. */
 function laneLinks(links: readonly Link[], rank: Map<string, number>, spine: ReadonlySet<string>) {
-  const lanes: Link[] = [], dummies = new Map<string, { rank: number; spine: boolean }>(), chains = new Map<string, string[]>();
+  const lanes: Link[] = [], dummies = new Map<string, { rank: number; spine: boolean; ends: [string, string] }>(), chains = new Map<string, string[]>();
   links.forEach((link, index) => {
     const from = rank.get(link.source), to = rank.get(link.target);
     if (from === undefined || to === undefined || link.source === link.target) return;
@@ -118,7 +128,7 @@ function laneLinks(links: readonly Link[], rank: Map<string, number>, spine: Rea
     for (let r = start + 1; r < end; r++) {
       const id = `\u0000lane:${index}:${r}`;
       chain.push(id);
-      dummies.set(id, { rank: r, spine: spine.has(link.source) && spine.has(link.target) });
+      dummies.set(id, { rank: r, spine: spine.has(link.source) && spine.has(link.target), ends: [link.source, link.target] });
       lanes.push({ source: previous, target: id });
       previous = id;
     }
@@ -152,27 +162,35 @@ export function compactLayout(input: CompactInput): { positions: Map<string, Poi
   const mean = (list: string[]) => list.length ? list.reduce((sum, id) => sum + y.get(id)!, 0) / list.length : undefined;
   const placeRank = (r: number, leftToRight: boolean) => {
     const members = byRank.get(r)!;
-    const desired = new Map(members.map(id => {
+    const desired = new Map<string, number>(), key = new Map<string, number>();
+    for (const id of members) {
       const all = neighbours.get(id)!;
       const lead = all.filter(n => leftToRight ? rank.get(n)! < r : rank.get(n)! > r);
       const trail = all.filter(n => leftToRight ? rank.get(n)! > r : rank.get(n)! < r);
-      // A lane slot sits between both of its ends, so a long link climbs a little at each rank.
-      if (dummies.has(id)) return [id, mean(all) ?? y.get(id)!];
-      return [id, mean(lead) ?? mean(trail) ?? y.get(id)!];
-    }));
+      // A lane slot sits between both of its ends, and is ordered by the end it is heading to,
+      // so a long link stays inside their span instead of looping around nodes on the way.
+      const lane = dummies.get(id);
+      if (!lane) { desired.set(id, mean(lead) ?? mean(trail) ?? y.get(id)!); key.set(id, desired.get(id)!); continue; }
+      const [lo, hi] = [y.get(lane.ends[0])!, y.get(lane.ends[1])!].sort((a, b) => a - b);
+      const within = (value: number) => Math.min(hi!, Math.max(lo!, value));
+      desired.set(id, within(mean(all) ?? y.get(id)!));
+      key.set(id, within(mean(trail) ?? desired.get(id)!));
+    }
     const spineId = members.find(id => onSpine.has(id));
+    // On a tie, a lane sits nearer the spine than a card.
+    const towardSpine = (a: string, b: string) => (Number(dummies.has(b)) - Number(dummies.has(a))) * (key.get(a)! < 0 ? -1 : 1);
     const rest = members.filter(id => id !== spineId)
-      .sort((a, b) => desired.get(a)! - desired.get(b)! || y.get(a)! - y.get(b)! || a.localeCompare(b));
-    let items: PackItem[] = rest.map(id => ({ id, desired: desired.get(id)! }));
+      .sort((a, b) => key.get(a)! - key.get(b)! || towardSpine(a, b) || y.get(a)! - y.get(b)! || a.localeCompare(b));
+    let items: (PackItem & { lane?: boolean })[] = rest.map(id => ({ id, desired: desired.get(id)!, lane: dummies.has(id) }));
     if (spineId) {
-      const above: PackItem[] = [], below: PackItem[] = [];
-      for (const item of items) (item.desired < 0 || (item.desired === 0 && above.length < below.length) ? above : below).push(item);
-      items = [...above, { id: spineId, desired: 0, fixed: true }, ...below];
+      const above: typeof items = [], below: typeof items = [];
+      for (const item of items) (key.get(item.id)! < 0 || (key.get(item.id) === 0 && !item.lane && above.length < below.length) ? above : below).push(item);
+      items = [...above, { id: spineId, desired: 0, fixed: true, lane: dummies.has(spineId) }, ...below];
     }
     for (const [id, value] of packRank(items, COMPACT_ROW_GAP)) y.set(id, value);
   };
-  // Two ordering sweeps, then the final left-to-right row assignment.
-  for (const leftToRight of [true, false, true]) for (const r of leftToRight ? order : [...order].reverse()) placeRank(r, leftToRight);
+  // Ordering sweeps in both directions, then the final left-to-right row assignment.
+  for (const leftToRight of [true, false, true, false, true]) for (const r of leftToRight ? order : [...order].reverse()) placeRank(r, leftToRight);
   const rankIndex = new Map(order.map((r, i) => [r, i]));
   const gap = rankGap(order.map(r => byRank.get(r)!.map(id => y.get(id)!)));
   const point = (id: string) => ({ x: rankIndex.get(rank.get(id)!)! * gap, y: Math.round(y.get(id)!) });

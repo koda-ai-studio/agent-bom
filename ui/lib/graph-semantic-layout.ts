@@ -78,7 +78,7 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
       const from = positions.get(edge.source), to = positions.get(edge.target);
       const reverse = Boolean(from && to && from.x > to.x);
       const sameRank = Boolean(from && to && from.x === to.x);
-      const lane = from && lanes.get(edge.id)?.map(point => ({ dx: point.x - from.x, dy: point.y - from.y }));
+      const lane = from && lanes.get(edge.id)?.map(point => ({ dx: point.x - from.x, dy: point.y - from.y, half: COMPACT_NODE_WIDTH / 2 }));
       const color = edgeFamilyColor(edgeFamily(String(edge.data?.relationship ?? "")));
       const marker = (value: Edge["markerEnd"]) => value && typeof value === "object" ? { ...value, color, width: 14, height: 14 } : value;
       return { ...edge, type: "compact", animated: false, ...(edge.markerEnd ? { markerEnd: marker(edge.markerEnd)! } : {}),

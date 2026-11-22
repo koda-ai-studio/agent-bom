@@ -3,6 +3,7 @@
 import { BaseEdge, EdgeLabelRenderer, useStore, type Edge, type EdgeProps } from "@xyflow/react";
 
 import type { AttackPathDirection } from "@/lib/attack-path-graph-layout";
+import { compactEdgeCurve } from "@/components/graph-compact-edge";
 import type { EdgeEvidenceStyle, PathGraphEdge } from "@/lib/attack-path-graph-model";
 import { relationshipLaneFor } from "@/lib/relationship-lanes";
 import { relationshipPath } from "@/lib/relationship-routing";
@@ -43,8 +44,10 @@ export function AttackPathGraphEdge(props: EdgeProps<AttackPathFlowEdge>) {
     : { markerEnd: `url(#${markerPrefix}-${kind})` };
   const lane = relationshipLaneFor(id, edges, nodeId => nodes.find(node => node.id === nodeId)?.position.y,
     nodeId => nodes.find(node => node.id === nodeId)?.position.x);
-  const [path, labelX, labelY] = relationshipPath(props, nodes.filter(node => !node.hidden).map(node => ({ id: node.id, ...node.position,
-    width: node.measured?.width ?? node.width ?? 152, height: node.measured?.height ?? node.height ?? 136 })), direction === "TB" ? undefined : lane);
+  // A phone column draws one smooth curve between the two handles; routing around obstacles there looped past the column.
+  const curve = direction === "TB" ? compactEdgeCurve(props) : null;
+  const [path, labelX, labelY] = curve ? [curve.path, curve.mid.x, curve.mid.y] : relationshipPath(props, nodes.filter(node => !node.hidden).map(node => ({ id: node.id, ...node.position,
+    width: node.measured?.width ?? node.width ?? 152, height: node.measured?.height ?? node.height ?? 136 })), lane);
   const label = { x: labelX, y: labelY };
   // A selected-path hop names its relationship on the line at all times: above it on a row (lines that turn
   // into branch rows leave below it) and beside it on a phone column. A branch names its own on hover or focus.

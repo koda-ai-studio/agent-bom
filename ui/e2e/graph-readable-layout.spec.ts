@@ -424,10 +424,9 @@ for (const theme of ["light", "dark"] as const) test(`provider marks read as par
   expect(measured.map(mark => mark.title).sort()).toEqual(["Source: AWS", "Source: Snowflake"]);
   await expect(page.locator('[data-id="worker"] [data-graph-source-badge]')).toHaveCount(0);
   await expect(page.locator('.react-flow [data-node-badge="provider"]')).toHaveCount(0);
-  // The type label and its environment chip share one centre line.
-  const row = page.locator('[data-id="worker"] [data-testid="graph-node-badges"]');
-  const centres = await row.evaluate(el => [...el.children].map(child => { const r = child.getBoundingClientRect(); return r.top + r.height / 2; }));
-  expect(Math.max(...centres) - Math.min(...centres)).toBeLessThanOrEqual(1.5);
+  // The canvas keeps one type line; the environment stays in the drawer, not as a chip.
+  await expect(page.locator('[data-id="worker"] [data-entity-role]')).toBeVisible();
+  await expect(page.locator('[data-id="worker"] [data-node-badge]')).toHaveCount(0);
   // Names wrap only between segments, without a lone short tail.
   const lines = await page.locator('[data-id="bucket"] [data-graph-entity] > p').first().evaluate(label => {
     const rows = new Map<number, string>();

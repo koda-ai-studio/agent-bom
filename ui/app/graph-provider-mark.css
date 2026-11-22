@@ -12,8 +12,8 @@
 .graph-provider-mark-node .graph-provider-mark-glyph { width: 84%; height: 84%; }
 .graph-provider-mark-node .graph-provider-mark-glyph-aws { width: 88%; height: 88%; }
 /* The compact canvas glyph is smaller; its mark keeps a logo of at least 24px at the 46px glyph. */
-.graph-provider-mark-node.graph-provider-mark-compact { right: -36%; top: -30%; width: 66%; height: 66%; min-width: 0; min-height: 0; }
-.graph-provider-mark-node.graph-provider-mark-compact :is(.graph-provider-mark-glyph, .graph-provider-mark-glyph-aws) { width: 90%; height: 90%; }
+.graph-provider-mark-node.graph-provider-mark-compact { right: -40%; top: -32%; width: 70%; height: 70%; min-width: 0; min-height: 0; }
+.graph-provider-mark-node.graph-provider-mark-compact :is(.graph-provider-mark-glyph, .graph-provider-mark-glyph-aws) { width: 96%; height: 96%; }
 /* Inline marks sit on chips and cards, not the canvas: no cut-out ring. */
 .graph-provider-mark-inline { border-width: 0; outline-width: 1px; outline-offset: -1px; }
 .graph-provider-mark-inline .graph-provider-mark-glyph { width: 74%; height: 74%; }
