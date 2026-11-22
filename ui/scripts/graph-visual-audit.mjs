@@ -134,10 +134,27 @@ export function auditGraphGrammar({ margin = 48, minGlyph = 32, minFill = 0.6, m
   // Rendered caption text (names and type lines), measured line by line: a line must never cross label text.
   const captions = [...document.querySelectorAll(".react-flow__node")].filter(node => getComputedStyle(node).visibility !== "hidden").flatMap(node =>
     [...node.querySelectorAll("[data-semantic-name], [data-entity-role]")].flatMap(element => {
-      const range = document.createRange();
-      range.selectNodeContents(element);
-      return [...range.getClientRects()].filter(rect => rect.width > 1 && rect.height > 1).map(rect => ({ id: node.getAttribute("data-id"), rect }));
+      // Each text run, cut to what its overflow-clipping ancestors (an ellipsis box) actually paint.
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+      const out = [];
+      for (let text = walker.nextNode(); text; text = walker.nextNode()) {
+        if (text.parentElement?.closest(".sr-only")) continue;
+        const range = document.createRange();
+        range.selectNodeContents(text);
+        const clips = [];
+        for (let el = text.parentElement; el && el !== node; el = el.parentElement) if (getComputedStyle(el).overflow !== "visible") clips.push(el.getBoundingClientRect());
+        for (const raw of range.getClientRects()) {
+          const rect = clips.reduce((r, c) => ({ left: Math.max(r.left, c.left), right: Math.min(r.right, c.right), top: Math.max(r.top, c.top), bottom: Math.min(r.bottom, c.bottom) }),
+            { left: raw.left, right: raw.right, top: raw.top, bottom: raw.bottom });
+          if (rect.right - rect.left > 1 && rect.bottom - rect.top > 1) out.push({ id: node.getAttribute("data-id"), rect });
+        }
+      }
+      return out;
     }));
+  // A caption the frame shows only part of reads as a different name ("e Runbook Agent"): text is either whole in frame or wholly outside it.
+  const clipped = [...new Set(captions.filter(({ rect }) => rect.right > canvas.left && rect.left < canvas.right && rect.bottom > canvas.top && rect.top < canvas.bottom
+    && (rect.left < canvas.left - 0.5 || rect.right > canvas.right + 0.5 || rect.top < canvas.top - 0.5 || rect.bottom > canvas.bottom + 0.5)).map(caption => caption.id))];
+  if (clipped.length) add("clippedCaptions", clipped);
   const diagnosticChips = [...document.querySelectorAll(".react-flow__node *")].filter(el => el.children.length === 0 && /semantic layer unavailable/i.test(el.textContent ?? ""));
   if (diagnosticChips.length) add("diagnosticChips", diagnosticChips.length);
   for (const element of document.querySelectorAll(".react-flow__edge")) {

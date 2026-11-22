@@ -31,3 +31,18 @@ it("routes long portrait links along the glyph side, away from names and interve
   expect(result.edges[0]).toMatchObject({ sourceHandle: "phone-left", targetHandle: "phone-left" });
   expect(result.edges[1]).toMatchObject({ sourceHandle: null, targetHandle: null });
 });
+
+it("puts a lone branch in the right column so its caption faces into the canvas, never off its left edge", () => {
+  const nodes: Node<LineageNodeData>[] = [
+    { id: "agent", position: { x: 0, y: 0 }, data: { label: "Developer Copilot", nodeType: "agent", semanticLayer: "orchestration", semanticPathIndex: 0 } },
+    ...["filesystem", "github"].map(id => ({ id, position: { x: 0, y: 0 }, data: { label: id, nodeType: "server" as const, semanticLayer: "mcp_server" } })),
+    { id: "peer", position: { x: 0, y: 0 }, data: { label: "SRE Runbook Agent", nodeType: "agent", semanticLayer: "orchestration" } },
+  ];
+  const edges: Edge[] = [["agent", "filesystem"], ["agent", "github"], ["peer", "filesystem"]].map(([source, target]) => ({ id: `${source}-${target}`, source: source!, target: target! }));
+  const result = graphPortraitLayout(nodes, edges);
+  const peer = result.nodes.find(n => n.id === "peer")!;
+  expect(peer.data.phoneSide).toBe("right");
+  // Its link to the server above crosses the centre gap: no same-side loop around the column.
+  const link = result.edges.find(e => e.id === "peer-filesystem")!;
+  expect(link.sourceHandle).not.toBe(link.targetHandle);
+});

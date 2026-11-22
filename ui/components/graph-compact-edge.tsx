@@ -41,11 +41,15 @@ export function compactEdgeCurve(props: Pick<EdgeProps, "sourceX" | "sourceY" | 
 }
 
 /** An inspected link names its relationship and evidence in full, just above the line: names hang below glyphs. */
-function InspectLabel({ id, at, relationship, text, aggregate, inspecting }: { id: string; at: Point; relationship: string; text: React.ReactNode; aggregate: boolean; inspecting: boolean }) {
+function InspectLabel({ id, at, relationship, text, aggregate, inspecting, shift = 0 }: { id: string; at: Point; relationship: string; text: React.ReactNode; aggregate: boolean; inspecting: boolean; shift?: number }) {
   const zoom = useStore(state => state.transform[2]);
+  // On a phone the label sits beside the link, on the side away from the captions, rather than over it.
+  const anchor = shift > 0 ? `translate(${8 / Math.max(zoom, 0.16)}px, -50%) translate(${at.x}px, ${at.y}px)`
+    : shift < 0 ? `translate(calc(-100% - ${8 / Math.max(zoom, 0.16)}px), -50%) translate(${at.x}px, ${at.y}px)`
+    : `translate(-50%, -100%) translate(${at.x}px, ${at.y - 28 / Math.max(zoom, 0.16)}px)`;
   return <EdgeLabelRenderer>
     <div data-edge-id={id} data-inspecting={inspecting ? "true" : "false"} className={`nodrag nopan graph-relationship-label ${aggregate ? "graph-aggregate-label" : ""}`}
-      style={{ position: "absolute", transform: `translate(-50%, -100%) translate(${at.x}px, ${at.y - 28 / Math.max(zoom, 0.16)}px)`, fontSize: 12.5 / Math.max(zoom, 0.16), pointerEvents: "none", whiteSpace: "nowrap" }}>
+      style={{ position: "absolute", transform: anchor, fontSize: 12.5 / Math.max(zoom, 0.16), pointerEvents: "none", whiteSpace: "nowrap" }}>
       <RelationshipBadge relationship={relationship}>{text}</RelationshipBadge>
     </div>
   </EdgeLabelRenderer>;
@@ -105,6 +109,6 @@ export function CompactRelationshipEdge(props: EdgeProps) {
       {...(props.markerStart ? { markerStart: props.markerStart } : {})}
       {...(props.markerEnd && !(stubbed && offscreen & 2) ? { markerEnd: props.markerEnd } : {})}
       {...(props.interactionWidth !== undefined ? { interactionWidth: props.interactionWidth } : {})} />
-    {text != null && <InspectLabel id={props.id} at={mid} relationship={relationship} text={text} aggregate={aggregate} inspecting={inspecting} />}
+    {text != null && <InspectLabel id={props.id} at={mid} relationship={relationship} text={text} aggregate={aggregate} inspecting={inspecting} shift={Number(props.data?.labelShift ?? 0)} />}
   </g>;
 }

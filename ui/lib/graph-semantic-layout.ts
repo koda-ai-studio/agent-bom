@@ -152,19 +152,23 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
   const owners = contextOwners(visible, edges, onPath);
   const images = workloadImageContext(visible, edges);
   for (const [id, owner] of images.owners) if (!onPath.has(id)) owners.set(id, owner);
-  const { positions, arcs, behind } = compactLayout({ ids: visible.map(node => node.id), links: drawn, column: id => columns.get(id) ?? 0, containment,
-    levelLeaf: id => { const found = byId.get(id); return Boolean(found) && semanticLayer(found!) === "finding"; },
-    spine: primary, attached: attachedRanks(visible, drawn, columns),
+  const base = { ids: visible.map(node => node.id), links: drawn, column: (id: string) => columns.get(id) ?? 0, containment,
+    // Findings, and the group that folds an asset's findings, sit level with the asset they were found on.
+    levelLeaf: (id: string) => { const found = byId.get(id); return Boolean(found) && (semanticLayer(found!) === "finding" || found!.type === "findingGroupNode"); },
+    spine: primary, attached: attachedRanks(visible, drawn, columns) };
+  const boxes = new Map(visible.map(node => [node.id, cardWidth(node, node.id)]));
+  const { positions, arcs, behind } = compactLayout({ ...base,
     caption: id => { const found = byId.get(id);
-      return { name: shownName(found, id), typeLine: String(found?.data.readingLabel ?? found?.data.entityType ?? ""), box: cardWidth(found, id) }; },
-    width: id => cardWidth(byId.get(id), id), tall: id => twoLineName(byId.get(id), id) ? TALL_CARD_ROOM : undefined });
+      if (found?.type === "findingGroupNode") return { name: `Findings (${found.data.readingFindings?.count ?? 0})`, typeLine: "Click to explore" };
+      return { name: shownName(found, id), typeLine: String(found?.data.readingLabel ?? found?.data.entityType ?? ""), box: boxes.get(id) ?? cardWidth(found, id) }; },
+    width: id => boxes.get(id) ?? cardWidth(byId.get(id), id), tall: id => twoLineName(byId.get(id), id) ? TALL_CARD_ROOM : undefined });
   const pathPairs = new Set(primary.slice(1).map((id, index) => `${primary[index]}\u0000${id}`));
   return {
     nodes: nodes.map(node => {
-      const width = cardWidth(node, node.id), placed = positions.get(node.id);
+      const box = boxes.get(node.id) ?? cardWidth(node, node.id), placed = positions.get(node.id);
       // A wider caption box stays centred on its rank, so its glyph lines up with the others.
-      return { ...node, position: placed ? { x: placed.x - (width - COMPACT_NODE_WIDTH) / 2, y: placed.y } : node.position,
-      style: { ...node.style, width, "--graph-node-card-width": `${width}px` },
+      return { ...node, position: placed ? { x: placed.x - (box - COMPACT_NODE_WIDTH) / 2, y: placed.y } : node.position,
+      style: { ...node.style, width: box, "--graph-node-card-width": `${box}px` },
       data: { ...node.data, evidenceFlow: true, semanticLayout: true,
         ...(onPath.has(node.id) ? { semanticPathIndex: primary.indexOf(node.id) } : {}), renderBand: dense ? node.data.renderBand : "detail" as const,
         readingLabel: node.data.readingLabel ?? assetServiceLabel({ nodeType: node.data.nodeType, entityType: node.data.entityType, attributes: node.data.attributes, provider: node.data.dimensions?.cloud_provider }) ?? assetKindLabel({ nodeType: node.data.nodeType, entityType: node.data.entityType, attributes: node.data.attributes }),

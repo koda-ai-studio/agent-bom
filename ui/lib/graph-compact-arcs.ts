@@ -76,12 +76,12 @@ const FRAME = { width: 1120 * 0.85, height: 500 * 0.85 };
 const WIDER_SCREEN = 1.6;
 
 /** The zoom Fit all will choose for these card positions, estimated from their extent and a caption under the lowest row. */
-export function fitZoom(positions: ReadonlyMap<string, Point>, box: number): number {
+export function fitZoom(positions: ReadonlyMap<string, Point>, box: number, frame: { width: number; height: number } = FRAME): number {
   const points = [...positions.values()];
   if (!points.length) return 1;
   const xs = points.map(p => p.x), ys = points.map(p => p.y);
   const width = Math.max(...xs) - Math.min(...xs) + box, height = Math.max(...ys) - Math.min(...ys) + 200;
-  return Math.min(1, Math.max(0.02, Math.min(FRAME.width / width, FRAME.height / height)));
+  return Math.min(1, Math.max(0.02, Math.min(frame.width / width, frame.height / height)));
 }
 
 /** How much room a caption's rendered text takes at a zoom, in layout units. Names wrap between

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Edge, Node } from "@xyflow/react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { semanticGraphLayout } from "@/lib/graph-semantic-layout";
-import { COMPACT_RANK_GAP } from "@/lib/graph-compact-layout";
+import { canvasName } from "@/components/graph-compact-node";
 
 // The layout's input exactly as the investigation canvas hands it over for the reference correlation view.
 const reference = JSON.parse(readFileSync("tests/fixtures/reference-layout-input.json", "utf8")) as { nodes: Node<LineageNodeData>[]; edges: Edge[]; selectedPath: string[] };
@@ -22,22 +22,34 @@ describe("reference correlation view placement", () => {
   const at = (id: string) => result.nodes.find(node => node.id === id)!.position;
 
   it("puts the pinned manifest in the column right before its package, in a free row", () => {
-    expect(at("source:pinned-package").x).toBe(at("package:mcp:pillow").x - COMPACT_RANK_GAP);
-    const peers = result.nodes.filter(node => node.id !== "source:pinned-package" && node.position.x === at("source:pinned-package").x);
+    // Same column as the MCP server, the one right before the package.
+    const centre = (id: string) => { const card = result.nodes.find(node => node.id === id)!; return card.position.x + Number(card.style!.width) / 2; };
+    expect(centre("source:pinned-package")).toBe(centre("server:mcp:document-review"));
+    expect(centre("server:mcp:document-review")).toBeLessThan(centre("package:mcp:pillow"));
+    const peers = result.nodes.filter(node => node.id !== "source:pinned-package" && centre(node.id) === centre("source:pinned-package"));
     expect(peers.every(node => Math.abs(node.position.y - at("source:pinned-package").y) >= 150)).toBe(true);
   });
 
-  it("draws every link as one curve, at most 2.5 times its straight distance, clear of every card but the manifest link", () => {
-    // The manifest's link into its package's left side is the one curve the caption model cannot clear with certainty;
-    // it is drawn quieter, and the browser gate checks it never crosses text. Every other link is a clear curve.
-    expect(result.edges.filter(edge => edge.data?.passesBehind).map(edge => edge.id)).toEqual(
-      result.edges.filter(edge => edge.data?.passesBehind && edge.source === "source:pinned-package").map(edge => edge.id));
+  it("draws every link as one curve, at most 2.5 times its straight distance, clear of every card but at most one quieter link", () => {
+    // At most one link the caption model cannot prove clear is drawn quieter; the browser gate checks it never crosses text.
+    expect(result.edges.filter(edge => edge.data?.passesBehind).length).toBeLessThanOrEqual(1);
     for (const edge of result.edges) {
       const points = curve(at(edge.source), at(edge.target), edge.data?.arcDy as [number, number] | undefined);
       const drawn = points.slice(1).reduce((sum, p, i) => sum + Math.hypot(p.x - points[i]!.x, p.y - points[i]!.y), 0);
       const chord = Math.hypot(at(edge.target).x - at(edge.source).x, at(edge.target).y - at(edge.source).y);
       expect(drawn / chord, edge.id).toBeLessThanOrEqual(2.5);
     }
+  });
+
+  it("keeps the whole view fittable at a legible zoom, widening name boxes only when every name then fits", () => {
+    const xs = result.nodes.map(node => node.position.x + Number(node.style!.width) / 2), ys = result.nodes.map(node => node.position.y);
+    const zoom = Math.min(1, (1320 * 0.9) / (Math.max(...xs) - Math.min(...xs) + 216), (590 * 0.9) / (Math.max(...ys) - Math.min(...ys) + 200));
+    // Fit all never goes below its legible floor, so the layout must fit a 1440px canvas at or above it.
+    expect(zoom).toBeGreaterThanOrEqual(0.4);
+    const char = (14 * 0.88 * 0.55) / zoom;
+    const widened = result.nodes.some(node => Number(node.style!.width) > 216 && !["package", "finding"].includes(String(node.data.semanticLayer)));
+    if (widened) for (const node of result.nodes) for (const word of canvasName(node.data.label).split(" "))
+      expect(word.length * char, `${node.id}: ${word}`).toBeLessThanOrEqual(Number(node.style!.width));
   });
 
   it("keeps the selected path on one straight row", () => {

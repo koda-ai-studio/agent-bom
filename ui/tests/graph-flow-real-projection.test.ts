@@ -54,7 +54,9 @@ describe("exposure on real Kubernetes projection output", () => {
     const one = byLabel(result.nodes, "service: prod/web"), two = byLabel(result.nodes, "service: prod/web-public");
     expect(one.data.semanticLayer).toBeDefined();
     expect(two.data.semanticLayer).toBe(one.data.semanticLayer);
-    expect(one.position.x).toBe(two.position.x);
+    // Same rank: their glyphs share one centre line, whatever their name boxes' widths.
+    const centre = (node: typeof one) => node.position.x + Number(node.style?.width ?? 0) / 2;
+    expect(centre(one)).toBe(centre(two));
     expect(one.position.y).not.toBe(two.position.y);
     expect(result.edges.some(edge => edge.source === one.id)).toBe(true);
     expect(result.edges.some(edge => edge.source === two.id)).toBe(true);

@@ -69,7 +69,9 @@ export function graphPortraitLayout(nodes: Node<LineageNodeData>[], edges: Edge[
   const positions = new Map<string, Point>();
   // Trunk hops sit on the centre line; branch rows keep it clear for links that pass them.
   const sides = new Map<string, "trunk" | "left" | "right">();
-  portraitRows(visible, edges).forEach(({ ids, trunk }, index) => ids.forEach((id, slot) => {
+  // A lone branch takes the right column: its caption faces right, into the canvas, never off its left edge.
+  portraitRows(visible, edges).forEach(({ ids, trunk }, index) => ids.forEach((id, place) => {
+    const slot = !trunk && ids.length === 1 ? 1 : place;
     positions.set(id, { x: trunk ? SINGLE : slot * PORTRAIT_COLUMN, y: index * PORTRAIT_ROW });
     sides.set(id, trunk ? "trunk" : slot ? "right" : "left");
   }));
@@ -84,7 +86,10 @@ export function graphPortraitLayout(nodes: Node<LineageNodeData>[], edges: Edge[
       const from = positions.get(edge.source), to = positions.get(edge.target);
       if (!from || !to) return edge;
       const [sourceHandle, targetHandle] = handles(from, to, positions);
-      return { ...edge, sourceHandle, targetHandle, data: { ...edge.data, phoneLayout: true } };
+      // Captions face away from the centre line, so a link's label sits on its centre-line side.
+      const side = sides.get(edge.target) === "trunk" ? sides.get(edge.source) : sides.get(edge.target);
+      const labelShift = side === "left" ? 1 : side === "right" ? -1 : 0;
+      return { ...edge, sourceHandle, targetHandle, data: { ...edge.data, phoneLayout: true, labelShift } };
     }),
   };
 }

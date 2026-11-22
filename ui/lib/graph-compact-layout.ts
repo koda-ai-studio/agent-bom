@@ -328,7 +328,10 @@ function refinePlacement(ids: readonly string[], links: readonly Link[], positio
   const budget = { left: SEARCH_BUDGET };
   const flips = (seed: number) => new Map([...positions].map(([id, p]) => [id, spine.has(id) || !flipped(seed, id) ? p : { x: p.x, y: -p.y }]));
   const starts = [positions, ...Array.from({ length: RESTARTS }, (_, seed) => flips(seed))];
-  const runs = starts.filter((start, i) => i === 0 || rowsClear(ids, start, tall))
+  // A restart never begins taller than the sweep's own layout plus one row; moves are bounded by the zoom budget.
+  const heightOf = (map: ReadonlyMap<string, Point>) => { const ys = ids.map(id => map.get(id)!.y); return Math.max(...ys) - Math.min(...ys); };
+  const maxSpan = heightOf(positions) + COMPACT_ROW_GAP;
+  const runs = starts.filter((start, i) => i === 0 || (rowsClear(ids, start, tall) && heightOf(start) <= maxSpan))
     .map(start => { const copy = new Map(start); return { copy, cost: refineRows(ids, links, copy, spine, caption, zoom, levelLeaf, tall, budget) }; });
   const best = runs.reduce((a, b) => b.cost < a.cost - 1e-6 ? b : a);
   for (const [id, p] of best.copy) positions.set(id, p);

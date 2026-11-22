@@ -151,9 +151,10 @@ describe("evidence-driven graph flow", () => {
     expect(preview.totalNodes).toBe(41);
     expect(preview.totalEdges).toBe(40);
     // The repository and the folders it contains share a layer: the folders take the next rank together.
-    const folderXs = new Set(result.nodes.filter(n => n.id !== "repo").map(node => node.position.x));
+    const centre = (node: (typeof result.nodes)[number]) => node.position.x + Number(node.style?.width ?? 0) / 2;
+    const folderXs = new Set(result.nodes.filter(n => n.id !== "repo").map(centre));
     expect(folderXs.size).toBe(1);
-    expect([...folderXs][0]).toBeGreaterThan(result.nodes.find(n => n.id === "repo")!.position.x);
+    expect([...folderXs][0]).toBeGreaterThan(centre(result.nodes.find(n => n.id === "repo")!));
     const ys = result.nodes.map(n => n.position.y);
     expect(Math.max(...ys) - Math.min(...ys)).toBeLessThan(4000);
     expect(result.edges).toHaveLength(11);
