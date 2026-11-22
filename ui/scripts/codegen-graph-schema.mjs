@@ -127,6 +127,7 @@ function render(schema) {
       (layer) =>
         `  ${JSON.stringify(layer.key)}: ${jsonStringify({
           label: layer.label,
+          column: layer.column,
         }).replace(/\n/g, "\n  ")},`,
     )
     .join("\n");
@@ -198,6 +199,8 @@ export const GRAPH_SEMANTIC_LAYERS: readonly GraphSemanticLayerKey[] = [${semant
 
 export interface GraphSemanticLayerMeta {
   label: string;
+  /** Left-to-right canvas column, owned by the backend. */
+  column: number;
 }
 
 export const GRAPH_SEMANTIC_LAYER_META: Record<GraphSemanticLayerKey, GraphSemanticLayerMeta> = {

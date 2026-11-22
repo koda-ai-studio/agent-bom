@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
 import { routeNodeAggregates, withSemanticLayer } from "./helpers/graph-rollup-mocks";
+import nodeAggregateCases from "../tests/fixtures/node-aggregate-cases.json";
 
 // Non-empty fixture with two observed paths so the security graph page can
 // prove that queue selection updates the in-place graph and evidence panel.
@@ -521,7 +522,8 @@ async function routeCockpit(
   await page.route("**/v1/graph?**", async (route) => {
     await route.fulfill({ contentType: "application/json", body: JSON.stringify(graph) });
   });
-  await routeNodeAggregates(page);
+  // The form-data package carries the aggregate the backend roll-up computes for it.
+  await routeNodeAggregates(page, { "pkg:form-data": nodeAggregateCases["cockpit:pkg:form-data"] });
   await page.route("**/v1/graph/rollup?**", async (route) => {
     if (options.rollupDelayMs) {
       await new Promise((resolve) => setTimeout(resolve, options.rollupDelayMs));
@@ -1725,7 +1727,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(canvas.locator(".react-flow__node")).toHaveCount(5);
     await expect(canvas.locator(".react-flow__edge")).toHaveCount(4);
     await expect(canvas.locator('.react-flow__node[data-id="cve:form-data"]')).toHaveCount(1);
-    await expect(canvas.getByRole("button", { name: /^1 finding on form-data@4\.0\.0, worst critical/ })).toBeVisible();
+    await expect(canvas.getByLabel(/^Findings \(1\) on form-data@4\.0\.0, worst critical/)).toBeVisible();
     await expect(canvas.getByRole("tooltip")).toHaveCount(0);
     const firstLine = canvas.locator('.react-flow__edge[data-id="agent:desktop->server:github:uses"]');
     await firstLine.focus();

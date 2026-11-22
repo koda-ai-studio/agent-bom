@@ -1,0 +1,27 @@
+{
+  "cockpit:pkg:form-data": {
+    "aggregate": {
+      "by_type": {
+        "vulnerability": 1
+      },
+      "descendant_count": 1,
+      "exposed_count": 0,
+      "finding_occurrence_count": 1,
+      "internet_exposed": false,
+      "issue_count": 1,
+      "severity_counts": {
+        "critical": 1,
+        "high": 0,
+        "info": 0,
+        "low": 0,
+        "medium": 0,
+        "none": 0
+      },
+      "toxic_combo": false,
+      "toxic_count": 0,
+      "worst_severity": "critical",
+      "worst_severity_rank": 5
+    },
+    "semantic_layer": "package"
+  }
+}

@@ -71,7 +71,15 @@ def test_reference_lab_preserves_source_receipts_and_evidence_boundaries() -> No
 
     capture = payload["capture_fixture"]
     assert capture["graph"]["scan_id"] == payload["correlation"]["output_scan_id"]
-    assert capture["graph"]["attack_paths"] == [path]
+    # The capture graph serves what /v1/graph does for this snapshot: the receipt's
+    # one count, and the ranked paths that count covers, the proof path among them.
+    retained = payload["correlation"]["result_manifest"]["output"]["attack_paths"]
+    served = capture["graph"]["attack_paths"]
+    assert capture["graph"]["stats"]["attack_paths"] == retained
+    assert len(served) == retained["retained_count"] == capture["graph"]["stats"]["attack_path_count"]
+    key = lambda item: (item["source"], item["target"], tuple(item["edges"]))  # noqa: E731
+    assert key(path) in {key(item) for item in served}
+    assert [item["composite_risk"] for item in served] == sorted((item["composite_risk"] for item in served), reverse=True)
     # The modeled identity path plus one card per entry holding the image/SBOM CVE
     # occurrence: the workload via its MCP server, the IaC workload (which runs the
     # SBOM image by digest, so the image is not a separate entry) and the pinned manifest.
