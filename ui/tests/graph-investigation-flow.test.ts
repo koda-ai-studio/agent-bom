@@ -44,8 +44,8 @@ it("uses the same backend columns for identity, vulnerability and inventory", ()
     expect(result.applied).toBe(true);
     expect(result.primaryPath).toEqual([]);
     expect(at(result, "role").x).toBeLessThan(at(result, "bucket").x);
-    expect(at(result, "cve").x).toBe(at(result, "pod").x);
-    expect(at(result, "cve").y).toBeGreaterThan(at(result, "pod").y);
+    // A finding branches one rank right of the asset it affects.
+    expect(at(result, "cve").x).toBeGreaterThan(at(result, "pod").x);
     expect(result.nodes.map(node => node.position)).toEqual(results[0]!.nodes.map(node => node.position));
   }
 });
@@ -58,9 +58,9 @@ it("keeps a finding shared with a hidden asset outside a single-owner group", ()
 
 it("does not derive columns from recorded ownership depth", () => {
   const result = investigationFlow(nodes, edges, "inventory");
-  expect(at(result, "account").x).toBe(GRAPH_SEMANTIC_LAYER_META.scope.column * 380);
-  expect(at(result, "cluster").x).toBe(GRAPH_SEMANTIC_LAYER_META.infra.column * 380);
-  expect(at(result, "pod").x).toBe(GRAPH_SEMANTIC_LAYER_META.app.column * 380);
+  // Ranks follow backend layers (scope, app, infra), compressed, whatever the ownership depth.
+  expect(at(result, "account").x).toBeLessThan(at(result, "pod").x);
+  expect(at(result, "pod").x).toBeLessThan(at(result, "cluster").x);
   expect(new Set(result.nodes.map(node => `${node.position.x}:${node.position.y}`)).size).toBe(nodes.length);
 });
 
@@ -70,8 +70,10 @@ it("keeps sibling workloads and their findings off the server-ranked spine", () 
   expect(result.primaryPath).not.toContain("sibling");
   expect(result.primaryPath).not.toContain("sibling-cve");
   expect(at(result, "sibling").y).not.toBe(at(result, "pod").y);
-  expect(at(result, "sibling-cve").y).toBeGreaterThan(at(result, "sibling").y);
-  expect(at(result, "sibling").x).toBe(GRAPH_SEMANTIC_LAYER_META.app.column * 380);
+  expect(at(result, "sibling-cve").y).not.toBe(at(result, "pod").y);
+  expect(at(result, "sibling-cve").x).toBeGreaterThan(at(result, "sibling").x);
+  // The spine gives its same-layer hops separate slots; the sibling keeps the layer's first slot.
+  expect(at(result, "sibling").x).toBeLessThanOrEqual(at(result, "pod").x);
 });
 
 it("applies the same semantic layout to a package correlation view", () => {
@@ -79,8 +81,9 @@ it("applies the same semantic layout to a package correlation view", () => {
   const links = [e("image", "package", "contains"), e("package", "finding", "vulnerable_to")];
   const result = investigationFlow(input, links, "auto");
   expect(result.applied).toBe(true);
-  expect(new Set(result.nodes.map(node => node.position.x)).size).toBe(1);
-  expect(at(result, "finding").y).toBeGreaterThan(at(result, "package").y);
+  // image -> package -> finding read left to right, each one rank right of its owner.
+  expect(at(result, "package").x).toBeGreaterThan(at(result, "image").x);
+  expect(at(result, "finding").x).toBeGreaterThan(at(result, "package").x);
   expect(result.edges.map(edge => edge.id)).toEqual(links.map(edge => edge.id));
 });
 
@@ -126,6 +129,8 @@ it("does not invent a path for disconnected workloads", () => {
 
 it("keeps containment edges without moving parents out of their backend layer", () => {
   const result = investigationFlow(nodes, edges, "exposure");
-  for (const node of nodes.slice(0, 4)) expect(at(result, node.id).x).toBe(GRAPH_SEMANTIC_LAYER_META[node.data.semanticLayer as keyof typeof GRAPH_SEMANTIC_LAYER_META].column * 380);
+  const column = (id: string) => GRAPH_SEMANTIC_LAYER_META[nodes.find(node => node.id === id)!.data.semanticLayer as keyof typeof GRAPH_SEMANTIC_LAYER_META].column;
+  const ids = nodes.slice(0, 4).map(node => node.id);
+  for (const a of ids) for (const b of ids) if (column(a) < column(b)) expect(at(result, a).x).toBeLessThan(at(result, b).x);
   expect(result.edges.filter(edge => edge.data?.relationship === "contains").map(edge => [edge.source, edge.target])).toEqual([["account", "cluster"], ["cluster", "pod"]]);
 });

@@ -961,8 +961,11 @@ main > div {
 }
 
 /* Shared graph canvas theme. */
-:root { --graph-canvas: #242d3b; --graph-edge-structure: #8b96aa; --graph-edge-access: #b69cf5; --graph-edge-data: #45c4f5; --graph-edge-exposure: #f5b942; --graph-edge-risk: #ff6b7a; }
-[data-theme="light"] { --graph-canvas: #f1f5fa; --graph-edge-structure: #6b778c; --graph-edge-access: #7c3aed; --graph-edge-data: #0284c7; --graph-edge-exposure: #c76a06; --graph-edge-risk: #d21f3c; }
+:root { --graph-canvas: #242d3b; }
+[data-theme="light"] { --graph-canvas: #f1f5fa; }
+/* Compact canvas: one line colour per relationship family. */
+:root { --graph-edge-structure: #8b96aa; --graph-edge-access: #b69cf5; --graph-edge-data: #45c4f5; --graph-edge-exposure: #f5b942; --graph-edge-risk: #ff6b7a; }
+[data-theme="light"] { --graph-edge-structure: #6b778c; --graph-edge-access: #7c3aed; --graph-edge-data: #0284c7; --graph-edge-exposure: #c76a06; --graph-edge-risk: #d21f3c; }
 .react-flow { background-color: var(--graph-canvas); }
 /* Scenario cards share width with the decision panel; keep metadata legible. */
 .scenario-context-canvas .react-flow__node :is(span, p, .text-xs) { font-size: max(16px, var(--graph-node-meta-size, 16px), 1em); }

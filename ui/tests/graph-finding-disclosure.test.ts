@@ -66,13 +66,13 @@ it("keeps finding disclosure available when an asset uses the display ID prefix"
   expect(new Set(result.nodes.map(n => n.id)).size).toBe(result.nodes.length);
 });
 
-it("keeps a finding group below its owner with its authoritative accessible count", () => {
+it("branches a finding group one rank right of its owner with its authoritative accessible count", () => {
   const left = nodes.map(n => n.id === "finding" ? { ...n, position: { x: -600, y: 0 } } : n);
   const result = cloudFindingDisclosure(left, edges, new Set(), () => {}, true);
   const group = result.nodes.find(n => n.type === "findingGroupNode")!;
   const link = result.edges.find(e => e.data?.relationship === "finding_group")!;
-  expect(group.position.x).toBe(nodes[0]!.position.x);
-  expect(group.position.y).toBeGreaterThan(nodes[0]!.position.y);
+  expect(group.position.x).toBeGreaterThan(nodes[0]!.position.x);
+  expect(group.position.y).toBe(nodes[0]!.position.y);
   expect(link.sourceHandle).toBeUndefined();
   expect(link.targetHandle).toBeUndefined();
   expect(group.ariaLabel).toBe("Findings for app: 7");

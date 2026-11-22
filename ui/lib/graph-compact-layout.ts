@@ -10,7 +10,7 @@ export const COMPACT_ROW_GAP = 200;
 /** Layout-unit width of a compact node box; the name truncates inside it. */
 export const COMPACT_NODE_WIDTH = 200;
 
-type Link = { id?: string; source: string; target: string };
+type Link = { id?: string; source: string; target: string; data?: Record<string, unknown> | undefined };
 export type PackItem = { id: string; desired: number; fixed?: boolean };
 type Point = { x: number; y: number };
 
@@ -46,9 +46,13 @@ export function packRank(items: readonly (PackItem & { lane?: boolean })[], gap:
 
 /** Longest-path depth inside each base column, so a same-column link always
  * runs left to right. Back edges of a cycle are ignored deterministically. */
-function columnDepths(ids: readonly string[], links: readonly Link[], column: (id: string) => number) {
+function columnDepths(ids: readonly string[], links: readonly Link[], column: (id: string) => number, containment: CompactInput["containment"]) {
   const out = new Map<string, string[]>();
-  for (const link of links) if (column(link.source) === column(link.target)) out.set(link.source, [...(out.get(link.source) ?? []), link.target]);
+  for (const link of links) {
+    if (column(link.source) !== column(link.target)) continue;
+    const pair = containment ? containment(link) : [link.source, link.target] as const;
+    if (pair) out.set(pair[0], [...(out.get(pair[0]) ?? []), pair[1]].sort());
+  }
   const state = new Map<string, 1 | 2>(), forward: Link[] = [];
   const visit = (id: string) => {
     state.set(id, 1);
@@ -59,7 +63,7 @@ function columnDepths(ids: readonly string[], links: readonly Link[], column: (i
     }
     state.set(id, 2);
   };
-  for (const id of ids) if (!state.has(id)) visit(id);
+  for (const id of [...ids].sort()) if (!state.has(id)) visit(id);
   const depth = new Map(ids.map(id => [id, 0]));
   for (let changed = true, guard = 0; changed && guard <= ids.length; guard++) {
     changed = false;
@@ -74,13 +78,15 @@ export type CompactInput = {
   /** Backend column for each id (fractional keys place display nodes between columns). */
   column: (id: string) => number;
   spine: readonly string[];
+  /** Parent and child of a link inside one column, or null for a peer link that splits no rank. */
+  containment?: (link: Link) => readonly [string, string] | null;
   /** Display nodes placed relative to another node's rank (offset in ranks, may be fractional). */
   attached?: ReadonlyMap<string, { to: string; offset: number }>;
 };
 
-function rankKeys({ ids, links, column, attached }: CompactInput) {
+function rankKeys({ ids, links, column, attached, containment }: CompactInput) {
   const placed = ids.filter(id => !attached?.has(id));
-  const depth = columnDepths(placed, links.filter(link => !attached?.has(link.source) && !attached?.has(link.target)), column);
+  const depth = columnDepths(placed, links.filter(link => !attached?.has(link.source) && !attached?.has(link.target)), column, containment);
   const key = new Map(placed.map(id => [id, column(id) * 1000 + depth.get(id)!]));
   // Before an anchor: left of the earliest target. After: right of the latest one. Chains resolve in order.
   const pending = new Map(attached ?? []);
@@ -140,7 +146,7 @@ function laneLinks(links: readonly Link[], rank: Map<string, number>, spine: Rea
     const chain: string[] = [];
     if (end - start > 1 && link.id) chains.set(link.id, chain);
     for (let r = start + 1; r < end; r++) {
-      const id = `\u0000lane:${index}:${r}`;
+      const id = `\u0000lane:${link.id ?? `${link.source}\u0000${link.target}:${index}`}:${r}`;
       chain.push(id);
       dummies.set(id, { rank: r, spine: spine.has(link.source) && spine.has(link.target), ends: [link.source, link.target] });
       lanes.push({ source: previous, target: id });

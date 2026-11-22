@@ -22,25 +22,25 @@ it("connects nodes in one semantic column on the same outside edge", () => {
   for (const edge of result.edges) expect(edge).toMatchObject({ sourceHandle: null, targetHandle: "context" });
 });
 
-it("reserves an owner's context rows before placing unrelated peers in the same layer", () => {
+it("branches an owner's context one rank right, on its owner's row, before unrelated peers", () => {
   const nodes: Node<LineageNodeData>[] = [["entry", "user"], ["a-workload", "infra"], ["b-config", "code"], ["c-source", "code"], ["package", "package"]]
     .map(([id, semanticLayer]) => ({ id: id!, position: { x: 0, y: 0 }, data: { label: id!, nodeType: "container", semanticLayer } }));
   const placed = semanticGraphLayout(nodes, [{ id: "owns", source: "a-workload", target: "package", data: { relationship: "contains" } }], ["entry"]).nodes;
-  const y = (id: string) => placed.find(n => n.id === id)!.position.y;
-  expect(y("package")).toBeGreaterThan(y("a-workload"));
-  expect(y("package")).toBeLessThan(y("b-config"));
+  const at = (id: string) => placed.find(n => n.id === id)!.position;
+  expect(at("package").x).toBeGreaterThan(at("a-workload").x);
+  expect(at("package").y).toBe(at("a-workload").y);
+  expect(at("b-config").y).not.toBe(at("a-workload").y);
 });
 
-it("packs a single layer's owner groups side by side in backend order with context below", () => {
+it("keeps a single layer's owners in one rank with each owner's context beside it", () => {
   const nodes: Node<LineageNodeData>[] = [["z-owner", "code"], ["a-owner", "code"], ["z-package", "package"], ["a-package", "package"]]
     .map(([id, semanticLayer]) => ({ id: id!, position: { x: 0, y: 0 }, data: { label: id!, nodeType: "container", semanticLayer } }));
   const edges = ["z", "a"].map(prefix => ({ id: prefix, source: `${prefix}-owner`, target: `${prefix}-package`, data: { relationship: "contains" } }));
   const placed = semanticGraphLayout(nodes, edges).nodes;
   const pos = (id: string) => placed.find(node => node.id === id)!.position;
-  expect(pos("z-owner").x).toBeLessThan(pos("a-owner").x);
-  expect(pos("z-owner").y).toBe(pos("a-owner").y);
+  expect(pos("z-owner").x).toBe(pos("a-owner").x);
   for (const prefix of ["z", "a"]) {
-    expect(pos(`${prefix}-package`).x).toBe(pos(`${prefix}-owner`).x);
-    expect(pos(`${prefix}-package`).y).toBeGreaterThan(pos(`${prefix}-owner`).y);
+    expect(pos(`${prefix}-package`).x).toBeGreaterThan(pos(`${prefix}-owner`).x);
+    expect(pos(`${prefix}-package`).y).toBe(pos(`${prefix}-owner`).y);
   }
 });

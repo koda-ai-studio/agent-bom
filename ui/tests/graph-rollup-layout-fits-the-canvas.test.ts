@@ -1,3 +1,4 @@
+import { SEMANTIC_COLUMN_GAP, SEMANTIC_ROW_GAP } from "@/lib/graph-semantic-layout";
 /** Roll-up windows stay bounded while their columns retain backend meaning. */
 import { describe, expect, it } from "vitest";
 import type { GraphRollupContainer } from "@/lib/api-types";
@@ -57,12 +58,13 @@ describe("bounded semantic roll-up windows", () => {
     }
   });
 
-  it("stacks sibling scopes in their shared backend layer with clear card spacing", () => {
+  it("wraps unlinked sibling scopes of one backend layer into a grid with clear card spacing", () => {
     const { nodes } = buildRollupFlowGraph(containers(3));
-    expect(new Set(nodes.map(node => node.position.x)).size).toBe(1);
-    const ys = nodes.map(node => node.position.y).sort((a, b) => a - b);
-    expect(ys[1]! - ys[0]!).toBeGreaterThanOrEqual(240);
-    expect(ys[2]! - ys[1]!).toBeGreaterThanOrEqual(240);
+    const points = nodes.map(node => node.position);
+    for (const [i, a] of points.entries()) for (const b of points.slice(i + 1)) {
+      expect(Math.abs(a.x - b.x) >= SEMANTIC_COLUMN_GAP || Math.abs(a.y - b.y) >= SEMANTIC_ROW_GAP).toBe(true);
+    }
+    expect(new Set(points.map(point => point.x)).size).toBeGreaterThan(1);
   });
 
   it("lays different semantic layers left-to-right rather than wrapping a grid", () => {

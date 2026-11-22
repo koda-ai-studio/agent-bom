@@ -15,8 +15,10 @@ it("keeps the supplied spine connected vertically with its context beside the re
   expect(new Set(path.map(n => n.position.x)).size).toBe(1);
   expect(path[0]!.position.y).toBeLessThan(path[1]!.position.y);
   expect(path[1]!.position.y).toBeLessThan(path[2]!.position.y);
-  expect(byId.get("package")!.position.x).toBeGreaterThan(byId.get("server")!.position.x);
+  // A branch sits in a row of up to two under the hop it connects to, clear of the trunk line.
+  expect(byId.get("package")!.position.x).not.toBe(byId.get("server")!.position.x);
   expect(byId.get("package")!.position.y).toBeGreaterThan(byId.get("server")!.position.y);
+  expect(byId.get("package")!.position.y).toBeLessThan(byId.get("asset")!.position.y);
   expect(result.nodes.every(n => n.position.x + Number(n.style?.width) <= 328)).toBe(true);
   expect(result.edges.map(e => [e.id, e.source, e.target])).toEqual(edges.map(e => [e.id, e.source, e.target]));
   expect({ nodes, edges }).toEqual(original);

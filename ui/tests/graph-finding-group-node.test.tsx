@@ -14,7 +14,8 @@ describe("GraphFindingGroupNode", () => {
   it("names the group by its owner and displays the supplied finding count", () => {
     view(data());
     expect(screen.getByRole("button", { name: "Expand 2 findings for pod: prod/web" })).toBeTruthy();
-    expect(screen.getByText("Click to explore · 2 findings")).toBeTruthy();
+    expect(screen.getByText("Findings (2)")).toBeTruthy();
+    expect(screen.getByText("Click to explore")).toBeTruthy();
   });
 
   it("uses the singular for one finding", () => {

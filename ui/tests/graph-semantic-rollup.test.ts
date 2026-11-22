@@ -1,4 +1,3 @@
-import { GRAPH_SEMANTIC_LAYER_META } from "@/lib/graph-schema.generated";
 import type { Node } from "@xyflow/react";
 import { expect, it, vi } from "vitest";
 import type { LineageNodeData } from "@/components/lineage-nodes";
@@ -39,8 +38,8 @@ it("uses the backend rollup count and severity rather than the loaded finding su
   expect(group.data.readingFindings?.count).toBe(41);
   expect(group.data.semanticLayout).toBe(true);
   expect(group.data.readingFindings?.severity).toBe("critical");
-  expect(group.position.x).toBe(owner.position.x);
-  expect(group.position.y).toBeGreaterThan(owner.position.y);
+  expect(group.position.x).toBeGreaterThan(owner.position.x);
+  expect(group.position.y).toBe(owner.position.y);
   expect(group.data.rollup).toEqual(owner.data.rollup);
 });
 
@@ -63,7 +62,9 @@ it("lays out roll-up entries by their backend layer and preserves their aggregat
     { ...owner.data.rollup!, id: "agent", semantic_layer: "orchestration" },
   ];
   const result = buildRollupFlowGraph(entries);
-  expect(result.nodes.find(node => node.id === "entry")!.position.x).toBe(GRAPH_SEMANTIC_LAYER_META.user.column * 380);
+  // Occupied layers are compressed into consecutive ranks; the user-layer entry leads.
+  expect(result.nodes.find(node => node.id === "entry")!.position.x).toBe(0);
+  expect(result.nodes.find(node => node.id === "entry")!.position.x).toBeLessThan(result.nodes.find(node => node.id === "agent")!.position.x);
   expect(result.nodes.find(node => node.id === "agent")!.position.x).toBeLessThan(result.nodes.find(node => node.id === "tool")!.position.x);
   expect(result.nodes.every(node => node.data.semanticLayout)).toBe(true);
   expect(result.nodes[0]!.data.rollup?.aggregate).toEqual(owner.data.rollup!.aggregate);

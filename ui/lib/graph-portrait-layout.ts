@@ -2,8 +2,8 @@ import type { Edge, Node } from "@xyflow/react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { semanticColumns } from "@/lib/graph-semantic-columns";
 
-export const PORTRAIT_CARD_WIDTH = 160;
-export const PORTRAIT_COLUMN = 200;
+export const PORTRAIT_CARD_WIDTH = 144;
+export const PORTRAIT_COLUMN = 184;
 export const PORTRAIT_ROW = 124;
 
 type Point = { x: number; y: number };
@@ -47,11 +47,14 @@ const inner = (point: Point) => point.x < SINGLE ? "phone-right" : "phone-left";
 
 /** Adjacent rows join top to bottom. A link that skips rows runs down the centre
  * gap between the paired columns and enters a pair member from its inner side. */
-function handles(from: Point, to: Point): [string | null, string | null] {
+function handles(from: Point, to: Point, positions: Map<string, Point>): [string | null, string | null] {
   // Opposite paired columns face each other across the centre gap, whatever their rows.
   if (from.y === to.y || (from.x !== SINGLE && to.x !== SINGLE && from.x !== to.x)) return from.x < to.x ? ["phone-right", "phone-left"] : ["phone-left", "phone-right"];
   const down = from.y < to.y;
   if (Math.abs(to.y - from.y) <= PORTRAIT_ROW) return down ? [null, null] : ["phone-up", "phone-down"];
+  // Another trunk hop in between: pass it on the glyph side, where branch rows leave room.
+  const [top, bottom] = down ? [from.y, to.y] : [to.y, from.y];
+  if (from.x === SINGLE && to.x === SINGLE && [...positions.values()].some(p => p.x === SINGLE && p.y > top && p.y < bottom)) return ["phone-left", "phone-left"];
   const source = from.x === SINGLE ? (down ? null : "phone-up") : inner(from);
   const target = to.x === SINGLE ? (down ? null : "phone-down") : inner(to);
   return [source, target];
@@ -75,7 +78,7 @@ export function graphPortraitLayout(nodes: Node<LineageNodeData>[], edges: Edge[
     edges: edges.map((edge): Edge => {
       const from = positions.get(edge.source), to = positions.get(edge.target);
       if (!from || !to) return edge;
-      const [sourceHandle, targetHandle] = handles(from, to);
+      const [sourceHandle, targetHandle] = handles(from, to, positions);
       return { ...edge, sourceHandle, targetHandle, data: { ...edge.data, phoneLayout: true } };
     }),
   };

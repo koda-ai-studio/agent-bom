@@ -116,6 +116,13 @@ describe("compact attack-path layout", () => {
   });
 });
 
+it("places every node the same way whatever order the API returns nodes and links in", () => {
+  const nodes = [node("a", "agent"), node("s1", "server"), node("s2", "server"), node("t", "tool"), node("p", "package"), node("u", "user")];
+  const edges = [edge("u", "a"), edge("a", "s1"), edge("a", "s2"), edge("s1", "t"), edge("u", "p", "depends_on"), edge("a", "t")];
+  const place = (n: typeof nodes, e: typeof edges) => Object.fromEntries(semanticGraphLayout(n, e).nodes.map(x => [x.id, x.position]));
+  expect(place([...nodes].reverse(), [...edges].reverse())).toEqual(place(nodes, edges));
+});
+
 describe("rank packing", () => {
   it("keeps order, spacing and a symmetric fan around a shared target", () => {
     const ys = packRank([0, 0, 0].map((desired, i) => ({ id: String(i), desired })), COMPACT_ROW_GAP);

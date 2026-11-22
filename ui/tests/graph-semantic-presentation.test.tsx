@@ -41,14 +41,12 @@ it("keeps the full name in a tooltip and the visible name to two lines above its
   expect(container.querySelector("[data-entity-role]")).toHaveClass("truncate");
 });
 
-it("shows recorded privilege, sensitive data and KEV above the node", () => {
+it("keeps privilege and sensitive-data chips off the canvas and marks KEV with a corner dot", () => {
   const Renderer = lineageNodeTypes.dataStoreNode;
   const { container } = render(<ReactFlowProvider><Renderer data={{ label: "Customer data", nodeType: "dataStore", semanticLayout: true,
     attributes: { admin_equivalent: true, data_classification: "confidential" }, isKev: true }} /></ReactFlowProvider>);
-  const badges = container.querySelector("[data-semantic-badges]");
-  expect(badges).toHaveTextContent(/Privileged/);
-  expect(badges).toHaveTextContent(/Sensitive/);
-  expect(badges).toHaveTextContent("KEV");
+  expect(container.querySelector("[data-semantic-badges]")).toBeNull();
+  expect(container.querySelector('[data-compact-marker="kev"]')).toHaveTextContent("KEV-listed");
   expect(screen.getByText("Customer data")).toBeInTheDocument();
 });
 
@@ -78,33 +76,22 @@ it("does not promote legacy hints into canonical attribute badges", () => {
   expect(markers.map(marker => marker.kind).sort()).toEqual(["privileged", "sensitive"]);
 });
 
-it("keeps badges outside the glyph baseline and omits an unassessed default zero", () => {
+it("omits an unassessed default zero and draws the name after the glyph", () => {
   const Renderer = lineageNodeTypes.containerNode;
   const { container } = render(<ReactFlowProvider><Renderer data={{ label: "Workload", nodeType: "container", semanticLayout: true,
     riskScore: 0, attributes: { admin_equivalent: true } }} /></ReactFlowProvider>);
-  expect(container.querySelector("[data-semantic-badges]")).not.toHaveClass("absolute");
   expect(container.querySelector("[data-semantic-risk]")).toBeNull();
+  const glyph = container.querySelector(".graph-entity-glyph")!, name = container.querySelector("[data-semantic-name]")!;
+  expect(Boolean(glyph.compareDocumentPosition(name) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
 });
 
-it("keeps zoom-compensated badge rows below the glyph and its two-line label", () => {
-  const Renderer = lineageNodeTypes.containerNode;
-  const { container } = render(<ReactFlowProvider><Renderer data={{ label: "Workload", nodeType: "container", semanticLayout: true,
-    riskScore: 8, attributes: { admin_equivalent: true, data_classification: "restricted" } }} /></ReactFlowProvider>);
-  const glyph = container.querySelector('.graph-entity-glyph')!;
-  const name = container.querySelector('[data-semantic-name]')!;
-  const badges = container.querySelector('[data-semantic-badges]')!;
-  expect(Boolean(glyph.compareDocumentPosition(badges) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
-  expect(Boolean(name.compareDocumentPosition(badges) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
-});
-
-it.each(["package", "finding", "runtime_evidence"])("renders owned %s context as a compact sub-row without changing its backend badges", semanticLayer => {
+it.each(["package", "finding", "runtime_evidence"])("draws owned %s context as the same compact circle as every node", semanticLayer => {
   const Renderer = lineageNodeTypes.packageNode;
   const { container } = render(<ReactFlowProvider><Renderer data={{ label: "Recorded context", nodeType: "package", semanticLayout: true,
     semanticLayer, semanticOwner: "workload", attributes: { data_classification: "restricted" } }} /></ReactFlowProvider>);
-  expect(container.querySelector('[data-graph-subrow="workload"]')).not.toBeNull();
-  expect(container.querySelector('.graph-entity-glyph')).toHaveStyle({ width: "var(--graph-context-glyph-size, 48px)", height: "var(--graph-context-glyph-size, 48px)" });
-  expect(container.querySelector('[data-semantic-name]')).toHaveClass("col-start-2");
-  expect(container.querySelector('[data-semantic-badges]')).toHaveTextContent("Sensitive data");
+  expect(container.querySelector("[data-graph-subrow]")).toBeNull();
+  expect(container.querySelector(".graph-entity-glyph")).toHaveStyle({ width: "calc(var(--graph-node-glyph-size, 56px) * 0.7)" });
+  expect(container.querySelector("[data-semantic-badges]")).toBeNull();
 });
 
 it("retains a full glyph for a package explicitly retained on the selected spine", () => {

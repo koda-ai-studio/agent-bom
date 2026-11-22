@@ -1,3 +1,4 @@
+import { SEMANTIC_COLUMN_GAP, SEMANTIC_ROW_GAP } from "@/lib/graph-semantic-layout";
 import { expect, it } from "vitest";
 import type { Edge, Node } from "@xyflow/react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
@@ -36,11 +37,12 @@ it("branches recorded findings from their assets while preserving access order",
   const byId = new Map(result.nodes.map(n => [n.id, n]));
   expect(byId.get("gateway")!.position.x).toBeLessThan(byId.get("cluster")!.position.x);
   expect(byId.get("checkout")!.position.x).toBe(byId.get("ledger")!.position.x);
-  const chain = ["account", "cluster", "checkout", "role", "bucket"].map(id => byId.get(id)!.position.x);
-  expect(chain).toEqual([0, 1140, 760, 2280, 2660]);
+  // Backend layer order (scope, app, infra, identity, asset), with empty layers compressed.
+  const chain = ["account", "checkout", "cluster", "role", "bucket"].map(id => byId.get(id)!.position.x);
+  expect(chain).toEqual([...chain].sort((a, b) => a - b));
+  expect(new Set(chain).size).toBe(chain.length);
   for (const [finding, owner] of [["cve", "checkout"], ["grant-finding", "role"]]) {
-    expect(byId.get(finding!)!.position.x).toBe(byId.get(owner!)!.position.x);
-    expect(byId.get(finding!)!.position.y).toBeGreaterThan(byId.get(owner!)!.position.y);
+    expect(byId.get(finding!)!.position.x).toBeGreaterThan(byId.get(owner!)!.position.x);
     expect(byId.get(finding!)!.data.readingOwner).toBe(owner);
   }
   expect(byId.get("role")!.data.readingLabel).toBe("Role");
@@ -73,10 +75,8 @@ it("uses the shared grammar for unknown subtypes, grouped entries and large esta
 it("reserves full captions and separates every node without dropping disconnected inventory", () => {
   const result = graphHierarchyLayout([...nodes, node("unlinked", "dataStore")], edges);
   expect(result.nodes).toHaveLength(nodes.length + 1);
-  for (const a of result.nodes) for (const b of result.nodes) {
-    if (a.id !== b.id && Math.abs(a.position.x - b.position.x) < 340) {
-      expect(Math.abs(a.position.y - b.position.y)).toBeGreaterThanOrEqual(240);
-    }
+  for (const [i, a] of result.nodes.entries()) for (const b of result.nodes.slice(i + 1)) {
+    expect(Math.abs(a.position.x - b.position.x) >= SEMANTIC_COLUMN_GAP || Math.abs(a.position.y - b.position.y) >= SEMANTIC_ROW_GAP).toBe(true);
   }
 });
 

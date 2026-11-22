@@ -1,8 +1,10 @@
 import type { Edge, Node } from "@xyflow/react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { semanticGraphLayout, SEMANTIC_COLUMN_GAP, SEMANTIC_ROW_GAP } from "@/lib/graph-semantic-layout";
+import { COMPACT_NODE_WIDTH } from "@/lib/graph-compact-layout";
 
-export const MCP_FLOW_FOOTPRINT = { width: 240, height: 216, cardMaxHeight: 216, column: SEMANTIC_COLUMN_GAP, row: SEMANTIC_ROW_GAP };
+/** A compact card (circle, two name lines, one type line) fits a row with the separation pass's 24-unit gap. */
+export const MCP_FLOW_FOOTPRINT = { width: COMPACT_NODE_WIDTH, height: SEMANTIC_ROW_GAP - 24, cardMaxHeight: SEMANTIC_ROW_GAP - 24, column: SEMANTIC_COLUMN_GAP, row: SEMANTIC_ROW_GAP };
 export const mcpEvidenceFlow = semanticGraphLayout;
 
 /** Recorded upstream evidence for a finding, including reverse `affects` edges.

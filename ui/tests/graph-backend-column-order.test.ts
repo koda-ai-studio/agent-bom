@@ -25,7 +25,9 @@ it("orders same-layer scope containers by containment, independently of their id
     { id: "account-env", source: "z-account", target: "a-environment", data: { relationship: "contains" } }];
   const placed = semanticGraphLayout(nodes, edges).nodes;
   const y = (id: string) => placed.find(node => node.id === id)!.position.y;
-  expect(y("y-organization")).toBeLessThan(y("z-account"));
-  expect(y("z-account")).toBeLessThan(y("a-environment"));
-  expect(new Set(placed.map(node => node.position.x)).size).toBe(1);
+  // Containment inside one backend layer reads left to right: each child takes the next rank.
+  const x = (id: string) => placed.find(node => node.id === id)!.position.x;
+  expect(x("y-organization")).toBeLessThan(x("z-account"));
+  expect(x("z-account")).toBeLessThan(x("a-environment"));
+  expect(y("y-organization")).toBe(y("a-environment"));
 });

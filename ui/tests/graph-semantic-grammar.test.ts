@@ -27,26 +27,27 @@ describe("shared semantic graph grammar", () => {
   it("honours the backend semantic_layer over the surface and renderer kind", () => {
     const entry = node("entry", "container", "container-image");
     entry.data.semanticLayer = "user";
-    const { nodes } = graphHierarchyLayout([entry, node("agent", "agent")], []);
-    expect(nodes[0]!.position.x).toBe(GRAPH_SEMANTIC_LAYER_META.user.column * 380);
-    expect(nodes[1]!.position.x).toBeGreaterThan(nodes[0]!.position.x);
+    const { nodes } = graphHierarchyLayout([node("workload", "container"), entry, node("agent", "agent")], []);
+    // Empty columns are compressed, so the user-layer entry leads even its renderer's own app layer.
+    expect(nodes[1]!.position.x).toBeLessThan(nodes[0]!.position.x);
+    expect(nodes[2]!.position.x).toBeGreaterThan(nodes[0]!.position.x);
   });
 
   it("surfaces an invalid backend layer instead of guessing a column", () => {
     const bad = node("bad", "container");
     bad.data.semanticLayer = "not-a-layer";
-    const result = graphHierarchyLayout([bad], []);
+    const result = graphHierarchyLayout([bad, node("pkg", "package")], []);
     expect(result.nodes[0]!.data.semanticLayerIssue).toBe("Semantic layer unavailable");
-    expect(result.nodes[0]!.position.x).toBeGreaterThan(5 * 380);
+    expect(result.nodes[0]!.position.x).toBeGreaterThan(result.nodes[1]!.position.x);
   });
 
   it("surfaces a missing API layer without deriving it from the entity type", () => {
     const bad = node("bad", "container");
     bad.data.entityType = "container";
     bad.data.semanticLayer = undefined;
-    const result = graphHierarchyLayout([bad], []);
+    const result = graphHierarchyLayout([bad, node("pkg", "package")], []);
     expect(result.nodes[0]!.data.semanticLayerIssue).toBe("Semantic layer unavailable");
-    expect(result.nodes[0]!.position.x).toBeGreaterThan(5 * 380);
+    expect(result.nodes[0]!.position.x).toBeGreaterThan(result.nodes[1]!.position.x);
   });
 
   it("keeps separate incoming ports for different sources of the same relationship", () => {
@@ -74,7 +75,7 @@ import { investigationFlow } from "@/lib/graph-investigation-flow";
 import { relationshipPath } from "@/lib/relationship-routing";
 import { Position } from "@xyflow/react";
 import { semanticColumns } from "@/lib/graph-semantic-columns";
-import { semanticGraphLayout } from "@/lib/graph-semantic-layout";
+import { semanticGraphLayout, SEMANTIC_ROW_GAP } from "@/lib/graph-semantic-layout";
 import { hopColumnLayout } from "@/lib/graph-hop-columns";
 import { layoutAttackPathGraph } from "@/lib/attack-path-graph-layout";
 
@@ -98,13 +99,13 @@ it("retains backend columns even when a selected spine traverses them in reverse
   expect(columns.get("tool")).toBeGreaterThan(columns.get("server")!);
 });
 
-it("keeps sibling context below the highlighted top path", () => {
+it("fans sibling context evenly on both sides of the highlighted path", () => {
   const nodes = [node("root", "agent"), node("left", "server"), node("right", "server")];
   const edges = ["left", "right"].map(id => ({ id, source: "root", target: id, data: { relationship: "uses" } }));
   const result = semanticGraphLayout(nodes, edges, ["root"]);
   const left = result.nodes.find(n => n.id === "left")!, right = result.nodes.find(n => n.id === "right")!;
-  expect(left.position.y).toBeGreaterThan(0);
-  expect(right.position.y).toBeGreaterThan(left.position.y);
+  expect(left.position.y + right.position.y).toBe(0);
+  expect(left.position.y).not.toBe(0);
 });
 
 it("keeps semantic columns and the straight spine through mobile preview placement", () => {
@@ -179,12 +180,12 @@ it("frames the occupied selected-path columns without a blank leading canvas", (
   expect(layout.width).toBe(Math.max(...xs) + layout.nodeWidth);
 });
 
-it("places a recorded package dependency below its single server owner", () => {
+it("places a recorded package dependency in the rank right of its single server owner", () => {
   const input = [node("server", "server"), node("package", "package")];
   const edge = { id: "dependency", source: "server", target: "package", data: { relationship: "depends_on" } };
   const result = graphHierarchyLayout(input, [edge]);
-  expect(result.nodes[1]!.position.x).toBe(result.nodes[0]!.position.x);
-  expect(result.nodes[1]!.position.y).toBeGreaterThan(result.nodes[0]!.position.y);
+  expect(result.nodes[1]!.position.x).toBeGreaterThan(result.nodes[0]!.position.x);
+  expect(result.nodes[1]!.position.y).toBe(result.nodes[0]!.position.y);
   expect(result.nodes[1]!.data.semanticOwner).toBe("server");
   expect(result.edges[0]).toMatchObject({ source: "server", target: "package", data: { relationship: "depends_on" } });
 });
@@ -208,20 +209,20 @@ it("keeps off-path package dependencies below their recorded owner in the select
   expect(buildAttackPathGraphModel(graph, selected).nodes.find(node => node.id === "pkg:urllib3")?.semanticOwner).toBeUndefined();
 });
 
-it("reserves compact rows for uniquely owned package context while keeping full cards clear", () => {
+it("fans uniquely owned package context around its owner a full row apart", () => {
   const nodes = [node("server", "server"), node("package-a", "package"), node("package-b", "package")];
   const edges = nodes.slice(1).map(n => ({ id: n.id, source: "server", target: n.id, data: { relationship: "contains" } }));
   const result = semanticGraphLayout(nodes, edges, ["server"]);
   const children = result.nodes.slice(1);
-  expect(children.every(child => child.style?.minHeight === 132)).toBe(true);
-  expect(Math.abs(children[0]!.position.y - children[1]!.position.y)).toBe(156);
-  expect(children.every(child => child.position.y >= 240)).toBe(true);
+  expect(Math.abs(children[0]!.position.y - children[1]!.position.y)).toBeGreaterThanOrEqual(SEMANTIC_ROW_GAP);
+  expect(children.every(child => child.position.x > result.nodes[0]!.position.x)).toBe(true);
 });
 
-it("routes owner-to-subrow links around the same column through its outside ports", () => {
+it("draws an owner-to-context link left to right on the default ports", () => {
   const nodes = [node("server", "server"), node("package", "package")];
   const result = semanticGraphLayout(nodes, [{ id: "dependency", source: "server", target: "package", data: { relationship: "depends_on" } }], ["server"]);
   expect(result.edges[0]!.sourceHandle).toBeNull();
-  expect(result.edges[0]!.targetHandle).toBe("context");
-  expect(result.nodes[1]!.position.x).toBe(result.nodes[0]!.position.x);
+  expect(result.edges[0]!.targetHandle).toBeNull();
+  expect(result.edges[0]!.type).toBe("compact");
+  expect(result.nodes[1]!.position.x).toBeGreaterThan(result.nodes[0]!.position.x);
 });

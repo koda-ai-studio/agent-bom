@@ -6,6 +6,8 @@ import { graphHierarchyLayout, orderHierarchyBranches } from "@/lib/graph-hierar
 import { readableLineageDagreLr } from "@/lib/graph-node-dimensions";
 import { graphConnectionPreview } from "@/lib/graph-connection-preview";
 import { graphAdaptiveFrame } from "@/lib/graph-adaptive-frame";
+import { COMPACT_NODE_WIDTH } from "@/lib/graph-compact-layout";
+import { SEMANTIC_COLUMN_GAP, SEMANTIC_ROW_GAP } from "@/lib/graph-semantic-layout";
 
 // Recorded semantic layers supplied by these API examples.
 const layers: Record<string, string> = { agent: "orchestration", server: "mcp_server", container: "app", environment: "infra",
@@ -18,11 +20,18 @@ const edge = (id: string, source: string, target: string, relationship: string):
   id, source, target, data: { relationship, evidenceMode: "inferred" }, markerEnd: "arrow",
 });
 
+/** No two compact cards come closer than a row in one rank, or a rank across. */
+function expectCompactCardsClear(nodes: Node[]) {
+  for (const [i, a] of nodes.entries()) for (const b of nodes.slice(i + 1)) {
+    expect(Math.abs(a.position.x - b.position.x) >= SEMANTIC_COLUMN_GAP || Math.abs(a.position.y - b.position.y) >= SEMANTIC_ROW_GAP).toBe(true);
+  }
+}
+
 describe("evidence-driven graph flow", () => {
   it("reserves the semantic renderer footprint for a peer group", () => {
     const group = { ...node("peers", "server"), type: "clusterPillNode" };
     const result = graphHierarchyLayout([node("workspace", "agent"), group], [edge("uses", "workspace", "peers", "uses")]);
-    expect(result.nodes.every(node => node.style?.minHeight === 216)).toBe(true);
+    expect(result.nodes.every(node => node.style?.width === COMPACT_NODE_WIDTH)).toBe(true);
     expect(result.nodes[1]!.position.x).toBeGreaterThan(result.nodes[0]!.position.x);
   });
   it("fits a compact three-source correlation without hiding its finding off canvas", () => {
@@ -62,11 +71,7 @@ describe("evidence-driven graph flow", () => {
     const links = entries.slice(0, 3).map(n => edge(n.id, n.id, "package", "contains"));
     links.push(edge("finding", "package", "finding", "vulnerable_to"));
     const { nodes } = graphHierarchyLayout(entries, links, readableLineageDagreLr());
-    for (const a of nodes) for (const b of nodes) {
-      if (a.id !== b.id && Math.abs(a.position.x - b.position.x) < 240) {
-        expect(Math.abs(a.position.y - b.position.y)).toBeGreaterThanOrEqual(240);
-      }
-    }
+    expectCompactCardsClear(nodes);
   });
 
   it("reserves finding footer space in a compact branched AI environment", () => {
@@ -74,13 +79,7 @@ describe("evidence-driven graph flow", () => {
     const pairs = [["environment", "model"], ["environment", "triage"], ["environment", "intake"], ["model", "torch"], ["triage", "tickets"], ["intake", "documents"], ["torch", "cve"], ["tickets", "credential"], ["documents", "pillow"]];
     const links = pairs.map(([source, target]) => edge(`${source}-${target}`, source!, target!, "contains"));
     const result = graphHierarchyLayout(entries, links, readableLineageDagreLr({ fitAspect: 2.2 }));
-    for (const a of result.nodes) for (const b of result.nodes) {
-      if (a.id !== b.id && Math.abs(a.position.x - b.position.x) < 240) {
-        const upper = a.position.y < b.position.y ? a : b;
-        expect(Math.abs(a.position.y - b.position.y)).toBeGreaterThanOrEqual(Number(upper.style?.minHeight) + 24);
-      }
-    }
-    expect(result.nodes.every(n => n.style?.minHeight === (n.data.semanticOwner ? 132 : 216))).toBe(true);
+    expectCompactCardsClear(result.nodes);
     expect(result.edges.map(e => [e.source, e.target])).toEqual(links.map(e => [e.source, e.target]));
   });
 
@@ -91,12 +90,7 @@ describe("evidence-driven graph flow", () => {
     const links = ["server", "model", "dataset"].map(id => edge(id, "agent", id, "uses"));
     links.push(edge("tool", "server", "tool", "has_tool"));
     const { nodes } = graphHierarchyLayout(entries, links, readableLineageDagreLr());
-    for (const a of nodes) for (const b of nodes) {
-      if (a.id !== b.id && Math.abs(a.position.x - b.position.x) < 240) {
-        expect(Math.abs(a.position.y - b.position.y)).toBeGreaterThanOrEqual(240);
-      }
-    }
-    expect(nodes.every(n => Number(n.style?.minHeight) >= 216)).toBe(true);
+    expectCompactCardsClear(nodes);
   });
 
   it("keeps aggregate member counts visible when overview relationship captions are quiet", () => {
@@ -125,15 +119,17 @@ describe("evidence-driven graph flow", () => {
   it("follows recorded engineering relationships and keeps warnings downstream of their subject", () => {
     const result = graphHierarchyLayout(nodes, edges);
     const x = new Map(result.nodes.map(n => [n.id, n.position.x]));
-    for (const id of ["source", "ci"]) expect(x.get(id)).toBe(x.get("repo"));
+    // Contained items take the rank right of their container; a package and its CVE branch right of their owner.
+    for (const id of ["source", "ci"]) expect(x.get(id)).toBeGreaterThan(x.get("repo")!);
+    expect(x.get("source")).toBe(x.get("ci"));
     expect(x.get("app")).toBeLessThan(x.get("repo")!);
-    expect(x.get("package")).toBe(x.get("app"));
-    expect(x.get("cve")).toBe(x.get("package"));
-    expect(x.get("warning")).toBe(x.get("ci"));
-    expect(result.nodes.find(n => n.id === "warning")!.position.y).toBeGreaterThan(result.nodes.find(n => n.id === "ci")!.position.y);
+    expect(x.get("package")).toBeGreaterThan(x.get("app")!);
+    expect(x.get("cve")).toBeGreaterThan(x.get("package")!);
+    expect(x.get("warning")).toBeGreaterThan(x.get("ci")!);
     expect(result.edges.map(e => [e.id, e.source, e.target, e.data?.relationship, e.data?.evidenceMode, e.markerEnd]))
       .toEqual(edges.map(e => [e.id, e.source, e.target, e.data?.relationship, e.data?.evidenceMode, e.markerEnd]));
-    expect(result.edges.find(e => e.id === "warning")?.sourceHandle).toBeNull();
+    // The warning reads downstream of its subject, so its recorded link is drawn back into it.
+    expect(result.edges.find(e => e.id === "warning")?.sourceHandle).toBe("context");
   });
 
   it("retains every shared-finding relationship without inventing an owner", () => {
@@ -154,7 +150,10 @@ describe("evidence-driven graph flow", () => {
     const result = graphHierarchyLayout(preview.nodes, preview.edges, readableLineageDagreLr());
     expect(preview.totalNodes).toBe(41);
     expect(preview.totalEdges).toBe(40);
-    expect(new Set(result.nodes.map(node => node.position.x)).size).toBe(1);
+    // The repository and the folders it contains share a layer: the folders take the next rank together.
+    const folderXs = new Set(result.nodes.filter(n => n.id !== "repo").map(node => node.position.x));
+    expect(folderXs.size).toBe(1);
+    expect([...folderXs][0]).toBeGreaterThan(result.nodes.find(n => n.id === "repo")!.position.x);
     const ys = result.nodes.map(n => n.position.y);
     expect(Math.max(...ys) - Math.min(...ys)).toBeLessThan(4000);
     expect(result.edges).toHaveLength(11);

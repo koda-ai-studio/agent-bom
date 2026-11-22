@@ -1,3 +1,4 @@
+import { COMPACT_NODE_WIDTH } from "@/lib/graph-compact-layout";
 import { describe, expect, it } from "vitest";
 import { FLOW_READABLE_NODE_LIMIT, flowAvailability, flowPinnedIds, investigationFlow, type InvestigationFlow } from "@/lib/graph-investigation-flow";
 import { graphConnectionPreview } from "@/lib/graph-connection-preview";
@@ -16,7 +17,8 @@ describe("exposure on real Kubernetes projection output", () => {
     expect(result.primaryPath).toEqual([]);
     expect(result.nodes.every(node => typeof node.data.semanticLayer === "string")).toBe(true);
     expect(at(result, "Role: web-sa-reader").x).toBeGreaterThan(at(result, "pod: prod/web-7c9f-1").x);
-    expect(at(result, "replicaset: prod/web-7c9f").x).toBe(at(result, "pod: prod/web-7c9f-1").x);
+    // A controller and the pod it owns share a backend layer; the pod takes the next rank.
+    expect(at(result, "replicaset: prod/web-7c9f").x).toBeLessThan(at(result, "pod: prod/web-7c9f-1").x);
   });
 
   it("never invents or reverses an edge to do so", () => {
@@ -161,15 +163,13 @@ describe("the reading of each flow", () => {
     }
   });
 
-  it("keeps package and finding context below their recorded owners", () => {
+  it("branches package and finding context right of their recorded owners", () => {
     const result = run("withFindings", "vulnerability");
     const image = byLabel(result.nodes, "image: nginx:1.19.0"), pkg = byLabel(result.nodes, "openssl@1.1.1k"), finding = byLabel(result.nodes, "CVE-2021-3711");
     expect(pkg.data.semanticOwner).toBe(image.id);
     expect(finding.data.semanticOwner).toBe(pkg.id);
-    expect(pkg.position.x).toBe(image.position.x);
-    expect(finding.position.x).toBe(pkg.position.x);
-    expect(pkg.position.y).toBeGreaterThan(image.position.y);
-    expect(finding.position.y).toBeGreaterThan(pkg.position.y);
+    expect(pkg.position.x).toBeGreaterThan(image.position.x);
+    expect(finding.position.x).toBeGreaterThan(pkg.position.x);
   });
 
   it("does not manufacture a primary path when the snapshot has none", () => {
@@ -201,11 +201,11 @@ describe("the reading of each flow", () => {
     const result = run("tokenMounted", "exposure");
     const controller = byLabel(result.nodes, "replicaset: prod/web-7c9f"), pod = byLabel(result.nodes, "pod: prod/web-7c9f-1");
     expect(controller.data.semanticLayer).toBeDefined();
-    expect(controller.position.x).toBe(pod.position.x);
+    expect(controller.position.x).toBeLessThan(pod.position.x);
     const owner = result.edges.find(edge => edge.source === controller.id && edge.target === pod.id)!;
     expect(owner).toBeDefined();
     expect(owner.sourceHandle).toBeNull();
-    expect(owner.targetHandle).toBe("context");
+    expect(owner.targetHandle).toBeNull();
   });
 
   it("treats drift incidents like other findings when one asset owns them", () => {
@@ -255,12 +255,12 @@ describe("a large map with no specific flow", () => {
     expect(result.edges.map(edge => [edge.source, edge.target])).toEqual(edges.map(edge => [edge.source, edge.target]));
   });
 
-  it("keeps semantic nodes detailed with compact owned sub-rows", () => {
+  it("keeps semantic nodes detailed at the compact card width", () => {
     const { nodes, edges } = k8sFlowGraph("projectScan");
     const banded = nodes.map(n => ({ ...n, data: { ...n.data, renderBand: "summary" as const } }));
     const result = investigationFlow(banded, edges, "auto");
     expect(result.applied).toBe(true);
-    expect(result.nodes.every(n => n.data.renderBand === "detail" && n.style?.minHeight === (n.data.semanticOwner ? 132 : 216))).toBe(true);
+    expect(result.nodes.every(n => n.data.renderBand === "detail" && n.style?.width === COMPACT_NODE_WIDTH)).toBe(true);
   });
 
   it("uses the same semantic layout for small maps", () => {

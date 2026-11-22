@@ -49,7 +49,7 @@ describe("small MCP evidence flow", () => {
     expect(at.credential!.y).toBe(at.client!.y);
     expect(at.finding!.y).toBe(at.client!.y);
     expect(at["github-package"]!.y).not.toBe(at.credential!.y);
-    expect(at["files-1"]!.y).toBeGreaterThan(at["github-1"]!.y);
+    expect(at["files-1"]!.y).not.toBe(at["github-1"]!.y);
     const backwards = mcpEvidenceFlow(nodes, [{ id: "back", source: "finding", target: "credential", data: { relationship: "affects" } }])!;
     expect(backwards.edges[0]!.sourceHandle).toBe("context");
     expect(backwards.edges[0]!.targetHandle).toBe("context");
@@ -57,8 +57,8 @@ describe("small MCP evidence flow", () => {
 
   it("spaces rows for the tallest card it draws, so no two cards in a column overlap", () => {
     const result = mcpEvidenceFlow(nodes, edges)!;
-    // Two label lines and the fixed badge band fit inside the reserved card footprint.
-    expect(MCP_FLOW_FOOTPRINT.cardMaxHeight).toBeGreaterThanOrEqual(216);
+    // A circle, two name lines and one type line fit inside the reserved compact footprint.
+    expect(MCP_FLOW_FOOTPRINT.cardMaxHeight).toBeGreaterThanOrEqual(170);
     const box = (n: Node<LineageNodeData>) => ({ left: n.position.x, right: n.position.x + Number(n.style?.width ?? 0),
       top: n.position.y, bottom: n.position.y + MCP_FLOW_FOOTPRINT.cardMaxHeight });
     const overlaps: string[] = [];
@@ -69,15 +69,14 @@ describe("small MCP evidence flow", () => {
     expect(overlaps).toEqual([]);
   });
 
-  it("keeps the primary evidence chain at the top of its connected context", () => {
+  it("keeps the primary evidence chain on row zero with its branches fanned on both sides", () => {
     const result = mcpEvidenceFlow(nodes, edges)!;
     const primary = result.nodes.find(n => n.id === "client")!.position.y;
-    const branchRows = result.nodes.filter(n => n.data.nodeType === "server").map(n => n.position.y);
-    expect(Math.min(...branchRows)).toBeGreaterThanOrEqual(primary);
+    expect(primary).toBe(0);
+    const branchRows = result.nodes.filter(n => n.data.nodeType === "server" && n.id !== "github-1").map(n => n.position.y);
+    expect(branchRows.every(y => y !== primary)).toBe(true);
+    expect(Math.min(...branchRows)).toBeLessThan(primary);
     expect(Math.max(...branchRows)).toBeGreaterThan(primary);
-    const low = Math.min(...result.nodes.map(n => n.position.y)), high = Math.max(...result.nodes.map(n => n.position.y));
-    expect(primary).toBe(low);
-    expect(high).toBeGreaterThan(primary);
   });
 
   it("is deterministic across API ordering and does not relabel scope or evidence", () => {

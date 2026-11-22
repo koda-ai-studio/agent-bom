@@ -23,11 +23,11 @@ it("preserves runs evidence through the real API-to-canvas adapter", () => {
   expect(placed.nodes.find(n => n.id === "image")?.data.evidenceSources).toEqual(["sbom"]);
 });
 
-it("keeps the backend image entity below its workload with recorded source chips", () => {
+it("branches the backend image entity right of its workload with its recorded sources", () => {
   const result = semanticGraphLayout([node("workload"), node("image")], [runs]);
   const image = result.nodes.find(n => n.id === "image")!, workload = result.nodes.find(n => n.id === "workload")!;
-  expect(image.position.x).toBe(workload.position.x);
-  expect(image.position.y).toBeGreaterThan(workload.position.y);
+  expect(image.position.x).toBeGreaterThan(workload.position.x);
+  expect(image.position.y).toBe(workload.position.y);
   expect(image.data.imageSubrow).toBe(true);
   expect(image.data.evidenceSources).toEqual(["sbom"]);
   expect(workload.data.evidenceSources).toEqual(["kubernetes"]);
@@ -48,7 +48,7 @@ it("keeps an explicit image hop on the selected spine", () => {
   expect(image.data.imageSubrow).not.toBe(true);
 });
 
-it("keeps image packages in the owner's final column after spine placement", () => {
+it("keeps image packages to the right of their image after spine placement", () => {
   const orchestrator = node("orchestrator", "agent");
   orchestrator.data.semanticLayer = "orchestration";
   const pkg = node("package", "package");
@@ -57,8 +57,8 @@ it("keeps image packages in the owner's final column after spine placement", () 
     { id: "package", source: "image", target: "package", data: { relationship: "contains" } },
   ], ["orchestrator", "workload"]);
   const x = (id: string) => result.nodes.find(n => n.id === id)!.position.x;
-  expect(x("package")).toBe(x("image"));
-  expect(x("image")).toBe(x("workload"));
+  expect(x("package")).toBeGreaterThan(x("image"));
+  expect(x("image")).toBeGreaterThan(x("workload"));
 });
 
 import { buildAttackPathGraphModel } from "@/lib/attack-path-graph-model";
