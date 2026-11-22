@@ -87,7 +87,7 @@ export function CompactRelationshipEdge(props: EdgeProps) {
     ? props.label ?? (relationship ? relationshipEdgeLabelText(relationship, props.data) : null) : null;
   const style = { stroke: edgeFamilyColor(family), strokeWidth: spine ? 2.4 : inspecting ? 2 : 1.4, opacity: spine || inspecting ? 1 : 0.78,
     strokeDasharray: edgeIsDashed(family, props.data) ? "6 4" : undefined, fill: "none" };
-  return <g ref={ref} data-relationship={relationship || undefined} data-edge-family={family} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+  return <g ref={ref} data-relationship={relationship || undefined} data-edge-family={family} data-label-disclosure={relationship === "vulnerable_to" ? "on-demand" : undefined} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
     {typeof props.data?.hoverDescription === "string" && <title>{props.data.hoverDescription}</title>}
     <BaseEdge id={props.id} path={path} style={style}
       {...(props.markerStart ? { markerStart: props.markerStart } : {})}

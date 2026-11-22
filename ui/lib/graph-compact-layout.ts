@@ -217,5 +217,26 @@ export function compactLayout(input: CompactInput): { positions: Map<string, Poi
   const rankIndex = new Map(order.map((r, i) => [r, i]));
   const gap = rankGap(order.map(r => byRank.get(r)!.map(id => y.get(id)!)));
   const point = (id: string) => ({ x: rankIndex.get(rank.get(id)!)! * gap, y: Math.round(y.get(id)!) });
-  return { positions: new Map(ids.map(id => [id, point(id)])), lanes: new Map([...chains].map(([id, chain]) => [id, chain.map(point)])) };
+  const cards = new Map(order.map(r => [r, byRank.get(r)!.filter(id => !dummies.has(id)).map(id => y.get(id)!)]));
+  return { positions: new Map(ids.map(id => [id, point(id)])), lanes: new Map([...chains].map(([id, chain]) => [id, keptSlots(chain).map(point)])) };
+
+  /** A slot the packer pushed outside its link's two ends would draw a loop. Drop such slots
+   * when the direct curve across their ranks clears every card there; otherwise keep the lane. */
+  function keptSlots(chain: string[]) {
+    const [a, b] = dummies.get(chain[0]!)!.ends;
+    const ends = [y.get(a!)!, y.get(b!)!], lo = Math.min(...ends) - 1, hi = Math.max(...ends) + 1;
+    const kept = chain.filter(slot => y.get(slot)! >= lo && y.get(slot)! <= hi);
+    if (kept.length === chain.length) return chain;
+    const [left, right] = rank.get(a!)! <= rank.get(b!)! ? [a!, b!] : [b!, a!];
+    const route = [left, ...kept, right];
+    const clear = chain.every(slot => {
+      if (kept.includes(slot)) return true;
+      const r = rank.get(slot)!;
+      const after = route.findIndex(id => rank.get(id)! > r), p = route[after - 1]!, q = route[after]!;
+      const t = (r - rank.get(p)!) / (rank.get(q)! - rank.get(p)!), ease = t * t * (3 - 2 * t);
+      const at = y.get(p)! + (y.get(q)! - y.get(p)!) * ease;
+      return cards.get(r)!.every(cardY => Math.abs(cardY - at) >= COMPACT_ROW_GAP / 2);
+    });
+    return clear ? kept : chain;
+  }
 }

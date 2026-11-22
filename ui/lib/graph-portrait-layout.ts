@@ -73,7 +73,7 @@ export function graphPortraitLayout(nodes: Node<LineageNodeData>[], edges: Edge[
     nodes: nodes.map(node => ({ ...node, position: positions.get(node.id) ?? node.position,
       style: { ...node.style, width: PORTRAIT_CARD_WIDTH, "--graph-node-card-width": `${PORTRAIT_CARD_WIDTH}px`, "--graph-node-glyph-size": "56px",
         "--graph-context-glyph-size": "56px", "--graph-node-icon-size": "28px", "--graph-context-icon-size": "28px",
-        "--graph-node-label-size": "14px", "--graph-node-meta-size": "13px" },
+        "--graph-node-label-size": "15px", "--graph-node-meta-size": "14px" },
       data: { ...node.data, phoneLayout: true } })),
     edges: edges.map((edge): Edge => {
       const from = positions.get(edge.source), to = positions.get(edge.target);

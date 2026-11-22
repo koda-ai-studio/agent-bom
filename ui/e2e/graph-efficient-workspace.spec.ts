@@ -54,10 +54,11 @@ for (const theme of ["light", "dark"]) test(`small graph uses its canvas and def
   await expect(findingLabel).toHaveCount(0);
   await expect(page.getByTestId("graph-entity-drawer").getByRole("heading",{name:"CVE-2023-4863",exact:true})).toBeVisible();
   await expect.poll(async()=>Math.round((await page.locator(".react-flow").boundingBox())!.height)).toBeLessThanOrEqual(560);
+  // The compact circle draws 36-46px on screen (it was 66px before the compact canvas).
   await expect.poll(async()=>{
     const canvas=(await page.locator(".react-flow").boundingBox())!;
     const glyphs=await page.locator(".react-flow .graph-entity-glyph").evaluateAll(es=>es.map(e=>e.getBoundingClientRect().toJSON()));
-    return glyphs.length===2 && glyphs.every(g=>g.width>=65 && g.x>=canvas.x && g.right<=canvas.x+canvas.width && g.y>=canvas.y && g.bottom<=canvas.y+canvas.height);
+    return glyphs.length===2 && glyphs.every(g=>g.width>=36 && g.x>=canvas.x && g.right<=canvas.x+canvas.width && g.y>=canvas.y && g.bottom<=canvas.y+canvas.height);
   }).toBe(true);
   expect(requests.filter(p=>p.startsWith("/v1/graph/diff?")||p.startsWith("/v1/graph/edges/changes?"))).toEqual([]);
   expect(requests.filter(p=>p.startsWith("/v1/graph/node/"))).toHaveLength(1);

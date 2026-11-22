@@ -7,6 +7,7 @@ import { canvasName } from "@/components/graph-compact-node";
 it("keeps names up to 28 characters whole and shortens image digests", () => {
   expect(canvasName("Reference Evidence Workload")).toBe("Reference Evidence Workload");
   expect(canvasName("reference-evidence-api@sha256:0123456789abcdeff477d58a")).toBe("reference-evidence-api @ f477d58a");
+  expect(canvasName("GITHUB_PERSONAL_ACCESS_TOKEN")).toBe("GITHUB_PER…ESS_TOKEN");
   const long = canvasName("an extremely long deployment name with many words");
   expect(long.length).toBeLessThanOrEqual(28);
   expect(long).toContain("…");

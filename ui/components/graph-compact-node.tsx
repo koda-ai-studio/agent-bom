@@ -32,6 +32,9 @@ const NAME_LIMIT = 28;
 export function canvasName(name: string): string {
   const digest = name.match(/^(.*)@sha256:([0-9a-f]{8,})$/i);
   const base = digest ? digest[1]! : name, suffix = digest ? ` @ ${digest[2]!.slice(-8)}` : "";
+  // One unbroken token cannot wrap at a word, so past 20 characters it keeps its two ends.
+  const longestToken = Math.max(...base.split(/[\s-]+/).map(token => token.length));
+  if (longestToken > 20 && base.length > 20) return `${base.slice(0, 10)}…${base.slice(-9)}${suffix}`;
   return (base.length <= NAME_LIMIT ? base : `${base.slice(0, 18).trimEnd()}…${base.slice(-9).trimStart()}`) + suffix;
 }
 

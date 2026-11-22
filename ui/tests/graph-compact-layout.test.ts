@@ -66,6 +66,19 @@ describe("compact attack-path layout", () => {
     expect(at(result, "cve").x).toBeLessThan(at(result, "tool").x);
   });
 
+  it("never draws a link's lane outside the span of its own two ends", () => {
+    const nodes = [node("account", "account"), node("bucket", "package"), node("cluster", "cloudResource"), node("gateway", "container")];
+    const result = semanticGraphLayout(nodes, ["bucket", "cluster", "gateway"].map(id => edge("account", id, "contains")));
+    for (const link of result.edges) {
+      const from = at(result, link.source), to = at(result, link.target);
+      for (const point of (link.data?.lanePoints as { dy: number }[] | undefined) ?? []) {
+        const y = from.y + point.dy;
+        expect(y).toBeGreaterThanOrEqual(Math.min(from.y, to.y) - 1);
+        expect(y).toBeLessThanOrEqual(Math.max(from.y, to.y) + 1);
+      }
+    }
+  });
+
   it("never stacks two nodes of one rank closer than the row gap", () => {
     const servers = Array.from({ length: 5 }, (_, i) => node(`s${i}`, "server"));
     const agents = [node("a1", "agent"), node("a2", "agent")];

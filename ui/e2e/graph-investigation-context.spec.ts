@@ -145,12 +145,8 @@ for (const theme of ["light", "dark"]) test(`fit all includes complete shared-se
     return Math.max(0, ...[...node.querySelectorAll("span, p")].filter(text => text.textContent?.trim()).map(text => parseFloat(getComputedStyle(text).fontSize) * zoom));
   }));
   expect(Math.min(...primaryFonts)).toBeGreaterThanOrEqual(12);
-  const badgeFonts = await page.locator(".react-flow__node [data-node-badge]").evaluateAll(badges => badges.map(badge => {
-    const transform = getComputedStyle(badge.closest(".react-flow__viewport")!).transform;
-    return parseFloat(getComputedStyle(badge).fontSize) * new DOMMatrixReadOnly(transform).a;
-  }));
-  expect(badgeFonts.length).toBeGreaterThan(0);
-  expect(Math.min(...badgeFonts)).toBeGreaterThanOrEqual(11);
+  // Environment and other chips live in the drawer; the compact canvas keeps one type line per node.
+  await expect(page.locator(".react-flow__node [data-node-badge]")).toHaveCount(0);
   await page.screenshot({ path: info.outputPath(`shared-server-${theme}.png`), animations: "disabled" });
 });
 
