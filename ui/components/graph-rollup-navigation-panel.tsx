@@ -23,6 +23,7 @@ export function RollupNavigationPanel({
   onReset,
   onBreadcrumb,
   onDecisionMode,
+  onMapMode,
   onRetry,
 }: {
   summary: GraphRollupResponse | null;
@@ -39,6 +40,8 @@ export function RollupNavigationPanel({
   onReset: () => void;
   onBreadcrumb: (index: number) => void;
   onDecisionMode: () => void;
+  /** Opens the grouped scope map from the ranked overview. */
+  onMapMode?: (() => void) | undefined;
   onRetry: () => void;
 }) {
   const visibleCount =
@@ -89,6 +92,11 @@ export function RollupNavigationPanel({
               Risk rollup
             </button>
           ) : null}
+          {decisionActive && onMapMode ? (
+            <button type="button" onClick={onMapMode} className="graph-chip-emerald">
+              Scope map
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={onDismiss}
@@ -128,4 +136,3 @@ export function RollupNavigationPanel({
     </div>
   );
 }
-

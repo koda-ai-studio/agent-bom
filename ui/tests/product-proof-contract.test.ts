@@ -133,9 +133,9 @@ describe("product proof capture contract", () => {
     expect(source).toContain("[body.current.scan_id, body.scenario.base_scan_id]");
     expect(source).toContain('newCapturePage("dark", { width: 1512, height: 811 })');
     expect(source).toContain('newCapturePage("light", { width: 1568, height: 780 })');
-    // Fifteen scopes sit below the ranked-list threshold, so the current state is the grouped map.
-    expect(source).toContain('canvasPage.locator(".react-flow__node:visible").first().waitFor');
-    expect(source).toContain('expectedText: ["Investigation", "Scope overview", "aggregate links"]');
+    // Fifteen scopes do not frame whole legibly at 1512x811, so the current state is the ranked overview.
+    expect(source).toContain(`canvasPage.locator('[data-testid="graph-scope-overview"]').waitFor`);
+    expect(source).toContain('expectedText: ["Investigation", "Recorded connections", "Browse all 15 nodes and scopes"]');
     expect(source).toContain("const body = rollupResponse();");
     expect(source).not.toContain("top_level: graph.nodes.slice(0, 30)");
     expect(source).toContain('page.route("**/v1/graph/scenarios"');

@@ -121,6 +121,7 @@ export function GraphAdvancedControls({ page }: { page: GraphPageModel }) {
                 onReset={resetRollupToRoot}
                 onBreadcrumb={navigateRollupBreadcrumb}
                 onDecisionMode={() => setRollupMapExpanded(false)}
+                onMapMode={() => setRollupMapExpanded(true)}
               />
             )}
 

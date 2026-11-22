@@ -31,7 +31,7 @@ export function buildScopePreview(items: GraphRollupContainer[], edges: GraphRol
   const selectedLinks = links.filter(edge => ids.has(edge.source === root.id ? edge.target : edge.source));
   const flow = buildRollupFlowGraph([root, ...chosen], { edges: selectedLinks });
   const nodes = flow.nodes.map((node, i) => ({ ...node,
-    position: { x: i === 0 ? 0 : 460, y: i === 0 ? (chosen.length - 1) * 90 : (i - 1) * 180 },
+    position: { x: i === 0 ? 0 : 460, y: i === 0 ? (chosen.length - 1) * 75 : (i - 1) * 150 },
     data: { ...node.data, rollup: undefined, rollupCompact: false, highlighted: false,
       attributes: { ...node.data.attributes, rollup_is_container: false },
     },

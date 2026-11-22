@@ -61,7 +61,7 @@ function GraphViewSwitch({ page }: { page: GraphPageModel }) {
 function GraphViewportCounts({ page, flowView }: Pick<Props, "page" | "flowView">) {
   const {
     showViewportScope, displayNodes, displayEdges, scenarioContextIds, rollupNavigationActive, rollupView, scenarioElements, selectedScenarioId, attackPathLens, selectedAttackPath, investigationMode, scenarioExpanded,
-    setExpandedScenarioId, showMiniMap, minimapExpanded, setMinimapExpanded, fitVisible, rootConnections, loadingGraph, loadRootInvestigation, investigationDirection,
+    setExpandedScenarioId, showMiniMap, minimapExpanded, setMinimapExpanded, fitVisible, rootConnections, loadingGraph, loadRootInvestigation, investigationDirection, rollupMapIllegible,
   } = page;
   const { disclosed } = flowView;
   // Asking for the whole map is asking for all of its connections too.
@@ -69,6 +69,7 @@ function GraphViewportCounts({ page, flowView }: Pick<Props, "page" | "flowView"
   return showViewportScope ? <GraphViewportScope
     collapsedFindings={disclosed.collapsed} canonicalVisibleNodes={flowView.canonicalVisibleNodes} totalNodes={displayNodes.length} totalEdges={displayEdges.length}
     scopeLabel={scenarioContextIds ? "Changes and neighbors" : rollupNavigationActive ? (rollupView?.mode === "drilldown" ? `Within ${rollupView.node?.label ?? "selected scope"}` : "Scope overview") : "Graph"}
+    partialView={rollupNavigationActive && rollupMapIllegible ? "Opened on the riskiest scope's connections; Fit all shows every scope" : undefined}
     aggregate={rollupNavigationActive} unconnected={scenarioElements.unconnected.length}
     scenarioToggle={selectedScenarioId && !attackPathLens && !selectedAttackPath && !investigationMode ? { expanded: scenarioExpanded, onToggle: () => setExpandedScenarioId(scenarioExpanded ? null : selectedScenarioId) } : undefined}
     minimap={showMiniMap ? { expanded: minimapExpanded, onToggle: () => setMinimapExpanded(value => !value) } : undefined}

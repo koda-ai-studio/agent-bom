@@ -205,8 +205,9 @@ function NarrativeRow({
                 style={{ width: `${(item.impact_score / 10) * 100}%` }}
               />
             </div>
-            <span className="text-xs font-mono text-ink-secondary">
-              {item.impact_score.toFixed(1)}
+            {/* A package's impact score is 0–10; a path's composite risk elsewhere is 0–100, so the scale is shown. */}
+            <span className="text-xs font-mono text-ink-secondary" title="Package impact score, 0–10">
+              {item.impact_score.toFixed(1)}<span className="text-ink-tertiary">/10</span>
             </span>
           </div>
         </td>
@@ -749,7 +750,7 @@ function RemediationPage() {
                   </th>
                   <th className="text-left px-4 py-3">
                     <SortButton
-                      label="Risk"
+                      label="Impact"
                       field="impact_score"
                       current={sortKey}
                       dir={sortDir}

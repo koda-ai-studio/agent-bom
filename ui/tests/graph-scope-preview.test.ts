@@ -19,7 +19,8 @@ describe("scope relationship preview", () => {
     expect(preview?.shownRelationships).toBe(3);
     expect(preview?.edges.map(e => [e.source, e.target])).toEqual([["a", "repo"], ["c", "repo"], ["d", "repo"]]);
     expect(preview?.edges.every(e => e.sourceHandle === "context" && e.targetHandle === "context" && e.data?.quietLabel)).toBe(true);
-    expect(preview?.nodes.find(n => n.id === "repo")?.position.y).toBe(180);
+    // The root sits level with the middle neighbour.
+    expect(preview?.nodes.find(n => n.id === "repo")?.position.y).toBe(preview?.nodes.find(n => n.id === "c")?.position.y);
     expect(preview?.nodes.every(n => n.data.rollup === undefined)).toBe(true);
     expect(buildScopePreview(items, edges, "orphan")).toBeNull();
   });
