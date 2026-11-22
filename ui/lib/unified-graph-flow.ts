@@ -1,3 +1,4 @@
+import { recordSemanticLayer } from "@/lib/graph-semantic-columns";
 import { agentContextRelationshipLabel, graphAgentContext, platformAgentCount } from "@/lib/graph-agent-context";
 import { graphEdgeEvidence, graphEdgeEvidenceLabel } from "@/lib/graph-edge-evidence";
 import { GRAPH_EDGE_KIND_META, type GraphEdgeKindKey } from "@/lib/graph-schema.generated";
@@ -298,7 +299,7 @@ function toLineageData(
     lastSeen: node.last_seen,
     dataSources: node.data_sources ?? [],
     dimensions: node.dimensions,
-    semanticLayer: node.semantic_layer,
+    semanticLayer: recordSemanticLayer(node),
     complianceTags: node.compliance_tags ?? [],
     attributes,
     isCritical: isCriticalNode(node),

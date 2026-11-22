@@ -1,4 +1,4 @@
-import { GRAPH_SEMANTIC_LAYER_META, type GraphSemanticLayerKey } from "@/lib/graph-schema.generated";
+import { GRAPH_NODE_KIND_META, GRAPH_SEMANTIC_LAYER_META, type GraphSemanticLayerKey } from "@/lib/graph-schema.generated";
 
 const UNKNOWN_COLUMN = Math.max(...Object.values(GRAPH_SEMANTIC_LAYER_META).map(meta => meta.column)) + 1;
 
@@ -7,6 +7,19 @@ export type SemanticNode = {
   data: { entityType?: string | undefined; nodeType?: string | undefined; semanticLayer?: string | null | undefined };
 };
 export type SemanticEdge = { source: string; target: string; data?: Record<string, unknown> | undefined };
+
+const isLayer = (value: unknown): value is GraphSemanticLayerKey => typeof value === "string" && Object.hasOwn(GRAPH_SEMANTIC_LAYER_META, value);
+
+/** A node record's layer by the API's own rule (agent_bom.graph.semantic_layer): the stamped layer, else a layer the
+ * producer recorded, else a surface that names one, else the entity kind's. Records some endpoints return unstamped
+ * (lifecycle, neighbours, queries) land in the same column as on /v1/graph. */
+export function recordSemanticLayer(record: { entity_type?: unknown; semantic_layer?: unknown; attributes?: Record<string, unknown> | null; dimensions?: { surface?: unknown } | null }): GraphSemanticLayerKey | undefined {
+  if (isLayer(record.semantic_layer)) return record.semantic_layer;
+  if (isLayer(record.attributes?.semantic_layer)) return record.attributes.semantic_layer;
+  if (isLayer(record.dimensions?.surface)) return record.dimensions.surface;
+  const kind = String(record.entity_type ?? "");
+  return Object.hasOwn(GRAPH_NODE_KIND_META, kind) ? GRAPH_NODE_KIND_META[kind as keyof typeof GRAPH_NODE_KIND_META].layer : undefined;
+}
 
 export function semanticLayer(node: SemanticNode): GraphSemanticLayerKey | null {
   const layer = node.data.semanticLayer;

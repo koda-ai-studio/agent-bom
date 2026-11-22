@@ -84,13 +84,14 @@ export function captionGeometry(input: CaptionGeometryInput): CaptionGeometry {
 
   const name = input.name ?? "", box = input.box ?? Infinity, maxLines = input.maxLines ?? 2;
   const zoom = input.zoom ?? 1, near = Math.max(zoom, input.near ?? zoom);
-  // Break rules: each word splits into pieces; a piece may end a line only after its hyphen or underscore.
+  // Break rules: each word splits into pieces; a piece may end a line only after its hyphen or underscore, or its path slash when it has neither.
   const pieces = (word: string): NamePiece[] => {
     if (/^(CVE|GHSA|CWE)-|^[0-9a-f]{8,}$/i.test(word)) return [{ text: word, breakAfter: false, protect: true }];
     const at = word.indexOf("@", 1);
     const base = at > 0 ? word.slice(0, at) : word, version = at > 0 ? word.slice(at) : "";
-    const parts = base.match(/[^-_]+[-_]*|[-_]+/g) ?? [base];
-    const out = parts.map((text, index) => ({ text, breakAfter: /[-_]$/.test(text) && index < parts.length - 1, protect: false }));
+    // A path slash is a break only in a name with no hyphen or underscore to break at (deploy/values.yaml).
+    const parts = (/[-_]/.test(base) ? base.match(/[^-_]+[-_]*|[-_]+/g) : base.match(/[^/]+\/*|\/+/g)) ?? [base];
+    const out = parts.map((text, index) => ({ text, breakAfter: /[-_/]$/.test(text) && index < parts.length - 1, protect: false }));
     if (version) out.push({ text: version, breakAfter: false, protect: true });
     return out;
   };

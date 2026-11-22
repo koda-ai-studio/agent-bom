@@ -1,3 +1,4 @@
+import { recordSemanticLayer } from "@/lib/graph-semantic-columns";
 import { semanticGraphLayout } from "@/lib/graph-semantic-layout";
 import { MarkerType, type Edge, type Node } from "@xyflow/react";
 
@@ -62,7 +63,7 @@ function rollupContainerToNodeData(
     rollup: container,
     nodeType,
     entityType: container.entity_type,
-    semanticLayer: container.semantic_layer,
+    semanticLayer: recordSemanticLayer(container),
     severity: rollupDisplaySeverity(container) || undefined,
     description: rollupContainerSubtitle(container),
     attributes: {

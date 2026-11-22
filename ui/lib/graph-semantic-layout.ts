@@ -42,8 +42,9 @@ function attachedRanks(visible: Node<LineageNodeData>[], edges: Edge[], columns:
   // column before (an account that contains the gateway), it shares that column instead, so no link into the entry
   // has to pass the anchor's caption.
   const layerOf = new Map(visible.map(node => [node.id, semanticLayer(node)]));
+  // A source in a later column does not lead in: an agent hosted on the exposed workload sits right of it.
   const upstream = edges.filter(edge => exposed.includes(edge.target) && ids.has(edge.source) && edge.source !== INTERNET_ANCHOR_ID
-    && layerOf.get(edge.source) !== "finding").map(edge => edge.source);
+    && layerOf.get(edge.source) !== "finding" && (columns.get(edge.source) ?? 0) <= (columns.get(edge.target) ?? 0)).map(edge => edge.source);
   if (ids.has(INTERNET_ANCHOR_ID) && exposed.length) attached.set(INTERNET_ANCHOR_ID, upstream.length
     ? { to: [...new Set(upstream)].join("\n"), offset: 0 } : { to: exposed.join("\n"), offset: -0.5 });
   for (const node of visible) {
@@ -72,8 +73,9 @@ function manifestSources(visible: Node<LineageNodeData>[], edges: Edge[], moved:
   return out;
 }
 
-// An exposure inside one layer reads entry first, so the exposed node takes the next rank.
-const PARENT_FIRST = new Set(["contains", "hosts", "runs", "depends_on", "manages", "owns", "provides_tool", "exposed_to"]);
+// An exposure inside one layer reads entry first, so the exposed node takes the next rank; a configuring file or job
+// reads before what it configures.
+const PARENT_FIRST = new Set(["contains", "hosts", "runs", "depends_on", "manages", "owns", "provides_tool", "exposed_to", "configures"]);
 const CHILD_FIRST = new Set(["part_of", "hosted_on", "belongs_to", "member_of"]);
 /** Parent and child of a containment-like or exposure link inside one backend layer; any other link splits no rank. */
 function containment(link: { source: string; target: string; data?: Record<string, unknown> | undefined }): [string, string] | null {
@@ -81,7 +83,7 @@ function containment(link: { source: string; target: string; data?: Record<strin
   return PARENT_FIRST.has(kind) ? [link.source, link.target] : CHILD_FIRST.has(kind) ? [link.target, link.source] : null;
 }
 
-const OWNED_BY_TARGET = new Set(["contains", "depends_on", "hosts", "runs", "uses_framework"]);
+const OWNED_BY_TARGET = new Set(["contains", "depends_on", "hosts", "runs", "uses_framework", "imports"]);
 const FINDING_LINKS = new Set(["vulnerable_to", "exhibits_drift"]);
 
 /** A package sits one rank right of its nearest recorded owner or dependent, and a

@@ -19,12 +19,15 @@ describe("one caption geometry for layout, routing and the gate", () => {
       expect(a.hits(x, y, part), `${x},${y},${part}`).toBe(b.hits(x, y, part));
   });
 
-  it("breaks names only after a hyphen or underscore, never inside an id, digest or version", () => {
+  it("breaks names only after a hyphen, underscore or path slash, never inside an id, digest or version", () => {
     const lines = (name: string, chars: number) => captionGeometry({ name, box: chars, nameChar: 1, maxLines: 9 }).nameLines;
     expect(lines("reference-evidence-workload", 20)).toEqual(["reference-evidence-", "workload"]);
     expect(lines("render_untrusted_image", 12)).toEqual(["render_", "untrusted_", "image"]);
     expect(lines("CVE-2023-4863 in pillow", 14)).toEqual(["CVE-2023-4863", "in pillow"]);
     expect(lines("pillow@9.0.0-beta", 7)).toEqual(["pillow@9.0.0-beta"]);
+    expect(lines("deploy/values.yaml", 12)).toEqual(["deploy/", "values.yaml"]);
+    expect(lines(".github/workflows/", 12)).toEqual([".github/", "workflows/"]);
+    expect(lines("prod/web-7c9f-1", 10)).toEqual(["prod/web-", "7c9f-1"]);
     expect(nameBreaks("reference-api").map(piece => piece.text)).toEqual(["reference-", "api"]);
     expect(nameBreaks("GHSA-abcd-efgh-ijkl")).toEqual([{ text: "GHSA-abcd-efgh-ijkl", breakAfter: false, protect: true }]);
   });

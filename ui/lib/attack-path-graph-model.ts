@@ -1,3 +1,4 @@
+import { recordSemanticLayer } from "@/lib/graph-semantic-columns";
 import { workloadImageContext } from "@/lib/graph-workload-image";
 import { internetExposure, INTERNET_ANCHOR_ID } from "@/lib/graph-internet-context";
 import type { GraphNodeAggregate } from "@/lib/graph-node-aggregates";
@@ -290,7 +291,7 @@ export function buildAttackPathGraphModel(
     const node = nodes.get(id)!;
     const index = pathNodeIds.indexOf(id);
     return {
-      id, kind: "entity", label: node.entity_type === "agent" ? formatInventoryAgentLabel(node.label || id) : node.label || id, entityType: node.entity_type, dimensions: node.dimensions, semanticLayer: node.semantic_layer, typeLabel: assetTypeLabel(node),
+      id, kind: "entity", label: node.entity_type === "agent" ? formatInventoryAgentLabel(node.label || id) : node.label || id, entityType: node.entity_type, dimensions: node.dimensions, semanticLayer: recordSemanticLayer(node), typeLabel: assetTypeLabel(node),
       role: index < 0 ? "branch" : index === 0 && lastIndex > 0 ? "entry" : index === lastIndex ? "target" : "path",
       semanticOwner: contextOwners.get(id), imageSubrow: contextOwners.has(id) && images.owners.has(id), evidenceSources: images.sources.get(id),
       aggregate: options.nodeAggregates?.get(id)?.aggregate,

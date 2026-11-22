@@ -2088,9 +2088,9 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
       if (badgeAudit.logos.some(logo => logo.overlapsCaption)) {
         throw new Error(`Vendor badge overlaps a node caption on ${filename}: ${JSON.stringify(badgeAudit.logos)}`);
       }
-      // Display-only anchors (the Internet entry, finding groups) are not graph entities.
+      // Display-only anchors (the Internet entry, finding groups) and their links are not graph entities.
       const graphNodeCount = await page.locator('.react-flow__node:visible:not([data-id^="display:"])').count();
-      const graphEdgeCount = await page.locator(".react-flow__edge").count();
+      const graphEdgeCount = await page.locator('.react-flow__edge:not([data-id^="display:"])').count();
       if (graphNodeCount < options.minGraphNodes || graphEdgeCount < (options.minGraphEdges ?? 1)) {
         throw new Error(`Incomplete graph on ${urlPath}: ${graphNodeCount} nodes / ${graphEdgeCount} edges`);
       }
@@ -2118,7 +2118,7 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
         }
       }
       if (options.minGraphBadgeFontPx) {
-        const sizes = await page.locator(".react-flow__node [data-node-badge], .react-flow__node .graph-finding-metadata > span").evaluateAll(badges => badges.map(badge => {
+        const sizes = await page.locator(".react-flow__node [data-node-badge], .react-flow__node .graph-finding-metadata > span, .react-flow__node [data-graph-caption]").evaluateAll(badges => badges.map(badge => {
           const viewport = badge.closest(".react-flow__viewport");
           const transform = viewport ? getComputedStyle(viewport).transform : "none";
           const scale = transform === "none" ? 1 : new DOMMatrixReadOnly(transform).a;
@@ -2656,7 +2656,9 @@ async function main() {
           await view.click();
           await expect(view).toHaveAttribute("aria-pressed", "true");
           await p.getByRole("button", { name: "View & layers", exact: true }).click();
-          if (scope === "cloud") await p.getByRole("button", { name: /^Expand findings/ }).click();
+          // Findings fold only under an owner with a backend aggregate; the showcase draws every one.
+          const expandFindings = p.getByRole("button", { name: /^Expand findings/ });
+          if (await expandFindings.count()) await expandFindings.click();
           // Every fixture node is drawn; display-only anchors (the Internet entry) are extra, and only for backend-true exposure.
           await expect(p.locator('.react-flow__node:not([data-id^="display:"])')).toHaveCount(fixture.nodes.length);
           const exposed = fixture.nodes.some(item => (item.attributes?.risk_context?.internet_exposed ?? item.attributes?.internet_exposed) === true);
@@ -3012,7 +3014,8 @@ async function main() {
       assertNodeLabelsWithinBounds: true, assertNoSharedRelationshipRuns: true,
       assertEdgeLabelsClearOfNodes: true,
       assertNoHorizontalOverflow: true,
-      maxGraphBottomGapPx: 64,
+      // The frame follows the graph's geometry; a wide six-card mesh opens in a shorter frame. It must never clip.
+      maxGraphBottomGapPx: 400,
       minGraphBadgeFontPx: 11,
     });
     await page.setViewportSize({ width: 1440, height: 980 });
