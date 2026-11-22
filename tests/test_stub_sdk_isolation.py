@@ -10,23 +10,19 @@ randomized run hides it until it doesn't.
 
 from __future__ import annotations
 
-import importlib.util
+import importlib
+import os
 import sys
 import types
-from pathlib import Path
 from typing import Any
 
 import pytest
 
-CONFTEST = Path(__file__).resolve().parent / "conftest.py"
-
 
 def _conftest() -> Any:
-    spec = importlib.util.spec_from_file_location("_abom_conftest_probe", CONFTEST)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    # Re-executing conftest replaces HOME and the state dirs after other modules
+    # have captured defaults from the session environment (for example teardown).
+    return importlib.import_module("tests.conftest")
 
 
 # Every provider SDK a test fakes by writing straight into sys.modules.
@@ -50,3 +46,14 @@ def test_a_faked_sdk_stub_does_not_survive_the_test_that_installed_it(root: str)
     finally:
         if installed:
             sys.modules.pop(root, None)
+
+
+def test_loading_stub_guard_helpers_preserves_test_environment() -> None:
+    before = dict(os.environ)
+    try:
+        _conftest()
+        changed = sorted(key for key in before.keys() | os.environ.keys() if before.get(key) != os.environ.get(key))
+        assert changed == []
+    finally:
+        os.environ.clear()
+        os.environ.update(before)
