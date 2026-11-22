@@ -465,14 +465,14 @@ def _snapshots(
     iac.add_node(
         _node(
             "service:reference-api",
-            EntityType.SERVER,
+            EntityType.CLOUD_RESOURCE,
             f"Public {kubernetes['service_name']} service",
             source="kubernetes_iac",
             attributes={
                 "canonical_id": f"kubernetes-uid:{kubernetes['service_uid']}",
                 "internet_exposed": bool(kubernetes["internet_exposed"]),
+                "kubernetes_kind": "Service",
                 "modeled": True,
-                "semantic_layer": "api_gateway",
             },
             index=2,
             severity="high",
@@ -510,8 +510,9 @@ def _snapshots(
     # the image never merges with this permission-bearing deployment.
     iac.add_edge(
         _edge(
+            # The Service fronts the deployment's container, which runs the agent.
             "service:reference-api",
-            "workload:reference-api",
+            "container:iac:reference-api",
             RelationshipType.EXPOSED_TO,
             scan_id=iac.scan_id,
             source_kind="kubernetes_iac",
