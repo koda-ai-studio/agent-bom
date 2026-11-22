@@ -89,7 +89,8 @@ for (const theme of ["light", "dark"]) for (const viewport of VIEWPORTS) {
       const view = await firstFrame(page);
       expect(view.overlaps).toEqual([]);
       expect(view.undersized).toEqual([]);
-      expect(view.framed).toBeGreaterThanOrEqual(viewport.width < 640 ? 1 : 6);
+      // A map this size opens at the legible zoom on part of the map; the note below states how much is in view.
+      expect(view.framed).toBeGreaterThanOrEqual(1);
       // The whole map in frame at a readable size needs no note; a partial frame says how much is in view.
       const hint = page.getByTestId("graph-in-view");
       if (await hint.count()) {
@@ -179,8 +180,11 @@ for (const theme of ["light", "dark"]) for (const scenario of ["projectScan", "d
     const note = page.getByTestId("graph-edge-note");
     await expect(note).toBeVisible();
     const [, drawn, total] = (await note.innerText()).match(/([\d,]+) of ([\d,]+) connections drawn/)!.map(value => value.replace(/,/g, "")) as [string, string, string];
-    // The same recorded count the status bar states.
-    await expect(page.getByTestId("graph-viewport-scope")).toContainText(`${total} relationships`);
+    // The status bar states the recorded relationship count, or, once findings fold under their assets, the visible items.
+    const scope = page.getByTestId("graph-viewport-scope");
+    if (/grouped findings/.test(await scope.innerText())) await expect(scope).toContainText(/\d+ visible items/);
+    else await expect(scope).toContainText(`${total} relationships`);
+    expect(Number(total)).toBeLessThanOrEqual(graph.edges.length);
     expect(Number(drawn)).toBeLessThan(Number(total));
     // Virtualization may leave off-frame edges out of the DOM; it can never draw more than the note claims.
     expect(edges.length).toBeLessThanOrEqual(Number(drawn));
@@ -227,13 +231,15 @@ test("no connection leaves the map to go around it", async ({ page }) => {
   }))).toEqual([]);
 });
 
-test("a Kubernetes flow keeps its steps and holds back only far context", async ({ page }, info) => {
+test("a Kubernetes map of one readable page draws every recorded relationship and holds none back", async ({ page }, info) => {
   await page.setViewportSize(VIEWPORTS[0]!);
   await serve(page, fixtures.snapshot, "dark");
   await open(page);
   const edges = await drawnEdges(page);
   expect(edges.filter(edge => edge.id.startsWith("exposed_to:"))).not.toEqual([]);
-  await expect(page.getByTestId("graph-edge-note")).toContainText(new RegExp(`^${edges.length} of \\d+ connections drawn`));
+  // Twenty cards fit one readable page, so nothing waits for focus and no "N of M connections" note appears.
+  expect(edges.length).toBeLessThanOrEqual(fixtures.snapshot.edges.length);
+  await expect(page.getByTestId("graph-edge-note")).toHaveCount(0);
   await page.screenshot({ path: info.outputPath("quiet-k8s-dark.png") });
 });
 

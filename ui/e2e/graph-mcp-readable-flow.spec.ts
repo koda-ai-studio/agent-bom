@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { withSemanticLayer } from "./helpers/graph-rollup-mocks";
+import { ownedFindingAggregates, routeNodeAggregates, withSemanticLayer } from "./helpers/graph-rollup-mocks";
 const stamp = "2026-10-15T00:00:00Z";
 const node = (id: string, entity_type: string, label = id) => withSemanticLayer({ id, entity_type, label, severity: "none", status: "active", risk_score: 0, attributes: {}, dimensions: {}, data_sources: ["synthetic-fixture"], compliance_tags: [] });
 const edge = (source: string, target: string, relationship: string) => ({ id: `${source}:${relationship}:${target}`, source, target, relationship, direction: "directed", traversable: true, weight: 1, evidence: { tier: "static_scan", source: "synthetic-fixture" }, first_seen: stamp, last_seen: stamp });
@@ -163,6 +163,8 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     const edges = [edge("endpoint","instance","exposed_to"),edge("instance","mcp","hosts"),edge("mcp","role","authenticates_as"),edge("role","data","has_permission"),
       edge("mcp","cve-1","vulnerable_to"),edge("mcp","cve-2","vulnerable_to"),edge("config","mcp","affects")];
     await fixture(page,nodes,edges);
+    // Findings fold under their asset only from the backend's per-asset aggregates.
+    await routeNodeAggregates(page, ownedFindingAggregates(nodes, edges));
     await page.goto("/security-graph?lens=estate&scan=snapshot&rollup=0&layers=apiGateway,cloudResource,server,role,dataStore,vulnerability,misconfiguration");
     if (width === 390) await page.getByRole("group", { name:"Investigation view" }).getByRole("button", { name:"Graph", exact:true }).click();
     await expect(page.locator('.react-flow__node:not([data-id^="display:"])')).toHaveCount(5);

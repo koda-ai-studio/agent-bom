@@ -1293,7 +1293,8 @@ for (const viewport of [
     expect(interactionBox!.y + interactionBox!.height).toBeLessThanOrEqual(nodeBandBox!.y + 1);
     expect(legendBox!.y).toBeGreaterThanOrEqual(nodeBandBox!.y + nodeBandBox!.height - 1);
     await expect(legend).toContainText("Selected path");
-    await expect(legend).toContainText("Findings on asset");
+    // The path's finding is its terminal hop, so the legend names the has-finding link that reaches it.
+    await expect(legend).toContainText("Has finding");
     await page.screenshot({
       path: testInfo.outputPath(`security-graph-${viewport.width}x${viewport.height}.png`),
       fullPage: true,

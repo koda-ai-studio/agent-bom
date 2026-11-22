@@ -96,8 +96,8 @@ export function CompactRelationshipEdge(props: EdgeProps) {
   const { path, mid } = stubbed ? stubCurve(props, offscreen, STUB_LENGTH / Math.max(zoom, 0.05)) : compactEdgeCurve(props);
   const spine = props.data?.pathEmphasis === true;
   // A roll-up or folded-group link stands for many relationships; its count reads at rest, as a summary.
-  const aggregate = Boolean(props.data?.aggregate || props.data?.isClusterEdge) && typeof props.label === "string";
   const full = props.label ?? (relationship ? relationshipEdgeLabelText(relationship, props.data) : null);
+  const aggregate = Boolean(props.data?.aggregate || props.data?.isClusterEdge) && (typeof props.label === "string" || typeof full === "string");
   // At rest a folded group link shows only its count (×N); its relationship and evidence read on inspection.
   const count = !inspecting && props.data?.isClusterEdge && typeof full === "string" ? full.match(/×\d+/)?.[0] ?? null : null;
   const text = (inspecting || aggregate) && props.data?.labelVisibility !== "hide" ? count ?? full : null;

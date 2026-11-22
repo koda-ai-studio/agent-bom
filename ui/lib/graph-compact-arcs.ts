@@ -113,10 +113,15 @@ export function captionExtent({ name, typeLine, box: own }: CaptionText, fallbac
 const DEFAULT_EXTENT: CaptionExtent = { half: CARD_HALF_WIDTH, top: GLYPH_BELOW, depth: CARD_BELOW, lines: [{ half: CARD_HALF_WIDTH, top: GLYPH_BELOW, bottom: CARD_BELOW }], above: CARD_ABOVE };
 
 /** Caption extents for every card at the zoom these positions will fit at, or the generic card when no text is known. */
+const EXTENT_CACHE = new WeakMap<(id: string) => CaptionText, Map<string, Map<string, CaptionExtent>>>();
+
 function extents(positions: ReadonlyMap<string, Point>, text: ((id: string) => CaptionText) | undefined, box: number, fixedZoom?: number) {
   if (!text) return { extent: () => DEFAULT_EXTENT, inset: 0 };
   const zoom = fixedZoom ?? fitZoom(positions, box), small = positions.size <= SMALL_GRAPH;
-  const cache = new Map<string, CaptionExtent>();
+  // Extents depend only on the text, box and zoom, so one layout's placement search reuses them across evaluations.
+  const byText = EXTENT_CACHE.get(text) ?? EXTENT_CACHE.set(text, new Map()).get(text)!;
+  const key = `${box}|${zoom}|${small}`;
+  const cache = byText.get(key) ?? byText.set(key, new Map()).get(key)!;
   return { extent: (id: string) => cache.get(id) ?? cache.set(id, captionExtent(text(id), box, zoom, small)).get(id)!,
     inset: (small ? SMALL_GLYPH_PX : GLYPH_PX) / 2 / zoom };
 }
@@ -189,6 +194,9 @@ export function blockedLinkCount(links: readonly Link[], positions: ReadonlyMap<
     const [left, right] = from.x < to.x ? [from, to] : [to, from];
     const cards = all.filter(([id, p]) => id !== link.source && id !== link.target && p.x > left.x - p.half && p.x < right.x + p.half).map(([, p]) => p);
     // A few typical bends stand in for the full search: level, rise early, rise late, or through the middle.
+    // Most links are clear as plain curves; only a blocked one tries the typical bends.
+    const plain = cubic(left, right, left.y, right.y, inset);
+    if (detour(plain) <= MAX_DETOUR && !blocked(plain, cards, 1, [left, right])) continue;
     const levels = canonicalLevels(left, right).filter(level => allowedLevel(level, left, right));
     const clear = levels.some(c1 => levels.some(c2 => {
       if (!levelAtCaptionEnd(c1, c2, left, right)) return false;

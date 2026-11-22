@@ -40,3 +40,20 @@ export function withNodeLayers<T extends { nodes: GraphNode[] }>(graph: T): T {
     }),
   };
 }
+
+/** What the API's node-aggregates read returns for this fixture: each asset's recorded findings, by worst severity. */
+export function ownedFindingAggregates(nodes: { id: string; entity_type: string; severity: string; semantic_layer?: string }[], links: { source: string; target: string; relationship: string }[]) {
+  const rank: Record<string, number> = { none: 0, info: 1, low: 2, medium: 3, high: 4, critical: 5 };
+  const findings = new Map(nodes.filter(n => ["vulnerability", "misconfiguration"].includes(n.entity_type)).map(n => [n.id, n]));
+  const owned = new Map<string, Set<string>>();
+  for (const link of links) {
+    const pair = findings.has(link.target) && !findings.has(link.source) ? [link.source, link.target]
+      : findings.has(link.source) && link.relationship === "affects" ? [link.target, link.source] : null;
+    if (pair) owned.set(pair[0]!, new Set([...(owned.get(pair[0]!) ?? []), pair[1]!]));
+  }
+  return Object.fromEntries([...owned].map(([id, ids]) => {
+    const worst = [...ids].map(f => findings.get(f)!.severity).sort((a, b) => (rank[b] ?? 0) - (rank[a] ?? 0))[0] ?? "none";
+    const layer = nodes.find(n => n.id === id)!.semantic_layer ?? "";
+    return [id, { semantic_layer: layer, aggregate: { issue_count: ids.size, worst_severity: worst, worst_severity_rank: rank[worst] ?? 0 } }];
+  }));
+}

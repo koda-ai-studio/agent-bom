@@ -252,6 +252,7 @@ export function compactLayout(input: CompactInput): { positions: Map<string, Poi
     refinePlacement(ids, links, positions, onSpine, input.caption, input.levelLeaf, tall, zoom);
     levelLeaves(ids, positions, leaf, neighbours, onSpine, tall);
   }
+  clearLevelLinks(ids, links, positions, tall, onSpine);
   const { arcs, behind } = linkArcs(links, positions, input.caption, COMPACT_NODE_WIDTH, zoom);
   return { positions, arcs, behind };
 }
@@ -331,15 +332,21 @@ function refinePlacement(ids: readonly string[], links: readonly Link[], positio
   // A restart never begins taller than the sweep's own layout plus one row; moves are bounded by the zoom budget.
   const heightOf = (map: ReadonlyMap<string, Point>) => { const ys = ids.map(id => map.get(id)!.y); return Math.max(...ys) - Math.min(...ys); };
   const maxSpan = heightOf(positions) + COMPACT_ROW_GAP;
-  const runs = starts.filter((start, i) => i === 0 || (rowsClear(ids, start, tall) && heightOf(start) <= maxSpan))
-    .map(start => { const copy = new Map(start); return { copy, cost: refineRows(ids, links, copy, spine, caption, zoom, levelLeaf, tall, budget) }; });
-  const best = runs.reduce((a, b) => b.cost < a.cost - 1e-6 ? b : a);
+  // Restarts run only while every link so far still lacks a clear curve.
+  let best: { copy: Map<string, Point>; cost: number } | null = null;
+  for (const [i, start] of starts.entries()) {
+    if (i > 0 && (!rowsClear(ids, start, tall) || heightOf(start) > maxSpan)) continue;
+    const copy = new Map(start), cost = refineRows(ids, links, copy, spine, caption, zoom, levelLeaf, tall, budget);
+    if (!best || cost < best.cost - 1e-6) best = { copy, cost };
+    if (best.cost < 1000 || budget.left <= 0) break;
+  }
+  if (!best) return;
   for (const [id, p] of best.copy) positions.set(id, p);
 }
 
 const RESTARTS = 8;
 /** Placement evaluations one layout may spend searching. */
-const SEARCH_BUDGET = 2500;
+const SEARCH_BUDGET = 2200;
 /** Seed 0 flips every branch (the mirror image); later seeds flip a hashed half of them. */
 function flipped(seed: number, id: string): boolean {
   if (seed === 0) return true;
@@ -368,7 +375,11 @@ function refineRows(ids: readonly string[], links: readonly Link[], positions: M
     return false;
   };
   const room = (upper: string) => Math.max(COMPACT_ROW_GAP, tall(upper) ?? 0);
-  const free = (id: string, y: number, ignore: readonly string[]) => ids.every(other => {
+  // The spine's own row is taken wherever the spine runs: nothing else may sit on it between its first and last hop.
+  const spineXs = [...spine].filter(id => positions.has(id)).map(id => positions.get(id)!.x);
+  const onSpineRow = (id: string, y: number) => spineXs.length > 1 && Math.abs(y - positions.get([...spine].find(s => positions.has(s))!)!.y) < COMPACT_ROW_GAP / 2
+    && positions.get(id)!.x > Math.min(...spineXs) && positions.get(id)!.x < Math.max(...spineXs);
+  const free = (id: string, y: number, ignore: readonly string[]) => !onSpineRow(id, y) && ids.every(other => {
     if (other === id || ignore.includes(other) || positions.get(other)!.x !== positions.get(id)!.x) return true;
     const peer = positions.get(other)!.y;
     return peer < y ? y - peer >= room(other) : peer - y >= room(id);
@@ -437,5 +448,26 @@ function levelLeaves(ids: readonly string[], positions: Map<string, Point>, leaf
     let items: PackItem[] = rest.map(id => ({ id, desired: target(id), below: tall(id) }));
     if (spineId) items = [...items.filter(item => item.desired < 0), { id: spineId, desired: 0, fixed: true, below: tall(spineId) }, ...items.filter(item => item.desired >= 0)];
     for (const [id, value] of packRank(items, COMPACT_ROW_GAP, true)) positions.set(id, { x: positions.get(id)!.x, y: Math.round(value) });
+  }
+}
+
+/** A card (off the spine) standing on the row of a level link it is not part of (a finding group between a spine hop and the next,
+ * or between a role and the data it reaches) would sit on that line: it moves to the nearest free row above. */
+function clearLevelLinks(ids: readonly string[], links: readonly Link[], positions: Map<string, Point>, tall: (id: string) => number | undefined, spine: ReadonlySet<string>) {
+  const linked = (a: string, b: string) => links.some(link => (link.source === a && link.target === b) || (link.source === b && link.target === a));
+  const level = links.filter(link => positions.has(link.source) && positions.has(link.target) && positions.get(link.source)!.y === positions.get(link.target)!.y);
+  for (const id of ids) {
+    if (spine.has(id)) continue;
+    const here = positions.get(id)!;
+    // A card in a chain with both ends (A → B → C under A → C) belongs on that row.
+    const blocking = level.some(link => link.source !== id && link.target !== id && !(linked(id, link.source) && linked(id, link.target)) && positions.get(link.source)!.y === here.y
+      && here.x > Math.min(positions.get(link.source)!.x, positions.get(link.target)!.x) && here.x < Math.max(positions.get(link.source)!.x, positions.get(link.target)!.x));
+    if (!blocking) continue;
+    const peers = ids.filter(other => other !== id && positions.get(other)!.x === here.x).map(other => ({ y: positions.get(other)!.y, room: Math.max(COMPACT_ROW_GAP, tall(other) ?? 0) }));
+    const room = Math.max(COMPACT_ROW_GAP, tall(id) ?? 0);
+    for (let step = 1; step < 20; step++) {
+      const y = here.y - step * COMPACT_ROW_GAP;
+      if (peers.every(peer => peer.y < y ? y - peer.y >= peer.room : peer.y - y >= room)) { positions.set(id, { x: here.x, y }); break; }
+    }
   }
 }

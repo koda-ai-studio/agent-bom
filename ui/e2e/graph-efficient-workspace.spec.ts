@@ -103,8 +103,10 @@ for (const theme of ["light", "dark"]) test(`three evidence sources stay readabl
     return canvas.y + canvas.height <= 900;
   }).toBe(true);
   await page.screenshot({ path: info.outputPath(`evidence-resized-${theme}.png`), animations: "disabled" });
+  // Opening the layers panel gives it room by shortening the canvas, and closing it gives the room back.
+  const open = (await page.locator(".react-flow").boundingBox())!.height;
   await page.getByRole("button", { name: "View & layers" }).click();
-  await expect.poll(async () => (await page.locator(".react-flow").boundingBox())!.height).toBeLessThanOrEqual(320);
+  await expect.poll(async () => (await page.locator(".react-flow").boundingBox())!.height).toBeLessThan(open);
   await page.getByRole("button", { name: "View & layers" }).click();
-  await expect.poll(async () => (await page.locator(".react-flow").boundingBox())!.height).toBeGreaterThan(400);
+  await expect.poll(async () => (await page.locator(".react-flow").boundingBox())!.height).toBeGreaterThanOrEqual(open - 1);
 });

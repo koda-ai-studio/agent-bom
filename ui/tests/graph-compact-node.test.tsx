@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 import { render } from "@testing-library/react";
 import { ReactFlowProvider } from "@xyflow/react";
 import { lineageNodeTypes } from "@/components/lineage-nodes";
-import { canvasName, prosePreview } from "@/components/graph-compact-node";
+import { canvasName, nameBreaks, prosePreview } from "@/components/graph-compact-node";
 
 it("keeps names whole and shortens only image digests", () => {
   expect(canvasName("Reference Evidence Workload")).toBe("Reference Evidence Workload");
@@ -27,15 +27,39 @@ it("previews a prose finding title in about two lines, cut at a word, and keeps 
   expect(prosePreview("CVE-2025-29927")).toBe("CVE-2025-29927");
 });
 
-it("never splits an identifier: a single token stays on one line, words wrap only at spaces", () => {
+it("never splits or truncates a finding id; ordinary names break only after a hyphen or underscore", () => {
   const Renderer = lineageNodeTypes.vulnNode;
   const { container } = render(<ReactFlowProvider><Renderer data={{ label: "CVE-2026-108", nodeType: "vulnerability", semanticLayout: true }} /></ReactFlowProvider>);
-  const words = container.querySelectorAll("[data-semantic-name] span");
-  expect(words).toHaveLength(1);
-  expect(words[0]).toHaveClass("truncate");
+  const id = container.querySelector("[data-semantic-name] .whitespace-nowrap")!;
+  expect(id.textContent).toBe("CVE-2026-108");
+  expect(id).not.toHaveClass("truncate");
+  expect(container.querySelectorAll("[data-semantic-name] wbr")).toHaveLength(0);
   const Tool = lineageNodeTypes.toolNode;
   const tool = render(<ReactFlowProvider><Tool data={{ label: "Repository token for render_untrusted_image", nodeType: "tool", semanticLayout: true }} /></ReactFlowProvider>);
-  const parts = [...tool.container.querySelectorAll("[data-semantic-name] span span")];
-  expect(parts.map(part => part.textContent)).toEqual(["Repository", "token", "for", "render_untrusted_image"]);
-  expect(parts.every(part => part.classList.contains("whitespace-nowrap"))).toBe(true);
+  const pieces = [...tool.container.querySelectorAll("[data-semantic-name] .truncate")].map(part => part.textContent);
+  expect(pieces).toEqual(["Repository", "token", "for", "render_", "untrusted_", "image"]);
+  expect(tool.container.querySelectorAll("[data-semantic-name] wbr")).toHaveLength(2);
+});
+
+
+it("lets ordinary names break after a hyphen or underscore, never inside an id, digest or version", () => {
+  const pieces = (text: string) => nameBreaks(text).map(piece => `${piece.text}${piece.breakAfter ? "|" : ""}${piece.protect ? "!" : ""}`);
+  // The hyphen stays at the end of the line it ends.
+  expect(pieces("reference-evidence-api")).toEqual(["reference-|", "evidence-|", "api"]);
+  expect(pieces("render_untrusted_image")).toEqual(["render_|", "untrusted_|", "image"]);
+  // A version token after "@" never breaks.
+  expect(pieces("pillow@9.0.0")).toEqual(["pillow", "@9.0.0!"]);
+  expect(pieces("server-github@2025.4.8")).toEqual(["server-|", "github", "@2025.4.8!"]);
+  // Finding ids and digests are one unbreakable piece.
+  for (const id of ["CVE-2023-4863", "GHSA-abcd-efgh-ijkl", "CWE-79", "f477d58a"]) expect(pieces(id)).toEqual([`${id}!`]);
+});
+
+it("puts a finding id under its glyph on a phone, where the card's full width holds it, instead of truncating it beside the glyph", () => {
+  const Renderer = lineageNodeTypes.vulnNode;
+  const finding = render(<ReactFlowProvider><Renderer data={{ label: "CVE-2025-29927", nodeType: "vulnerability", semanticLayout: true, phoneLayout: true, phoneSide: "right" }} /></ReactFlowProvider>);
+  const card = finding.container.querySelector("[data-compact-node]")!;
+  expect(card).toHaveClass("flex-col");
+  const Role = lineageNodeTypes.serverNode;
+  const role = render(<ReactFlowProvider><Role data={{ label: "checkout-runtime", nodeType: "role", semanticLayout: true, phoneLayout: true, phoneSide: "right" }} /></ReactFlowProvider>);
+  expect(role.container.querySelector("[data-compact-node]")).toHaveClass("flex-row");
 });

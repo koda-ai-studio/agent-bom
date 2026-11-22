@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { ownedFindingAggregates, routeNodeAggregates } from "./helpers/graph-rollup-mocks";
 
 for (const recorded of [true,false]) test(`credential context only joins recorded hops: ${recorded}`, async ({ page },info) => {
   await page.setViewportSize({width:1440,height:1000});
@@ -19,6 +20,8 @@ for (const recorded of [true,false]) test(`credential context only joins recorde
     if(u.pathname==="/v1/graph/views/fix-first") return r.fulfill({json:{scan_id:"snapshot",tenant_id:"fixture",created_at:stamp,cards:[],attack_campaigns:[],summary:{total_paths:1,matched_paths:1,returned_paths:0,highest_risk:75,covered_findings:0,node_count:nodes.length,edge_count:edges.length},focus:{cve:"",package:"",agent:""}}});
     return r.fulfill({status:404,json:{detail:"Outside fixture"}});
   });
+  // The asset's finding badge reads the backend's per-asset aggregate.
+  await routeNodeAggregates(page, ownedFindingAggregates(nodes, edges.map(e => ({ source: e.source!, target: e.target!, relationship: e.relationship }))));
   await page.goto("/security-graph?lens=attack-path&scan=snapshot");
   const canvas=page.locator('.react-flow');
   // A recorded finding is the path's terminal hop; the asset it affects also carries its badge.
@@ -31,7 +34,7 @@ for (const recorded of [true,false]) test(`credential context only joins recorde
   } else {
     await expect(canvas.getByText("WAREHOUSE_TOKEN_REFERENCE")).toHaveCount(0);
     await expect(canvas.locator('.react-flow__node[data-id="CVE-2026-1000"]')).toBeVisible();
-    await expect(canvas.getByRole("button",{name:"1 finding on warehouse-mcp, worst high (1 high). Open findings"})).toBeVisible();
+    await expect(canvas.getByRole("button",{name:"Findings (1) on warehouse-mcp, worst high. Open loaded findings"})).toBeVisible();
     await page.getByText("Evidence & relationships",{exact:true}).click();
     await expect(page.getByRole("region",{name:"Reported exposure context"})).toContainText("WAREHOUSE_TOKEN_REFERENCE");
     await expect(page.getByRole("region",{name:"Reported exposure context"})).toContainText("do not add path hops or establish access");

@@ -36,7 +36,12 @@ function attachedRanks(visible: Node<LineageNodeData>[], edges: Edge[], columns:
   const ids = new Set(visible.map(node => node.id));
   const attached = new Map<string, { to: string; offset: number }>();
   const exposed = edges.filter(edge => edge.source === INTERNET_ANCHOR_ID && ids.has(edge.target)).map(edge => edge.target);
-  if (ids.has(INTERNET_ANCHOR_ID) && exposed.length) attached.set(INTERNET_ANCHOR_ID, { to: exposed.join("\n"), offset: -0.5 });
+  // The anchor sits in its own column left of each exposed entry; when something already leads into the entry from the
+  // column before (an account that contains the gateway), it shares that column instead, so no link into the entry
+  // has to pass the anchor's caption.
+  const upstream = edges.filter(edge => exposed.includes(edge.target) && ids.has(edge.source) && edge.source !== INTERNET_ANCHOR_ID).map(edge => edge.source);
+  if (ids.has(INTERNET_ANCHOR_ID) && exposed.length) attached.set(INTERNET_ANCHOR_ID, upstream.length
+    ? { to: [...new Set(upstream)].join("\n"), offset: 0 } : { to: exposed.join("\n"), offset: -0.5 });
   for (const node of visible) {
     const owner = node.data.displayTargetId;
     if (node.type === "findingGroupNode" && node.data.displayOnly && owner && ids.has(owner)) attached.set(node.id, { to: owner, offset: 0.5 });
@@ -154,7 +159,9 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
   for (const [id, owner] of images.owners) if (!onPath.has(id)) owners.set(id, owner);
   const base = { ids: visible.map(node => node.id), links: drawn, column: (id: string) => columns.get(id) ?? 0, containment,
     // Findings, and the group that folds an asset's findings, sit level with the asset they were found on.
-    levelLeaf: (id: string) => { const found = byId.get(id); return Boolean(found) && (semanticLayer(found!) === "finding" || found!.type === "findingGroupNode"); },
+    // A group whose asset is on the spine would sit on the spine's own row and block it, so it fans off the row instead.
+    levelLeaf: (id: string) => { const found = byId.get(id); return Boolean(found) && (semanticLayer(found!) === "finding"
+      || (found!.type === "findingGroupNode" && !onPath.has(String(found!.data.displayTargetId ?? "")))); },
     spine: primary, attached: attachedRanks(visible, drawn, columns) };
   const boxes = new Map(visible.map(node => [node.id, cardWidth(node, node.id)]));
   const { positions, arcs, behind } = compactLayout({ ...base,

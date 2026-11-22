@@ -25,9 +25,14 @@ export function legibleZoomForText(textPx: number): number {
 }
 
 /** Fit options that never zoom below `floor`: a topology too large for that is panned, not shrunk. */
-export function legibleFit<T extends { minZoom?: number; maxZoom?: number }>(options: T, floor: number): T & { minZoom: number } {
+/** The zoom controls sit at the canvas's left edge; a fit keeps this much clear there so no caption hides under them. */
+export const CONTROLS_RESERVE = "72px";
+type FitPadding = number | `${number}px` | `${number}%` | { top?: number | string; right?: number | string; bottom?: number | string; left?: number | string };
+
+export function legibleFit<T extends { minZoom?: number; maxZoom?: number; padding?: FitPadding }>(options: T, floor: number): T & { minZoom: number; padding: FitPadding } {
   const minZoom = Math.max(options.minZoom ?? 0, floor);
-  return { ...options, ...(options.maxZoom !== undefined && options.maxZoom < minZoom ? { maxZoom: minZoom } : {}), minZoom };
+  const padding = options.padding ?? { top: 0.08, right: 0.08, bottom: 0.08, left: CONTROLS_RESERVE };
+  return { ...options, ...(options.maxZoom !== undefined && options.maxZoom < minZoom ? { maxZoom: minZoom } : {}), minZoom, padding };
 }
 
 /** Geometry, not node count, determines the useful canvas and initial camera. */

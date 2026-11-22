@@ -43,17 +43,41 @@ function CaptionBox({ phone, children }: { phone: boolean; children: ReactNode }
 
 /** Desktop: glyph above a centred caption. Phone: the caption beside the glyph, facing away from the centre line. */
 function phoneLayoutClass(data: LineageNodeData): string {
-  if (!data.phoneLayout) return "mx-auto w-fit flex-col items-center text-center";
+  // A finding id never truncates: on a phone it reads under its glyph, across the card's full width.
+  if (!data.phoneLayout || stackedOnPhone(data)) return "mx-auto w-fit flex-col items-center text-center";
   return data.phoneSide === "left" ? "w-full flex-row-reverse items-center gap-1.5 text-right" : "w-full flex-row items-center gap-1.5 text-left";
 }
 
-/** Names wrap only between words and never inside one: an identifier (a CVE id, a tool
- * name) stays on one line and ends in an ellipsis rather than splitting at a hyphen or underscore. */
+function stackedOnPhone(data: LineageNodeData): boolean {
+  return Boolean(data.phoneLayout) && /\b(CVE|GHSA)-/i.test(String(data.label ?? ""));
+}
+
+/** Identifiers that are read as one token: finding ids and image digest tails. */
+const PROTECTED_TOKEN = /^(CVE|GHSA|CWE)-|^[0-9a-f]{8,}$/i;
+
+export type NamePiece = { text: string; breakAfter: boolean; protect: boolean };
+
+/** Where an ordinary name may break: after a hyphen or underscore, which stays at the end of its line.
+ * A finding id, a digest, or a version after "@" is one piece that never breaks. */
+export function nameBreaks(word: string): NamePiece[] {
+  if (PROTECTED_TOKEN.test(word)) return [{ text: word, breakAfter: false, protect: true }];
+  const at = word.indexOf("@", 1);
+  const base = at > 0 ? word.slice(0, at) : word, version = at > 0 ? word.slice(at) : "";
+  const parts = base.match(/[^-_]+[-_]*|[-_]+/g) ?? [base];
+  const pieces = parts.map((text, index) => ({ text, breakAfter: /[-_]$/.test(text) && index < parts.length - 1, protect: false }));
+  if (version) pieces.push({ text: version, breakAfter: false, protect: true });
+  return pieces;
+}
+
+/** Names wrap between words, and inside an ordinary word only after a hyphen or underscore, to at most two lines
+ * (the paragraph clamps the rest). Finding ids, digests and versions never split; a finding id never truncates. */
 function NameWords({ text, hidden }: { text: string; hidden: boolean }) {
-  const words = text.split(" ");
-  if (words.length === 1) return <span aria-hidden={hidden || undefined} className="block max-w-full truncate">{text}</span>;
-  return <span aria-hidden={hidden || undefined}>{words.map((word, index) => <Fragment key={index}>{index ? " " : ""}
-    <span className="inline-block max-w-full truncate whitespace-nowrap align-top">{word}</span></Fragment>)}</span>;
+  return <span aria-hidden={hidden || undefined} className="[overflow-wrap:normal] [word-break:normal]">{text.split(" ").map((word, index) => <Fragment key={index}>{index ? " " : ""}
+    <span className="inline">{nameBreaks(word).map((piece, at) => <Fragment key={at}>
+      {piece.protect && /^(CVE|GHSA)-/i.test(piece.text)
+        ? <span className="whitespace-nowrap">{piece.text}</span>
+        : <span className="inline-block max-w-full truncate whitespace-nowrap align-top">{piece.text}</span>}
+      {piece.breakAfter && <wbr />}</Fragment>)}</span></Fragment>)}</span>;
 }
 
 /** A prose finding title (a sentence, not an identifier) previews in about two lines, cut at a word. */
@@ -156,7 +180,7 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
       <FindingDisclosure data={data} />
       {held && <span data-testid="graph-held-connections" className="sr-only">{held}</span>}
     </div>
-    <CaptionBox phone={Boolean(data.phoneLayout)}>
+    <CaptionBox phone={Boolean(data.phoneLayout) && !stackedOnPhone(data)}>
     <p data-semantic-name title={fullTitle} className="mt-[0.3em] line-clamp-2 max-w-full font-semibold leading-[1.15] text-foreground" style={{ fontSize: "calc(var(--graph-node-label-size, 14px) * 0.88)" }}>
       <NameWords text={canvasName(preview)} hidden={canvasName(preview) !== fullTitle} />
     </p>

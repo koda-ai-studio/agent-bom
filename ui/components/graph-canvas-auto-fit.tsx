@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Panel, getViewportForBounds, useNodesInitialized, useReactFlow, useStore, type Node, type FitViewOptions, type Rect } from "@xyflow/react";
-import { GRAPH_FIT_MAX_ZOOM, GRAPH_LEGIBLE_FIT_ZOOM, GRAPH_PHONE_FOCUS_MIN_ZOOM, graphAdaptiveFrame, legibleFitZoom } from "@/lib/graph-adaptive-frame";
+import { CONTROLS_RESERVE, GRAPH_FIT_MAX_ZOOM, GRAPH_LEGIBLE_FIT_ZOOM, GRAPH_PHONE_FOCUS_MIN_ZOOM, graphAdaptiveFrame, legibleFitZoom } from "@/lib/graph-adaptive-frame";
 import { graphInspectorTargets } from "@/lib/graph-inspector-framing";
 import { readableNodeId } from "@/lib/node-id-tail";
 
@@ -118,7 +118,7 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     // The controls' left inset narrows the fit slightly, so hold the camera at that zoom; the
     // symmetric margin still covers the difference, so no card leaves the frame.
     const whole = { minZoom: portrait ? 48 / 56 : legibleFitZoom(width), maxZoom: GRAPH_FIT_MAX_ZOOM };
-    let options: FitViewOptions = { padding: { top: padding, right: padding, bottom: padding, left: portrait ? "48px" : phone ? padding : "72px" }, duration: 0, ...whole,
+    let options: FitViewOptions = { padding: { top: padding, right: phone || portrait ? "8px" : padding, bottom: padding, left: phone || portrait ? CONTROLS_RESERVE : "72px" }, duration: 0, ...whole,
       ...(focus ? phone ? { nodes: focus, minZoom: GRAPH_PHONE_FOCUS_MIN_ZOOM, maxZoom: 1.1 } : { nodes: focus, minZoom: legibleFitZoom(width), ...(legiblePath ? { maxZoom: PRIMARY_PATH_MAX_ZOOM } : {}), ...(legiblePath && primaryZoom ? { minZoom: primaryZoom, maxZoom: primaryZoom } : {}) } : {}) };
     let fitIds = focus ? new Set(focus.map(node => node.id)) : null;
     // Convergence must measure exactly the nodes passed to fitView.

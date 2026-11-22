@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { withSemanticLayer } from "./helpers/graph-rollup-mocks";
+import { ownedFindingAggregates, routeNodeAggregates, withSemanticLayer } from "./helpers/graph-rollup-mocks";
 
 const stamp = "2026-11-05T00:00:00Z";
 const node = (id: string, entity_type: string, attributes = {}) => withSemanticLayer({ id, entity_type, label: id, attributes, status: "active", severity: "none", risk_score: 0, dimensions: {}, data_sources: ["synthetic-fixture"], compliance_tags: [] });
@@ -46,6 +46,8 @@ for (const theme of ["light", "dark"]) test(`distinct flows, finding drilldown a
     if (path === "/v1/graph/rollup") return r.fulfill({ json: { ...graph, mode: "rollup", top_level: [], children: [], summary: { total_nodes: nodes.length }, completeness: { complete: true }, pagination: { offset: 0, limit: 100, total: 0, returned: 0, has_more: false } } });
     return r.fulfill({ status: 404, json: { detail: "Outside fixture" } });
   });
+  // The finding group comes from the backend's per-asset aggregates.
+  await routeNodeAggregates(page, ownedFindingAggregates(nodes, edges));
   await page.goto("/security-graph?scan=snapshot&lens=estate&rollup=0&layers=account,cluster,apiGateway,container,role,dataStore,vulnerability");
   const flow = page.getByRole("combobox", { name: "Investigation flow" });
   await expect(flow).toBeVisible();
@@ -69,7 +71,9 @@ for (const theme of ["light", "dark"]) test(`distinct flows, finding drilldown a
   await page.screenshot({ path: testInfo.outputPath(`finding-${theme}.png`), fullPage: false });
   for (const scenario of ["identity", "vulnerability", "inventory"]) {
     await flow.selectOption(scenario);
-    await expect(page.locator('.react-flow__node[data-id="display:internet"]')).toHaveCount(0);
+    // One shared Internet anchor at most; never a per-entry anchor node.
+    await expect(page.locator('.react-flow__node[data-id^="display:internet:"]')).toHaveCount(0);
+    await expect(page.locator('.react-flow__node[data-id="display:internet"]')).toHaveCount(await page.locator('.react-flow__node[data-id="endpoint"]').count() ? 1 : 0);
     await expect(page.locator("[data-graph-adaptive-frame]")).toHaveAttribute("data-graph-camera-settled", "true");
     const entry = scenario === "identity" ? "role" : scenario === "vulnerability" ? "pod" : "account";
     await expect(async () => {

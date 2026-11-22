@@ -154,7 +154,17 @@ export function auditGraphGrammar({ margin = 48, minGlyph = 32, minFill = 0.6, m
   // A caption the frame shows only part of reads as a different name ("e Runbook Agent"): text is either whole in frame or wholly outside it.
   const clipped = [...new Set(captions.filter(({ rect }) => rect.right > canvas.left && rect.left < canvas.right && rect.bottom > canvas.top && rect.top < canvas.bottom
     && (rect.left < canvas.left - 0.5 || rect.right > canvas.right + 0.5 || rect.top < canvas.top - 0.5 || rect.bottom > canvas.bottom + 0.5)).map(caption => caption.id))];
-  if (clipped.length) add("clippedCaptions", clipped);
+  // The zoom controls sit over the canvas: a caption under them is as hidden as one off the edge.
+  const controls = [...document.querySelectorAll(".react-flow__controls")].map(element => element.getBoundingClientRect()).filter(rect => rect.width && rect.height);
+  const covered = captions.filter(({ rect }) => controls.some(c => rect.left < c.right && rect.right > c.left && rect.top < c.bottom && rect.bottom > c.top)).map(caption => caption.id);
+  const hidden = [...new Set([...clipped, ...covered])];
+  if (hidden.length) add("clippedCaptions", hidden);
+  // A finding id is the key fact on its card: it is never cut short with an ellipsis.
+  const truncatedIds = [...document.querySelectorAll(".react-flow__node")].filter(node => getComputedStyle(node).visibility !== "hidden").flatMap(node =>
+    [...node.querySelectorAll("[data-semantic-name]")].filter(name => /\b(CVE|GHSA)-/i.test(name.textContent ?? "")
+      && (name.scrollHeight > name.clientHeight + 1 || [name, ...name.querySelectorAll("*")].some(el => el.scrollWidth > el.clientWidth + 1 && /\b(CVE|GHSA)-/i.test(el.textContent ?? ""))))
+      .map(() => node.getAttribute("data-id")));
+  if (truncatedIds.length) add("truncatedIds", truncatedIds);
   const diagnosticChips = [...document.querySelectorAll(".react-flow__node *")].filter(el => el.children.length === 0 && /semantic layer unavailable/i.test(el.textContent ?? ""));
   if (diagnosticChips.length) add("diagnosticChips", diagnosticChips.length);
   for (const element of document.querySelectorAll(".react-flow__edge")) {

@@ -38,6 +38,12 @@ function portraitRows(visible: Node<LineageNodeData>[], edges: Edge[]) {
     if (placed.has(id)) continue;
     rows.push({ ids: [id], trunk: true }); placed.add(id); branch(id);
   }
+  // Without a recorded path there is no spine to follow: rows read top to bottom by backend column, so a second
+  // entry (another Service in front of the same pod) is read before what it leads to.
+  if (!primary.length) {
+    const column = (row: { ids: string[] }) => Math.min(...row.ids.map(id => columns.get(id) ?? 0));
+    return rows.map((row, index) => ({ row, index })).sort((a, b) => column(a.row) - column(b.row) || a.index - b.index).map(({ row }) => row);
+  }
   return rows;
 }
 
@@ -53,9 +59,15 @@ function handles(from: Point, to: Point, positions: Map<string, Point>): [string
   if (from.y === to.y || (from.x !== SINGLE && to.x !== SINGLE && from.x !== to.x)) return from.x < to.x ? ["phone-right", "phone-left"] : ["phone-left", "phone-right"];
   const down = from.y < to.y;
   if (Math.abs(to.y - from.y) <= PORTRAIT_ROW) return down ? [null, null] : ["phone-up", "phone-down"];
-  // Another trunk hop in between: pass it on the glyph side, where branch rows leave room.
   const [top, bottom] = down ? [from.y, to.y] : [to.y, from.y];
-  if (from.x === SINGLE && to.x === SINGLE && [...positions.values()].some(p => p.x === SINGLE && p.y > top && p.y < bottom)) return ["phone-left", "phone-left"];
+  if (from.x === SINGLE && to.x === SINGLE) {
+    const between = [...positions.values()].filter(p => p.y > top && p.y < bottom);
+    const left = between.some(p => p.x < SINGLE), right = between.some(p => p.x > SINGLE), trunk = between.some(p => p.x === SINGLE);
+    // Pass the cards in between on the side they leave free: the left when a right-column glyph or a trunk hop is in the way.
+    if (right && !left) return ["phone-left", "phone-left"];
+    if (left && !right && !trunk) return ["phone-right", "phone-right"];
+    if (trunk) return ["phone-left", "phone-left"];
+  }
   const source = from.x === SINGLE ? (down ? null : "phone-up") : inner(from);
   const target = to.x === SINGLE ? (down ? null : "phone-down") : inner(to);
   return [source, target];
