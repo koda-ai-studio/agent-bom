@@ -2134,7 +2134,7 @@ for (const width of [1440, 1920]) for (const theme of ["light", "dark"]) {
     await page.setViewportSize({ width, height: width === 1440 ? 900 : 1080 });
     await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
     await routeCockpit(page, undefined, { referenceGraph: true });
-    await page.goto(`/graph?scan=${scanId}&rollup=0&capture=1&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`);
+    await page.goto(`/graph?scan=${scanId}&rollup=0&capture=1&layers=cloudResource,server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`);
     await expect(page.locator(".react-flow__node")).toHaveCount(11);
     await page.locator(".react-flow__controls-fitview").click();
     await page.waitForLoadState("networkidle");

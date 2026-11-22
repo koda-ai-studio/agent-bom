@@ -10,7 +10,7 @@
       ]
     }
   ],
-  "artifact_sha256": "sha256:10e08dbd28cd1c749d57b86f60582332b44217eb27c7bb30c3c018d515966191",
+  "artifact_sha256": "sha256:e5c22dc9e6d0387678af585508b4e82db556b08de2661044c94ee30856fed277",
   "capture_fixture": {
     "fix_first": {
       "attack_campaigns": [
@@ -44,8 +44,8 @@
           "partition": "bucket:42",
           "path_count": 1,
           "priority_method": "structural_path_rank.v1",
-          "priority_score": 48.0,
-          "top_path_summary": "Internet-exposed Public reference-evidence-api service is linked to internet-exposed reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (3 hop chain)."
+          "priority_score": 50.0,
+          "top_path_summary": "Internet-exposed Public reference-evidence-api service is linked to internet-exposed reference-evidence-api@sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a; is linked to reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (4 hop chain)."
         }
       ],
       "cards": [
@@ -2729,7 +2729,8 @@
             "findings": [],
             "packages": [],
             "servers": [
-              "Public reference-evidence-api service"
+              "Public reference-evidence-api service",
+              "reference-evidence-api@sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a"
             ],
             "tools": []
           },
@@ -2746,24 +2747,25 @@
                 "candidate_path_count": 1,
                 "entry_count": 1,
                 "evaluated_entry_count": 1,
-                "hop_count": 3,
+                "hop_count": 4,
                 "node_count": 11,
                 "result_count": 1
               },
               "reason_codes": [],
               "status": "complete"
             },
-            "composite_risk": 48.0,
+            "composite_risk": 50.0,
             "credential_exposure": [],
             "edges": [
               "exposed_to",
+              "contains",
               "authenticates_as",
               "has_permission"
             ],
             "finding_ids": [],
             "hop_evidence": [
               {
-                "canonical_edge_id": "1cb8e11c-0788-5bff-a8c8-86785be4c2c5",
+                "canonical_edge_id": "86b368cc-6d78-5865-9078-f5e4ae4ad170",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
@@ -2776,6 +2778,27 @@
                 "runtime_observed_state": "not_observed",
                 "runtime_references": [],
                 "source_node_id": "service:reference-api",
+                "source_snapshot_ids": [
+                  "reference-kubernetes-iac-scan"
+                ],
+                "target_node_id": "container:iac:reference-api",
+                "traversable": true,
+                "truncated": false
+              },
+              {
+                "canonical_edge_id": "8ac6ef17-a843-5b9d-bc8f-509f046d99ca",
+                "complete": true,
+                "confidence": 1.0,
+                "correlation_identity_status": "current",
+                "direction": "directed",
+                "evidence_tier": "modeled_infrastructure",
+                "freshness": "fresh",
+                "reason_codes": [],
+                "relationship": "contains",
+                "relationship_provenance": "recorded",
+                "runtime_observed_state": "not_observed",
+                "runtime_references": [],
+                "source_node_id": "container:iac:reference-api",
                 "source_snapshot_ids": [
                   "reference-kubernetes-iac-scan"
                 ],
@@ -2828,6 +2851,7 @@
             ],
             "hops": [
               "service:reference-api",
+              "container:iac:reference-api",
               "agent:model:reference-workload",
               "identity:model:reference-workload",
               "data-store:reference-customer-records"
@@ -2839,7 +2863,7 @@
               "directed_provenance_backed_hops"
             ],
             "source": "service:reference-api",
-            "summary": "Internet-exposed Public reference-evidence-api service is linked to internet-exposed reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (3 hop chain).",
+            "summary": "Internet-exposed Public reference-evidence-api service is linked to internet-exposed reference-evidence-api@sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a; is linked to reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (4 hop chain).",
             "target": "data-store:reference-customer-records",
             "technique_mappings": [],
             "tool_exposure": [],
@@ -2851,7 +2875,8 @@
               "reference-evidence-workload"
             ],
             "affectedServers": [
-              "Public reference-evidence-api service"
+              "Public reference-evidence-api service",
+              "reference-evidence-api@sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a"
             ],
             "dependencyContext": {
               "ecosystem": "",
@@ -2860,7 +2885,8 @@
               "serverName": "Public reference-evidence-api service"
             },
             "edgeIds": [
-              "exposed_to:service:reference-api:agent:model:reference-workload",
+              "exposed_to:service:reference-api:container:iac:reference-api",
+              "contains:container:iac:reference-api:agent:model:reference-workload",
               "authenticates_as:agent:model:reference-workload:identity:model:reference-workload",
               "has_permission:identity:model:reference-workload:data-store:reference-customer-records"
             ],
@@ -2888,8 +2914,8 @@
               },
               "completeness": {
                 "analysisStatus": "complete",
-                "evidencedHops": 3,
-                "expectedHops": 3,
+                "evidencedHops": 4,
+                "expectedHops": 4,
                 "reasonCodes": [],
                 "status": "complete"
               },
@@ -2922,7 +2948,7 @@
             "findings": [],
             "hopEvidence": [
               {
-                "canonical_edge_id": "1cb8e11c-0788-5bff-a8c8-86785be4c2c5",
+                "canonical_edge_id": "86b368cc-6d78-5865-9078-f5e4ae4ad170",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
@@ -2936,6 +2962,28 @@
                 "runtime_outcome": "unknown",
                 "runtime_references": [],
                 "source_node_id": "service:reference-api",
+                "source_snapshot_ids": [
+                  "reference-kubernetes-iac-scan"
+                ],
+                "target_node_id": "container:iac:reference-api",
+                "traversable": true,
+                "truncated": false
+              },
+              {
+                "canonical_edge_id": "8ac6ef17-a843-5b9d-bc8f-509f046d99ca",
+                "complete": true,
+                "confidence": 1.0,
+                "correlation_identity_status": "current",
+                "direction": "directed",
+                "evidence_tier": "modeled_infrastructure",
+                "freshness": "fresh",
+                "reason_codes": [],
+                "relationship": "contains",
+                "relationship_provenance": "recorded",
+                "runtime_observed_state": "not_observed",
+                "runtime_outcome": "unknown",
+                "runtime_references": [],
+                "source_node_id": "container:iac:reference-api",
                 "source_snapshot_ids": [
                   "reference-kubernetes-iac-scan"
                 ],
@@ -2990,7 +3038,7 @@
             ],
             "hops": [
               {
-                "entityType": "server",
+                "entityType": "cloud_resource",
                 "evidenceProvenance": {
                   "execution": "not_established",
                   "first_seen": "2026-08-30T04:02:00+00:00",
@@ -3016,6 +3064,32 @@
                 },
                 "role": "server",
                 "severity": "high"
+              },
+              {
+                "entityType": "container",
+                "evidenceProvenance": {
+                  "execution": "not_established",
+                  "first_seen": "2026-08-30T04:02:00+00:00",
+                  "last_seen": "2026-08-30T04:02:00+00:00",
+                  "schema_version": "agent-bom.graph-evidence/v1",
+                  "source_snapshot_ids": [
+                    "reference-kubernetes-iac-scan"
+                  ],
+                  "sources": [
+                    "kubernetes_iac"
+                  ],
+                  "tier": "unspecified",
+                  "time_basis": "recorded_observation"
+                },
+                "id": "container:iac:reference-api",
+                "label": "reference-evidence-api@sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a",
+                "rawLabel": "reference-evidence-api@sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a",
+                "risk_assessment": {
+                  "basis": null,
+                  "scope": null,
+                  "status": "not_assessed"
+                },
+                "role": "server"
               },
               {
                 "entityType": "agent",
@@ -3102,10 +3176,11 @@
                 "role": "unknown"
               }
             ],
-            "id": "service:reference-api::data-store:reference-customer-records::service:reference-api->agent:model:reference-workload->identity:model:reference-workload->data-store:reference-customer-records::exposed_to,authenticates_as,has_permission",
+            "id": "service:reference-api::data-store:reference-customer-records::service:reference-api->container:iac:reference-api->agent:model:reference-workload->identity:model:reference-workload->data-store:reference-customer-records::exposed_to,contains,authenticates_as,has_permission",
             "label": "Modeled customer records via reference-evidence-workload",
             "nodeIds": [
               "service:reference-api",
+              "container:iac:reference-api",
               "agent:model:reference-workload",
               "identity:model:reference-workload",
               "data-store:reference-customer-records"
@@ -3125,9 +3200,18 @@
               {
                 "confidence": 1.0,
                 "direction": "directed",
-                "id": "exposed_to:service:reference-api:agent:model:reference-workload",
+                "id": "exposed_to:service:reference-api:container:iac:reference-api",
                 "relationship": "exposed_to",
                 "source": "service:reference-api",
+                "target": "container:iac:reference-api",
+                "traversable": true
+              },
+              {
+                "confidence": 1.0,
+                "direction": "directed",
+                "id": "contains:container:iac:reference-api:agent:model:reference-workload",
+                "relationship": "contains",
+                "source": "container:iac:reference-api",
                 "target": "agent:model:reference-workload",
                 "traversable": true
               },
@@ -3150,11 +3234,11 @@
                 "traversable": true
               }
             ],
-            "riskScore": 48.0,
+            "riskScore": 50.0,
             "schemaVersion": "agent-bom.graph-evidence/v1",
             "severity": "unknown",
             "source": {
-              "entityType": "server",
+              "entityType": "cloud_resource",
               "evidenceProvenance": {
                 "execution": "not_established",
                 "first_seen": "2026-08-30T04:02:00+00:00",
@@ -3181,7 +3265,7 @@
               "role": "server",
               "severity": "high"
             },
-            "summary": "Internet-exposed Public reference-evidence-api service is linked to internet-exposed reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (3 hop chain).",
+            "summary": "Internet-exposed Public reference-evidence-api service is linked to internet-exposed reference-evidence-api@sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a; is linked to reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (4 hop chain).",
             "target": {
               "entityType": "data_store",
               "evidenceProvenance": {
@@ -3209,7 +3293,7 @@
               "role": "unknown"
             }
           },
-          "id": "service:reference-api::data-store:reference-customer-records::service:reference-api->agent:model:reference-workload->identity:model:reference-workload->data-store:reference-customer-records::exposed_to,authenticates_as,has_permission",
+          "id": "service:reference-api::data-store:reference-customer-records::service:reference-api->container:iac:reference-api->agent:model:reference-workload->identity:model:reference-workload->data-store:reference-customer-records::exposed_to,contains,authenticates_as,has_permission",
           "next_actions": [
             {
               "detail": "Review the agent, user, or service account that can trigger this path.",
@@ -3228,12 +3312,12 @@
                 "canonical_id": "kubernetes-uid:9ba1b7ae-3bd2-5cb6-951a-5935ad4fc3a1",
                 "correlation": {
                   "conflict_fields": [],
-                  "identity_basis": "runtime_stable_id",
+                  "identity_basis": "cloud_resource_id",
                   "identity_version": "scoped-identity.v7",
                   "observation_count": 1,
                   "observations": [
                     {
-                      "attribute_digest": "sha256:ce27af03f60de9dd49ef9ca380d9f4adb4e340e1128f3b80085a2e1a7bc3c0b4",
+                      "attribute_digest": "sha256:52c8155dfaff75efc3ba0f0978f9dadc6625f2424e7f5b3241e5381ab9028b66",
                       "data_sources": [
                         "kubernetes_iac"
                       ],
@@ -3254,14 +3338,14 @@
                   ]
                 },
                 "internet_exposed": true,
+                "kubernetes_kind": "Service",
                 "modeled": true,
                 "risk_assessment": {
                   "basis": null,
                   "scope": null,
                   "scored_value": 8.0,
                   "status": "not_assessed"
-                },
-                "semantic_layer": "api_gateway"
+                }
               },
               "canonical_id": "kubernetes-uid:9ba1b7ae-3bd2-5cb6-951a-5935ad4fc3a1",
               "category_uid": 5,
@@ -3271,7 +3355,7 @@
                 "kubernetes_iac"
               ],
               "dimensions": {},
-              "entity_type": "server",
+              "entity_type": "cloud_resource",
               "evidence_provenance": {
                 "execution": "not_established",
                 "first_seen": "2026-08-30T04:02:00+00:00",
@@ -3298,6 +3382,82 @@
               "risk_score": 8.0,
               "severity": "high",
               "severity_id": 4,
+              "status": "active",
+              "type_uid": 400101
+            },
+            {
+              "attributes": {
+                "correlation": {
+                  "conflict_fields": [],
+                  "identity_basis": "snapshot_scoped_runtime_occurrence",
+                  "identity_version": "scoped-identity.v7",
+                  "observation_count": 1,
+                  "observations": [
+                    {
+                      "attribute_digest": "sha256:a1671ad05b8c7c6f3a402550f180335253b3e7faff993b950e7596ef074f9e43",
+                      "data_sources": [
+                        "kubernetes_iac"
+                      ],
+                      "risk_assessment": {
+                        "basis": null,
+                        "scope": null,
+                        "status": "not_assessed"
+                      },
+                      "risk_score": 0.0,
+                      "scan_id": "reference-kubernetes-iac-scan",
+                      "severity": "",
+                      "snapshot_created_at": "2026-08-30T04:02:00+00:00",
+                      "source_node_id": "container:iac:reference-api"
+                    }
+                  ],
+                  "source_scan_ids": [
+                    "reference-kubernetes-iac-scan"
+                  ]
+                },
+                "image_digest": "sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a",
+                "modeled": true,
+                "risk_assessment": {
+                  "basis": null,
+                  "scope": null,
+                  "scored_value": 0.0,
+                  "status": "not_assessed"
+                }
+              },
+              "canonical_id": "e68abb93-3377-5bdb-a756-fdeaccb90818",
+              "category_uid": 5,
+              "class_uid": 4001,
+              "compliance_tags": [],
+              "data_sources": [
+                "kubernetes_iac"
+              ],
+              "dimensions": {},
+              "entity_type": "container",
+              "evidence_provenance": {
+                "execution": "not_established",
+                "first_seen": "2026-08-30T04:02:00+00:00",
+                "last_seen": "2026-08-30T04:02:00+00:00",
+                "schema_version": "agent-bom.graph-evidence/v1",
+                "source_snapshot_ids": [
+                  "reference-kubernetes-iac-scan"
+                ],
+                "sources": [
+                  "kubernetes_iac"
+                ],
+                "tier": "unspecified",
+                "time_basis": "recorded_observation"
+              },
+              "first_seen": "2026-08-30T04:02:00+00:00",
+              "id": "container:iac:reference-api",
+              "label": "reference-evidence-api@sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a",
+              "last_seen": "2026-08-30T04:02:00+00:00",
+              "risk_assessment": {
+                "basis": null,
+                "scope": null,
+                "status": "not_assessed"
+              },
+              "risk_score": 0.0,
+              "severity": "",
+              "severity_id": 0,
               "status": "active",
               "type_uid": 400101
             },
@@ -3627,7 +3787,7 @@
           ],
           "occurrence_count": 1,
           "occurrence_path_ids": [
-            "service:reference-api::data-store:reference-customer-records::service:reference-api->agent:model:reference-workload->identity:model:reference-workload->data-store:reference-customer-records::exposed_to,authenticates_as,has_permission"
+            "service:reference-api::data-store:reference-customer-records::service:reference-api->container:iac:reference-api->agent:model:reference-workload->identity:model:reference-workload->data-store:reference-customer-records::exposed_to,contains,authenticates_as,has_permission"
           ],
           "rank": 4,
           "rank_meta": {
@@ -3654,14 +3814,15 @@
               "label": "Sensitive data"
             }
           ],
-          "semantic_key": "finding=data-store%3Areference-customer-records&agent=agent%3Amodel%3Areference-workload%2Cidentity%3Amodel%3Areference-workload&package=&asset=service%3Areference-api",
+          "semantic_key": "finding=data-store%3Areference-customer-records&agent=agent%3Amodel%3Areference-workload%2Cidentity%3Amodel%3Areference-workload&package=&asset=container%3Aiac%3Areference-api%2Cservice%3Areference-api",
           "sequence_labels": [
             "Public reference-evidence-api service",
+            "reference-evidence-api@sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a",
             "reference-evidence-workload",
             "reference-evidence-workload",
             "Modeled customer records"
           ],
-          "summary": "Internet-exposed Public reference-evidence-api service is linked to internet-exposed reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (3 hop chain).",
+          "summary": "Internet-exposed Public reference-evidence-api service is linked to internet-exposed reference-evidence-api@sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a; is linked to reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (4 hop chain).",
           "title": "Modeled customer records via reference-evidence-workload"
         }
       ],
@@ -3812,8 +3973,8 @@
           "partition": "bucket:42",
           "path_count": 1,
           "priority_method": "structural_path_rank.v1",
-          "priority_score": 48.0,
-          "top_path_summary": "Internet-exposed Public reference-evidence-api service is linked to internet-exposed reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (3 hop chain)."
+          "priority_score": 50.0,
+          "top_path_summary": "Internet-exposed Public reference-evidence-api service is linked to internet-exposed reference-evidence-api@sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a; is linked to reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (4 hop chain)."
         }
       ],
       "attack_paths": [
@@ -4167,24 +4328,25 @@
               "candidate_path_count": 1,
               "entry_count": 1,
               "evaluated_entry_count": 1,
-              "hop_count": 3,
+              "hop_count": 4,
               "node_count": 11,
               "result_count": 1
             },
             "reason_codes": [],
             "status": "complete"
           },
-          "composite_risk": 48.0,
+          "composite_risk": 50.0,
           "credential_exposure": [],
           "edges": [
             "exposed_to",
+            "contains",
             "authenticates_as",
             "has_permission"
           ],
           "finding_ids": [],
           "hop_evidence": [
             {
-              "canonical_edge_id": "1cb8e11c-0788-5bff-a8c8-86785be4c2c5",
+              "canonical_edge_id": "86b368cc-6d78-5865-9078-f5e4ae4ad170",
               "complete": true,
               "confidence": 1.0,
               "correlation_identity_status": "current",
@@ -4197,6 +4359,27 @@
               "runtime_observed_state": "not_observed",
               "runtime_references": [],
               "source_node_id": "service:reference-api",
+              "source_snapshot_ids": [
+                "reference-kubernetes-iac-scan"
+              ],
+              "target_node_id": "container:iac:reference-api",
+              "traversable": true,
+              "truncated": false
+            },
+            {
+              "canonical_edge_id": "8ac6ef17-a843-5b9d-bc8f-509f046d99ca",
+              "complete": true,
+              "confidence": 1.0,
+              "correlation_identity_status": "current",
+              "direction": "directed",
+              "evidence_tier": "modeled_infrastructure",
+              "freshness": "fresh",
+              "reason_codes": [],
+              "relationship": "contains",
+              "relationship_provenance": "recorded",
+              "runtime_observed_state": "not_observed",
+              "runtime_references": [],
+              "source_node_id": "container:iac:reference-api",
               "source_snapshot_ids": [
                 "reference-kubernetes-iac-scan"
               ],
@@ -4249,6 +4432,7 @@
           ],
           "hops": [
             "service:reference-api",
+            "container:iac:reference-api",
             "agent:model:reference-workload",
             "identity:model:reference-workload",
             "data-store:reference-customer-records"
@@ -4260,7 +4444,7 @@
             "directed_provenance_backed_hops"
           ],
           "source": "service:reference-api",
-          "summary": "Internet-exposed Public reference-evidence-api service is linked to internet-exposed reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (3 hop chain).",
+          "summary": "Internet-exposed Public reference-evidence-api service is linked to internet-exposed reference-evidence-api@sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a; is linked to reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (4 hop chain).",
           "target": "data-store:reference-customer-records",
           "technique_mappings": [],
           "tool_exposure": [],
@@ -4785,7 +4969,7 @@
         },
         {
           "activity_id": 1,
-          "canonical_id": "1cb8e11c-0788-5bff-a8c8-86785be4c2c5",
+          "canonical_id": "86b368cc-6d78-5865-9078-f5e4ae4ad170",
           "confidence": 1.0,
           "direction": "directed",
           "evidence": {
@@ -4796,7 +4980,7 @@
             "tier": "modeled_infrastructure"
           },
           "first_seen": "2026-08-30T04:02:00+00:00",
-          "id": "exposed_to:service:reference-api:agent:model:reference-workload",
+          "id": "exposed_to:service:reference-api:container:iac:reference-api",
           "last_seen": "2026-08-30T04:02:00+00:00",
           "provenance": {
             "artifact": "examples/reference-evidence-lab",
@@ -4812,7 +4996,7 @@
                   "evidence_digest": "sha256:32afcd2bfc5ded0e48e02aa50f464a4b33c7ce1cc1814fa092af1d1052ce4373",
                   "scan_id": "reference-kubernetes-iac-scan",
                   "snapshot_created_at": "2026-08-30T04:02:00+00:00",
-                  "source_edge_id": "exposed_to:service:reference-api:workload:reference-api",
+                  "source_edge_id": "exposed_to:service:reference-api:container:iac:reference-api",
                   "traversable": true
                 }
               ],
@@ -4827,8 +5011,8 @@
           "source_id": "service:reference-api",
           "source_run_id": "reference-evidence-correlation-v1",
           "source_scan_id": "reference-evidence-correlation-v1",
-          "target": "agent:model:reference-workload",
-          "target_id": "agent:model:reference-workload",
+          "target": "container:iac:reference-api",
+          "target_id": "container:iac:reference-api",
           "traversable": true,
           "valid_from": "2026-08-30T04:02:00+00:00",
           "valid_to": null,
@@ -5568,12 +5752,12 @@
             "canonical_id": "kubernetes-uid:9ba1b7ae-3bd2-5cb6-951a-5935ad4fc3a1",
             "correlation": {
               "conflict_fields": [],
-              "identity_basis": "runtime_stable_id",
+              "identity_basis": "cloud_resource_id",
               "identity_version": "scoped-identity.v7",
               "observation_count": 1,
               "observations": [
                 {
-                  "attribute_digest": "sha256:ce27af03f60de9dd49ef9ca380d9f4adb4e340e1128f3b80085a2e1a7bc3c0b4",
+                  "attribute_digest": "sha256:52c8155dfaff75efc3ba0f0978f9dadc6625f2424e7f5b3241e5381ab9028b66",
                   "data_sources": [
                     "kubernetes_iac"
                   ],
@@ -5594,14 +5778,14 @@
               ]
             },
             "internet_exposed": true,
+            "kubernetes_kind": "Service",
             "modeled": true,
             "risk_assessment": {
               "basis": null,
               "scope": null,
               "scored_value": 8.0,
               "status": "not_assessed"
-            },
-            "semantic_layer": "api_gateway"
+            }
           },
           "canonical_id": "kubernetes-uid:9ba1b7ae-3bd2-5cb6-951a-5935ad4fc3a1",
           "category_uid": 5,
@@ -5611,7 +5795,7 @@
             "kubernetes_iac"
           ],
           "dimensions": {},
-          "entity_type": "server",
+          "entity_type": "cloud_resource",
           "evidence_provenance": {
             "execution": "not_established",
             "first_seen": "2026-08-30T04:02:00+00:00",
@@ -5636,7 +5820,7 @@
             "status": "not_assessed"
           },
           "risk_score": 8.0,
-          "semantic_layer": "api_gateway",
+          "semantic_layer": "infra",
           "severity": "high",
           "severity_id": 4,
           "status": "active",
@@ -5981,13 +6165,14 @@
         },
         "highest_interaction_risk": 0.0,
         "interaction_risk_count": 0,
-        "max_attack_path_risk": 48.0,
+        "max_attack_path_risk": 50.0,
         "node_types": {
           "agent": 1,
+          "cloud_resource": 1,
           "container": 2,
           "data_store": 1,
           "package": 1,
-          "server": 2,
+          "server": 1,
           "service_account": 1,
           "source_file": 1,
           "tool": 1,
@@ -6116,7 +6301,7 @@
       {
         "age_hours": 0.066667,
         "created_at": "2026-08-30T04:02:00+00:00",
-        "digest": "sha256:614be826e649b1c36cef777158e18688cf76eed906fc9f763eaf4555a51e80b7",
+        "digest": "sha256:0ff7cef2485bfd18185c1953824d1cd08e1ee66bcb4974f88e53f4e3dee8750c",
         "edge_count": 2,
         "freshness": "fresh",
         "node_count": 3,
@@ -6125,7 +6310,7 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:0fc5719b544c774dc58d2cf947a1f0c6271faaa95af8c801d5559522a8011420"
+          "value": "sha256:240321953e4d7ea3a7d8e18c7b86751ceb0fac3f3575c1943ec62a4a38ee6825"
         },
         "source_kinds": [
           "kubernetes_iac"
@@ -6187,7 +6372,7 @@
         ]
       }
     ],
-    "manifest_sha256": "sha256:7d435324df5126ffe18cf5aa2e2a51cf5630c170720436dfb88ac946899bef02",
+    "manifest_sha256": "sha256:90e3b0548437ace25a56cbf0acb7f897475f102201dc0e90fb0eebbaf3da42ed",
     "max_age_hours": 168,
     "name": "Reference evidence lab",
     "output_scan_id": "reference-evidence-correlation-v1",
@@ -6325,7 +6510,7 @@
         {
           "age_hours": 0.066667,
           "created_at": "2026-08-30T04:02:00+00:00",
-          "digest": "sha256:614be826e649b1c36cef777158e18688cf76eed906fc9f763eaf4555a51e80b7",
+          "digest": "sha256:0ff7cef2485bfd18185c1953824d1cd08e1ee66bcb4974f88e53f4e3dee8750c",
           "edge_count": 2,
           "freshness": "fresh",
           "node_count": 3,
@@ -6334,7 +6519,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:0fc5719b544c774dc58d2cf947a1f0c6271faaa95af8c801d5559522a8011420"
+            "value": "sha256:240321953e4d7ea3a7d8e18c7b86751ceb0fac3f3575c1943ec62a4a38ee6825"
           },
           "source_kinds": [
             "kubernetes_iac"
@@ -6404,7 +6589,7 @@
           "retained_count": 4
         },
         "edge_count": 12,
-        "graph_digest_sha256": "sha256:10fec4e731e18863d7067de7b74dd58366844377e3e99fa07317494f317e1378",
+        "graph_digest_sha256": "sha256:29de04dda402907e8dedeff3d6ff8df58f0097f59073008aa6fce7e1f268e642",
         "node_count": 11,
         "scan_id": "reference-evidence-correlation-v1"
       },
@@ -6486,24 +6671,25 @@
         "candidate_path_count": 1,
         "entry_count": 1,
         "evaluated_entry_count": 1,
-        "hop_count": 3,
+        "hop_count": 4,
         "node_count": 11,
         "result_count": 1
       },
       "reason_codes": [],
       "status": "complete"
     },
-    "composite_risk": 48.0,
+    "composite_risk": 50.0,
     "credential_exposure": [],
     "edges": [
       "exposed_to",
+      "contains",
       "authenticates_as",
       "has_permission"
     ],
     "finding_ids": [],
     "hop_evidence": [
       {
-        "canonical_edge_id": "1cb8e11c-0788-5bff-a8c8-86785be4c2c5",
+        "canonical_edge_id": "86b368cc-6d78-5865-9078-f5e4ae4ad170",
         "complete": true,
         "confidence": 1.0,
         "correlation_identity_status": "current",
@@ -6516,6 +6702,27 @@
         "runtime_observed_state": "not_observed",
         "runtime_references": [],
         "source_node_id": "service:reference-api",
+        "source_snapshot_ids": [
+          "reference-kubernetes-iac-scan"
+        ],
+        "target_node_id": "container:iac:reference-api",
+        "traversable": true,
+        "truncated": false
+      },
+      {
+        "canonical_edge_id": "8ac6ef17-a843-5b9d-bc8f-509f046d99ca",
+        "complete": true,
+        "confidence": 1.0,
+        "correlation_identity_status": "current",
+        "direction": "directed",
+        "evidence_tier": "modeled_infrastructure",
+        "freshness": "fresh",
+        "reason_codes": [],
+        "relationship": "contains",
+        "relationship_provenance": "recorded",
+        "runtime_observed_state": "not_observed",
+        "runtime_references": [],
+        "source_node_id": "container:iac:reference-api",
         "source_snapshot_ids": [
           "reference-kubernetes-iac-scan"
         ],
@@ -6568,6 +6775,7 @@
     ],
     "hops": [
       "service:reference-api",
+      "container:iac:reference-api",
       "agent:model:reference-workload",
       "identity:model:reference-workload",
       "data-store:reference-customer-records"
@@ -6579,7 +6787,7 @@
       "directed_provenance_backed_hops"
     ],
     "source": "service:reference-api",
-    "summary": "Internet-exposed Public reference-evidence-api service is linked to internet-exposed reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (3 hop chain).",
+    "summary": "Internet-exposed Public reference-evidence-api service is linked to internet-exposed reference-evidence-api@sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a; is linked to reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (4 hop chain).",
     "target": "data-store:reference-customer-records",
     "technique_mappings": [],
     "tool_exposure": [],
