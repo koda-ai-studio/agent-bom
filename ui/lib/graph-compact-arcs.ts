@@ -2,15 +2,15 @@
  * (horizontal tangents at both ends) would cross a card, its two control points
  * are raised or lowered so the single curve bends around the cards in its way. */
 
+import { captionGeometry, type CaptionGeometry, NAME_LINES } from "@/lib/graph-caption-geometry";
+
 type Point = { x: number; y: number };
 type Link = { id?: string; source: string; target: string };
-/** The caption under a glyph, in layout units: each text line's half width and its span below the row,
- * plus the widest half and the deepest line for quick checks. */
-export type CaptionLine = { half: number; top: number; bottom: number };
-export type CaptionExtent = { half: number; top: number; depth: number; lines: CaptionLine[]; above: number };
+/** The caption under a glyph, in layout units around the glyph centre, with its obstacle test. */
+export type CaptionExtent = CaptionGeometry;
 /** The text a card draws under its glyph: its name (wrapping between words) and its one-line type. */
 export type CaptionText = { name: string; typeLine: string; box?: number };
-type Card = Point & CaptionExtent;
+type Card = Point & { g: CaptionExtent };
 
 /** Horizontal reach of each control point, as a share of the link's horizontal span. */
 export const ARC_REACH = 0.45;
@@ -39,7 +39,7 @@ function cubic(from: Point, to: Point, c1y: number, c2y: number, inset = 0): Poi
 
 /** Typical control heights: level at either end, through the middle, or bowed just above or below both cards. */
 function canonicalLevels(left: Card, right: Card): number[] {
-  return [left.y, right.y, (left.y + right.y) / 2, Math.min(left.y, right.y) - SPAN_ABOVE / 2, Math.max(left.y + left.depth, right.y + right.depth)];
+  return [left.y, right.y, (left.y + right.y) / 2, Math.min(left.y, right.y) - SPAN_ABOVE / 2, Math.max(left.y + left.g.depth, right.y + right.g.depth)];
 }
 
 /** A link that climbs or falls bends only between its two rows, so it never reads as an S;
@@ -77,12 +77,17 @@ let FRAME = { ...DEFAULT_FRAME };
 /** Canvas sizes are bucketed so a resize only re-places the graph when the room really changed. */
 const FRAME_BUCKET = 80;
 let frameKey = "default";
+let bucket: { w: number; h: number } | null = null;
 
 /** Places later layouts for the canvas actually measured (less Fit all's padding). Returns the bucket key, which
  * callers add to their layout memo so a real resize re-places the graph. */
 export function setLayoutFrame(width: number, height: number): string {
-  if (!(width > 0 && height > 0)) { FRAME = { ...DEFAULT_FRAME }; frameKey = "default"; return frameKey; }
-  const w = Math.round(width / FRAME_BUCKET) * FRAME_BUCKET, h = Math.round(height / FRAME_BUCKET) * FRAME_BUCKET;
+  if (!(width > 0 && height > 0)) { FRAME = { ...DEFAULT_FRAME }; frameKey = "default"; bucket = null; return frameKey; }
+  // The canvas height follows the placed graph, so a size keeps its bucket until it moves a whole bucket away:
+  // on a bucket edge, rounding alone would flip the bucket, re-place the graph and resize the canvas on every render.
+  const snap = (value: number, current: number | undefined) => current !== undefined && Math.abs(value - current) < FRAME_BUCKET ? current : Math.round(value / FRAME_BUCKET) * FRAME_BUCKET;
+  const w = snap(width, bucket?.w), h = snap(height, bucket?.h);
+  bucket = { w, h };
   // The measured canvas only ever makes the caption model more cautious: a larger canvas keeps the laptop frame.
   FRAME = { width: Math.min(DEFAULT_FRAME.width, w * MEASURED_SHARE), height: Math.min(DEFAULT_FRAME.height, h * MEASURED_SHARE) };
   frameKey = `${w}x${h}`;
@@ -104,95 +109,82 @@ export function fitZoom(positions: ReadonlyMap<string, Point>, box: number, fram
   return Math.min(1, Math.max(0.02, Math.min(frame.width / width, frame.height / height)));
 }
 
-/** How much room a caption's rendered text takes at a zoom, in layout units. Names wrap between
- * words inside the card box (a single long word is cut at the box); the type line is one line. */
+/** How much room a caption's rendered text takes at a zoom, in layout units, with the card's glyph:
+ * names break as the card breaks them (see `captionGeometry`), the type line is one line. */
 export function captionExtent({ name, typeLine, box: own }: CaptionText, fallbackBox: number, zoom: number, small = false): CaptionExtent {
-  const box = own ?? fallbackBox;
-  const width = (text: string, px: number, char: number) => (text.length * px * char) / zoom;
-  // Names wrap between words inside the card box, as the browser wraps them.
-  const wrap = (char: number) => {
-    const lines: string[] = [];
-    for (const word of name.split(" ")) {
-      const joined = lines.length ? `${lines.at(-1)} ${word}` : word;
-      if (lines.length && width(joined, NAME_PX, char) <= box) lines[lines.length - 1] = joined; else lines.push(word);
-    }
-    return lines.slice(0, 2);
-  };
-  const shown = wrap(NAME_CHAR);
   const near = Math.min(1, zoom * WIDER_SCREEN), radius = (small ? SMALL_GLYPH_PX : GLYPH_PX) / 2;
-  // Each line spans from where it starts at the closest zoom (a larger screen) to where it ends at the farthest.
-  let offset = radius + 0.3 * NAME_PX;
-  const lines: CaptionLine[] = [...shown.map(line => ({ text: line, px: NAME_PX, char: NAME_CHAR })), { text: typeLine, px: META_PX, char: META_CHAR }].map(({ text, px, char }) => {
-    const line = { half: Math.min(box, width(text, px, char)) / 2 + 4 / zoom, top: offset / near, bottom: (offset + LINE * px) / zoom };
-    offset += LINE * px;
-    return line;
-  });
-  return { half: Math.max(...lines.map(line => line.half)), top: lines[0]!.top, depth: lines.at(-1)!.bottom, lines, above: (radius + 4) / zoom };
+  // A wider screen draws the same graph closer (up to `near`), where the name may wrap differently.
+  return captionGeometry({ name, typeLine, box: own ?? fallbackBox, nameChar: NAME_PX * NAME_CHAR, metaChar: META_PX * META_CHAR,
+    nameLine: LINE * NAME_PX, metaLine: LINE * META_PX, maxLines: NAME_LINES, zoom, near, firstTop: radius + 0.3 * NAME_PX, above: (radius + 4) / zoom, pad: 4 / zoom, glyph: GLYPH_RECT });
 }
 
-const DEFAULT_EXTENT: CaptionExtent = { half: CARD_HALF_WIDTH, top: GLYPH_BELOW, depth: CARD_BELOW, lines: [{ half: CARD_HALF_WIDTH, top: GLYPH_BELOW, bottom: CARD_BELOW }], above: CARD_ABOVE };
+/** The glyph's solid area on another card, in layout units around its centre. */
+const GLYPH_RECT = { left: -GLYPH_HALF_WIDTH, right: GLYPH_HALF_WIDTH, top: -CARD_ABOVE, bottom: GLYPH_BELOW };
+const DEFAULT_EXTENT: CaptionExtent = captionGeometry({ measured: [{ left: -CARD_HALF_WIDTH, right: CARD_HALF_WIDTH, top: GLYPH_BELOW, bottom: CARD_BELOW }], glyph: GLYPH_RECT, above: CARD_ABOVE });
 
 /** Caption extents for every card at the zoom these positions will fit at, or the generic card when no text is known. */
+/** Each link's blocked verdict for one set of extents, keyed by its ends and the cards in its span. */
+const VERDICT_CACHE = new WeakMap<Map<string, CaptionExtent>, Map<string, boolean>>();
 const EXTENT_CACHE = new WeakMap<(id: string) => CaptionText, Map<string, Map<string, CaptionExtent>>>();
 
 function extents(positions: ReadonlyMap<string, Point>, text: ((id: string) => CaptionText) | undefined, box: number, fixedZoom?: number) {
-  if (!text) return { extent: () => DEFAULT_EXTENT, inset: 0 };
+  if (!text) return { extent: () => DEFAULT_EXTENT, inset: 0, verdicts: new Map<string, boolean>() };
   const zoom = fixedZoom ?? fitZoom(positions, box), small = positions.size <= SMALL_GRAPH;
   // Extents depend only on the text, box and zoom, so one layout's placement search reuses them across evaluations.
   const byText = EXTENT_CACHE.get(text) ?? EXTENT_CACHE.set(text, new Map()).get(text)!;
   const key = `${box}|${zoom}|${small}`;
   const cache = byText.get(key) ?? byText.set(key, new Map()).get(key)!;
+  const verdicts = VERDICT_CACHE.get(cache) ?? VERDICT_CACHE.set(cache, new Map()).get(cache)!;
   return { extent: (id: string) => cache.get(id) ?? cache.set(id, captionExtent(text(id), box, zoom, small)).get(id)!,
-    inset: (small ? SMALL_GLYPH_PX : GLYPH_PX) / 2 / zoom };
+    inset: (small ? SMALL_GLYPH_PX : GLYPH_PX) / 2 / zoom, verdicts };
 }
 
-function inCaption(p: Point, card: Card, scale = 1): boolean {
-  const dx = Math.abs(p.x - card.x) / scale, dy = (p.y - card.y) / scale;
-  return dx < card.half && dy >= card.top && dy < card.depth && card.lines.some(line => dx < line.half && dy >= line.top && dy < line.bottom);
-}
-
-/** Whether a sampled curve crosses another card, or the caption under one of its own two cards. */
+/** Whether a sampled curve crosses another card (solid from its glyph's top to its last caption line),
+ * or the caption text under one of its own two cards. */
 function blocked(points: Point[], cards: Card[], scale = 1, ends: Card[] = []): boolean {
-  return points.some(p => ends.some(end => inCaption(p, end, scale)) || cards.some(card => {
-    const dx = Math.abs(p.x - card.x) / scale, dy = (p.y - card.y) / scale;
-    // Another card is solid from its glyph's top to its last caption line, as wide as its widest line.
-    return (dx < GLYPH_HALF_WIDTH && dy > -CARD_ABOVE && dy < GLYPH_BELOW) || (dx < card.half && dy > -card.above && dy < card.depth);
-  }));
+  return points.some(p => ends.some(end => end.g.hits((p.x - end.x) / scale, (p.y - end.y) / scale, "caption"))
+    || cards.some(card => card.g.hits((p.x - card.x) / scale, (p.y - card.y) / scale, "card")));
+}
+
+/** The gentlest pair of control heights whose curve clears every card and both end captions, or null. */
+function bestBend(left: Card, right: Card, cards: Card[], inset: number): { c1: number; c2: number } | null {
+  // Keep the bend within its own two cards' height, so it never reads as a loop around the graph.
+  const low = Math.min(left.y, right.y) - SPAN_ABOVE, high = Math.max(left.y + left.g.depth, right.y + right.g.depth) + SPAN_BELOW / 4;
+  const levels: number[] = [], lowest = low - 3 * SPAN_ABOVE, highest = high + 2 * SPAN_BELOW;
+  const step = Math.max(40, (highest - lowest) / (MAX_LEVELS - 1));
+  for (let level = lowest; level <= highest; level += step) levels.push(level);
+  levels.push(...canonicalLevels(left, right));
+  let best: { c1: number; c2: number; cost: number } | null = null;
+  for (const c1 of levels) for (const c2 of levels) {
+    if (!allowedLevel(c1, left, right) || !allowedLevel(c2, left, right) || !levelAtCaptionEnd(c1, c2, left, right)) continue;
+    // A bend against the link's own direction reads as an S; it costs more than a deeper bend the same way.
+    const fall = Math.sign(right.y - left.y);
+    const against = (value: number, from: number) => fall !== 0 && Math.sign(value - from) === -fall ? 3 : 1;
+    const cost = Math.abs(c1 - left.y) * against(c1, left.y) + Math.abs(c2 - right.y) * against(c2, right.y);
+    if (best && cost >= best.cost) continue;
+    const points = cubic(left, right, c1, c2, inset);
+    if (points.some(p => p.y < low || p.y > high) || detour(points) > MAX_DETOUR || blocked(points, cards, 1, [left, right])) continue;
+    best = { c1, c2, cost };
+  }
+  return best;
 }
 
 /** Control-point heights, relative to the source row, for each link whose plain curve would cross a card. */
 export function linkArcs(links: readonly Link[], positions: ReadonlyMap<string, Point>, text?: (id: string) => CaptionText, box = CARD_HALF_WIDTH * 2, zoom?: number): { arcs: Map<string, [number, number]>; behind: Set<string> } {
   const arcs = new Map<string, [number, number]>(), behind = new Set<string>();
   const { extent, inset } = extents(positions, text, box, zoom);
-  const all = [...positions.entries()].map(([id, p]) => [id, { ...p, ...extent(id) }] as const);
+  const all = [...positions.entries()].map(([id, p]) => [id, { x: p.x, y: p.y, g: extent(id) }] as const);
   if (all.length > MAX_CARDS) return { arcs, behind };
   for (const link of links) {
     const fromPoint = positions.get(link.source), toPoint = positions.get(link.target);
     if (!link.id || !fromPoint || !toPoint || fromPoint.x === toPoint.x) continue;
-    const from: Card = { ...fromPoint, ...extent(link.source) }, to: Card = { ...toPoint, ...extent(link.target) };
+    const from: Card = { x: fromPoint.x, y: fromPoint.y, g: extent(link.source) }, to: Card = { x: toPoint.x, y: toPoint.y, g: extent(link.target) };
     const [left, right] = from.x < to.x ? [from, to] : [to, from];
-    const cards = all.filter(([id, p]) => id !== link.source && id !== link.target && p.x > left.x - p.half && p.x < right.x + p.half).map(([, p]) => p);
+    const cards = all.filter(([id, p]) => id !== link.source && id !== link.target && p.x > left.x - p.g.half && p.x < right.x + p.g.half).map(([, p]) => p);
     const dense = all.length > DENSE_CARDS;
     if (!blocked(cubic(left, right, left.y, right.y, inset), cards, dense ? DENSE_MARGIN : 1, [left, right])) continue;
     if (dense) { behind.add(link.id); continue; }
-    // Keep the bend within its own two cards' height, so it never reads as a loop around the graph.
-    const low = Math.min(left.y, right.y) - SPAN_ABOVE, high = Math.max(left.y + left.depth, right.y + right.depth) + SPAN_BELOW / 4;
-    const levels: number[] = [], lowest = low - 3 * SPAN_ABOVE, highest = high + 2 * SPAN_BELOW;
-    const step = Math.max(40, (highest - lowest) / (MAX_LEVELS - 1));
-    for (let level = lowest; level <= highest; level += step) levels.push(level);
-    levels.push(...canonicalLevels(left, right));
-    let best: { c1: number; c2: number; cost: number } | null = null;
-    for (const c1 of levels) for (const c2 of levels) {
-      if (!allowedLevel(c1, left, right) || !allowedLevel(c2, left, right) || !levelAtCaptionEnd(c1, c2, left, right)) continue;
-      // A bend against the link's own direction reads as an S; it costs more than a deeper bend the same way.
-      const fall = Math.sign(right.y - left.y);
-      const against = (value: number, from: number) => fall !== 0 && Math.sign(value - from) === -fall ? 3 : 1;
-      const cost = Math.abs(c1 - left.y) * against(c1, left.y) + Math.abs(c2 - right.y) * against(c2, right.y);
-      if (best && cost >= best.cost) continue;
-      const points = cubic(left, right, c1, c2, inset);
-      if (points.some(p => p.y < low || p.y > high) || detour(points) > MAX_DETOUR || blocked(points, cards, 1, [left, right])) continue;
-      best = { c1, c2, cost };
-    }
+    const best = bestBend(left, right, cards, inset);
     // No single curve clears every card: the link is drawn faint, passing behind them.
     if (!best) { behind.add(link.id); continue; }
     // Stored in drawing order: the source's control point first.
@@ -204,25 +196,32 @@ export function linkArcs(links: readonly Link[], positions: ReadonlyMap<string, 
 
 /** How many links have no simple curve clear of every card and caption: the placement search keeps this at zero where it can. */
 export function blockedLinkCount(links: readonly Link[], positions: ReadonlyMap<string, Point>, text: (id: string) => CaptionText, box: number, zoom?: number): number {
-  const { extent, inset } = extents(positions, text, box, zoom);
-  const all = [...positions.entries()].map(([id, p]) => [id, { ...p, ...extent(id) }] as const);
+  const { extent, inset, verdicts } = extents(positions, text, box, zoom);
+  const all = [...positions.entries()].map(([id, p]) => [id, { x: p.x, y: p.y, g: extent(id) }, `\u0000${id},${p.x},${p.y}`] as const);
   let count = 0;
   for (const link of links) {
     const a = positions.get(link.source), b = positions.get(link.target);
     if (!a || !b || a.x === b.x) continue;
-    const from: Card = { ...a, ...extent(link.source) }, to: Card = { ...b, ...extent(link.target) };
+    const from: Card = { x: a.x, y: a.y, g: extent(link.source) }, to: Card = { x: b.x, y: b.y, g: extent(link.target) };
     const [left, right] = from.x < to.x ? [from, to] : [to, from];
-    const cards = all.filter(([id, p]) => id !== link.source && id !== link.target && p.x > left.x - p.half && p.x < right.x + p.half).map(([, p]) => p);
+    const span = all.filter(([id, p]) => id !== link.source && id !== link.target && p.x > left.x - p.g.half && p.x < right.x + p.g.half);
+    const cards = span.map(([, p]) => p);
+    // A link's verdict depends only on its ends and the cards in its span: a search move re-judges only the links it touched.
+    let key = `${link.source}\u0000${link.target}\u0000${a.x},${a.y},${b.x},${b.y}`;
+    for (const entry of span) key += entry[2];
+    const known = verdicts.get(key);
+    if (known !== undefined) { if (known) count++; continue; }
     // A few typical bends stand in for the full search: level, rise early, rise late, or through the middle.
     // Most links are clear as plain curves; only a blocked one tries the typical bends.
     const plain = cubic(left, right, left.y, right.y, inset);
-    if (detour(plain) <= MAX_DETOUR && !blocked(plain, cards, 1, [left, right])) continue;
+    if (detour(plain) <= MAX_DETOUR && !blocked(plain, cards, 1, [left, right])) { verdicts.set(key, false); continue; }
     const levels = canonicalLevels(left, right).filter(level => allowedLevel(level, left, right));
     const clear = levels.some(c1 => levels.some(c2 => {
       if (!levelAtCaptionEnd(c1, c2, left, right)) return false;
       const points = cubic(left, right, c1, c2, inset);
       return detour(points) <= MAX_DETOUR && !blocked(points, cards, 1, [left, right]);
     }));
+    verdicts.set(key, !clear);
     if (!clear) count++;
   }
   return count;

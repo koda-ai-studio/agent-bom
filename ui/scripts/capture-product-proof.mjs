@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { nodeAggregatesResponse, rollupResponse } from "./product-proof-rollup.mjs";
-import { auditGraphGrammar, auditRenderedGraph, renderedRelationshipCurves, sharedRelationshipRuns } from "./graph-visual-audit.mjs";
+import { auditRenderedGraph, graphGrammarExpression, renderedRelationshipCurves, sharedRelationshipRuns } from "./graph-visual-audit.mjs";
 import { chromium, expect } from "@playwright/test";
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -2298,7 +2298,7 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
     const viewport = page.viewportSize();
     if (options.fitContentHeight) await fitViewportToContent(page, options.fitContentHeight);
     if (await page.locator(".react-flow__node").count()) {
-      const grammar = await page.evaluate(auditGraphGrammar, {});
+      const grammar = await page.evaluate(graphGrammarExpression({}));
       if (Object.keys(grammar).length) throw new Error(`Graph grammar violated on ${filename}: ${JSON.stringify(grammar)}`);
     }
     await page.screenshot({ path: path.join(captureOutputDir, filename), fullPage: false, animations: "disabled" });

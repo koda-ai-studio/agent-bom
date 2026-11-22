@@ -1,3 +1,14 @@
+import { captionGeometry } from "../lib/graph-caption-geometry.ts";
+
+/** The caption model's own obstacle test, injected into the page as source: the gate judges rendered captions
+ * and glyphs with the same function the layout's spacing and curve routing use. */
+export const CAPTION_GEOMETRY_SOURCE = captionGeometry.toString();
+
+/** A page expression that runs the grammar audit with the shared caption geometry. */
+export function graphGrammarExpression(options = {}) {
+  return `(${auditGraphGrammar.toString()})(${JSON.stringify(options)}, (${CAPTION_GEOMETRY_SOURCE}))`;
+}
+
 /** Runs inside Playwright's page context against actual rendered SVG curves. */
 export function auditRenderedGraph({ edges }) {
   const byId = new Map(edges.map(edge => [edge.id, edge]));
@@ -117,7 +128,8 @@ export function renderedRelationshipCurves() {
  * Runs inside Playwright's page context: the agreed graph grammar, measured on the first frame.
  * Returns only violations; an empty object means the frame passes.
  */
-export function auditGraphGrammar({ margin = 48, minGlyph = 32, minFill = 0.6, maxDetour = 1.6, maxLength = 2.5 } = {}) {
+export function auditGraphGrammar({ margin = 48, minGlyph = 32, minFill = 0.6, maxDetour = 1.6, maxLength = 2.5 } = {}, geometry = undefined) {
+  if (typeof geometry !== "function") throw new Error("auditGraphGrammar needs the shared caption geometry: run it through graphGrammarExpression()");
   const canvas = document.querySelector(".react-flow")?.getBoundingClientRect();
   if (!canvas) return {};
   const nodes = [...document.querySelectorAll(".react-flow__node")].filter(node => getComputedStyle(node).visibility !== "hidden")
@@ -165,6 +177,17 @@ export function auditGraphGrammar({ margin = 48, minGlyph = 32, minFill = 0.6, m
       && (name.scrollHeight > name.clientHeight + 1 || [name, ...name.querySelectorAll("*")].some(el => el.scrollWidth > el.clientWidth + 1 && /\b(CVE|GHSA)-/i.test(el.textContent ?? ""))))
       .map(() => node.getAttribute("data-id")));
   if (truncatedIds.length) add("truncatedIds", truncatedIds);
+  // Every other name is whole too: a clamped line or a cut piece ends in an ellipsis and reads as a different name.
+  const clampedNames = [...document.querySelectorAll(".react-flow__node")].filter(node => getComputedStyle(node).visibility !== "hidden").flatMap(node =>
+    [...node.querySelectorAll("[data-semantic-name]")].filter(name => !/\b(CVE|GHSA)-/i.test(name.textContent ?? "")
+      && (name.scrollHeight > name.clientHeight + 1 || [...name.querySelectorAll("*")].some(el => el.scrollWidth > el.clientWidth + 1)))
+      .map(name => `${node.getAttribute("data-id")}: ${name.textContent}`));
+  if (clampedNames.length) add("clampedNames", clampedNames);
+  // Each card's rendered caption lines and glyph, judged by the shared obstacle test.
+  const captionsById = new Map();
+  for (const { id, rect } of captions) captionsById.set(id, [...(captionsById.get(id) ?? []), rect]);
+  const captionObstacles = [...captionsById].map(([id, rects]) => ({ id, shape: geometry({ measured: rects, inset: 1 }) }));
+  const glyphShapes = new Map(nodes.filter(node => node.glyph).map(node => [node, geometry({ measured: [], glyph: node.glyph, inset: 4 })]));
   const diagnosticChips = [...document.querySelectorAll(".react-flow__node *")].filter(el => el.children.length === 0 && /semantic layer unavailable/i.test(el.textContent ?? ""));
   if (diagnosticChips.length) add("diagnosticChips", diagnosticChips.length);
   for (const element of document.querySelectorAll(".react-flow__edge")) {
@@ -183,14 +206,14 @@ export function auditGraphGrammar({ margin = 48, minGlyph = 32, minFill = 0.6, m
       top: Math.min(source.box.top, target.box.top), bottom: Math.max(source.box.bottom, target.box.bottom) };
     if (points.some(p => !inside(span, p, margin))) add("loops", id);
     const through = nodes.filter(node => node !== source && node !== target && node.glyph
-      && points.some(p => inside({ left: node.glyph.left + 4, right: node.glyph.right - 4, top: node.glyph.top + 4, bottom: node.glyph.bottom - 4 }, p)));
+      && points.some(p => glyphShapes.get(node).hits(p.x, p.y, "glyph")));
     if (through.length) add("throughNodes", `${id} through ${through.map(node => node.id).join(",")}`);
     const steps = Math.max(2, Math.ceil(length / 3));
     const fine = Array.from({ length: steps + 1 }, (_, i) => {
       const q = path.getPointAtLength(length * i / steps);
       return { x: matrix.a * q.x + matrix.c * q.y + matrix.e, y: matrix.b * q.x + matrix.d * q.y + matrix.f };
     });
-    const crossed = [...new Set(captions.filter(({ rect }) => fine.some(p => p.x > rect.left + 1 && p.x < rect.right - 1 && p.y > rect.top + 1 && p.y < rect.bottom - 1)).map(caption => caption.id))];
+    const crossed = captionObstacles.filter(({ shape }) => fine.some(p => shape.hits(p.x, p.y, "caption"))).map(({ id }) => id);
     if (crossed.length) add("throughCaptions", `${id} through ${crossed.join(",")}`);
     if (points.some(p => inside(canvas, p)) && ![source, target].every(node => overlaps(node.box, canvas))) add("offscreenEndpoints", id);
     // Drawn length against the straight distance between the endpoints: a detour or loop-back inflates it.

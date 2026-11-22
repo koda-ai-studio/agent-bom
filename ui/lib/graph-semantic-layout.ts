@@ -6,7 +6,8 @@ import { INTERNET_ANCHOR_ID, internetExposure, withInternetAnchor } from "@/lib/
 import { workloadImageContext } from "@/lib/graph-workload-image";
 import { edgeFamily, edgeFamilyColor } from "@/lib/graph-edge-family";
 import { COMPACT_NODE_WIDTH, COMPACT_RANK_GAP, COMPACT_ROW_GAP, compactLayout } from "@/lib/graph-compact-layout";
-import { canvasName, nameBreaks, prosePreview } from "@/components/graph-compact-node";
+import { canvasName, prosePreview } from "@/components/graph-compact-node";
+import { captionGeometry } from "@/lib/graph-caption-geometry";
 import { layoutFrameKey } from "@/lib/graph-compact-arcs";
 
 const DENSE_MAP_NODES = 24;
@@ -134,13 +135,7 @@ function cardWidth(node: Node<LineageNodeData> | undefined, id: string): number 
 const TALL_CARD_ROOM = 236;
 function twoLineName(node: Node<LineageNodeData> | undefined, id: string): boolean {
   // Wrap as the card does: between words, and inside an ordinary word after a hyphen or underscore.
-  const box = cardWidth(node, id), words = shownName(node, id).split(" ").flatMap(word => nameBreaks(word).map(piece => piece.text));
-  let lines = 1, line = 0;
-  for (const word of words) {
-    const width = word.length * CEILING_CHAR_UNITS;
-    if (line && line + CEILING_CHAR_UNITS + width > box) { lines++; line = width; } else line += (line ? CEILING_CHAR_UNITS : 0) + width;
-  }
-  return lines > 1;
+  return captionGeometry({ name: shownName(node, id), box: cardWidth(node, id), nameChar: CEILING_CHAR_UNITS }).nameLines.length > 1;
 }
 
 /** The last few placements, by graph signature. Results are never mutated after layout. */

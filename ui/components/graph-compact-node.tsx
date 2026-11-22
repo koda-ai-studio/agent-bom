@@ -1,6 +1,8 @@
 "use client";
 
 import { nameBreaks } from "@/lib/graph-name-breaks";
+import { NAME_LINES, PHONE_NAME_LINES } from "@/lib/graph-caption-geometry";
+import { stacksOnPhone } from "@/lib/graph-portrait-layout";
 import { Fragment, useEffect, useRef, type ReactNode } from "react";
 import { Handle, Position, useNodeId, useUpdateNodeInternals } from "@xyflow/react";
 import { FolderGit2 } from "lucide-react";
@@ -28,6 +30,8 @@ const ICON = "calc(var(--graph-node-icon-size, 28px) * 0.7)";
 const META = { fontSize: "var(--graph-node-meta-size, 12px)" };
 
 const PROSE_LIMIT = 36;
+/** Spelled out so Tailwind emits them; tests hold them to NAME_LINES and PHONE_NAME_LINES. */
+export const NAME_CLAMP = { desktop: "line-clamp-4", phone: "line-clamp-3", lines: { desktop: NAME_LINES, phone: PHONE_NAME_LINES } } as const;
 
 /** Canvas name: an image digest reads as its short tail; everything else is kept whole
  * and wraps. The full name stays in the title and drawer. */
@@ -50,7 +54,7 @@ function phoneLayoutClass(data: LineageNodeData): string {
 }
 
 function stackedOnPhone(data: LineageNodeData): boolean {
-  return Boolean(data.phoneLayout) && /\b(CVE|GHSA)-/i.test(String(data.label ?? ""));
+  return Boolean(data.phoneLayout) && stacksOnPhone(data.label);
 }
 
 export { nameBreaks, type NamePiece } from "@/lib/graph-name-breaks";
@@ -167,7 +171,7 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
       {held && <span data-testid="graph-held-connections" className="sr-only">{held}</span>}
     </div>
     <CaptionBox phone={Boolean(data.phoneLayout) && !stackedOnPhone(data)}>
-    <p data-semantic-name title={fullTitle} className="mt-[0.3em] line-clamp-2 max-w-full font-semibold leading-[1.15] text-foreground" style={{ fontSize: "calc(var(--graph-node-label-size, 14px) * 0.88)" }}>
+    <p data-semantic-name title={fullTitle} className={`mt-[0.3em] ${data.phoneLayout ? NAME_CLAMP.phone : NAME_CLAMP.desktop} max-w-full font-semibold leading-[1.15] text-foreground`} style={{ fontSize: "calc(var(--graph-node-label-size, 14px) * 0.88)" }}>
       <NameWords text={canvasName(preview)} hidden={canvasName(preview) !== fullTitle} />
     </p>
     {canvasName(preview) !== fullTitle && <span className="sr-only">{fullTitle}</span>}

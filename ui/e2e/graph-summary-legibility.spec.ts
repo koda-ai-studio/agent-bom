@@ -31,4 +31,18 @@ test("compact inventory names remain readable after zooming out", async ({ page 
     return parseFloat(getComputedStyle(label).fontSize) * scale;
   })).toBeGreaterThanOrEqual(12);
   await expect(page.getByTestId("summary-node").first()).toHaveAttribute("title", /package-/);
+  // The hand-over happens before the minimum zoom: from the switch, zooming out still goes further.
+  const zoomOut = page.getByRole("button", { name: /zoom out/i });
+  const viewportZoom = () => page.locator(".react-flow__viewport").evaluate(element => new DOMMatrixReadOnly(getComputedStyle(element).transform).a);
+  await expect(zoomOut).toBeEnabled();
+  const handOver = await viewportZoom();
+  let floor = handOver;
+  for (let step = 0; step < 40 && await zoomOut.isEnabled(); step++) {
+    await zoomOut.click();
+    await page.waitForTimeout(150);
+    const next = await viewportZoom();
+    if (next >= floor - 1e-4) break;
+    floor = next;
+  }
+  expect(floor, "the summary renderer takes over above the lowest zoom").toBeLessThan(handOver * 0.95);
 });

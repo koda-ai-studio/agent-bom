@@ -335,9 +335,23 @@ function refinePlacement(ids: readonly string[], links: readonly Link[], positio
   relevel: (positions: Map<string, Point>) => void = () => {}) {
   if (ids.length < 3) return;
   // Deterministic restarts: the sweep's placement, its mirror image, and variants with some branches flipped.
-  // One evaluation budget across every restart keeps the search to a few tens of milliseconds.
+  // One evaluation budget, shared out across the restarts, bounds the search.
   const budget = { left: SEARCH_BUDGET };
-  const flips = (seed: number) => new Map([...positions].map(([id, p]) => [id, spine.has(id) || !flipped(seed, id) ? p : { x: p.x, y: -p.y }]));
+  // A flipped branch can put a tall card (a two-line caption) over a peer it then needs more room above:
+  // each rank is re-packed so the start keeps every card's room instead of being discarded.
+  const flips = (seed: number) => {
+    const map = new Map([...positions].map(([id, p]) => [id, spine.has(id) || !flipped(seed, id) ? p : { x: p.x, y: -p.y }]));
+    const ranks = new Map<number, string[]>();
+    for (const id of ids) ranks.set(map.get(id)!.x, [...(ranks.get(map.get(id)!.x) ?? []), id]);
+    for (const members of ranks.values()) {
+      const items = members.sort((a, b) => map.get(a)!.y - map.get(b)!.y || a.localeCompare(b))
+        .map(id => ({ id, desired: map.get(id)!.y, fixed: spine.has(id) && map.get(id)!.y === 0, below: tall(id) }));
+      if (items.filter(item => item.fixed).length > 1) continue;
+      for (const [id, y] of packRank(items, COMPACT_ROW_GAP, true)) map.set(id, { x: map.get(id)!.x, y: Math.round(y) });
+    }
+    relevel(map);
+    return map;
+  };
   const starts = [positions, ...Array.from({ length: RESTARTS }, (_, seed) => flips(seed))];
   // A restart never begins taller than the sweep's own layout plus one row; moves are bounded by the zoom budget.
   const heightOf = (map: ReadonlyMap<string, Point>) => { const ys = ids.map(id => map.get(id)!.y); return Math.max(...ys) - Math.min(...ys); };
@@ -346,7 +360,10 @@ function refinePlacement(ids: readonly string[], links: readonly Link[], positio
   let best: { copy: Map<string, Point>; cost: number } | null = null;
   for (const [i, start] of starts.entries()) {
     if (i > 0 && (!rowsClear(ids, start, tall) || heightOf(start) > maxSpan)) continue;
-    const copy = new Map(start), cost = refineRows(ids, links, copy, spine, caption, zoom, levelLeaf, tall, budget, relevel);
+    // A start may spend at most half of what is left, so a greedy search that stalls cannot starve the restarts.
+    const share = { left: i < starts.length - 1 ? Math.ceil(budget.left / 2) : budget.left }, granted = share.left;
+    const copy = new Map(start), cost = refineRows(ids, links, copy, spine, caption, zoom, levelLeaf, tall, share, relevel);
+    budget.left -= granted - Math.max(0, share.left);
     if (!best || cost < best.cost - 1e-6) best = { copy, cost };
     if (best.cost < 1000 || budget.left <= 0) break;
   }

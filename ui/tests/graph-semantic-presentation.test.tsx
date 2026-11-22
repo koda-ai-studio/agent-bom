@@ -31,13 +31,13 @@ it("reads the canonical admin flag and folded exposure independently of legacy r
   expect(nodeContextMarkers({ risk_context: { internet_exposed: true } }).some(marker => marker.kind === "internet")).toBe(true);
 });
 
-it("keeps the full name in a tooltip and the visible name to two lines above its type", () => {
+it("keeps the full name in a tooltip and the visible name to at most four lines above its type", () => {
   const label = "an extremely long deployment name with enough words to wrap repeatedly";
   const Renderer = lineageNodeTypes.containerNode;
   const { container } = render(<ReactFlowProvider><Renderer data={{ label, nodeType: "container", semanticLayout: true, evidenceFlow: true }} /></ReactFlowProvider>);
   const caption = container.querySelector("[data-semantic-name]");
   expect(caption).toHaveAttribute("title", label);
-  expect(caption).toHaveClass("line-clamp-2");
+  expect(caption).toHaveClass("line-clamp-4");
   expect(container.querySelector("[data-entity-role]")).toHaveClass("truncate");
 });
 

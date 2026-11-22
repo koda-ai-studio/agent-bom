@@ -8,6 +8,11 @@ export const PORTRAIT_ROW = 124;
 
 type Point = { x: number; y: number };
 
+/** A finding id never truncates: on a phone its caption stacks under a glyph centred in its card, right of the trunk line. */
+export function stacksOnPhone(label: unknown): boolean {
+  return /\b(CVE|GHSA)-/i.test(String(label ?? ""));
+}
+
 /** Rows top to bottom: each spine hop alone on the trunk, then its branches two per row. */
 function portraitRows(visible: Node<LineageNodeData>[], edges: Edge[]) {
   const ids = new Set(visible.map(node => node.id));
@@ -63,12 +68,16 @@ const inner = (point: Point) => point.x < SINGLE ? "phone-right" : "phone-left";
 
 /** Adjacent rows join top to bottom. A link that skips rows runs down the centre
  * gap between the paired columns and enters a pair member from its inner side. */
-function handles(from: Point, to: Point, positions: Map<string, Point>): [string | null, string | null] {
+function handles(from: Point, to: Point, positions: Map<string, Point>, stacked: readonly Point[]): [string | null, string | null] {
   // Opposite paired columns face each other across the centre gap, whatever their rows.
   if (from.y === to.y || (from.x !== SINGLE && to.x !== SINGLE && from.x !== to.x)) return from.x < to.x ? ["phone-right", "phone-left"] : ["phone-left", "phone-right"];
   const down = from.y < to.y;
   if (Math.abs(to.y - from.y) <= PORTRAIT_ROW) return down ? [null, null] : ["phone-up", "phone-down"];
   const [top, bottom] = down ? [from.y, to.y] : [to.y, from.y];
+  // Past a stacked finding on the trunk, a link to the left column leaves its trunk card from the left, clear of that caption.
+  const pastStacked = stacked.some(p => p.y > top && p.y < bottom);
+  if (pastStacked && from.x === SINGLE && to.x < SINGLE) return ["phone-left", "phone-right"];
+  if (pastStacked && to.x === SINGLE && from.x < SINGLE) return ["phone-right", "phone-left"];
   if (from.x === SINGLE && to.x === SINGLE) {
     const between = [...positions.values()].filter(p => p.y > top && p.y < bottom);
     const left = between.some(p => p.x < SINGLE), right = between.some(p => p.x > SINGLE), trunk = between.some(p => p.x === SINGLE);
@@ -90,12 +99,23 @@ export function graphPortraitLayout(nodes: Node<LineageNodeData>[], edges: Edge[
   const positions = new Map<string, Point>();
   // Trunk hops sit on the centre line; branch rows keep it clear for links that pass them.
   const sides = new Map<string, "trunk" | "left" | "right">();
-  // A lone branch takes the right column: its caption faces right, into the canvas, never off its left edge.
-  portraitRows(visible, edges).forEach(({ ids, trunk }, index) => ids.forEach((id, place) => {
-    const slot = !trunk && ids.length === 1 ? 1 : place;
+  const rows = portraitRows(visible, edges);
+  const rowOf = new Map(rows.flatMap(({ ids }, index) => ids.map(id => [id, index] as const)));
+  const label = new Map(visible.map(node => [node.id, node.data.label]));
+  const stackedRows = rows.flatMap(({ ids, trunk }, index) => trunk && stacksOnPhone(label.get(ids[0]!)) ? [index] : []);
+  // A lone branch whose link to the trunk skips a stacked finding takes the left column, away from that finding's caption.
+  const skipsStacked = (id: string) => edges.some(edge => {
+    if (edge.hidden || (edge.source !== id && edge.target !== id)) return false;
+    const other = rowOf.get(edge.source === id ? edge.target : edge.source), here = rowOf.get(id)!;
+    return other !== undefined && rows[other]!.trunk && stackedRows.some(row => row > Math.min(other, here) && row < Math.max(other, here));
+  });
+  // Otherwise a lone branch takes the right column: its caption faces right, into the canvas, never off its left edge.
+  rows.forEach(({ ids, trunk }, index) => ids.forEach((id, place) => {
+    const slot = !trunk && ids.length === 1 ? (skipsStacked(id) ? 0 : 1) : place;
     positions.set(id, { x: trunk ? SINGLE : slot * PORTRAIT_COLUMN, y: index * PORTRAIT_ROW });
     sides.set(id, trunk ? "trunk" : slot ? "right" : "left");
   }));
+  const stacked = stackedRows.map(row => positions.get(rows[row]!.ids[0]!)!);
   return {
     nodes: nodes.map(node => ({ ...node, position: positions.get(node.id) ?? node.position,
       style: { ...node.style, width: PORTRAIT_CARD_WIDTH, "--graph-node-card-width": `${PORTRAIT_CARD_WIDTH}px`, "--graph-node-glyph-size": "56px",
@@ -106,7 +126,7 @@ export function graphPortraitLayout(nodes: Node<LineageNodeData>[], edges: Edge[
     edges: edges.map((edge): Edge => {
       const from = positions.get(edge.source), to = positions.get(edge.target);
       if (!from || !to) return edge;
-      const [sourceHandle, targetHandle] = handles(from, to, positions);
+      const [sourceHandle, targetHandle] = handles(from, to, positions, stacked);
       // Captions face away from the centre line, so a link's label sits on its centre-line side.
       const side = sides.get(edge.target) === "trunk" ? sides.get(edge.source) : sides.get(edge.target);
       const labelShift = side === "left" ? 1 : side === "right" ? -1 : 0;

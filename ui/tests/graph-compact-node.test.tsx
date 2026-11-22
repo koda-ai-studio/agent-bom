@@ -11,12 +11,13 @@ it("keeps names whole and shortens only image digests", () => {
   expect(canvasName("an extremely long deployment name with many words")).toBe("an extremely long deployment name with many words");
 });
 
-it("draws one circle, a two-line name and one type line with no canvas chips", () => {
+it("draws one circle, a name that may take up to four lines and one type line with no canvas chips", () => {
   const Renderer = lineageNodeTypes.dataStoreNode;
   const { container } = render(<ReactFlowProvider><Renderer data={{ label: "Customer data", nodeType: "dataStore", semanticLayout: true,
     attributes: { admin_equivalent: true, data_classification: "confidential", risk_context: { internet_exposed: true } }, isKev: true }} /></ReactFlowProvider>);
   expect(container.querySelector("[data-compact-node]")).not.toBeNull();
-  expect(container.querySelector("[data-semantic-name]")).toHaveClass("line-clamp-2");
+  // A long hyphenated name reads whole: the layout leaves room under the card for every line it takes.
+  expect(container.querySelector("[data-semantic-name]")).toHaveClass("line-clamp-4");
   expect(container.querySelector("[data-semantic-badges]")).toBeNull();
   expect(container.querySelector('[data-compact-marker="kev"]')).not.toBeNull();
   expect(container.querySelector('[data-compact-marker="internet"]')).not.toBeNull();
@@ -62,4 +63,16 @@ it("puts a finding id under its glyph on a phone, where the card's full width ho
   const Role = lineageNodeTypes.serverNode;
   const role = render(<ReactFlowProvider><Role data={{ label: "checkout-runtime", nodeType: "role", semanticLayout: true, phoneLayout: true, phoneSide: "right" }} /></ReactFlowProvider>);
   expect(role.container.querySelector("[data-compact-node]")).toHaveClass("flex-row");
+});
+
+it("lets a phone caption beside its glyph take three lines, so a hyphenated server name reads whole", () => {
+  const Renderer = lineageNodeTypes.serverNode;
+  const { container } = render(<ReactFlowProvider><Renderer data={{ label: "github-enterprise MCP", nodeType: "server", semanticLayout: true, phoneLayout: true, phoneSide: "right" }} /></ReactFlowProvider>);
+  expect(container.querySelector("[data-semantic-name]")).toHaveClass("line-clamp-3");
+});
+
+it("spells each clamp class for the line limit the layout and caption model use", async () => {
+  const { NAME_CLAMP } = await import("@/components/graph-compact-node");
+  expect(NAME_CLAMP.desktop).toBe(`line-clamp-${NAME_CLAMP.lines.desktop}`);
+  expect(NAME_CLAMP.phone).toBe(`line-clamp-${NAME_CLAMP.lines.phone}`);
 });

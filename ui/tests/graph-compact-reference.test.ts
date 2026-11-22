@@ -152,3 +152,28 @@ describe("the /graph route with the side navigation open", () => {
     } finally { setLayoutFrame(0, 0); }
   });
 });
+
+describe("room under names that take more than two lines", () => {
+  it("leaves every card's whole name clear of the next card in its rank, at the zoom Fit all picks", async () => {
+    const { setLayoutFrame, captionExtent, fitZoom } = await import("@/lib/graph-compact-arcs");
+    const nav = JSON.parse(readFileSync("tests/fixtures/reference-nav-layout-input.json", "utf8")) as { nodes: Node<LineageNodeData>[]; edges: Edge[]; selectedPath: string[] };
+    setLayoutFrame(1134, 551);
+    try {
+      const result = semanticGraphLayout(nav.nodes, nav.edges, nav.selectedPath);
+      const centre = (node: Node<LineageNodeData>) => ({ x: node.position.x + Number(node.style!.width) / 2, y: node.position.y });
+      const zoom = fitZoom(new Map(result.nodes.map(node => [node.id, centre(node)])), 216);
+      let stacked = 0, multiLine = 0;
+      for (const upper of result.nodes) for (const lower of result.nodes) {
+        if (centre(upper).x !== centre(lower).x || lower.position.y <= upper.position.y) continue;
+        const caption = captionExtent({ name: canvasName(String(upper.data.label)), typeLine: "Type", box: Number(upper.style!.width) }, 216, zoom);
+        stacked++;
+        if (caption.nameLines.length > 2) multiLine++;
+        // The lower card's glyph top sits its glyph radius above its row.
+        expect(lower.position.y - upper.position.y, `${upper.id} over ${lower.id}`).toBeGreaterThanOrEqual(caption.depth + caption.above);
+      }
+      // The fixture stacks cards in a rank, and at least one of them has a name longer than two lines.
+      expect(stacked).toBeGreaterThan(0);
+      expect(multiLine).toBeGreaterThan(0);
+    } finally { setLayoutFrame(0, 0); }
+  });
+});
