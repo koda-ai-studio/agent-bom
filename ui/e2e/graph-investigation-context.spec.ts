@@ -158,7 +158,7 @@ for (const theme of ["light", "dark"]) test(`complete correlation captions remai
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.addInitScript(t => localStorage.setItem("agent-bom-theme", t), theme);
   await fixture(page, proof.capture_fixture.graph.nodes, proof.capture_fixture.graph.edges, true);
-  await page.goto("/graph?capture=1&scan=snapshot&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile");
+  await page.goto("/graph?capture=1&scan=snapshot&layers=cloudResource,server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile");
   await expect(page.locator(".react-flow__node")).toHaveCount(11);
   await page.locator(".react-flow__controls-fitview").click();
   await expect.poll(() => page.locator(".react-flow").evaluate(canvas => {
