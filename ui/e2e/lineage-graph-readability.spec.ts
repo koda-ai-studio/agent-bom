@@ -802,13 +802,7 @@ for (const theme of ["light", "dark"] as const) {
       expect(overlapWidth * overlapHeight).toBe(0);
       await page.screenshot({ path: testInfo.outputPath(`initial-focus-${width}-${theme}.png`) });
       await page.getByRole("button", { name: "Fit all", exact: true }).click();
-      // Findings fold into per-asset groups, so the scope counts visible items and how many findings are grouped.
-      const scope = page.getByTestId("graph-viewport-scope");
-      await expect(scope).toContainText(new RegExp(`${graph.nodes.length} visible items · \\d+ grouped findings`));
-      const grouped = Number((await scope.textContent())!.match(/(\d+) grouped findings/)![1]);
-      const findings = graph.nodes.filter(node => node.entity_type === "vulnerability").length;
-      expect(grouped).toBeGreaterThan(0);
-      expect(grouped).toBeLessThanOrEqual(findings);
+      await expect(page.getByTestId("graph-viewport-scope")).toContainText(`${graph.nodes.length} nodes · ${graph.edges.length} relationships`);
       const zoom = await settledViewportZoom(page);
       await page.reload();
       await openGraphView(page);

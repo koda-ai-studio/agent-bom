@@ -46,3 +46,14 @@ it("puts a lone branch in the right column so its caption faces into the canvas,
   const link = result.edges.find(e => e.id === "peer-filesystem")!;
   expect(link.sourceHandle).not.toBe(link.targetHandle);
 });
+
+it("keeps a path's terminal finding right under its asset, ahead of the asset's other branches", () => {
+  const node = (id: string, nodeType: string, index?: number): Node<LineageNodeData> => ({ id, position: { x: 0, y: 0 },
+    data: { label: id, nodeType: nodeType as LineageNodeData["nodeType"], semanticLayer: nodeType === "vulnerability" ? "finding" : "app", ...(index !== undefined ? { semanticPathIndex: index } : {}) } });
+  const nodes = [node("gateway", "apiGateway", 0), node("checkout", "container", 1), node("cve", "vulnerability", 2), node("role", "role"), node("bucket", "dataStore")];
+  const edges: Edge[] = [["gateway", "checkout"], ["checkout", "cve"], ["checkout", "role"], ["role", "bucket"]].map(([source, target]) => ({ id: `${source}-${target}`, source: source!, target: target! }));
+  const result = graphPortraitLayout(nodes, edges);
+  const y = (id: string) => result.nodes.find(n => n.id === id)!.position.y;
+  expect(y("cve")).toBeGreaterThan(y("checkout"));
+  expect(y("cve")).toBeLessThan(y("role"));
+});

@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test, expect, type Page } from "@playwright/test";
+import { ownedFindingAggregates, routeNodeAggregates } from "./helpers/graph-rollup-mocks";
 
 type Graph = { nodes: { id: string; label: string; attributes: Record<string, unknown> }[]; edges: { id: string; source: string; target: string }[] };
 const fixtures = JSON.parse(readFileSync(join(__dirname, "fixtures/k8s-projection.json"), "utf8")) as Record<"snapshot" | "tokenMounted" | "internalOnly" | "twoServices" | "clusterEstate" | "withFindings", Graph>;
@@ -252,6 +253,9 @@ test("flows pause with an explanation while the layout is being edited", async (
 test("collapse findings closes a selected finding and hides it", async ({ page }) => {
   await page.setViewportSize(VIEWPORTS[0]!);
   await serve(page, fixtures.withFindings, "light");
+  // Findings fold only under an asset the backend reports an aggregate for.
+  const graph = fixtures.withFindings as unknown as { nodes: { id: string; entity_type: string; severity: string; semantic_layer?: string }[]; edges: { source: string; target: string; relationship: string }[] };
+  await routeNodeAggregates(page, ownedFindingAggregates(graph.nodes, graph.edges));
   await open(page);
   await flowSelect(page).selectOption("vulnerability");
   await settle(page);

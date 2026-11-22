@@ -3,7 +3,7 @@
  * ordered by its neighbours and fanned evenly around them. Presentation only:
  * ranks come from the caller's backend-derived keys, never from entity types. */
 
-import { blockedLinkCount, type CaptionText, fitZoom, linkArcs } from "@/lib/graph-compact-arcs";
+import { blockedLinkCount, type CaptionText, fitZoom, glyphsOnCurve, linkArcs } from "@/lib/graph-compact-arcs";
 
 // Cards grow in layout units as Fit all zooms out; these gaps keep the separation
 // pass's clear space (24 units) at the zooms graphs of this size fit at, so it does not move placed cards.
@@ -253,7 +253,14 @@ export function compactLayout(input: CompactInput): { positions: Map<string, Poi
     levelLeaves(ids, positions, leaf, neighbours, onSpine, tall);
   }
   clearLevelLinks(ids, links, positions, tall, onSpine);
-  const { arcs, behind } = linkArcs(links, positions, input.caption, COMPACT_NODE_WIDTH, zoom);
+  let { arcs, behind } = linkArcs(links, positions, input.caption, COMPACT_NODE_WIDTH, zoom);
+  // A link no curve can clear would be drawn through a glyph, which reads as a false route: move the card in its way
+  // off the curve (never a spine hop or one of the link's ends) and draw again.
+  for (let pass = 0; pass < 3 && behind.size && ids.length <= REFINE_CARDS; pass++) {
+    const moved = clearGlyphs(links.filter(link => link.id && behind.has(link.id)), ids, links, positions, tall, onSpine);
+    if (!moved) break;
+    ({ arcs, behind } = linkArcs(links, positions, input.caption, COMPACT_NODE_WIDTH, zoom));
+  }
   return { positions, arcs, behind };
 }
 
@@ -473,4 +480,23 @@ function clearLevelLinks(ids: readonly string[], links: readonly Link[], positio
       if (target !== undefined) { positions.set(id, { x: here.x, y: target }); break; }
     }
   }
+}
+
+/** Moves each non-spine card whose glyph sits on a blocked link's curve to the nearest free row of its rank
+ * that stands on no level link. Returns whether anything moved. */
+function clearGlyphs(blocked: readonly Link[], ids: readonly string[], links: readonly Link[], positions: Map<string, Point>,
+  tall: (id: string) => number | undefined, spine: ReadonlySet<string>): boolean {
+  let moved = false;
+  for (const link of blocked) for (const id of glyphsOnCurve(link, positions)) {
+    if (spine.has(id)) continue;
+    const here = positions.get(id)!;
+    const peers = ids.filter(other => other !== id && positions.get(other)!.x === here.x).map(other => ({ y: positions.get(other)!.y, room: Math.max(COMPACT_ROW_GAP, tall(other) ?? 0) }));
+    const room = Math.max(COMPACT_ROW_GAP, tall(id) ?? 0);
+    for (let step = 1; step < 20; step++) {
+      const y = [here.y - step * COMPACT_ROW_GAP, here.y + step * COMPACT_ROW_GAP].find(candidate => peers.every(peer => peer.y < candidate ? candidate - peer.y >= peer.room : peer.y - candidate >= room)
+        && glyphsOnCurve(link, new Map([...positions, [id, { x: here.x, y: candidate }]])).every(other => other !== id));
+      if (y !== undefined) { positions.set(id, { x: here.x, y }); moved = true; break; }
+    }
+  }
+  return moved;
 }

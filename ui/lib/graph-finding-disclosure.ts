@@ -24,8 +24,8 @@ export function cloudFindingDisclosure(nodes: Node<LineageNodeData>[], edges: Ed
     && typeof (byId.get(n.data.readingOwner)?.data.findingAggregate ?? byId.get(n.data.readingOwner)?.data.rollup?.aggregate)?.issue_count === "number") {
     groups.set(n.data.readingOwner, [...(groups.get(n.data.readingOwner) ?? []), n]);
   }
-  if (!groups.size) return { nodes, edges };
   const groupedIds = new Set([...groups.values()].flatMap(findings => findings.map(node => node.id)));
+  if (!groups.size) return { nodes, edges, groupedIds };
   const mapped = nodes.map(n => {
     const findings = groups.get(n.id);
     const severity = (n.data.findingAggregate ?? n.data.rollup?.aggregate)?.worst_severity;
@@ -51,7 +51,7 @@ export function cloudFindingDisclosure(nodes: Node<LineageNodeData>[], edges: Ed
       data: { displayOnly: true, relationship: "finding_group", traversable: false, quietLabel: true } });
   }
   // The bounded layout places each group one step right of its owner; operator positions are kept otherwise.
-  if (preservePositions) return { nodes: [...mapped, ...groupNodes], edges: [...mappedEdges, ...groupEdges] };
+  if (preservePositions) return { nodes: [...mapped, ...groupNodes], edges: [...mappedEdges, ...groupEdges], groupedIds };
   const layout = mixedEvidenceFlow([...mapped, ...groupNodes], [...mappedEdges, ...groupEdges]);
-  return { nodes: layout.nodes, edges: layout.edges };
+  return { nodes: layout.nodes, edges: layout.edges, groupedIds };
 }

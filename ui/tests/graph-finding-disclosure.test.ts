@@ -80,3 +80,12 @@ it("branches a finding group one rank right of its owner with its authoritative 
   const right = cloudFindingDisclosure(nodes, edges, new Set(), () => {}, true).edges.find(e => e.data?.relationship === "finding_group")!;
   expect(right.sourceHandle).toBeUndefined();
 });
+
+it("reports only the findings it actually folds: none when the owner has no backend aggregate", () => {
+  const folded = cloudFindingDisclosure(nodes, edges, new Set(), () => {});
+  expect(folded.groupedIds.size).toBeGreaterThan(0);
+  const withoutAggregate = nodes.map(node => ({ ...node, data: { ...node.data, findingAggregate: undefined } }));
+  const plain = cloudFindingDisclosure(withoutAggregate, edges, new Set(), () => {});
+  expect(plain.groupedIds.size).toBe(0);
+  expect(plain.nodes.every(node => !node.hidden)).toBe(true);
+});

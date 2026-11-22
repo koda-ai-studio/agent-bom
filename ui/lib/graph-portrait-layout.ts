@@ -32,7 +32,16 @@ function portraitRows(visible: Node<LineageNodeData>[], edges: Edge[]) {
       queue.push(...next);
     }
   };
-  for (const id of primary) { rows.push({ ids: [id], trunk: true }); placed.add(id); branch(id); }
+  // A path ending in a finding keeps that last hop right under the asset it was found on; the asset's other
+  // branches follow it, so the spine's final link never has to skip past branch cards.
+  const terminal = primary.at(-1), endsInFinding = terminal !== undefined && primary.length > 1
+    && ["vulnerability", "misconfiguration"].includes(String(visible.find(node => node.id === terminal)?.data.nodeType));
+  for (const [index, id] of primary.entries()) {
+    if (endsInFinding && id === terminal) continue;
+    rows.push({ ids: [id], trunk: true }); placed.add(id);
+    if (endsInFinding && index === primary.length - 2) { rows.push({ ids: [terminal!], trunk: true }); placed.add(terminal!); branch(id); branch(terminal!); }
+    else branch(id);
+  }
   const rest = [...ids].filter(id => !placed.has(id)).sort(byColumn);
   for (const id of rest) {
     if (placed.has(id)) continue;

@@ -7,6 +7,7 @@ import { workloadImageContext } from "@/lib/graph-workload-image";
 import { edgeFamily, edgeFamilyColor } from "@/lib/graph-edge-family";
 import { COMPACT_NODE_WIDTH, COMPACT_RANK_GAP, COMPACT_ROW_GAP, compactLayout } from "@/lib/graph-compact-layout";
 import { canvasName, prosePreview } from "@/components/graph-compact-node";
+import { layoutFrameKey } from "@/lib/graph-compact-arcs";
 
 const DENSE_MAP_NODES = 24;
 /** A map past one readable page has a tangle to quiet; smaller maps draw every connection. */
@@ -178,7 +179,7 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
   // Placement depends only on the graph's structure and its captions; a re-render that changes nothing else reuses it.
   const signature = JSON.stringify([visible.map(node => [node.id, node.type, node.data.label, node.data.semanticLayer, node.data.readingLabel,
     node.data.displayTargetId, node.data.readingFindings?.count, internetExposure(node.data.attributes)]),
-    drawn.map(edge => [edge.id, edge.source, edge.target, edge.data?.relationship]), primary]);
+    drawn.map(edge => [edge.id, edge.source, edge.target, edge.data?.relationship]), primary, layoutFrameKey()]);
   const { positions, arcs, behind } = LAYOUT_CACHE.get(signature) ?? remember(signature, compactLayout({ ...base,
     caption: id => { const found = byId.get(id);
       if (found?.type === "findingGroupNode") return { name: `Findings (${found.data.readingFindings?.count ?? 0})`, typeLine: "Click to explore" };

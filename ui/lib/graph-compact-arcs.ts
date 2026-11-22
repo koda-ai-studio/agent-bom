@@ -70,7 +70,27 @@ function detour(points: Point[]): number {
 const NAME_PX = 14 * 0.88, META_PX = 12, NAME_CHAR = 0.54, META_CHAR = 0.55, LINE = 1.15;
 const GLYPH_PX = 52 * 0.7, SMALL_GLYPH_PX = 66 * 0.7, SMALL_GRAPH = 12;
 /** The canvas a laptop fits an investigation into beside the open navigation, less Fit all's padding: the smallest common frame, so a larger one only gains room. */
-const FRAME = { width: 1120 * 0.85, height: 500 * 0.85 };
+const DEFAULT_FRAME = { width: 1120 * 0.85, height: 500 * 0.85 };
+/** Share of a measured canvas the fitted graph is assumed to use, after Fit all's padding and the controls' reserve. */
+const MEASURED_SHARE = 0.8;
+let FRAME = { ...DEFAULT_FRAME };
+/** Canvas sizes are bucketed so a resize only re-places the graph when the room really changed. */
+const FRAME_BUCKET = 80;
+let frameKey = "default";
+
+/** Places later layouts for the canvas actually measured (less Fit all's padding). Returns the bucket key, which
+ * callers add to their layout memo so a real resize re-places the graph. */
+export function setLayoutFrame(width: number, height: number): string {
+  if (!(width > 0 && height > 0)) return frameKey;
+  const w = Math.round(width / FRAME_BUCKET) * FRAME_BUCKET, h = Math.round(height / FRAME_BUCKET) * FRAME_BUCKET;
+  // The measured canvas only ever makes the caption model more cautious: a larger canvas keeps the laptop frame.
+  FRAME = { width: Math.min(DEFAULT_FRAME.width, w * MEASURED_SHARE), height: Math.min(DEFAULT_FRAME.height, h * MEASURED_SHARE) };
+  frameKey = `${w}x${h}`;
+  return frameKey;
+}
+
+/** The bucket the next layout is placed for. */
+export function layoutFrameKey(): string { return frameKey; }
 
 /** A wide desktop canvas fits the same graph at up to this much more zoom than a laptop's. */
 const WIDER_SCREEN = 1.6;
@@ -206,4 +226,14 @@ export function blockedLinkCount(links: readonly Link[], positions: ReadonlyMap<
     if (!clear) count++;
   }
   return count;
+}
+
+/** Cards whose glyph a link's plain curve would run through (never its own two ends). */
+export function glyphsOnCurve(link: Link, positions: ReadonlyMap<string, Point>): string[] {
+  const a = positions.get(link.source), b = positions.get(link.target);
+  if (!a || !b || a.x === b.x) return [];
+  const [left, right] = a.x < b.x ? [a, b] : [b, a];
+  const points = cubic(left, right, left.y, right.y, 0);
+  return [...positions].filter(([id, p]) => id !== link.source && id !== link.target && p.x > left.x && p.x < right.x
+    && points.some(q => Math.abs(q.x - p.x) < GLYPH_HALF_WIDTH && q.y - p.y > -CARD_ABOVE && q.y - p.y < GLYPH_BELOW)).map(([id]) => id);
 }

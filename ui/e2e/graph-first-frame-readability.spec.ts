@@ -180,11 +180,8 @@ for (const theme of ["light", "dark"]) for (const scenario of ["projectScan", "d
     const note = page.getByTestId("graph-edge-note");
     await expect(note).toBeVisible();
     const [, drawn, total] = (await note.innerText()).match(/([\d,]+) of ([\d,]+) connections drawn/)!.map(value => value.replace(/,/g, "")) as [string, string, string];
-    // The status bar states the recorded relationship count, or, once findings fold under their assets, the visible items.
-    const scope = page.getByTestId("graph-viewport-scope");
-    if (/grouped findings/.test(await scope.innerText())) await expect(scope).toContainText(/\d+ visible items/);
-    else await expect(scope).toContainText(`${total} relationships`);
-    expect(Number(total)).toBeLessThanOrEqual(graph.edges.length);
+    // The same recorded count the status bar states.
+    await expect(page.getByTestId("graph-viewport-scope")).toContainText(`${total} relationships`);
     expect(Number(drawn)).toBeLessThan(Number(total));
     // Virtualization may leave off-frame edges out of the DOM; it can never draw more than the note claims.
     expect(edges.length).toBeLessThanOrEqual(Number(drawn));

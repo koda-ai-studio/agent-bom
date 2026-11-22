@@ -77,8 +77,10 @@ function inferredFlow(nodes: FlowNode[], edges: Edge[]): SpecificFlow {
 
 /** Every view uses the same geometry. A view choice filters the subject; it
  * never derives an attack path or changes the server's evidence semantics. */
-export function investigationFlow(input: FlowNode[], inputEdges: Edge[], requested: InvestigationFlow, _narrowViewport = false): FlowResult {
-  void _narrowViewport;
+/** `_frame` names the canvas size bucket the placement is computed for (set with `setLayoutFrame`); callers pass it so
+ * their memo re-runs on a real resize. */
+export function investigationFlow(input: FlowNode[], inputEdges: Edge[], requested: InvestigationFlow, _narrowViewport = false, _frame?: string): FlowResult {
+  void _narrowViewport; void _frame;
   const scenario = requested === "auto" ? inferredFlow(input, inputEdges) : requested;
   const reason = flowUnavailableReason(input);
   if (reason) return { nodes: input, edges: inputEdges, scenario, applied: false, reason, primaryPath: [] };
