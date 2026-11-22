@@ -199,6 +199,8 @@ CURRENT_EVIDENCE_CONTRACTS = (
     "tests/test_neptune_unsupported_501.py",
     "tests/test_demo_estate_bootstrap.py",
     "tests/test_demo_estate_bootstrap_lifecycle.py",
+    "tests/test_demo_estate_bootstrap_restart.py",
+    "tests/test_demo_estate_bootstrap_refresh.py",
     "tests/test_demo_estate_bootstrap_live_feeds.py",
     "tests/test_demo_estate_bootstrap_reads.py",
     "tests/test_demo_estate_bootstrap_rollover.py",

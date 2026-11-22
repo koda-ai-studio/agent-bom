@@ -21,6 +21,8 @@ MEMORY_HEAVY_MODULES = frozenset(
     {
         "tests/test_demo_estate_bootstrap.py",
         "tests/test_demo_estate_bootstrap_lifecycle.py",
+        "tests/test_demo_estate_bootstrap_restart.py",
+        "tests/test_demo_estate_bootstrap_refresh.py",
         "tests/test_demo_estate_bootstrap_live_feeds.py",
         "tests/test_demo_estate_bootstrap_rollover.py",
     }
