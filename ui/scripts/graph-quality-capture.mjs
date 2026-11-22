@@ -114,7 +114,10 @@ export async function runGraphQualityCapture({ newCapturePage, buildScopeShowcas
         await expect(page.locator(".react-flow__node").first()).toBeVisible();
         await page.screenshot({ path: path.join(output, `${key}-expanded.png`) });
       } else {
-        const edge = fixture.edges[0];
+        // Open a relationship the first view actually draws; a preview may hold back the rest.
+        const drawn = new Set(await page.locator(".react-flow__edge").evaluateAll(edges => edges.map(e => e.dataset.id)));
+        const edge = fixture.edges.find(item => drawn.has(item.id));
+        if (fixture.edges.length && !edge) throw new Error(`${key}: none of the fixture relationships is drawn`);
         if (edge) {
           const arrow = page.locator(`.react-flow__edge[data-id="${edge.id}"]`);
           await arrow.focus();

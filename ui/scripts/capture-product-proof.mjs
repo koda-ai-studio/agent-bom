@@ -2088,7 +2088,8 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
       if (badgeAudit.logos.some(logo => logo.overlapsCaption)) {
         throw new Error(`Vendor badge overlaps a node caption on ${filename}: ${JSON.stringify(badgeAudit.logos)}`);
       }
-      const graphNodeCount = await page.locator(".react-flow__node:visible").count();
+      // Display-only anchors (the Internet entry, finding groups) are not graph entities.
+      const graphNodeCount = await page.locator('.react-flow__node:visible:not([data-id^="display:"])').count();
       const graphEdgeCount = await page.locator(".react-flow__edge").count();
       if (graphNodeCount < options.minGraphNodes || graphEdgeCount < (options.minGraphEdges ?? 1)) {
         throw new Error(`Incomplete graph on ${urlPath}: ${graphNodeCount} nodes / ${graphEdgeCount} edges`);
