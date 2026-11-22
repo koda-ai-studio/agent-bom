@@ -117,7 +117,7 @@ export function renderedRelationshipCurves() {
  * Runs inside Playwright's page context: the agreed graph grammar, measured on the first frame.
  * Returns only violations; an empty object means the frame passes.
  */
-export function auditGraphGrammar({ margin = 48, minGlyph = 48, minFill = 0.6 } = {}) {
+export function auditGraphGrammar({ margin = 48, minGlyph = 48, minFill = 0.6, maxDetour = 1.6 } = {}) {
   const canvas = document.querySelector(".react-flow")?.getBoundingClientRect();
   if (!canvas) return {};
   const nodes = [...document.querySelectorAll(".react-flow__node")].filter(node => getComputedStyle(node).visibility !== "hidden")
@@ -152,6 +152,15 @@ export function auditGraphGrammar({ margin = 48, minGlyph = 48, minFill = 0.6 } 
       && points.some(p => inside({ left: node.glyph.left + 4, right: node.glyph.right - 4, top: node.glyph.top + 4, bottom: node.glyph.bottom - 4 }, p)));
     if (through.length) add("throughNodes", `${id} through ${through.map(node => node.id).join(",")}`);
     if (points.some(p => inside(canvas, p)) && ![source, target].every(node => overlaps(node.box, canvas))) add("offscreenEndpoints", id);
+    // Drawn length against the straight distance between the endpoints: a detour or loop-back inflates it.
+    const drawn = points.slice(1).reduce((sum, p, i) => sum + Math.hypot(p.x - points[i].x, p.y - points[i].y), 0);
+    const chord = Math.hypot(points.at(-1).x - points[0].x, points.at(-1).y - points[0].y);
+    if (chord > 24 && drawn / chord > maxDetour) add("detours", `${id}:${(drawn / chord).toFixed(2)}`);
+    // Across columns a line leaves the left node's right side and enters the right node's left side.
+    const [left, right] = (source.box.left + source.box.right) / 2 <= (target.box.left + target.box.right) / 2 ? [source, target] : [target, source];
+    const leftEnd = left === source ? points[0] : points.at(-1), rightEnd = left === source ? points.at(-1) : points[0];
+    const separated = right.box.left - left.box.right > 24;
+    if (separated && (leftEnd.x < (left.box.left + left.box.right) / 2 || rightEnd.x > (right.box.left + right.box.right) / 2)) add("wrongSide", id);
   }
   const visible = nodes.filter(node => overlaps(node.box, canvas));
   const small = visible.filter(node => node.glyph && Math.min(node.glyph.width, node.glyph.height) < minGlyph - 0.5);
