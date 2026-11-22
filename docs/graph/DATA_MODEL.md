@@ -16,8 +16,8 @@ Entity types grouped into domains by each type's semantic layer (`graph/containe
 | AI and agents | `agent`, `application`, `blueprint`, `eval_suite`, `framework`, `server`, `tool`, `tool_call` | 23 | 36 | [ERD and relationships](data-model/domains/ai.md) |
 | Code and supply chain | `ci_job`, `code_module`, `config_file`, `directory`, `external_import`, `package`, `source_file` | 7 | 14 | [ERD and relationships](data-model/domains/supply.md) |
 | Findings | `drift_incident`, `misconfiguration`, `vulnerability` | 1 | 9 | [ERD and relationships](data-model/domains/findings.md) |
-| Cloud, infrastructure and data | `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `environment`, `fleet`, `model`, `provider`, `resource` | 14 | 26 | [ERD and relationships](data-model/domains/cloud.md) |
-| Identity and access | `access_grant`, `access_policy`, `account`, `credential`, `credential_ref`, `federated_identity`, `group`, `managed_identity`, `org`, `policy`, `role`, `service_account`, `service_principal`, `user` | 17 | 25 | [ERD and relationships](data-model/domains/identity.md) |
+| Cloud, infrastructure and data | `account`, `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `environment`, `fleet`, `model`, `org`, `provider`, `resource` | 17 | 29 | [ERD and relationships](data-model/domains/cloud.md) |
+| Identity and access | `access_grant`, `access_policy`, `credential`, `credential_ref`, `federated_identity`, `group`, `managed_identity`, `policy`, `role`, `service_account`, `service_principal`, `user` | 12 | 24 | [ERD and relationships](data-model/domains/identity.md) |
 
 ## Entities
 
@@ -27,7 +27,7 @@ Entity types grouped into domains by each type's semantic layer (`graph/containe
 |---|---|---|---|---|---|---|
 | `access_grant` | Access Grant | Identity and access | `identity` | 3 / 3001 |  | 1 |
 | `access_policy` | Access Policy | Identity and access | `identity` | 3 / 3001 |  | 1 (+1 demo) |
-| `account` | Account | Identity and access | `identity` | 3 / 3001 |  | 18 (+2 demo) |
+| `account` | Account | Cloud, infrastructure and data | `scope` | 3 / 3001 |  | 18 (+2 demo) |
 | `agent` | AI Agent | AI and agents | `orchestration` | 5 / 4001 |  | 9 (+2 demo) |
 | `api_gateway` | API Gateway | Cloud, infrastructure and data | `api_gateway` | 5 / 4001 |  | 2 |
 | `application` | Application | AI and agents | `app` | 5 / 4001 |  | 2 (+1 demo) |
@@ -44,20 +44,20 @@ Entity types grouped into domains by each type's semantic layer (`graph/containe
 | `dataset` | Dataset | Cloud, infrastructure and data | `asset` | 5 / 4001 |  | 1 (+1 demo) |
 | `directory` | Directory | Code and supply chain | `code` | 5 / 4001 |  | 6 |
 | `drift_incident` | Drift Incident | Findings | `finding` | 2 / 2004 | yes | 1 |
-| `environment` | Environment | Cloud, infrastructure and data | `infra` | 0 / 0 |  | 0 (+2 demo) |
+| `environment` | Environment | Cloud, infrastructure and data | `scope` | 0 / 0 |  | 0 (+2 demo) |
 | `eval_suite` | Eval Suite | AI and agents | `orchestration` | 5 / 4001 |  | 1 |
 | `external_import` | External Import | Code and supply chain | `code` | 5 / 4001 |  | 1 |
 | `federated_identity` | Federated Identity | Identity and access | `identity` | 3 / 3001 |  | 2 |
-| `fleet` | Fleet | Cloud, infrastructure and data | `infra` | 5 / 4001 |  | 1 |
+| `fleet` | Fleet | Cloud, infrastructure and data | `scope` | 5 / 4001 |  | 1 |
 | `framework` | AI Framework | AI and agents | `orchestration` | 5 / 4001 |  | 2 (+1 demo) |
 | `group` | Group | Identity and access | `identity` | 3 / 3001 |  | 4 |
 | `managed_identity` | Managed Identity | Identity and access | `identity` | 3 / 3001 |  | 8 |
 | `misconfiguration` | Misconfiguration | Findings | `finding` | 2 / 2003 | yes | 9 (+3 demo) |
 | `model` | Model | Cloud, infrastructure and data | `asset` | 5 / 4001 |  | 4 (+1 demo) |
-| `org` | Organization | Identity and access | `identity` | 3 / 3001 |  | 6 (+2 demo) |
+| `org` | Organization | Cloud, infrastructure and data | `scope` | 3 / 3001 |  | 6 (+2 demo) |
 | `package` | Package | Code and supply chain | `package` | 5 / 4001 |  | 6 (+2 demo) |
 | `policy` | Policy | Identity and access | `identity` | 3 / 3001 |  | 5 (+1 demo) |
-| `provider` | Provider | Cloud, infrastructure and data | `infra` | 0 / 0 |  | 4 (+1 demo) |
+| `provider` | Provider | Cloud, infrastructure and data | `scope` | 0 / 0 |  | 4 (+1 demo) |
 | `resource` | Resource | Cloud, infrastructure and data | `asset` | 5 / 4001 |  | 5 |
 | `role` | Role | Identity and access | `identity` | 3 / 3001 |  | 9 (+2 demo) |
 | `server` | MCP Server | AI and agents | `mcp_server` | 5 / 4001 |  | 4 (+2 demo) |

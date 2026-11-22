@@ -31,6 +31,44 @@ OUTPUT = UI / "tests" / "fixtures" / "product-proof-rollup.json"
 LAYERS = UI / "tests" / "fixtures" / "product-proof-layers.json"
 # Recorded attributes the unit fixtures use, and the risk context the backend stores for each.
 RISK_CONTEXT = UI / "tests" / "fixtures" / "risk-context.json"
+# Node aggregates for small E2E fixture graphs, keyed "<case>:<node id>"; each case
+# copies the nodes and edges of the spec fixture it stands for.
+AGGREGATE_CASES_OUTPUT = UI / "tests" / "fixtures" / "node-aggregate-cases.json"
+
+
+def _case_node(node_id: str, entity_type: str, label: str, severity: str, risk_score: float) -> dict[str, Any]:
+    return {
+        "id": node_id,
+        "entity_type": entity_type,
+        "label": label,
+        "status": "active",
+        "risk_score": risk_score,
+        "severity": severity,
+        "attributes": {},
+        "compliance_tags": [],
+        "data_sources": ["scan"],
+        "dimensions": {},
+    }
+
+
+AGGREGATE_CASES: dict[str, dict[str, Any]] = {
+    # security-graph-cockpit.spec.ts: the form-data package and its advisory.
+    "cockpit": {
+        "nodes": [
+            _case_node("pkg:form-data", "package", "form-data@4.0.0", "critical", 9.6),
+            _case_node("cve:form-data", "vulnerability", "CVE-2025-7783", "critical", 9.8),
+        ],
+        "edges": [
+            {
+                "id": "pkg:form-data->cve:form-data:vulnerable_to",
+                "source": "pkg:form-data",
+                "target": "cve:form-data",
+                "relationship": "vulnerable_to",
+            }
+        ],
+        "aggregate": ["pkg:form-data"],
+    },
+}
 RISK_CONTEXT_INPUTS: tuple[tuple[str, dict[str, Any]], ...] = (
     ("role", {"is_admin": True}),
     ("server", {"internet_exposed": True}),
@@ -74,6 +112,17 @@ def risk_contexts() -> list[dict[str, Any]]:
     ]
 
 
+def aggregate_cases() -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for case, spec in AGGREGATE_CASES.items():
+        graph = UnifiedGraph.from_dict({"scan_id": case, "tenant_id": "default", "nodes": spec["nodes"], "edges": spec["edges"]})
+        for node_id in spec["aggregate"]:
+            aggregate = node_aggregate(graph, node_id)
+            assert aggregate is not None
+            out[f"{case}:{node_id}"] = {"semantic_layer": semantic_layer(graph.nodes[node_id]), "aggregate": aggregate.to_dict()}
+    return out
+
+
 def render(fixture: dict[str, Any]) -> str:
     return json.dumps(fixture, indent=2, sort_keys=True) + "\n"
 
@@ -84,12 +133,14 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     layers = render(dict(sorted(LAYER_BY_ENTITY_TYPE.items())))
     contexts = render(risk_contexts())
+    cases = render(aggregate_cases())
     if not args.check:
         LAYERS.write_text(layers)
         RISK_CONTEXT.write_text(contexts)
+        AGGREGATE_CASES_OUTPUT.write_text(cases)
     text = render(build_fixture(demo_graph()))
     if args.check:
-        outputs = ((LAYERS, layers), (RISK_CONTEXT, contexts), (OUTPUT, text))
+        outputs = ((LAYERS, layers), (RISK_CONTEXT, contexts), (AGGREGATE_CASES_OUTPUT, cases), (OUTPUT, text))
         stale = [path for path, body in outputs if not path.exists() or path.read_text() != body]
         for path in stale:
             print(f"{path.relative_to(ROOT)} is stale; run python scripts/generate_product_proof_rollup.py", file=sys.stderr)

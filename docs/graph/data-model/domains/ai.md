@@ -91,7 +91,7 @@ Not drawn, because they can connect almost any two types: `correlates_with`, `la
 | `belongs_to` | `structural` | yes | Cloud, infrastructure and data: `cloud_resource`, `container`<br/>Identity and access: `credential`<br/>Findings: `misconfiguration`, `vulnerability`<br/>Code and supply chain: `package` | `application` |
 | `can_access` | `authority` | yes | `agent`, `application`, `server`, `tool`<br/>Cloud, infrastructure and data: `cloud_resource`, `cluster`, `container`, `model`<br/>Identity and access: `group`, `managed_identity`, `role`, `service_account`, `service_principal`, `user` | `agent`, `server`<br/>Cloud, infrastructure and data: `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `model`, `resource`<br/>Code and supply chain: `config_file` |
 | `configures` | `structural` | yes | Code and supply chain: `config_file` | `agent`, `server`, `tool` |
-| `contains` | `structural` | yes | `agent`, `application`, `framework`, `server`, `tool`<br/>Identity and access: `account`<br/>Cloud, infrastructure and data: `cluster`, `container`, `environment`, `fleet`<br/>Code and supply chain: `directory` | `agent`, `application`, `framework`, `server`, `tool`<br/>Code and supply chain: `directory`<br/>Findings: `misconfiguration`, `vulnerability` |
+| `contains` | `structural` | yes | `agent`, `application`, `framework`, `server`, `tool`<br/>Cloud, infrastructure and data: `account`, `cluster`, `container`, `environment`, `fleet`<br/>Code and supply chain: `directory` | `agent`, `application`, `framework`, `server`, `tool`<br/>Code and supply chain: `directory`<br/>Findings: `misconfiguration`, `vulnerability` |
 | `defines` | `structural` | yes | Code and supply chain: `source_file` | `tool` |
 | `depends_on` | `dependency` | yes | `framework`, `server` | Code and supply chain: `package` |
 | `evaluates` | `governance` | no | `eval_suite` | Cloud, infrastructure and data: `model` |
@@ -102,12 +102,12 @@ Not drawn, because they can connect almost any two types: `correlates_with`, `la
 | `governs` | `governance` | no | `blueprint`<br/>Identity and access: `access_policy` | `agent`, `tool`<br/>Findings: `drift_incident`<br/>Identity and access: `managed_identity` |
 | `has_permission` | `authority` | yes | Identity and access: `group`, `managed_identity`, `role`, `service_account`, `service_principal`, `user` | `tool` |
 | `hosted_on` | `dependency` | yes | `agent`, `server` | Cloud, infrastructure and data: `cloud_resource`, `cluster`, `container`, `fleet` |
-| `hosts` | `structural` | yes | Identity and access: `account`<br/>Cloud, infrastructure and data: `cloud_resource`, `environment`, `fleet`, `provider` | `agent`, `server` |
+| `hosts` | `structural` | yes | Cloud, infrastructure and data: `account`, `cloud_resource`, `environment`, `fleet`, `provider` | `agent`, `server` |
 | `invoked` | `runtime` | yes | Identity and access: `user` | `tool`, `tool_call` |
 | `manages` | `governance` | yes | Identity and access: `federated_identity`, `group`, `role`, `service_account`, `service_principal`, `user` | `agent` |
-| `member_of` | `authority` | yes | `agent`<br/>Identity and access: `federated_identity`, `group`, `role`, `service_account`, `service_principal`, `user` | `agent`<br/>Identity and access: `account`, `group`<br/>Cloud, infrastructure and data: `fleet` |
-| `owns` | `governance` | yes | Identity and access: `account`, `group`, `org`, `role`, `service_account`, `service_principal`, `user` | `agent` |
-| `part_of` | `structural` | yes | `agent`, `server`<br/>Code and supply chain: `ci_job` | `application`<br/>Cloud, infrastructure and data: `cluster`, `environment`, `fleet`<br/>Identity and access: `org` |
+| `member_of` | `authority` | yes | `agent`<br/>Identity and access: `federated_identity`, `group`, `role`, `service_account`, `service_principal`, `user` | `agent`<br/>Cloud, infrastructure and data: `account`, `fleet`<br/>Identity and access: `group` |
+| `owns` | `governance` | yes | Cloud, infrastructure and data: `account`, `org`<br/>Identity and access: `group`, `role`, `service_account`, `service_principal`, `user` | `agent` |
+| `part_of` | `structural` | yes | `agent`, `server`<br/>Code and supply chain: `ci_job` | `application`<br/>Cloud, infrastructure and data: `cluster`, `environment`, `fleet`, `org` |
 | `platform_for` | `structural` | no | Cloud, infrastructure and data: `provider` | `agent` |
 | `reaches_tool` | `authority` | yes | Identity and access: `credential` | `tool` |
 | `recorded_activity` | `correlation` | no | `agent`, `server`, `tool_call`<br/>Identity and access: `federated_identity`, `managed_identity`, `role`, `service_account`, `service_principal`, `user`<br/>Cloud, infrastructure and data: `resource` | `agent`, `application`, `framework`, `server`, `tool`, `tool_call`<br/>Identity and access: `access_policy`, `credential`, `credential_ref`, `policy`, `role`, `service_account`, `service_principal`, `user`<br/>Cloud, infrastructure and data: `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `model`, `resource`<br/>Code and supply chain: `ci_job`, `config_file`, `package` |

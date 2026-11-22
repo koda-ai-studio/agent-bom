@@ -43,6 +43,7 @@ _GOVERNANCE_ATTACK_PATH_LIMIT = 100
 
 
 _SEMANTIC_LAYER_LABELS = {
+    GraphSemanticLayer.SCOPE.value: "Scope",
     GraphSemanticLayer.USER.value: "User",
     GraphSemanticLayer.IDENTITY.value: "Identity",
     GraphSemanticLayer.APP.value: "Application",

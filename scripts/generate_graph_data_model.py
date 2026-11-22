@@ -87,7 +87,11 @@ DOMAINS: tuple[tuple[str, str, tuple[GraphSemanticLayer, ...]], ...] = (
         ),
     ),
     ("supply", "Code and supply chain", (GraphSemanticLayer.PACKAGE, GraphSemanticLayer.CODE, GraphSemanticLayer.CI)),
-    ("cloud", "Cloud, infrastructure and data", (GraphSemanticLayer.ASSET, GraphSemanticLayer.INFRA, GraphSemanticLayer.API_GATEWAY)),
+    (
+        "cloud",
+        "Cloud, infrastructure and data",
+        (GraphSemanticLayer.SCOPE, GraphSemanticLayer.ASSET, GraphSemanticLayer.INFRA, GraphSemanticLayer.API_GATEWAY),
+    ),
     ("findings", "Findings", (GraphSemanticLayer.FINDING,)),
 )
 

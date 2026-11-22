@@ -19432,7 +19432,7 @@ export interface components {
             node_types: string[];
             /** Semantic Layers */
             semantic_layers: {
-                [key: string]: string;
+                [key: string]: string | number;
             }[];
             /** Version */
             version: number;

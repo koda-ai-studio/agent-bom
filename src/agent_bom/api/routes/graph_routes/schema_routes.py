@@ -10,8 +10,17 @@ from agent_bom.api.routes.graph_routes._admission import _GraphAdmissionRoute
 from agent_bom.api.routes.graph_routes.params import _SEMANTIC_LAYER_LABELS
 from agent_bom.api.routes.graph_routes.schema_meta import _RELATIONSHIP_SCHEMA_META
 from agent_bom.graph import EntityType, GraphSemanticLayer, RelationshipType
+from agent_bom.graph.semantic_layer import SEMANTIC_LAYER_COLUMNS
 
 router = APIRouter(route_class=_GraphAdmissionRoute)
+
+
+def _semantic_layers() -> list[dict[str, str | int]]:
+    """Each layer's key, label and the canvas column the backend assigns it."""
+    return [
+        {"key": layer.value, "label": _SEMANTIC_LAYER_LABELS[layer.value], "column": SEMANTIC_LAYER_COLUMNS[layer.value]}
+        for layer in GraphSemanticLayer
+    ]
 
 
 @router.get("/graph/legend", **documented(GraphLegendResponse), tags=["graph"], deprecated=True)
@@ -172,7 +181,7 @@ def get_graph_schema() -> dict:
     return {
         "version": 1,
         "interchange": GRAPH_COMPATIBILITY,
-        "semantic_layers": [{"key": layer.value, "label": _SEMANTIC_LAYER_LABELS[layer.value]} for layer in GraphSemanticLayer],
+        "semantic_layers": _semantic_layers(),
         "node_kinds": sorted(node_kinds, key=lambda d: d["key"]),
         "edge_kinds": sorted(edge_kinds, key=lambda d: d["key"]),
         "node_types": sorted(entity.value for entity in EntityType),

@@ -10,7 +10,7 @@
       ]
     }
   ],
-  "artifact_sha256": "sha256:f621a035c484c5d815fe074029fb363b20841cc66a14abce844d8f5de6d6db13",
+  "artifact_sha256": "sha256:10e08dbd28cd1c749d57b86f60582332b44217eb27c7bb30c3c018d515966191",
   "capture_fixture": {
     "fix_first": {
       "attack_campaigns": [
@@ -3837,6 +3837,343 @@
             "reason_codes": [],
             "status": "complete"
           },
+          "composite_risk": 87.1,
+          "credential_exposure": [],
+          "edges": [
+            "uses",
+            "depends_on",
+            "vulnerable_to"
+          ],
+          "finding_ids": [
+            "reference-finding-cve-2023-4863"
+          ],
+          "hop_evidence": [
+            {
+              "canonical_edge_id": "014e774a-c7d9-570e-9545-b8282a2d1666",
+              "complete": true,
+              "confidence": 1.0,
+              "correlation_identity_status": "current",
+              "direction": "directed",
+              "evidence_tier": "static_scan",
+              "freshness": "fresh",
+              "reason_codes": [],
+              "relationship": "uses",
+              "relationship_provenance": "recorded",
+              "runtime_observed_state": "not_observed",
+              "runtime_references": [],
+              "source_node_id": "agent:model:reference-workload",
+              "source_snapshot_ids": [
+                "reference-mcp-config-scan"
+              ],
+              "target_node_id": "server:mcp:document-review",
+              "traversable": true,
+              "truncated": false
+            },
+            {
+              "canonical_edge_id": "da5e3844-dbea-55c8-9338-986aea01f4f8",
+              "complete": true,
+              "confidence": 1.0,
+              "correlation_identity_status": "current",
+              "direction": "directed",
+              "evidence_tier": "modeled_infrastructure",
+              "freshness": "fresh",
+              "reason_codes": [],
+              "relationship": "depends_on",
+              "relationship_provenance": "recorded",
+              "runtime_observed_state": "not_observed",
+              "runtime_references": [],
+              "source_node_id": "server:mcp:document-review",
+              "source_snapshot_ids": [
+                "reference-mcp-config-scan"
+              ],
+              "target_node_id": "package:mcp:pillow",
+              "traversable": true,
+              "truncated": false
+            },
+            {
+              "canonical_edge_id": "fdb66cb8-b823-5c9f-b6dd-ca979f36c3ca",
+              "complete": true,
+              "confidence": 1.0,
+              "correlation_identity_status": "current",
+              "direction": "directed",
+              "evidence_tier": "static_scan",
+              "freshness": "fresh",
+              "reason_codes": [
+                "applicability_unassessed"
+              ],
+              "relationship": "vulnerable_to",
+              "relationship_provenance": "recorded",
+              "runtime_observed_state": "not_observed",
+              "runtime_references": [],
+              "source_node_id": "package:mcp:pillow",
+              "source_snapshot_ids": [
+                "reference-image-sbom-scan"
+              ],
+              "target_node_id": "vulnerability:sbom:cve-2023-4863",
+              "traversable": true,
+              "truncated": false
+            }
+          ],
+          "hops": [
+            "agent:model:reference-workload",
+            "server:mcp:document-review",
+            "package:mcp:pillow",
+            "vulnerability:sbom:cve-2023-4863"
+          ],
+          "mitre_technique_ids": [],
+          "reachability": "likely",
+          "reachability_basis": [
+            "insufficient_evidence",
+            "applicability_unassessed",
+            "directed_provenance_backed_hops"
+          ],
+          "source": "agent:model:reference-workload",
+          "summary": "Unverified structural candidate: graph topology connects the agent and vulnerable package/server, but no executable graph or symbol path has been proven.",
+          "target": "vulnerability:sbom:cve-2023-4863",
+          "technique_mappings": [],
+          "tool_exposure": [
+            "render_untrusted_image"
+          ],
+          "vuln_ids": [
+            "CVE-2023-4863"
+          ]
+        },
+        {
+          "analysis": {
+            "limits": {
+              "max_depth": 8,
+              "max_entries": 200,
+              "max_nodes": 5000,
+              "max_paths": 50,
+              "max_visited_per_entry": 2000
+            },
+            "observed": {
+              "candidate_path_count": 1,
+              "entry_count": 1,
+              "evaluated_entry_count": 1,
+              "hop_count": 3,
+              "node_count": 11,
+              "result_count": 1
+            },
+            "reason_codes": [],
+            "status": "complete"
+          },
+          "composite_risk": 76.6,
+          "credential_exposure": [],
+          "edges": [
+            "runs",
+            "contains",
+            "vulnerable_to"
+          ],
+          "finding_ids": [
+            "reference-finding-cve-2023-4863"
+          ],
+          "hop_evidence": [
+            {
+              "canonical_edge_id": "b05709ce-c835-5d41-8a88-52096cb6641f",
+              "complete": true,
+              "confidence": 1.0,
+              "correlation_identity_status": "current",
+              "direction": "directed",
+              "evidence_tier": "derived",
+              "freshness": "fresh",
+              "reason_codes": [],
+              "relationship": "runs",
+              "relationship_provenance": "recorded",
+              "runtime_observed_state": "not_observed",
+              "runtime_references": [],
+              "source_node_id": "container:iac:reference-api",
+              "source_snapshot_ids": [
+                "reference-image-sbom-scan",
+                "reference-kubernetes-iac-scan"
+              ],
+              "target_node_id": "container:sbom:reference-api",
+              "traversable": true,
+              "truncated": false
+            },
+            {
+              "canonical_edge_id": "550df527-a763-50a0-afd7-47a9ae5acea5",
+              "complete": true,
+              "confidence": 1.0,
+              "correlation_identity_status": "current",
+              "direction": "directed",
+              "evidence_tier": "static_scan",
+              "freshness": "fresh",
+              "reason_codes": [],
+              "relationship": "contains",
+              "relationship_provenance": "recorded",
+              "runtime_observed_state": "not_observed",
+              "runtime_references": [],
+              "source_node_id": "container:sbom:reference-api",
+              "source_snapshot_ids": [
+                "reference-image-sbom-scan"
+              ],
+              "target_node_id": "package:mcp:pillow",
+              "traversable": true,
+              "truncated": false
+            },
+            {
+              "canonical_edge_id": "fdb66cb8-b823-5c9f-b6dd-ca979f36c3ca",
+              "complete": true,
+              "confidence": 1.0,
+              "correlation_identity_status": "current",
+              "direction": "directed",
+              "evidence_tier": "static_scan",
+              "freshness": "fresh",
+              "reason_codes": [
+                "applicability_unassessed"
+              ],
+              "relationship": "vulnerable_to",
+              "relationship_provenance": "recorded",
+              "runtime_observed_state": "not_observed",
+              "runtime_references": [],
+              "source_node_id": "package:mcp:pillow",
+              "source_snapshot_ids": [
+                "reference-image-sbom-scan"
+              ],
+              "target_node_id": "vulnerability:sbom:cve-2023-4863",
+              "traversable": true,
+              "truncated": false
+            }
+          ],
+          "hops": [
+            "container:iac:reference-api",
+            "container:sbom:reference-api",
+            "package:mcp:pillow",
+            "vulnerability:sbom:cve-2023-4863"
+          ],
+          "mitre_technique_ids": [],
+          "reachability": "likely",
+          "reachability_basis": [
+            "insufficient_evidence",
+            "applicability_unassessed",
+            "directed_provenance_backed_hops"
+          ],
+          "source": "container:iac:reference-api",
+          "summary": "Unverified structural candidate: graph topology connects the agent and vulnerable package/server, but no executable graph or symbol path has been proven.",
+          "target": "vulnerability:sbom:cve-2023-4863",
+          "technique_mappings": [],
+          "tool_exposure": [],
+          "vuln_ids": [
+            "CVE-2023-4863"
+          ]
+        },
+        {
+          "analysis": {
+            "limits": {
+              "max_depth": 8,
+              "max_entries": 200,
+              "max_nodes": 5000,
+              "max_paths": 50,
+              "max_visited_per_entry": 2000
+            },
+            "observed": {
+              "candidate_path_count": 1,
+              "entry_count": 1,
+              "evaluated_entry_count": 1,
+              "hop_count": 2,
+              "node_count": 11,
+              "result_count": 1
+            },
+            "reason_codes": [],
+            "status": "complete"
+          },
+          "composite_risk": 76.6,
+          "credential_exposure": [],
+          "edges": [
+            "depends_on",
+            "vulnerable_to"
+          ],
+          "finding_ids": [
+            "reference-finding-cve-2023-4863"
+          ],
+          "hop_evidence": [
+            {
+              "canonical_edge_id": "c0ad34e7-e3b8-57f4-9899-ff4ffb2b72cb",
+              "complete": true,
+              "confidence": 1.0,
+              "correlation_identity_status": "current",
+              "direction": "directed",
+              "evidence_tier": "static_scan",
+              "freshness": "fresh",
+              "reason_codes": [],
+              "relationship": "depends_on",
+              "relationship_provenance": "recorded",
+              "runtime_observed_state": "not_observed",
+              "runtime_references": [],
+              "source_node_id": "source:pinned-package",
+              "source_snapshot_ids": [
+                "reference-repository-scan"
+              ],
+              "target_node_id": "package:mcp:pillow",
+              "traversable": true,
+              "truncated": false
+            },
+            {
+              "canonical_edge_id": "fdb66cb8-b823-5c9f-b6dd-ca979f36c3ca",
+              "complete": true,
+              "confidence": 1.0,
+              "correlation_identity_status": "current",
+              "direction": "directed",
+              "evidence_tier": "static_scan",
+              "freshness": "fresh",
+              "reason_codes": [
+                "applicability_unassessed"
+              ],
+              "relationship": "vulnerable_to",
+              "relationship_provenance": "recorded",
+              "runtime_observed_state": "not_observed",
+              "runtime_references": [],
+              "source_node_id": "package:mcp:pillow",
+              "source_snapshot_ids": [
+                "reference-image-sbom-scan"
+              ],
+              "target_node_id": "vulnerability:sbom:cve-2023-4863",
+              "traversable": true,
+              "truncated": false
+            }
+          ],
+          "hops": [
+            "source:pinned-package",
+            "package:mcp:pillow",
+            "vulnerability:sbom:cve-2023-4863"
+          ],
+          "mitre_technique_ids": [],
+          "reachability": "likely",
+          "reachability_basis": [
+            "insufficient_evidence",
+            "applicability_unassessed",
+            "directed_provenance_backed_hops"
+          ],
+          "source": "source:pinned-package",
+          "summary": "Unverified structural candidate: graph topology connects the agent and vulnerable package/server, but no executable graph or symbol path has been proven.",
+          "target": "vulnerability:sbom:cve-2023-4863",
+          "technique_mappings": [],
+          "tool_exposure": [],
+          "vuln_ids": [
+            "CVE-2023-4863"
+          ]
+        },
+        {
+          "analysis": {
+            "limits": {
+              "max_depth": 8,
+              "max_entries": 200,
+              "max_nodes": 5000,
+              "max_paths": 50,
+              "max_visited_per_entry": 2000
+            },
+            "observed": {
+              "candidate_path_count": 1,
+              "entry_count": 1,
+              "evaluated_entry_count": 1,
+              "hop_count": 3,
+              "node_count": 11,
+              "result_count": 1
+            },
+            "reason_codes": [],
+            "status": "complete"
+          },
           "composite_risk": 48.0,
           "credential_exposure": [],
           "edges": [
@@ -5636,7 +5973,12 @@
           }
         },
         "attack_campaign_count": 1,
-        "attack_path_count": 1,
+        "attack_path_count": 4,
+        "attack_paths": {
+          "assessed_count": 4,
+          "basis": "derived_graph_paths",
+          "retained_count": 4
+        },
         "highest_interaction_risk": 0.0,
         "interaction_risk_count": 0,
         "max_attack_path_risk": 48.0,

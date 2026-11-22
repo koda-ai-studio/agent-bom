@@ -12,6 +12,7 @@ __all__ = ["EntityType", "GraphLayout", "GraphSemanticLayer", "NodeStatus", "Rel
 class GraphSemanticLayer(str, Enum):
     """Operator-facing AI system layers used to group graph entities."""
 
+    SCOPE = "scope"
     USER = "user"
     IDENTITY = "identity"
     APP = "app"

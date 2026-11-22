@@ -26,6 +26,7 @@ from agent_bom.discovery import parse_mcp_config  # noqa: E402
 from agent_bom.gateway_server import GatewaySettings, create_gateway_app  # noqa: E402
 from agent_bom.gateway_upstreams import UpstreamConfig, UpstreamRegistry  # noqa: E402
 from agent_bom.graph import EntityType, RelationshipType, UnifiedEdge, UnifiedGraph, UnifiedNode  # noqa: E402
+from agent_bom.graph.attack_path_counts import index_attack_paths  # noqa: E402
 from agent_bom.graph.correlation_service import CorrelationRequest, GraphCorrelationService  # noqa: E402
 from agent_bom.graph.edge_evidence import edge_evidence  # noqa: E402
 from agent_bom.graph.semantic_layer import node_payload  # noqa: E402
@@ -55,10 +56,16 @@ TOOL_NAME = "render_untrusted_image"
 _RUNTIME_FACTS_KEY = b"reference-lab-runtime-facts-key-32-bytes"
 
 
-def _served_graph(graph: Any) -> dict[str, Any]:
-    """The graph as the API serves it: every node carries its semantic layer."""
+def _served_graph(graph: Any, attack_paths: dict[str, Any]) -> dict[str, Any]:
+    """The graph as the API serves it: layered nodes and the receipt's one attack-path count."""
     body = graph.to_dict()
     body["nodes"] = [node_payload(graph.nodes[item["id"]]) for item in body["nodes"]]
+    summary, rows = index_attack_paths(graph)
+    if summary["retained_count"] != attack_paths["retained_count"]:
+        raise SystemExit(f"path index retains {summary['retained_count']} paths but the receipt says {attack_paths['retained_count']}")
+    body["attack_paths"] = [row.path.to_dict() for row in sorted(rows, key=lambda row: row.rank_index)]
+    body["stats"]["attack_paths"] = dict(attack_paths)
+    body["stats"]["attack_path_count"] = attack_paths["retained_count"]
     return body
 
 
@@ -788,7 +795,7 @@ async def _build_payload() -> dict[str, Any]:
                 "exploitability": {"status": "not_established"},
             },
             "capture_fixture": {
-                "graph": _served_graph(output),
+                "graph": _served_graph(output, completed.result_manifest["output"]["attack_paths"]),
                 "fix_first": fix_first,
                 "snapshots": [
                     {

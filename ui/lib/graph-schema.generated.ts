@@ -12,6 +12,7 @@ export const GRAPH_SCHEMA_VERSION = 1 as const;
 // ═══════════════════════════════════════════════════════════════════════════
 
 export enum GraphSemanticLayer {
+  SCOPE = "scope",
   USER = "user",
   IDENTITY = "identity",
   APP = "app",
@@ -28,56 +29,76 @@ export enum GraphSemanticLayer {
   CI = "ci",
 }
 
-export type GraphSemanticLayerKey = "user" | "identity" | "app" | "api_gateway" | "orchestration" | "mcp_server" | "tool" | "package" | "runtime_evidence" | "asset" | "infra" | "finding" | "code" | "ci";
+export type GraphSemanticLayerKey = "scope" | "user" | "identity" | "app" | "api_gateway" | "orchestration" | "mcp_server" | "tool" | "package" | "runtime_evidence" | "asset" | "infra" | "finding" | "code" | "ci";
 
-export const GRAPH_SEMANTIC_LAYERS: readonly GraphSemanticLayerKey[] = ["user", "identity", "app", "api_gateway", "orchestration", "mcp_server", "tool", "package", "runtime_evidence", "asset", "infra", "finding", "code", "ci"] as const;
+export const GRAPH_SEMANTIC_LAYERS: readonly GraphSemanticLayerKey[] = ["scope", "user", "identity", "app", "api_gateway", "orchestration", "mcp_server", "tool", "package", "runtime_evidence", "asset", "infra", "finding", "code", "ci"] as const;
 
 export interface GraphSemanticLayerMeta {
   label: string;
+  /** Left-to-right canvas column, owned by the backend. */
+  column: number;
 }
 
 export const GRAPH_SEMANTIC_LAYER_META: Record<GraphSemanticLayerKey, GraphSemanticLayerMeta> = {
+  "scope": {
+    "label": "Scope",
+    "column": 0
+  },
   "user": {
-    "label": "User"
+    "label": "User",
+    "column": 1
   },
   "identity": {
-    "label": "Identity"
+    "label": "Identity",
+    "column": 6
   },
   "app": {
-    "label": "Application"
+    "label": "Application",
+    "column": 2
   },
   "api_gateway": {
-    "label": "API / Gateway"
+    "label": "API / Gateway",
+    "column": 2
   },
   "orchestration": {
-    "label": "Orchestration"
+    "label": "Orchestration",
+    "column": 4
   },
   "mcp_server": {
-    "label": "MCP Server"
+    "label": "MCP Server",
+    "column": 5
   },
   "tool": {
-    "label": "Tool"
+    "label": "Tool",
+    "column": 6
   },
   "package": {
-    "label": "Package"
+    "label": "Package",
+    "column": 7
   },
   "runtime_evidence": {
-    "label": "Runtime Evidence"
+    "label": "Runtime Evidence",
+    "column": 7
   },
   "asset": {
-    "label": "Asset"
+    "label": "Asset",
+    "column": 7
   },
   "infra": {
-    "label": "Infrastructure"
+    "label": "Infrastructure",
+    "column": 3
   },
   "finding": {
-    "label": "Finding"
+    "label": "Finding",
+    "column": 7
   },
   "code": {
-    "label": "Code"
+    "label": "Code",
+    "column": 3
   },
   "ci": {
-    "label": "CI/CD"
+    "label": "CI/CD",
+    "column": 3
   },
 };
 
@@ -168,7 +189,7 @@ export const GRAPH_NODE_KIND_META: Record<GraphNodeKindKey, GraphNodeKindMeta> =
     "label": "Account",
     "color": "#0f766e",
     "shape": "square",
-    "layer": "identity",
+    "layer": "scope",
     "icon": "square",
     "category_uid": 3,
     "class_uid": 3001
@@ -321,7 +342,7 @@ export const GRAPH_NODE_KIND_META: Record<GraphNodeKindKey, GraphNodeKindMeta> =
     "label": "Environment",
     "color": "#9ca3af",
     "shape": "square",
-    "layer": "infra",
+    "layer": "scope",
     "icon": "square",
     "category_uid": 0,
     "class_uid": 0
@@ -357,7 +378,7 @@ export const GRAPH_NODE_KIND_META: Record<GraphNodeKindKey, GraphNodeKindMeta> =
     "label": "Fleet",
     "color": "#6b7280",
     "shape": "square",
-    "layer": "infra",
+    "layer": "scope",
     "icon": "square",
     "category_uid": 5,
     "class_uid": 4001
@@ -411,7 +432,7 @@ export const GRAPH_NODE_KIND_META: Record<GraphNodeKindKey, GraphNodeKindMeta> =
     "label": "Organization",
     "color": "#115e59",
     "shape": "square",
-    "layer": "identity",
+    "layer": "scope",
     "icon": "square",
     "category_uid": 3,
     "class_uid": 3001
@@ -438,7 +459,7 @@ export const GRAPH_NODE_KIND_META: Record<GraphNodeKindKey, GraphNodeKindMeta> =
     "label": "Provider",
     "color": "#d1d5db",
     "shape": "square",
-    "layer": "infra",
+    "layer": "scope",
     "icon": "square",
     "category_uid": 0,
     "class_uid": 0
