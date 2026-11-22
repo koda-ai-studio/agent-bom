@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { Fragment, useEffect, useRef, type ReactNode } from "react";
 import { Handle, Position, useNodeId, useUpdateNodeInternals } from "@xyflow/react";
 import { FolderGit2 } from "lucide-react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
@@ -26,18 +26,34 @@ const GLYPH = "calc(var(--graph-node-glyph-size, 56px) * 0.7)";
 const ICON = "calc(var(--graph-node-icon-size, 28px) * 0.7)";
 const META = { fontSize: "var(--graph-node-meta-size, 12px)" };
 
-const TOKEN_LIMIT = 24, PROSE_LIMIT = 36;
+const PROSE_LIMIT = 36;
 
 /** Canvas name: an image digest reads as its short tail; everything else is kept whole
  * and wraps. The full name stays in the title and drawer. */
 export function canvasName(name: string): string {
   const digest = name.match(/^(.*)@sha256:([0-9a-f]{8,})$/i);
   const base = digest ? digest[1]! : name, suffix = digest ? ` @ ${digest[2]!.slice(-8)}` : "";
-  // Names wrap to two lines and clamp only when they truly do not fit; a single unbroken token
-  // past 24 characters keeps its two ends, since it cannot wrap at a word.
-  const longestToken = Math.max(...base.split(/[\s-]+/).map(token => token.length));
-  if (longestToken > TOKEN_LIMIT) return `${base.slice(0, 12)}…${base.slice(-10)}${suffix}`;
   return base + suffix;
+}
+
+/** On a phone the caption is one column beside the glyph; on a desktop its lines sit directly under it. */
+function CaptionBox({ phone, children }: { phone: boolean; children: ReactNode }) {
+  return phone ? <div className="min-w-0 flex-1">{children}</div> : <>{children}</>;
+}
+
+/** Desktop: glyph above a centred caption. Phone: the caption beside the glyph, facing away from the centre line. */
+function phoneLayoutClass(data: LineageNodeData): string {
+  if (!data.phoneLayout) return "mx-auto w-fit flex-col items-center text-center";
+  return data.phoneSide === "left" ? "w-full flex-row-reverse items-center gap-1.5 text-right" : "w-full flex-row items-center gap-1.5 text-left";
+}
+
+/** Names wrap only between words and never inside one: an identifier (a CVE id, a tool
+ * name) stays on one line and ends in an ellipsis rather than splitting at a hyphen or underscore. */
+function NameWords({ text, hidden }: { text: string; hidden: boolean }) {
+  const words = text.split(" ");
+  if (words.length === 1) return <span aria-hidden={hidden || undefined} className="block max-w-full truncate">{text}</span>;
+  return <span aria-hidden={hidden || undefined}>{words.map((word, index) => <Fragment key={index}>{index ? " " : ""}
+    <span className="inline-block max-w-full truncate whitespace-nowrap align-top">{word}</span></Fragment>)}</span>;
 }
 
 /** A prose finding title (a sentence, not an identifier) previews in about two lines, cut at a word. */
@@ -128,9 +144,9 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
     ...(data.readingConnections ?? []).map(summary => `${summary.relationship === "hosts" ? "Hosts" : "Contains"} ${summary.label} in this view`)].filter(Boolean).join(" · ");
   return <div title={tooltip} data-graph-entity="true" data-compact-node data-evidence-flow={data.evidenceFlow || undefined} data-finding-owner={data.readingOwner}
     data-rollup-container={data.attributes?.rollup_is_container === true ? "true" : undefined}
-    style={{ maxWidth: "var(--graph-node-card-width, 200px)" }} className={`relative mx-auto flex w-fit flex-col items-center text-center transition-opacity ${data.dimmed ? "opacity-25" : ""}`}>
+    style={{ maxWidth: "var(--graph-node-card-width, 200px)" }} className={`relative flex transition-opacity ${data.dimmed ? "opacity-25" : ""} ${phoneLayoutClass(data)}`}>
     <div ref={glyphRef} data-severity-ring={severity} style={{ width: GLYPH, height: GLYPH }}
-      className={`graph-entity-glyph relative flex items-center justify-center rounded-full border-2 ${borderClass} ${bgClass} ${data.highlighted ? `ring-2 ring-offset-2 ring-offset-[var(--graph-canvas)] ${ringClass}` : ""}`}>
+      className={`graph-entity-glyph relative flex shrink-0 items-center justify-center rounded-full border-2 ${borderClass} ${bgClass} ${data.highlighted ? `ring-2 ring-offset-2 ring-offset-[var(--graph-canvas)] ${ringClass}` : ""}`}>
       {severity && <span className="sr-only" data-finding-severity={severity}>{`${severity} severity`}</span>}
       <CompactHandles data={data} source={source} target={target} />
       <GraphPackageGlyph ecosystem={data.nodeType === "package" ? badges.find(badge => badge.kind === "ecosystem")?.value : undefined}
@@ -140,13 +156,15 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
       <FindingDisclosure data={data} />
       {held && <span data-testid="graph-held-connections" className="sr-only">{held}</span>}
     </div>
-    <p data-semantic-name title={fullTitle} className="mt-[0.3em] line-clamp-2 max-w-full font-semibold leading-[1.15] text-foreground [overflow-wrap:anywhere]" style={{ fontSize: "calc(var(--graph-node-label-size, 14px) * 0.88)" }}>
-      {canvasName(preview) === fullTitle ? <span>{fullTitle}</span> : <span aria-hidden="true">{canvasName(preview)}</span>}
+    <CaptionBox phone={Boolean(data.phoneLayout)}>
+    <p data-semantic-name title={fullTitle} className="mt-[0.3em] line-clamp-2 max-w-full font-semibold leading-[1.15] text-foreground" style={{ fontSize: "calc(var(--graph-node-label-size, 14px) * 0.88)" }}>
+      <NameWords text={canvasName(preview)} hidden={canvasName(preview) !== fullTitle} />
     </p>
     {canvasName(preview) !== fullTitle && <span className="sr-only">{fullTitle}</span>}
     <span data-graph-caption data-entity-role className="block max-w-full truncate leading-[1.15] text-ink-secondary" style={META}>
       {scope ? scope.visible : typeLine(data, fullTitle)}
     </span>
     {scope && <span className="sr-only">{scope.spoken}</span>}
+    </CaptionBox>
   </div>;
 }

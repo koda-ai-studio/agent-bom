@@ -102,8 +102,21 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
   const owners = contextOwners(visible, edges, onPath);
   const images = workloadImageContext(visible, edges);
   for (const [id, owner] of images.owners) if (!onPath.has(id)) owners.set(id, owner);
-  const { positions, arcs, behind } = compactLayout({ ids: visible.map(node => node.id), links: drawn, column: id => columns.get(id) ?? 0, containment,
+  const { positions, arcs, behind, lanes, gutters } = compactLayout({ ids: visible.map(node => node.id), links: drawn, column: id => columns.get(id) ?? 0, containment,
+    levelLeaf: id => { const found = byId.get(id); return Boolean(found) && semanticLayer(found!) === "finding"; },
     spine: primary, attached: attachedRanks(visible, drawn, columns) });
+  // Lane slots as absolute x edges and heights relative to the source row, in drawing order.
+  const laneFor = (id: string, from: { x: number; y: number } | undefined, reverse: boolean, to?: { x: number; y: number }) => {
+    const slots = lanes.get(id);
+    if (!slots || !from || !to) return undefined;
+    const ordered = reverse ? [...slots].reverse().map(slot => ({ ...slot, left: slot.right, right: slot.left })) : slots;
+    // Level out to the source card's edge before turning, and level in from the target card's edge,
+    // so the turn never runs under either card's own caption.
+    const sourceEdge = reverse ? from.x : from.x + COMPACT_NODE_WIDTH, targetEdge = reverse ? to.x + COMPACT_NODE_WIDTH : to.x;
+    return [{ enter: sourceEdge, leave: sourceEdge, dy: 0 },
+      ...ordered.map(slot => ({ enter: slot.left, leave: slot.right, dy: slot.y - from.y })),
+      { enter: targetEdge, leave: targetEdge, dy: to.y - from.y }];
+  };
   const pathPairs = new Set(primary.slice(1).map((id, index) => `${primary[index]}\u0000${id}`));
   return {
     nodes: nodes.map(node => ({ ...node, position: positions.get(node.id) ?? node.position,
@@ -132,7 +145,7 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
       const marker = (value: Edge["markerEnd"]) => value && typeof value === "object" ? { ...value, color, width: 14, height: 14 } : value;
       return { ...edge, type: "compact", animated: false, ...(edge.markerEnd ? { markerEnd: marker(edge.markerEnd)! } : {}),
         ...(edge.markerStart ? { markerStart: marker(edge.markerStart)! } : {}), sourceHandle: reverse ? "context" : null, targetHandle: reverse || sameRank ? "context" : null,
-        data: { ...edge.data, semanticLayout: true, individualLabel: true, arcDy: arcs.get(edge.id), ...(quietUntilFocus ? { quietUntilFocus } : {}), passesBehind: behind.has(edge.id) || undefined, quietLabel: edge.data?.isClusterEdge !== true,
+        data: { ...edge.data, semanticLayout: true, individualLabel: true, arcDy: arcs.get(edge.id), lanePoints: laneFor(edge.id, from, reverse, to), gutterX: gutters.get(edge.id), ...(quietUntilFocus ? { quietUntilFocus } : {}), passesBehind: behind.has(edge.id) || undefined, quietLabel: edge.data?.isClusterEdge !== true,
           pathEmphasis: pathPairs.has(`${edge.source}\u0000${edge.target}`) || edge.data?.pathEmphasis === true } };
     }),
   };

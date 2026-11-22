@@ -17,8 +17,33 @@ function control(point: Point, position: Position, offset: number): Point {
 }
 
 /** One smooth curve between the two handles; never routed through a gutter. */
+type LaneSlot = { enter: number; leave: number; dy: number };
+const isLane = (value: unknown): value is LaneSlot[] => Array.isArray(value) && value.length > 0
+  && value.every(slot => typeof slot?.enter === "number" && typeof slot?.leave === "number" && typeof slot?.dy === "number");
+
+/** A link no single curve can route clear of cards: level through each reserved lane slot, joined by smooth turns in the gaps. */
+function laneCurve(source: Point, target: Point, slots: LaneSlot[]) {
+  const points = [source, ...slots.flatMap(slot => [{ x: slot.enter, y: source.y + slot.dy }, { x: slot.leave, y: source.y + slot.dy }]), target];
+  const segments = points.slice(1).map((q, i) => {
+    const p = points[i]!, half = (q.x - p.x) / 2;
+    return p.y === q.y ? `L ${q.x},${q.y}` : `C ${p.x + half},${p.y} ${q.x - half},${q.y} ${q.x},${q.y}`;
+  });
+  const m = Math.floor(points.length / 2);
+  return { path: `M ${source.x},${source.y} ${segments.join(" ")}`, mid: { x: (points[m - 1]!.x + points[m]!.x) / 2, y: (points[m - 1]!.y + points[m]!.y) / 2 } };
+}
+
+/** An adjacent link with no clear curve: level out of its source, down the empty gap between ranks, level into its target. */
+function gutterCurve(source: Point, target: Point, x: number) {
+  const dy = target.y - source.y, r = Math.min(Math.abs(dy) / 2, Math.abs(x - source.x), Math.abs(target.x - x), 40) * Math.sign(dy || 1);
+  const sx = Math.sign(x - source.x) || 1, tx = Math.sign(target.x - x) || 1, ar = Math.abs(r);
+  return { path: `M ${source.x},${source.y} L ${x - sx * ar},${source.y} Q ${x},${source.y} ${x},${source.y + r} L ${x},${target.y - r} Q ${x},${target.y} ${x + tx * ar},${target.y} L ${target.x},${target.y}`,
+    mid: { x, y: (source.y + target.y) / 2 } };
+}
+
 export function compactEdgeCurve(props: Pick<EdgeProps, "sourceX" | "sourceY" | "targetX" | "targetY" | "sourcePosition" | "targetPosition"> & { data?: EdgeProps["data"] }) {
   const source = { x: props.sourceX, y: props.sourceY }, target = { x: props.targetX, y: props.targetY };
+  if (isLane(props.data?.lanePoints) && !props.data?.phoneLayout) return laneCurve(source, target, props.data.lanePoints);
+  if (typeof props.data?.gutterX === "number" && !props.data.phoneLayout) return gutterCurve(source, target, props.data.gutterX);
   // Each end leaves along its handle: a side handle by 45% of the horizontal run, a top/bottom handle by half the vertical run.
   const sameSide = props.sourcePosition === props.targetPosition;
   const dx = Math.abs(target.x - source.x), dy = Math.abs(target.y - source.y);
@@ -46,6 +71,20 @@ function InspectLabel({ id, at, relationship, text, aggregate, inspecting }: { i
   </EdgeLabelRenderer>;
 }
 
+const STUB_LENGTH = 40;
+
+/** A link with an end outside the frame: a short stub leaving the visible end along its handle. */
+function stubCurve(props: Pick<EdgeProps, "sourceX" | "sourceY" | "targetX" | "targetY" | "sourcePosition" | "targetPosition">, offscreen: number, length: number) {
+  const source = { x: props.sourceX, y: props.sourceY }, target = { x: props.targetX, y: props.targetY };
+  if (offscreen === 3) return { path: `M ${source.x},${source.y}`, mid: source };
+  if (offscreen === 2) {
+    const end = control(source, props.sourcePosition, length);
+    return { path: `M ${source.x},${source.y} L ${end.x},${end.y}`, mid: end };
+  }
+  const start = control(target, props.targetPosition, length);
+  return { path: `M ${start.x},${start.y} L ${target.x},${target.y}`, mid: start };
+}
+
 /** Relationship verb and evidence appear on hover, focus or selection only. */
 export function CompactRelationshipEdge(props: EdgeProps) {
   const [hovered, setHovered] = useState(false);
@@ -60,20 +99,31 @@ export function CompactRelationshipEdge(props: EdgeProps) {
   }, []);
   const relationship = typeof props.data?.relationship === "string" ? props.data.relationship : "";
   const family = edgeFamily(relationship);
-  const { path, mid } = compactEdgeCurve(props);
-  const spine = props.data?.pathEmphasis === true;
   const inspecting = hovered || focused || Boolean(props.selected);
-  // A roll-up link stands for many folded relationships; its count reads at rest, as a summary, not a verb.
-  const aggregate = Boolean(props.data?.aggregate) && typeof props.label === "string";
-  const text = (inspecting || aggregate) && props.data?.labelVisibility !== "hide"
-    ? props.label ?? (relationship ? relationshipEdgeLabelText(relationship, props.data) : null) : null;
-  const style = { stroke: edgeFamilyColor(family), strokeWidth: spine ? 2.4 : inspecting ? 2 : 1.4, opacity: spine || inspecting ? 1 : props.data?.passesBehind ? 0.4 : 0.85,
+  // Which ends lie outside the current frame (1 source, 2 target), so a link to an off-screen node
+  // reads as a short stub at its visible end instead of a full-height line across the frame.
+  const offscreen = useStore(state => {
+    const [x, y, zoom] = state.transform;
+    const out = (px: number, py: number) => { const sx = px * zoom + x, sy = py * zoom + y; return sx < -8 || sy < -8 || sx > state.width + 8 || sy > state.height + 8; };
+    return (out(props.sourceX, props.sourceY) ? 1 : 0) + (out(props.targetX, props.targetY) ? 2 : 0);
+  });
+  const zoom = useStore(state => offscreen ? state.transform[2] : 1);
+  const stubbed = offscreen > 0 && !inspecting;
+  const { path, mid } = stubbed ? stubCurve(props, offscreen, STUB_LENGTH / Math.max(zoom, 0.05)) : compactEdgeCurve(props);
+  const spine = props.data?.pathEmphasis === true;
+  // A roll-up or folded-group link stands for many relationships; its count reads at rest, as a summary.
+  const aggregate = Boolean(props.data?.aggregate || props.data?.isClusterEdge) && typeof props.label === "string";
+  const full = props.label ?? (relationship ? relationshipEdgeLabelText(relationship, props.data) : null);
+  // At rest a folded group link shows only its count (×N); its relationship and evidence read on inspection.
+  const count = !inspecting && props.data?.isClusterEdge && typeof full === "string" ? full.match(/×\d+/)?.[0] ?? null : null;
+  const text = (inspecting || aggregate) && props.data?.labelVisibility !== "hide" ? count ?? full : null;
+  const style = { stroke: edgeFamilyColor(family), strokeWidth: spine ? 2.4 : inspecting ? 2 : 1.4, opacity: spine || inspecting ? 1 : stubbed || props.data?.passesBehind ? 0.4 : 0.85,
     strokeDasharray: edgeIsDashed(family, props.data) ? "6 4" : undefined, fill: "none" };
-  return <g ref={ref} data-relationship={relationship || undefined} data-edge-family={family} data-label-disclosure={relationship === "vulnerable_to" ? "on-demand" : undefined} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+  return <g ref={ref} data-relationship={relationship || undefined} data-edge-family={family} data-edge-stub={stubbed || undefined} data-label-disclosure={relationship === "vulnerable_to" ? "on-demand" : undefined} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
     {typeof props.data?.hoverDescription === "string" && <title>{props.data.hoverDescription}</title>}
     <BaseEdge id={props.id} path={path} style={style}
       {...(props.markerStart ? { markerStart: props.markerStart } : {})}
-      {...(props.markerEnd ? { markerEnd: props.markerEnd } : {})}
+      {...(props.markerEnd && !(stubbed && offscreen & 2) ? { markerEnd: props.markerEnd } : {})}
       {...(props.interactionWidth !== undefined ? { interactionWidth: props.interactionWidth } : {})} />
     {text != null && <InspectLabel id={props.id} at={mid} relationship={relationship} text={text} aggregate={aggregate} inspecting={inspecting} />}
   </g>;

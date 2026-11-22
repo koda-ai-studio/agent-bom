@@ -47,7 +47,7 @@ it("keeps privilege and sensitive-data chips off the canvas and marks KEV with a
     attributes: { admin_equivalent: true, data_classification: "confidential" }, isKev: true }} /></ReactFlowProvider>);
   expect(container.querySelector("[data-semantic-badges]")).toBeNull();
   expect(container.querySelector('[data-compact-marker="kev"]')).toHaveTextContent("KEV-listed");
-  expect(screen.getByText("Customer data")).toBeInTheDocument();
+  expect(container.querySelector("[data-semantic-name]")).toHaveTextContent("Customer data");
 });
 
 it("shows a supplied risk score without claiming an undocumented assessment", () => {

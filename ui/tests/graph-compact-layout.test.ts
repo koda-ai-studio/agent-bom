@@ -75,6 +75,19 @@ describe("compact attack-path layout", () => {
     expect(result.edges.every(link => link.type === "compact" && link.data?.lanePoints === undefined)).toBe(true);
   });
 
+  it("keeps each finding on its package's row, in package order, so finding links never cross", () => {
+    const packages = ["a", "b", "c"].map(id => node(`pkg-${id}`, "package"));
+    const findings = ["a1", "a2", "b1", "c1"].map(id => node(`cve-${id}`, "vulnerability"));
+    const server = node("server", "server");
+    const edges = [...packages.map(p => edge("server", p.id, "depends_on")), ...findings.map(f => edge(`pkg-${f.id.slice(4, 5)}`, f.id, "vulnerable_to"))];
+    const result = semanticGraphLayout([server, ...packages, ...findings], edges);
+    const y = (id: string) => at(result, id).y;
+    for (const p of ["a", "b", "c"]) expect(y(`cve-${p}1`)).toBeGreaterThanOrEqual(y(`pkg-${p}`));
+    const order = ["cve-a1", "cve-a2", "cve-b1", "cve-c1"].map(y);
+    expect(order).toEqual([...order].sort((m, n) => m - n));
+    expect(order.map((value, i) => [value, ["pkg-a", "pkg-a", "pkg-b", "pkg-c"].map(y)[i]!]).every(([cve, pkg]) => cve! >= pkg!)).toBe(true);
+  });
+
   it("never stacks two nodes of one rank closer than the row gap", () => {
     const servers = Array.from({ length: 5 }, (_, i) => node(`s${i}`, "server"));
     const agents = [node("a1", "agent"), node("a2", "agent")];

@@ -41,7 +41,8 @@ function portraitRows(visible: Node<LineageNodeData>[], edges: Edge[]) {
   return rows;
 }
 
-const SINGLE = PORTRAIT_COLUMN / 2;
+/** A trunk card starts where the left column ends, so its glyph (at its left edge) sits on the centre line. */
+const SINGLE = PORTRAIT_CARD_WIDTH;
 /** A pair member's side facing the centre gap between the two columns. */
 const inner = (point: Point) => point.x < SINGLE ? "phone-right" : "phone-left";
 
@@ -67,14 +68,18 @@ export function graphPortraitLayout(nodes: Node<LineageNodeData>[], edges: Edge[
   const visible = nodes.filter(node => !node.hidden);
   const positions = new Map<string, Point>();
   // Trunk hops sit on the centre line; branch rows keep it clear for links that pass them.
-  portraitRows(visible, edges).forEach(({ ids, trunk }, index) => ids.forEach((id, slot) =>
-    positions.set(id, { x: trunk ? SINGLE : slot * PORTRAIT_COLUMN, y: index * PORTRAIT_ROW })));
+  const sides = new Map<string, "trunk" | "left" | "right">();
+  portraitRows(visible, edges).forEach(({ ids, trunk }, index) => ids.forEach((id, slot) => {
+    positions.set(id, { x: trunk ? SINGLE : slot * PORTRAIT_COLUMN, y: index * PORTRAIT_ROW });
+    sides.set(id, trunk ? "trunk" : slot ? "right" : "left");
+  }));
   return {
     nodes: nodes.map(node => ({ ...node, position: positions.get(node.id) ?? node.position,
       style: { ...node.style, width: PORTRAIT_CARD_WIDTH, "--graph-node-card-width": `${PORTRAIT_CARD_WIDTH}px`, "--graph-node-glyph-size": "56px",
         "--graph-context-glyph-size": "56px", "--graph-node-icon-size": "28px", "--graph-context-icon-size": "28px",
         "--graph-node-label-size": "16px", "--graph-node-meta-size": "14px" },
-      data: { ...node.data, phoneLayout: true } })),
+      // Labels face away from the centre line, so links running down it never cross a caption.
+      data: { ...node.data, phoneLayout: true, phoneSide: sides.get(node.id) } })),
     edges: edges.map((edge): Edge => {
       const from = positions.get(edge.source), to = positions.get(edge.target);
       if (!from || !to) return edge;

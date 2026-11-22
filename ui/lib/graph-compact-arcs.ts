@@ -8,8 +8,8 @@ type Link = { id?: string; source: string; target: string };
 /** Horizontal reach of each control point, as a share of the link's horizontal span. */
 export const ARC_REACH = 0.45;
 /** A card around its row: a narrow glyph on the row and a wider caption hanging below it. */
-const CARD_ABOVE = 60, GLYPH_BELOW = 50, GLYPH_HALF_WIDTH = 50, CARD_BELOW = 185, CARD_HALF_WIDTH = 112;
-const MAX_DETOUR = 1.5;
+const CARD_ABOVE = 60, GLYPH_BELOW = 28, GLYPH_HALF_WIDTH = 50, CARD_BELOW = 185, CARD_HALF_WIDTH = 112;
+const MAX_DETOUR = 1.58;
 /** How far a bent link may leave the rows of its own two cards: up to their glyph tops, down to their captions. */
 const SPAN_ABOVE = 100, SPAN_BELOW = 200;
 /** Search budget: at most this many control heights per link, and no bending past overview size. */
@@ -34,10 +34,16 @@ function detour(points: Point[]): number {
   return chord ? drawn / chord : 1;
 }
 
-function blocked(points: Point[], cards: Point[], scale = 1): boolean {
-  return points.some(p => cards.some(card => {
+function inCaption(p: Point, card: Point, scale = 1): boolean {
+  const dx = Math.abs(p.x - card.x) / scale, dy = (p.y - card.y) / scale;
+  return dx < CARD_HALF_WIDTH && dy >= GLYPH_BELOW && dy < CARD_BELOW;
+}
+
+/** Whether a sampled curve crosses another card, or the caption under one of its own two cards. */
+function blocked(points: Point[], cards: Point[], scale = 1, ends: Point[] = []): boolean {
+  return points.some(p => ends.some(end => inCaption(p, end, scale)) || cards.some(card => {
     const dx = Math.abs(p.x - card.x) / scale, dy = (p.y - card.y) / scale;
-    return (dx < GLYPH_HALF_WIDTH && dy > -CARD_ABOVE && dy < GLYPH_BELOW) || (dx < CARD_HALF_WIDTH && dy >= GLYPH_BELOW && dy < CARD_BELOW);
+    return (dx < GLYPH_HALF_WIDTH && dy > -CARD_ABOVE && dy < GLYPH_BELOW) || inCaption(p, card, scale);
   }));
 }
 
@@ -52,7 +58,7 @@ export function linkArcs(links: readonly Link[], positions: ReadonlyMap<string, 
     const [left, right] = from.x < to.x ? [from, to] : [to, from];
     const cards = all.filter(([id, p]) => id !== link.source && id !== link.target && p.x > left.x - CARD_HALF_WIDTH && p.x < right.x + CARD_HALF_WIDTH).map(([, p]) => p);
     const dense = all.length > DENSE_CARDS;
-    if (!cards.length || !blocked(cubic(left, right, left.y, right.y), cards, dense ? DENSE_MARGIN : 1)) continue;
+    if (!blocked(cubic(left, right, left.y, right.y), cards, dense ? DENSE_MARGIN : 1, [left, right])) continue;
     if (dense) { behind.add(link.id); continue; }
     // Keep the bend within its own two cards' height, so it never reads as a loop around the graph.
     const low = Math.min(left.y, right.y) - SPAN_ABOVE, high = Math.max(left.y, right.y) + SPAN_BELOW;
@@ -64,7 +70,7 @@ export function linkArcs(links: readonly Link[], positions: ReadonlyMap<string, 
       const cost = Math.abs(c1 - left.y) + Math.abs(c2 - right.y);
       if (best && cost >= best.cost) continue;
       const points = cubic(left, right, c1, c2);
-      if (points.some(p => p.y < low || p.y > high) || detour(points) > MAX_DETOUR || blocked(points, cards)) continue;
+      if (points.some(p => p.y < low || p.y > high) || detour(points) > MAX_DETOUR || blocked(points, cards, 1, [left, right])) continue;
       best = { c1, c2, cost };
     }
     // No single curve clears every card: the link is drawn faint, passing behind them.

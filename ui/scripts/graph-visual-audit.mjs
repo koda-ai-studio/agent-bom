@@ -131,6 +131,13 @@ export function auditGraphGrammar({ margin = 48, minGlyph = 32, minFill = 0.6, m
   }, { node: null, d: Infinity }).node;
   const violations = {};
   const add = (key, item) => (violations[key] ??= []).push(item);
+  // Rendered caption text (names and type lines), measured line by line: a line must never cross label text.
+  const captions = [...document.querySelectorAll(".react-flow__node")].filter(node => getComputedStyle(node).visibility !== "hidden").flatMap(node =>
+    [...node.querySelectorAll("[data-semantic-name], [data-entity-role]")].flatMap(element => {
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      return [...range.getClientRects()].filter(rect => rect.width > 1 && rect.height > 1).map(rect => ({ id: node.getAttribute("data-id"), rect }));
+    }));
   const diagnosticChips = [...document.querySelectorAll(".react-flow__node *")].filter(el => el.children.length === 0 && /semantic layer unavailable/i.test(el.textContent ?? ""));
   if (diagnosticChips.length) add("diagnosticChips", diagnosticChips.length);
   for (const element of document.querySelectorAll(".react-flow__edge")) {
@@ -151,6 +158,13 @@ export function auditGraphGrammar({ margin = 48, minGlyph = 32, minFill = 0.6, m
     const through = nodes.filter(node => node !== source && node !== target && node.glyph
       && points.some(p => inside({ left: node.glyph.left + 4, right: node.glyph.right - 4, top: node.glyph.top + 4, bottom: node.glyph.bottom - 4 }, p)));
     if (through.length) add("throughNodes", `${id} through ${through.map(node => node.id).join(",")}`);
+    const steps = Math.max(2, Math.ceil(length / 3));
+    const fine = Array.from({ length: steps + 1 }, (_, i) => {
+      const q = path.getPointAtLength(length * i / steps);
+      return { x: matrix.a * q.x + matrix.c * q.y + matrix.e, y: matrix.b * q.x + matrix.d * q.y + matrix.f };
+    });
+    const crossed = [...new Set(captions.filter(({ rect }) => fine.some(p => p.x > rect.left + 1 && p.x < rect.right - 1 && p.y > rect.top + 1 && p.y < rect.bottom - 1)).map(caption => caption.id))];
+    if (crossed.length) add("throughCaptions", `${id} through ${crossed.join(",")}`);
     if (points.some(p => inside(canvas, p)) && ![source, target].every(node => overlaps(node.box, canvas))) add("offscreenEndpoints", id);
     // Drawn length against the straight distance between the endpoints: a detour or loop-back inflates it.
     const drawn = points.slice(1).reduce((sum, p, i) => sum + Math.hypot(p.x - points[i].x, p.y - points[i].y), 0);

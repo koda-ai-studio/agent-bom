@@ -23,7 +23,7 @@ export const COMPACT_LANE_CLEARANCE = 170;
 /** Ordered items keep their order and a minimum gap, settling as close to
  * their desired rows as the gap allows; a fixed item stays on row zero.
  * `lane` items are link lanes, which need less room than a card. */
-export function packRank(items: readonly (PackItem & { lane?: boolean })[], gap: number): Map<string, number> {
+export function packRank(items: readonly (PackItem & { lane?: boolean })[], gap: number, forwardOnly = false): Map<string, number> {
   const out = new Map<string, number>();
   const between = (a: { lane?: boolean } | undefined, b: { lane?: boolean } | undefined) =>
     a?.lane && b?.lane ? COMPACT_LANE_GAP : a?.lane || b?.lane ? Math.min(gap, COMPACT_LANE_CLEARANCE) : gap;
@@ -35,7 +35,8 @@ export function packRank(items: readonly (PackItem & { lane?: boolean })[], gap:
     const forward: number[] = [], backward: number[] = [];
     desired.forEach((d, i) => forward.push(i ? Math.max(d, forward[i - 1]! + between(list[i - 1], list[i])) : d));
     for (let i = desired.length - 1; i >= 0; i--) backward[i] = i === desired.length - 1 ? desired[i]! : Math.min(desired[i]!, backward[i + 1]! - between(list[i], list[i + 1]));
-    return list.map((item, i) => [item.id, Math.max((forward[i]! + backward[i]!) / 2, floor[i]!)] as const);
+    // Forward only: each item keeps its own row unless an earlier one pushes it down; nothing moves up.
+    return list.map((item, i) => [item.id, Math.max(forwardOnly ? forward[i]! : (forward[i]! + backward[i]!) / 2, floor[i]!)] as const);
   };
   if (spine < 0) { for (const [id, y] of spread(items)) out.set(id, y); return out; }
   const fixed = items[spine]!;
@@ -80,6 +81,8 @@ export type CompactInput = {
   /** Backend column for each id (fractional keys place display nodes between columns). */
   column: (id: string) => number;
   spine: readonly string[];
+  /** Leaves that sit level with their parent (findings), rather than fanning around it. */
+  levelLeaf?: (id: string) => boolean;
   /** Parent and child of a link inside one column, or null for a peer link that splits no rank. */
   containment?: (link: Link) => readonly [string, string] | null;
   /** Display nodes placed relative to another node's rank: a whole offset joins a later column's rank, a fraction sits between ranks. */
@@ -168,12 +171,12 @@ export function compactPositions(input: CompactInput): Map<string, Point> {
 }
 
 /** Positions, plus an arc height for each long link whose direct curve would still cross a card. */
-export function compactLayout(input: CompactInput): { positions: Map<string, Point>; arcs: Map<string, [number, number]>; behind: Set<string> } {
+export function compactLayout(input: CompactInput): { positions: Map<string, Point>; arcs: Map<string, [number, number]>; behind: Set<string>; lanes: Map<string, { left: number; right: number; y: number }[]>; gutters: Map<string, number> } {
   const { ids, links, spine } = input;
   const rank = rankKeys(input);
-  if (new Set(rank.values()).size === 1 && ids.length > 2 && ![...neighbourMap(ids, links).values()].some(list => list.length)) return { positions: gridPositions(ids), arcs: new Map(), behind: new Set() };
+  if (new Set(rank.values()).size === 1 && ids.length > 2 && ![...neighbourMap(ids, links).values()].some(list => list.length)) return { positions: gridPositions(ids), arcs: new Map(), behind: new Set(), lanes: new Map(), gutters: new Map() };
   const onSpine = new Set(spine.filter(id => rank.has(id)));
-  const { lanes, dummies } = laneLinks(links, rank, onSpine);
+  const { lanes, dummies, chains } = laneLinks(links, rank, onSpine);
   for (const [id, lane] of dummies) rank.set(id, lane.rank);
   const all = [...ids, ...dummies.keys()];
   const neighbours = neighbourMap(all, lanes);
@@ -212,10 +215,15 @@ export function compactLayout(input: CompactInput): { positions: Map<string, Poi
     let items: (PackItem & { lane?: boolean })[] = rest.map(id => ({ id, desired: desired.get(id)!, lane: dummies.has(id) }));
     if (spineId) {
       const above: typeof items = [], below: typeof items = [];
-      for (const item of items) (key.get(item.id)! < 0 || (key.get(item.id) === 0 && !item.lane && above.length < below.length) ? above : below).push(item);
+      // On a tie the upper side fills first: captions hang below glyphs, so a link rising from the spine meets none.
+      for (const item of items) (key.get(item.id)! < 0 || (key.get(item.id) === 0 && !item.lane && above.length <= below.length) ? above : below).push(item);
       items = [...above, { id: spineId, desired: 0, fixed: true, lane: dummies.has(spineId) }, ...below];
     }
-    for (const [id, value] of packRank(items, COMPACT_ROW_GAP)) y.set(id, value);
+    // A rank of pure leaves (findings under their packages) keeps each leaf on its parent's row,
+    // stacking siblings downward, so their links stay level and never cross a neighbour's.
+    const leaves = leftToRight && Boolean(input.levelLeaf) && members.every(id => !dummies.has(id) && input.levelLeaf!(id)
+      && neighbours.get(id)!.length > 0 && neighbours.get(id)!.every(n => rank.get(n)! < r));
+    for (const [id, value] of packRank(items, COMPACT_ROW_GAP, leaves)) y.set(id, value);
   };
   // Ordering sweeps in both directions, then the final left-to-right row assignment.
   for (const leftToRight of [true, false, true, false, true]) for (const r of leftToRight ? order : [...order].reverse()) placeRank(r, leftToRight);
@@ -224,7 +232,23 @@ export function compactLayout(input: CompactInput): { positions: Map<string, Poi
   const point = (id: string) => ({ x: rankIndex.get(rank.get(id)!)! * gap, y: Math.round(y.get(id)!) });
   for (const r of order) transposeRank(byRank.get(r)!.filter(id => !dummies.has(id)), r, rank, neighbours, y, onSpine);
   const positions = new Map(ids.map(id => [id, point(id)]));
-  return { positions, ...linkArcs(links, positions) };
+  const { arcs, behind } = linkArcs(links, positions);
+  // A link no single curve can route clear of cards runs through its reserved lane slots instead.
+  const laned = new Map<string, { left: number; right: number; y: number }[]>();
+  const gutters = new Map<string, number>();
+  for (const id of behind) {
+    const chain = chains.get(id);
+    if (!chain?.length) {
+      // An adjacent link with no clear curve turns down the empty gap between the two ranks.
+      const link = links.find(item => item.id === id);
+      const from = link && positions.get(link.source), to = link && positions.get(link.target);
+      if (from && to && from.x !== to.x) { gutters.set(id, Math.min(from.x, to.x) + COMPACT_NODE_WIDTH + (gap - COMPACT_NODE_WIDTH) / 2); behind.delete(id); }
+      continue;
+    }
+    laned.set(id, chain.map(slot => { const at = point(slot); return { left: at.x, right: at.x + COMPACT_NODE_WIDTH, y: at.y }; }));
+    behind.delete(id);
+  }
+  return { positions, arcs, behind, lanes: laned, gutters };
 }
 
 /** Swap neighbouring cards of one rank when that removes crossings with the ranks either side. */

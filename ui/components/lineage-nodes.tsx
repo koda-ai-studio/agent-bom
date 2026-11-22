@@ -51,6 +51,7 @@ export type LineageNodeData = {
   semanticPathIndex?: number | undefined;
   semanticLayout?: boolean | undefined;
   phoneLayout?: boolean | undefined;
+  phoneSide?: "trunk" | "left" | "right" | undefined;
   semanticOwner?: string | undefined;
   evidenceFlow?: boolean;
   /** A reading caveat a flow adds to the card's caption, such as an unmounted token. */
