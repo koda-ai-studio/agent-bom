@@ -1,3 +1,4 @@
+import { GRAPH_SEMANTIC_LAYER_META } from "@/lib/graph-schema.generated";
 import type { Node } from "@xyflow/react";
 import { expect, it, vi } from "vitest";
 import type { LineageNodeData } from "@/components/lineage-nodes";
@@ -62,7 +63,7 @@ it("lays out roll-up entries by their backend layer and preserves their aggregat
     { ...owner.data.rollup!, id: "agent", semantic_layer: "orchestration" },
   ];
   const result = buildRollupFlowGraph(entries);
-  expect(result.nodes.find(node => node.id === "entry")!.position.x).toBe(0);
+  expect(result.nodes.find(node => node.id === "entry")!.position.x).toBe(GRAPH_SEMANTIC_LAYER_META.user.column * 380);
   expect(result.nodes.find(node => node.id === "agent")!.position.x).toBeLessThan(result.nodes.find(node => node.id === "tool")!.position.x);
   expect(result.nodes.every(node => node.data.semanticLayout)).toBe(true);
   expect(result.nodes[0]!.data.rollup?.aggregate).toEqual(owner.data.rollup!.aggregate);

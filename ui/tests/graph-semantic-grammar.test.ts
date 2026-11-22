@@ -1,3 +1,4 @@
+import { GRAPH_SEMANTIC_LAYER_META } from "@/lib/graph-schema.generated";
 import { describe, expect, it } from "vitest";
 import type { Edge, Node } from "@xyflow/react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
@@ -27,7 +28,7 @@ describe("shared semantic graph grammar", () => {
     const entry = node("entry", "container", "container-image");
     entry.data.semanticLayer = "user";
     const { nodes } = graphHierarchyLayout([entry, node("agent", "agent")], []);
-    expect(nodes[0]!.position.x).toBe(0);
+    expect(nodes[0]!.position.x).toBe(GRAPH_SEMANTIC_LAYER_META.user.column * 380);
     expect(nodes[1]!.position.x).toBeGreaterThan(nodes[0]!.position.x);
   });
 
@@ -92,8 +93,8 @@ it("keeps a vertical mobile spine and symmetric desktop sibling lanes", () => {
 it("retains backend columns even when a selected spine traverses them in reverse", () => {
   const nodes = [node("asset", "package"), node("server", "server"), node("tool", "tool")];
   const columns = semanticColumns(nodes, [{ source: "server", target: "tool", data: { relationship: "exposes" } }], ["asset", "server"]);
-  expect(columns.get("server")).toBe(3);
-  expect(columns.get("asset")).toBe(5);
+  expect(columns.get("server")).toBe(GRAPH_SEMANTIC_LAYER_META.mcp_server.column);
+  expect(columns.get("asset")).toBe(GRAPH_SEMANTIC_LAYER_META.package.column);
   expect(columns.get("tool")).toBeGreaterThan(columns.get("server")!);
 });
 
@@ -156,7 +157,7 @@ it("does not move backend columns to match relationship depth", () => {
   workload.data.semanticLayer = "app";
   const identity = node("identity", "credential");
   identity.data.semanticLayer = "identity";
-  expect(semanticColumns([workload, identity], [{ source: "identity", target: "workload" }]).get("workload")).toBe(1);
+  expect(semanticColumns([workload, identity], [{ source: "identity", target: "workload" }]).get("workload")).toBe(GRAPH_SEMANTIC_LAYER_META.app.column);
 });
 
 it("keeps same-layer path hops distinct within their backend column", () => {
