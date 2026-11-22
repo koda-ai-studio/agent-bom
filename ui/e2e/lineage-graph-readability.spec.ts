@@ -1105,7 +1105,7 @@ for (const theme of ["light", "dark"] as const) {
     await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
     await routeGraphPage(page, graph);
     await page.goto(`/graph?capture=1&scan=${scanId}&layers=cloudResource,server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`);
-    await expect(page.locator(".react-flow__node")).toHaveCount(11);
+    await expect(page.locator('.react-flow__node:not([data-id^="display:"])')).toHaveCount(11);
     await settledViewportZoom(page);
     await page.getByRole("button", { name: "Fit all", exact: true }).click();
     await settledViewportZoom(page);

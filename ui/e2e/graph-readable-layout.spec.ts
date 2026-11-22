@@ -212,7 +212,7 @@ for (const theme of ["light", "dark"] as const) test(`reference correlation read
   expect(await cardOverlaps(page)).toEqual([]);
   expect(await edgesThroughNodes(page)).toEqual([]);
   expect(await labelCollisions(page)).toEqual([]);
-  await expect(page.locator(".react-flow__edge-path[marker-end]")).toHaveCount(proof.capture_fixture.graph.edges.length);
+  await expect(page.locator('.react-flow__edge:not([data-id^="display:"]) .react-flow__edge-path[marker-end]')).toHaveCount(proof.capture_fixture.graph.edges.length);
   // The overview keeps all directional relationships without nine competing captions.
   expect(await visibleLabelTexts(page)).toEqual([]);
   const smallestCaption = await page.locator("[data-graph-entity] > p:first-of-type").evaluateAll(labels => {
