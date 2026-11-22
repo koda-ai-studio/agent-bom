@@ -21,7 +21,9 @@ function control(point: Point, position: Position, offset: number): Point {
 const PHONE_SIDE_REACH = 44;
 
 export function compactEdgeCurve(props: Pick<EdgeProps, "sourceX" | "sourceY" | "targetX" | "targetY" | "sourcePosition" | "targetPosition"> & { data?: EdgeProps["data"] }) {
-  const source = { x: props.sourceX, y: props.sourceY }, target = { x: props.targetX, y: props.targetY };
+  // Several links meeting one side of a glyph end a few units apart (the layout's fan), never on one point.
+  const fan = (value: unknown) => typeof value === "number" && Number.isFinite(value) && !props.data?.phoneLayout ? value : 0;
+  const source = { x: props.sourceX, y: props.sourceY + fan(props.data?.sourceFan) }, target = { x: props.targetX, y: props.targetY + fan(props.data?.targetFan) };
   // Each end leaves along its handle: a side handle by 45% of the horizontal run, a top/bottom handle by half the vertical run.
   const sameSide = props.sourcePosition === props.targetPosition;
   const dx = Math.abs(target.x - source.x), dy = Math.abs(target.y - source.y);
@@ -103,7 +105,9 @@ export function CompactRelationshipEdge(props: EdgeProps) {
   const aggregate = Boolean(props.data?.aggregate || props.data?.isClusterEdge) && (typeof props.label === "string" || typeof full === "string");
   // At rest a folded group link shows only its count (×N); its relationship and evidence read on inspection.
   const count = !inspecting && props.data?.isClusterEdge && typeof full === "string" ? full.match(/×\d+/)?.[0] ?? null : null;
-  const text = (inspecting || aggregate) && props.data?.labelVisibility !== "hide" ? count ?? full : null;
+  // A link standing for a single relationship carries no summary worth reading at rest; it names itself on inspection.
+  const restingSummary = aggregate && (folded === null || folded > 1);
+  const text = (inspecting || restingSummary) && props.data?.labelVisibility !== "hide" ? count ?? full : null;
   const style = { stroke: edgeFamilyColor(family), strokeWidth: spine ? 2.4 : inspecting ? 2 : 1.4, opacity: spine || inspecting ? 1 : stubbed || props.data?.passesBehind ? 0.4 : 0.85,
     strokeDasharray: edgeIsDashed(family, props.data) ? "6 4" : undefined, fill: "none" };
   return <g ref={ref} data-relationship={relationship || undefined} data-edge-family={family} data-edge-stub={stubbed || undefined} data-label-disclosure={relationship === "vulnerable_to" ? "on-demand" : undefined} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>

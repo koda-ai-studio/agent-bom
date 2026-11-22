@@ -9,6 +9,7 @@ import { COMPACT_NODE_WIDTH, COMPACT_RANK_GAP, COMPACT_ROW_GAP, compactLayout } 
 import { canvasName, prosePreview } from "@/components/graph-compact-node";
 import { captionGeometry } from "@/lib/graph-caption-geometry";
 import { layoutFrameKey } from "@/lib/graph-compact-arcs";
+import { linkEndFans } from "@/lib/graph-compact-fan";
 
 const DENSE_MAP_NODES = 24;
 /** A map past one readable page has a tangle to quiet; smaller maps draw every connection. */
@@ -184,6 +185,7 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
       return { name: shownName(found, id), typeLine: String(found?.data.readingLabel ?? found?.data.entityType ?? ""), box: boxes.get(id) ?? cardWidth(found, id) }; },
     width: id => boxes.get(id) ?? cardWidth(byId.get(id), id), tall: id => twoLineName(byId.get(id), id) ? TALL_CARD_ROOM : undefined }));
   const pathPairs = new Set(primary.slice(1).map((id, index) => `${primary[index]}\u0000${id}`));
+  const fans = linkEndFans(drawn, positions);
   return {
     nodes: nodes.map(node => {
       const box = boxes.get(node.id) ?? cardWidth(node, node.id), placed = positions.get(node.id);
@@ -215,7 +217,7 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
       const marker = (value: Edge["markerEnd"]) => value && typeof value === "object" ? { ...value, color, width: 14, height: 14 } : value;
       return { ...edge, type: "compact", animated: false, ...(edge.markerEnd ? { markerEnd: marker(edge.markerEnd)! } : {}),
         ...(edge.markerStart ? { markerStart: marker(edge.markerStart)! } : {}), sourceHandle: reverse ? "context" : null, targetHandle: reverse || sameRank ? "context" : null,
-        data: { ...edge.data, semanticLayout: true, individualLabel: true, arcDy: arcs.get(edge.id), ...(quietUntilFocus ? { quietUntilFocus } : {}), passesBehind: behind.has(edge.id) || undefined, quietLabel: edge.data?.isClusterEdge !== true,
+        data: { ...edge.data, semanticLayout: true, individualLabel: true, arcDy: arcs.get(edge.id), ...fans.get(edge.id), ...(quietUntilFocus ? { quietUntilFocus } : {}), passesBehind: behind.has(edge.id) || undefined, quietLabel: edge.data?.isClusterEdge !== true,
           pathEmphasis: pathPairs.has(`${edge.source}\u0000${edge.target}`) || edge.data?.pathEmphasis === true } };
     }),
   };

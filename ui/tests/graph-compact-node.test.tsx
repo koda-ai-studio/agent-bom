@@ -76,3 +76,10 @@ it("spells each clamp class for the line limit the layout and caption model use"
   expect(NAME_CLAMP.desktop).toBe(`line-clamp-${NAME_CLAMP.lines.desktop}`);
   expect(NAME_CLAMP.phone).toBe(`line-clamp-${NAME_CLAMP.lines.phone}`);
 });
+
+it("names a container's recorded role in its type line when two visible containers share a name", () => {
+  const Renderer = lineageNodeTypes.containerNode;
+  const { container } = render(<ReactFlowProvider><Renderer data={{ label: "reference-evidence-api", nodeType: "container", entityType: "container", semanticLayout: true,
+    occurrenceRole: "Image inventory", attributes: {} }} /></ReactFlowProvider>);
+  expect(container.querySelector("[data-entity-role]")?.textContent).toBe("Image inventory");
+});

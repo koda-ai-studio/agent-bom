@@ -36,10 +36,31 @@ export const ATTACK_PATH_CANVAS_BOUNDS = { min: 240, max: 640 } as const;
  */
 const SPACING = { LR: { rank: 48, lane: 32 }, TB: { rank: 40, lane: 20 } } as const;
 
-/** The same backend-layer columns as the estate canvas, with the selected spine retained. */
+/** The card tells one path: its hops read left to right in hop order, even where a hop's backend layer comes
+ * before the hop it follows (a role that reaches an agent). A branch sits one column before, after or level with
+ * the card it connects to, by their backend layer order; a node no branch reaches keeps its backend column. */
 function rankColumns(model: AttackPathGraphModel): Map<string, number> {
-  const columns = semanticColumns(model.nodes.map(node => ({ id: node.id, data: { entityType: node.entityType, semanticLayer: node.semanticLayer } })),
+  const layered = semanticColumns(model.nodes.map(node => ({ id: node.id, data: { entityType: node.entityType, semanticLayer: node.semanticLayer } })),
     model.edges.map(edge => ({ ...edge, data: { relationship: edge.relationship } })), model.pathNodeIds);
+  const columns = new Map(layered);
+  const placed = new Set<string>();
+  let previous = -Infinity;
+  for (const id of model.pathNodeIds) {
+    if (!columns.has(id) || placed.has(id)) continue;
+    previous = Math.max(layered.get(id)!, previous + 1);
+    columns.set(id, previous);
+    placed.add(id);
+  }
+  for (let frontier = [...placed]; frontier.length;) {
+    const next: string[] = [];
+    for (const edge of model.edges) for (const [from, to] of [[edge.source, edge.target], [edge.target, edge.source]] as const) {
+      if (!frontier.includes(from) || placed.has(to) || !columns.has(to)) continue;
+      columns.set(to, columns.get(from)! + Math.sign(layered.get(to)! - layered.get(from)!));
+      placed.add(to);
+      next.push(to);
+    }
+    frontier = next;
+  }
   for (let pass = 0; pass < model.nodes.length; pass++) for (const node of model.nodes) {
     if (node.semanticOwner && columns.has(node.semanticOwner)) columns.set(node.id, columns.get(node.semanticOwner)!);
   }
