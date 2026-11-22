@@ -3257,7 +3257,7 @@ async function main() {
           `Path risk ${Math.max(...graph.attack_paths.map((item) => item.composite_risk)).toFixed(1)}/100`,
           "6 evidence hops",
           "Developer Copilot",
-          "github-enterprise MCP",
+          "copilot-portal",
           "next@",
           "CVE-2025-29927",
           "Upgrade next to 15.2.3",
@@ -3275,15 +3275,16 @@ async function main() {
         minGraphNodeFontPx: 12,
         minGraphEdgeLabelFontPx: 12,
         minGraphWidthFillRatio: 0.65,
-        minGraphHeightFillRatio: 0.42,
+        // One hop-order row is bound by width; the frame keeps its floor height for the controls and inspector.
+        minGraphHeightFillRatio: 0.15,
         assertEdgeLabelsClearOfNodes: true,
         assertNoHorizontalOverflow: true,
       },
     );
-    // Inventory relationships two hops out, after one expansion: both MCP servers, github's tool
-    // and credential, the portal workload that runs next, filesystem's tool, and the agent sharing filesystem MCP.
-    const CONTEXT_MAP_NODES = ["agent:developer-copilot", "server:github", "server:filesystem", "agent:sre-runbook",
-      "tool:repo-write", "cred:github", "container:copilot-portal", "tool:exec"];
+    // Inventory relationships two hops out, widened until github's tool loads: both MCP servers, github's tool and
+    // credential, the portal workload with the cluster that hosts it and the package it runs. The Internet anchor is display-only.
+    const CONTEXT_MAP_NODES = ["agent:developer-copilot", "server:github", "server:filesystem", "tool:repo-write",
+      "cred:github", "container:copilot-portal", "cluster:eks-ai", "pkg:next"];
     const CONTEXT_MAP_EDGES = 7;
     const prepareContextNeighborhood = async (contextPage) => {
       await contextPage.getByRole("heading", { name: "Investigation", exact: true }).waitFor({ state: "visible", timeout: 30_000 });
@@ -3296,20 +3297,27 @@ async function main() {
       await contextPage.getByRole("button", { name: /^Traversal/ }).click();
       await contextPage.getByLabel("Graph traversal depth", { exact: true }).selectOption("2");
       await viewControls.click();
-      await contextPage.locator('[data-id="tool:repo-write"]').waitFor({ state: "visible" });
-      const count = await contextPage.locator(".react-flow__node").count();
-      await contextPage.getByRole("button", { name: "Show more connections", exact: true }).click();
-      await expect.poll(() => contextPage.locator(".react-flow__node").count()).toBeGreaterThan(count);
+      // An exposed workload makes the automatic flow Exposure, which leaves tools and credentials out; this map is inventory.
+      await contextPage.getByLabel("Investigation flow", { exact: true }).selectOption("inventory");
+      // The rooted query starts inside a small node budget; the reader widens it until the tools and credential load.
+      const repoWrite = contextPage.locator('[data-id="tool:repo-write"]');
+      const showMore = contextPage.getByRole("button", { name: "Show more connections", exact: true });
+      for (let widen = 0; widen < 4 && !(await repoWrite.isVisible()); widen++) {
+        const count = await contextPage.locator(".react-flow__node").count();
+        await showMore.click();
+        await expect.poll(() => contextPage.locator(".react-flow__node").count()).toBeGreaterThan(count);
+      }
+      await repoWrite.waitFor({ state: "visible" });
       const inspector = contextPage.getByTestId("graph-entity-drawer");
       if (await inspector.isVisible()) await inspector.getByRole("button", { name: "Close", exact: true }).click();
-      await expect(contextPage.locator(".react-flow__node")).toHaveCount(CONTEXT_MAP_NODES.length);
+      await expect(contextPage.locator('.react-flow__node:not([data-id^="display:"])')).toHaveCount(CONTEXT_MAP_NODES.length);
       for (const id of CONTEXT_MAP_NODES) await expect(contextPage.locator(`.react-flow__node[data-id="${id}"]`)).toHaveCount(1);
       await fitReactFlow(contextPage);
       await scrollTo(contextPage, 0);
     };
     const prepareHorizontalNeighborhood = prepareContextNeighborhood;
     const contextNeighborhoodAssertions = {
-      expectedText: ["Investigation", "Developer Copilot", "github-enterprise MCP", "filesystem MCP", "create_pull_request", "execute_command", "GITHUB_ENTERPRISE_TOKEN", "copilot-portal:2.4.0"],
+      expectedText: ["Investigation", "Developer Copilot", "github-enterprise MCP", "filesystem MCP", "create_pull_request", "eks-ai-runtime", "GITHUB_ENTERPRISE_TOKEN", "copilot-portal:2.4.0"],
       expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/query"],
       minGraphNodes: CONTEXT_MAP_NODES.length, maxGraphNodes: CONTEXT_MAP_NODES.length,
       minGraphEdges: CONTEXT_MAP_EDGES, maxGraphEdges: CONTEXT_MAP_EDGES,

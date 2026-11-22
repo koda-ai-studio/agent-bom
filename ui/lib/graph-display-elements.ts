@@ -46,7 +46,9 @@ export function focusDisplayNodes({ nodes, band, blastRadius, pathNodeIds, pathO
 }): LineageNode[] {
   if (blastRadius) return nodes.map(node => emphasize(node, node.id === blastRadius.rootId, blastRadius.nodeIds.has(node.id), band));
   if (pathNodeIds) {
-    const slots = serpentinePositions([...(pathOrder?.keys() ?? [])], 4, { column: 460, row: 220 });
+    // One row in hop order, like the attack-path card: a wrapped second row would read right to left.
+    const hops = [...(pathOrder?.keys() ?? [])];
+    const slots = serpentinePositions(hops, hops.length, { column: 366, row: 220 });
     return nodes.filter(node => pathNodeIds.has(node.id)).map(node => {
       const slot = slots.get(node.id) ?? { x: 0, y: 0, reverse: false };
       const placed = emphasize({ ...node, position: { x: slot.x, y: slot.y } }, true, true, "detail");
@@ -122,6 +124,12 @@ const widthAtLeast = (edge: Edge, fallback: number, minimum: number) =>
   Math.max(typeof edge.style?.strokeWidth === "number" ? edge.style.strokeWidth : fallback, minimum);
 
 /** Edge emphasis for the same owner order as the nodes: selected path, blast radius, reachability, focus. */
+function withoutOverviewRouting(data: Edge["data"]): Record<string, unknown> {
+  const rest: Record<string, unknown> = { ...data };
+  for (const key of ["arcDy", "sourceFan", "targetFan", "passesBehind"]) delete rest[key];
+  return rest;
+}
+
 export function emphasizedDisplayEdges({ edges, nodes, neighborhood, pathEdgeIds, blastRadius, reachability, captureMode, zoom }: {
   edges: Edge[];
   nodes: LineageNode[];
@@ -140,14 +148,18 @@ export function emphasizedDisplayEdges({ edges, nodes, neighborhood, pathEdgeIds
     maxLabeledEdges: captureMode ? Number.POSITIVE_INFINITY : GRAPH_EDGE_LABEL_BUDGET,
   });
   if (pathEdgeIds) {
+    // The focused path is re-placed in hop-order rows, so the overview layout's handle sides, arcs and end fans no
+    // longer apply: each link leaves and enters by its cards' own handles, which follow the row direction.
     return readable.filter(edge => pathEdgeIds.has(edge.id)).map((edge): Edge => ({
       ...edge,
+      sourceHandle: null,
+      targetHandle: null,
       labelShowBg: true,
       labelBgPadding: [8, 4],
       labelBgBorderRadius: 6,
       labelBgStyle: { fill: "var(--surface)", fillOpacity: 1 },
       labelStyle: { fill: "var(--foreground)", fontSize: Math.max(12, Math.min(20, 13 / Math.max(zoom, 0.2))), fontWeight: 650 },
-      data: { ...edge.data, directionEmphasis: true, pathEmphasis: true },
+      data: { ...withoutOverviewRouting(edge.data), directionEmphasis: true, pathEmphasis: true },
       animated: !captureMode,
       style: { ...edge.style, opacity: 1, strokeWidth: widthAtLeast(edge, 2, 3.2), filter: undefined },
     }));
