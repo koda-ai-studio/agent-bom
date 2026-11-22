@@ -28755,7 +28755,14 @@
           "semantic_layers": {
             "items": {
               "additionalProperties": {
-                "type": "string"
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ]
               },
               "type": "object"
             },

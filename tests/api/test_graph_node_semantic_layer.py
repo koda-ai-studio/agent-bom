@@ -11,7 +11,7 @@ from agent_bom.api.stores import set_graph_store
 from agent_bom.graph import EntityType, GraphSemanticLayer, RelationshipType, UnifiedEdge, UnifiedGraph, UnifiedNode
 from agent_bom.graph.legend import ENTITY_LEGEND
 from agent_bom.graph.node import NodeDimensions
-from agent_bom.graph.semantic_layer import LAYER_BY_ENTITY_TYPE, node_payload, semantic_layer
+from agent_bom.graph.semantic_layer import LAYER_BY_ENTITY_TYPE, SEMANTIC_LAYER_COLUMNS, node_payload, semantic_layer
 from tests.test_graph_api import _RecordingGraphStore
 
 _LAYERS = {layer.value for layer in GraphSemanticLayer}
@@ -92,3 +92,20 @@ def test_summary_exposure_folds_in_the_risk_context_verdict() -> None:
     assert _lean_node(private)["attributes"] == {"internet_exposed": False}
     unknown = {"id": "r", "attributes": {"risk_context": {"internet_exposed": None}}}
     assert _lean_node(unknown)["attributes"] == {}
+
+
+def test_estate_containers_take_the_scope_layer_and_the_first_column() -> None:
+    for kind in ("org", "account", "provider", "environment", "fleet"):
+        assert LAYER_BY_ENTITY_TYPE[kind] == "scope", kind
+    assert set(SEMANTIC_LAYER_COLUMNS) == {layer.value for layer in GraphSemanticLayer}
+    column = SEMANTIC_LAYER_COLUMNS
+    # Scope contains everything, then entry, workload, agent, MCP server, its reach, then data and findings.
+    order = ["scope", "user", "api_gateway", "infra", "orchestration", "mcp_server", "tool", "asset"]
+    assert [column[layer] for layer in order] == sorted(column[layer] for layer in order)
+    assert len({column[layer] for layer in order}) == len(order)
+    assert column["identity"] == column["tool"] and column["finding"] == column["package"] == column["asset"]
+
+
+def test_schema_publishes_each_layer_column() -> None:
+    layers = TestClient(app).get("/v1/graph/schema").json()["semantic_layers"]
+    assert {layer["key"]: layer["column"] for layer in layers} == SEMANTIC_LAYER_COLUMNS

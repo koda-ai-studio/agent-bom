@@ -470,7 +470,7 @@ class GraphRollupResponse(ReadResponse):
 class GraphSchemaResponse(ReadResponse):
     version: int
     interchange: dict[str, str]
-    semantic_layers: list[dict[str, str]]
+    semantic_layers: list[dict[str, str | int]]
     node_kinds: list[Row]
     edge_kinds: list[Row]
     node_types: list[str]

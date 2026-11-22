@@ -361,7 +361,7 @@
         "worst_severity": "none",
         "worst_severity_rank": 0
       },
-      "semantic_layer": "infra"
+      "semantic_layer": "scope"
     },
     "model:gpt-prod": {
       "aggregate": {
@@ -528,7 +528,7 @@
         "worst_severity": "none",
         "worst_severity_rank": 0
       },
-      "semantic_layer": "infra"
+      "semantic_layer": "scope"
     },
     "role:prod-admin": {
       "aggregate": {
@@ -1522,7 +1522,7 @@
         "id": "env:prod-ai",
         "is_container": true,
         "label": "prod-ai-control-plane",
-        "semantic_layer": "infra",
+        "semantic_layer": "scope",
         "severity": "high"
       },
       {
@@ -1713,7 +1713,7 @@
         "id": "provider:aws-prod",
         "is_container": true,
         "label": "AWS prod account",
-        "semantic_layer": "infra",
+        "semantic_layer": "scope",
         "severity": "medium"
       }
     ]
