@@ -151,7 +151,7 @@ function endpointGuards(edge: Endpoints, boxes: Obstacle[]): Obstacle[] {
 /** Every source-target pair owns a cubic curve and distinct endpoint offsets.
  * No shared horizontal/vertical trunk can imply a relationship to another source. */
 export function relationshipPath(edge: Endpoints, obstacles: Obstacle[], lane?: RelationshipLane, clearance = 16): [string, number, number] {
-  let [path, x, y] = getBezierPath({ ...edge,
+  let [path] = getBezierPath({ ...edge,
     curvature: 0.25 + Math.abs(lane?.channel ?? 0) * 0.025,
   });
   const numbers = path.match(/-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi)!.map(Number);
@@ -159,7 +159,7 @@ export function relationshipPath(edge: Endpoints, obstacles: Obstacle[], lane?: 
   original[1][1] += lane?.source ?? 0;
   original[2][1] += lane?.target ?? 0;
   path = `M${original[0].join(",")} C${original.slice(1).map(point => point.join(",")).join(" ")}`;
-  [x, y] = cubicPoint(original, 0.5);
+  const [x, y] = cubicPoint(original, 0.5);
   const blockers = [...obstacles.filter(box => box.id !== edge.source && box.id !== edge.target), ...endpointGuards(edge, obstacles)]
     .map(box => ({ ...box, x: box.x + 16 - clearance, y: box.y + 16 - clearance, width: box.width - 2 * (16 - clearance), height: box.height - 2 * (16 - clearance) }))
     .filter(box => box.width > 0 && box.height > 0);
