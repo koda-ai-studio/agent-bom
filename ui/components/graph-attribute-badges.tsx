@@ -16,7 +16,7 @@ export function GraphAttributeBadges({ data }: { data: LineageNodeData }) {
   const aggregate = data.findingAggregate ?? data.rollup?.aggregate;
   const count = aggregate?.issue_count;
   const exposed = typeof aggregate?.exposed_count === "number" ? aggregate.exposed_count : 0;
-  const risk = typeof data.riskScore === "number" && Number.isFinite(data.riskScore) && (data.riskScore !== 0 || nodeRiskAssessment(data.riskAssessment).status === "assessed") ? graphSemanticRiskLabel(data.riskScore, data.riskAssessment) : null;
+  const risk = typeof data.riskScore === "number" && Number.isFinite(data.riskScore) && nodeRiskAssessment(data.riskAssessment).status === "assessed" ? graphSemanticRiskLabel(data.riskScore, data.riskAssessment) : null;
   if (!markers.length && !data.isKev && count == null && !exposed && !data.evidenceSources?.length && !data.semanticLayerIssue && risk === null) return null;
   return <div data-semantic-badges className="mt-2 flex w-full max-w-[240px] flex-wrap justify-center gap-1 text-xs text-ink-secondary">
     {data.semanticLayerIssue && <span data-semantic-layer-error className="rounded border border-amber-500 bg-surface px-1.5 py-0.5">{data.semanticLayerIssue}</span>}
