@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { graphPortraitLayout } from "@/lib/graph-portrait-layout";
 import { withFindingDrilldowns } from "@/lib/graph-finding-disclosure";
 import { Background, MiniMap, ReactFlow } from "@xyflow/react";
 import { GraphCanvasAutoFit } from "@/components/graph-canvas-auto-fit";
@@ -31,6 +32,7 @@ export function GraphFlowCanvas({ page, flowView }: { page: GraphPageModel; flow
   // Layout changes glide once (never while dragging or capturing); the camera frames the final positions.
   const motion = useAnimatedLayout(measuredDisplay.nodes, captureMode || presentation.editing, narrowViewport ? "narrow" : "wide", `${compactLayoutKey}:${flowView.kind}:${disclosed.key}`);
   const nodes = useMemo(() => withFindingDrilldowns(motion.nodes, page.drillIntoRollup), [motion.nodes, page.drillIntoRollup]);
+  const portrait = useMemo(() => narrowViewport ? graphPortraitLayout(nodes, quieted.edges) : { nodes, edges: quieted.edges }, [narrowViewport, nodes, quieted.edges]);
   return (
             <ReactFlow
               style={{ ...readableGraphNodeStyle(graphViewport.zoom, Boolean(investigationContext) || roomyOverview, (roomyOverview || Boolean(investigationContext) && compactInvestigationTopology) && !narrowViewport, displayNodes.length),
@@ -38,8 +40,8 @@ export function GraphFlowCanvas({ page, flowView }: { page: GraphPageModel; flow
                 ...(disclosed.available && !narrowViewport ? { "--graph-node-glyph-size": disclosedGlyphSize(graphViewport.zoom, displayNodes.length) } : {}) }}
               className={selectedScenarioId ? "scenario-context-canvas" : undefined}
               key={captureMode ? `lineage-capture:${scenarioExpanded ? "full" : "context"}` : `${presentation.storageKey}:${flowView.kind}:${presentation.restoredSavedState ? "restored" : "initial"}:${scenarioExpanded ? "full" : "context"}`}
-              nodes={nodes}
-              edges={quieted.edges}
+              nodes={portrait.nodes}
+              edges={portrait.edges}
               nodeTypes={lineageNodeTypesAdaptive}
               edgeTypes={relationshipEdgeTypes}
               // Ordinary views have one camera owner: GraphCanvasAutoFit.

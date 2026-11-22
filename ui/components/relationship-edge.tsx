@@ -127,7 +127,7 @@ export function RelationshipEdge(props: EdgeProps) {
     width: node.measured?.width ?? node.width ?? 240,
     height: node.measured?.height ?? node.height ?? 180,
   })), [nodes]);
-  const [path, routeX, routeY] = relationshipPath(props, obstacles, portLane);
+  const [path, routeX, routeY] = relationshipPath(props, obstacles, props.data?.phoneLayout ? undefined : portLane);
   const anchor = props.data?.labelAnchor === "source" || props.data?.labelAnchor === "target" ? anchoredLabelPoint(props, props.data.labelAnchor) : null;
   const x = anchor?.x ?? routeX, y = anchor?.y ?? routeY;
   useLayoutEffect(() => { scheduleRelationshipLabelLayout(labelRef.current); }, [path, zoom, label, x, y, visibility, inspecting]);

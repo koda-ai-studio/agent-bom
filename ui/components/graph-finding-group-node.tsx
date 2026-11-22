@@ -10,11 +10,16 @@ const HANDLE = "!h-1 !w-1 !border-0 !bg-transparent";
 export function GraphFindingGroupNode({ data }: { data: LineageNodeData }) {
   const count = data.readingFindings?.count ?? 0;
   const glyphSize = "var(--graph-node-glyph-size, 72px)";
-  return <div className="relative flex flex-col items-center gap-2 text-center" style={{ width: "var(--graph-node-card-width, 240px)" }} data-graph-entity="finding-group">
+  return <div className={`relative gap-2 ${data.phoneLayout ? "grid grid-cols-[56px_minmax(0,1fr)] items-start text-left" : "flex flex-col items-center text-center"}`} style={{ width: "var(--graph-node-card-width, 240px)" }} data-graph-entity="finding-group">
     {/* Handles sit beside the button: an interactive element may not contain another. */}
-    <div className="relative" style={{ width: glyphSize, height: glyphSize }}>
-      <Handle type="target" position={Position.Left} className={HANDLE} />
+    <div className="relative" style={{ width: glyphSize, height: glyphSize, ...(data.phoneLayout ? { gridRow: "1 / span 2" } : {}) }}>
+      <Handle type="target" position={data.phoneLayout ? Position.Top : Position.Left} className={HANDLE} />
       <Handle type="target" id="context" position={Position.Right} className={HANDLE} />
+      {data.phoneLayout && <>
+        <Handle type="target" id="phone-left" position={Position.Left} className={HANDLE} />
+        <Handle type="target" id="phone-right" position={Position.Right} className={HANDLE} />
+        <Handle type="target" id="phone-down" position={Position.Bottom} className={HANDLE} />
+      </>}
       <GraphCountHint text={`${data.description}: ${count} linked findings${data.readingFindings?.severity ? ` · highest severity: ${data.readingFindings.severity}` : " · severity not rated"}. Click to expand.`}><button type="button" onClick={event => { event.stopPropagation(); data.readingFindings?.toggle(); }}
         aria-label={`Expand ${count} finding${count === 1 ? "" : "s"} for ${data.description ?? "component"}`}
         style={{ width: glyphSize, height: glyphSize }}

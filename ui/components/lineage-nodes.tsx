@@ -48,6 +48,7 @@ export type LineageNodeData = {
   label: string;
   semanticPathIndex?: number | undefined;
   semanticLayout?: boolean | undefined;
+  phoneLayout?: boolean | undefined;
   semanticOwner?: string | undefined;
   evidenceFlow?: boolean;
   /** A reading caveat a flow adds to the card's caption, such as an unmounted token. */
@@ -228,7 +229,8 @@ function NodeCard({
     return () => { observer.disconnect(); cancelAnimationFrame(frame); };
   }, [nodeId, updateNodeInternals]);
   const subrow = data.semanticLayout && data.semanticOwner && ["package", "finding", "runtime_evidence"].includes(data.semanticLayer ?? "");
-  const compactGlyph = Boolean(subrow || data.imageSubrow);
+  const rowLayout = Boolean(subrow || data.phoneLayout);
+  const compactGlyph = Boolean(rowLayout || data.imageSubrow);
   const repository = graphRepositoryContext(data);
   const Icon = repository ? FolderGit2 : nodeGlyph(data.nodeType, data.attributes, data.entityType, data.dimensions?.cloud_provider);
   const provider = repository?.source ?? (showsProviderMark(data) ? entitySource(data) : null);
@@ -246,17 +248,25 @@ function NodeCard({
     ? undefined : subtitle;
   return (
     <div title={[graphNodeTooltip(data), data.evidenceFlowContext, ring?.description, ...(data.readingConnections ?? []).map(summary => `${summary.relationship === "hosts" ? "Hosts" : "Contains"} ${summary.label} in this view`)].filter(Boolean).join(" · ")} data-graph-entity="true" data-graph-subrow={subrow ? data.semanticOwner : undefined} data-evidence-flow={data.evidenceFlow || undefined} data-finding-owner={data.readingOwner} data-rollup-container={isRollupContainer ? "true" : undefined}
-      style={{ width: "var(--graph-node-card-width, 220px)", ...(subrow ? { gridTemplateColumns: "var(--graph-context-glyph-size, 48px) minmax(0, 1fr)" } : {}) }}
-      className={`relative w-[220px] ${subrow ? "grid items-start gap-x-3 text-left [&>*]:col-start-2" : "flex flex-col items-center text-center"} transition-opacity ${data.dimmed ? "opacity-25" : ""}`}>
-      <div ref={glyphRef} data-image-subrow={data.imageSubrow || undefined} data-severity-ring={severity} style={{ width: compactGlyph ? "var(--graph-context-glyph-size, 48px)" : "var(--graph-node-glyph-size, 72px)", height: compactGlyph ? "var(--graph-context-glyph-size, 48px)" : "var(--graph-node-glyph-size, 72px)", ...(subrow ? { gridColumn: 1, gridRow: "1 / span 3" } : {}) }} className={`graph-entity-glyph relative mb-3 flex h-[72px] w-[72px] items-center justify-center rounded-full border-2 shadow-sm ${
+      style={{ width: "var(--graph-node-card-width, 220px)", ...(rowLayout ? { gridTemplateColumns: "var(--graph-context-glyph-size, 48px) minmax(0, 1fr)" } : {}) }}
+      className={`relative w-[220px] ${rowLayout ? "grid items-start gap-x-3 text-left [&>*]:col-start-2" : "flex flex-col items-center text-center"} transition-opacity ${data.dimmed ? "opacity-25" : ""}`}>
+      <div ref={glyphRef} data-image-subrow={data.imageSubrow || undefined} data-severity-ring={severity} style={{ width: compactGlyph ? "var(--graph-context-glyph-size, 48px)" : "var(--graph-node-glyph-size, 72px)", height: compactGlyph ? "var(--graph-context-glyph-size, 48px)" : "var(--graph-node-glyph-size, 72px)", ...(rowLayout ? { gridColumn: 1, gridRow: "1 / span 3" } : {}) }} className={`graph-entity-glyph relative mb-3 flex h-[72px] w-[72px] items-center justify-center rounded-full border-2 shadow-sm ${
         isRollupContainer ? "border-outline-strong bg-surface-elevated" : `${borderClass} ${bgClass}`
       } ${data.highlighted ? `ring-2 ring-offset-4 ring-offset-[var(--surface)] ${ringClass}` : ""}`}>
         {severity && <span className="sr-only" data-finding-severity={severity}>{`${severity} severity`}</span>}
-        <Handle type="target" position={data.reverseFlow ? Position.Right : Position.Left}
+        <Handle type="target" position={data.phoneLayout ? Position.Top : data.reverseFlow ? Position.Right : Position.Left}
           className={`!h-1 !w-1 !border-0 !bg-transparent ${target ? "" : "!opacity-0"}`} />
-        <Handle type="source" position={data.reverseFlow ? Position.Left : Position.Right}
+        <Handle type="source" position={data.phoneLayout ? Position.Bottom : data.reverseFlow ? Position.Left : Position.Right}
           className={`!h-1 !w-1 !border-0 !bg-transparent ${source ? "" : "!opacity-0"}`} />
         <ContextHandles />
+        {data.phoneLayout && <>
+          <Handle type="source" id="phone-up" position={Position.Top} className="!h-1 !w-1 !border-0 !bg-transparent" />
+          <Handle type="target" id="phone-down" position={Position.Bottom} className="!h-1 !w-1 !border-0 !bg-transparent" />
+          {[Position.Left, Position.Right].map(position => <span key={position}>
+            <Handle type="source" id={`phone-${position}`} position={position} className="!h-1 !w-1 !border-0 !bg-transparent" />
+            <Handle type="target" id={`phone-${position}`} position={position} className="!h-1 !w-1 !border-0 !bg-transparent" />
+          </span>)}
+        </>}
         {data.readingFindings && !data.readingFindingsGroup && !data.readingFindings.expanded && <span className="absolute -left-5 -top-3"><GraphCountHint text={`${data.label}: ${data.readingFindings.count} linked finding${data.readingFindings.count === 1 ? "" : "s"}${data.readingFindings.severity ? ` · highest severity: ${data.readingFindings.severity}` : " · severity not rated"}. Click to ${data.readingFindings.expanded ? "collapse" : "expand"}.`}><button type="button" data-finding-disclosure
           aria-label={`${data.readingFindings.expanded ? "Collapse" : "Expand"} ${data.readingFindings.count} finding${data.readingFindings.count === 1 ? "" : "s"} for ${data.label}`}
           aria-expanded={data.readingFindings.expanded}
@@ -273,7 +283,7 @@ function NodeCard({
           className="absolute -bottom-1 -right-2 rounded-full border border-outline bg-surface px-1.5 font-medium leading-snug text-ink-secondary">+{data.heldConnections}<span className="sr-only"> more connections not drawn</span></span> : null}
       </div>
       {data.semanticLayout
-        ? <span data-semantic-name title={displayTitle} className={`mb-1 block w-full min-w-0 truncate text-lg font-semibold leading-[1.2] text-foreground ${subrow ? "col-start-2" : ""}`} style={{ fontSize: "var(--graph-node-label-size, 18px)" }}>{displayTitle}</span>
+        ? <span data-semantic-name title={displayTitle} className={`mb-1 block w-full min-w-0 truncate text-lg font-semibold leading-[1.2] text-foreground ${rowLayout ? "col-start-2" : ""}`} style={{ fontSize: "var(--graph-node-label-size, 18px)" }}>{displayTitle}</span>
         : <SegmentedLabel caption text={caption?.title ?? (repository?.slug || shortTitle.text)} className="mb-1 line-clamp-3 w-full min-w-0 text-lg font-semibold leading-[1.2] text-foreground" style={{ fontSize: "var(--graph-node-label-size, 18px)" }} />}
       {shortTitle.shortened && !caption && !repository && <span className="sr-only">{displayTitle}</span>}
       {/* The vendor mark names the provider; a second text chip would repeat it. */}
