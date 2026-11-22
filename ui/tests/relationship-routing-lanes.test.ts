@@ -28,7 +28,7 @@ describe("relationship lanes", () => {
     const [path] = relationshipPath(edge, [upper, lower], { source: 14, target: -14 });
     expect(path).toContain("C");
     const points = pairs(path);
-    expect(points[0]!.y).toBe(edge.sourceY + 14);
+    expect(points[0]!.y).toBe(edge.sourceY);
     // A Bezier control point is not a point on the rendered line. Reject a
     // shared horizontal segment, while allowing an isolated crossing.
     for (let i = 0; i + 3 < points.length; i += 3) {

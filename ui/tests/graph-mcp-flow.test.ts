@@ -69,15 +69,15 @@ describe("small MCP evidence flow", () => {
     expect(overlaps).toEqual([]);
   });
 
-  it("balances connected branches above and below the primary evidence chain", () => {
+  it("keeps the primary evidence chain at the top of its connected context", () => {
     const result = mcpEvidenceFlow(nodes, edges)!;
     const primary = result.nodes.find(n => n.id === "client")!.position.y;
     const branchRows = result.nodes.filter(n => n.data.nodeType === "server").map(n => n.position.y);
-    expect(Math.min(...branchRows)).toBeLessThan(primary);
+    expect(Math.min(...branchRows)).toBeGreaterThanOrEqual(primary);
     expect(Math.max(...branchRows)).toBeGreaterThan(primary);
     const low = Math.min(...result.nodes.map(n => n.position.y)), high = Math.max(...result.nodes.map(n => n.position.y));
-    expect((primary - low) / (high - low)).toBeGreaterThanOrEqual(0.3);
-    expect((primary - low) / (high - low)).toBeLessThanOrEqual(0.7);
+    expect(primary).toBe(low);
+    expect(high).toBeGreaterThan(primary);
   });
 
   it("is deterministic across API ordering and does not relabel scope or evidence", () => {
