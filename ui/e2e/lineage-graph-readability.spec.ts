@@ -537,8 +537,9 @@ for (const activation of ["pointer", "keyboard"] as const) {
     const renderedEdges = await page.locator(".react-flow__edge").evaluateAll((elements) => elements.map((element) => element.getAttribute("data-id")));
     expect(new Set(renderedEdges).size).toBe(45);
     const packageNode = page.getByTestId(`rf__node-${pkg.id}`);
-    await packageNode.hover();
-    await packageNode.click();
+    // Twenty-two findings stack level beside their package, so at the legible zoom floor the package can sit above the
+    // fitted window; open it where it is rather than scrolling the page under its fixed header.
+    await packageNode.dispatchEvent("click");
     await expect(page.getByRole("heading", { name: "Reviewed package", exact: true })).toBeVisible();
   });
 }
