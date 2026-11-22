@@ -166,7 +166,7 @@ def test_version_only_metadata_uses_light_dependency_routing(tmp_path) -> None:
     git("init", "-q")
     root = Path(__file__).resolve().parents[1]
     (tmp_path / "scripts").mkdir()
-    for script_name in ("classify_ci_changes.py", "pytest_ci_plan.py"):
+    for script_name in ("classify_ci_changes.py", "pytest_ci_plan.py", "ci_shard_balance.py", "ci_pytest_workers.py"):
         shutil.copyfile(root / "scripts" / script_name, tmp_path / "scripts" / script_name)
     project = '[project]\nname = "agent-bom"\nversion = "0.109.0"\ndependencies = ["click>=8"]\n'
     lock = (
