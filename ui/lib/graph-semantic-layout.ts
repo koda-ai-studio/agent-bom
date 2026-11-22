@@ -28,11 +28,10 @@ function contextOwners(nodes: Node<LineageNodeData>[], edges: Edge[], primary: R
 /** Containment orders peers inside a backend column without changing their layer. */
 function containmentOrder(members: Node<LineageNodeData>[], edges: Edge[]) {
   const remaining = new Map(members.map(node => [node.id, node]));
-  const links = edges.filter(edge => edge.data?.relationship === "contains" && remaining.has(edge.source) && remaining.has(edge.target));
+  const links = edges.filter(edge => ["contains", "hosts"].includes(String(edge.data?.relationship)) && remaining.has(edge.source) && remaining.has(edge.target));
   const ordered: Node<LineageNodeData>[] = [];
   while (remaining.size) {
-    const ready = [...remaining.values()].filter(node => !links.some(edge => edge.target === node.id && remaining.has(edge.source)))
-      .sort((a, b) => a.id.localeCompare(b.id));
+    const ready = [...remaining.values()].filter(node => !links.some(edge => edge.target === node.id && remaining.has(edge.source)));
     // Cyclic input cannot have a parent-first order; retain every node deterministically.
     if (!ready.length) { ordered.push(...[...remaining.values()].sort((a, b) => a.id.localeCompare(b.id))); break; }
     for (const node of ready) { ordered.push(node); remaining.delete(node.id); }
@@ -60,6 +59,18 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
     let owner = owners.get(id)!;
     while (owners.has(owner) && !seen.has(owner)) { seen.add(owner); owner = owners.get(owner)!; }
     if (!seen.has(owner)) columns.set(id, columns.get(owner)!);
+  }
+  // When all owner groups occupy one backend column, give each group a
+  // horizontal slot. Context retains its owner and its authoritative layer.
+  if (!primary.length && owners.size && new Set(visible.map(node => columns.get(node.id))).size === 1) {
+    const roots = containmentOrder(visible.filter(node => !owners.has(node.id)), edges);
+    const slots = new Map(roots.map((node, index) => [node.id, index]));
+    for (const node of visible) {
+      let root = node.id;
+      const seen = new Set<string>();
+      while (owners.has(root) && !seen.has(root)) { seen.add(root); root = owners.get(root)!; }
+      if (slots.has(root)) columns.set(node.id, slots.get(root)!);
+    }
   }
   const positions = new Map<string, { x: number; y: number }>();
   const rowHeight = (id: string) => owners.has(id) ? 132 : 216;

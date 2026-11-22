@@ -20,8 +20,8 @@ it("places an account scope before its infrastructure and keeps high columns dis
 
 import { semanticGraphLayout } from "@/lib/graph-semantic-layout";
 it("orders same-layer scope containers by containment, independently of their ids", () => {
-  const nodes = ["a-environment", "z-account", "y-organization"].map(id => ({ id, position: { x: 0, y: 0 }, data: { label: id, nodeType: "account", semanticLayer: "scope" } }));
-  const edges = [{ id: "org-account", source: "y-organization", target: "z-account", data: { relationship: "contains" } },
+  const nodes = ["a-environment", "z-account", "y-organization"].map(id => ({ id, position: { x: 0, y: 0 }, data: { label: id, nodeType: "account" as const, semanticLayer: "scope" } }));
+  const edges = [{ id: "org-account", source: "y-organization", target: "z-account", data: { relationship: "hosts" } },
     { id: "account-env", source: "z-account", target: "a-environment", data: { relationship: "contains" } }];
   const placed = semanticGraphLayout(nodes, edges).nodes;
   const y = (id: string) => placed.find(node => node.id === id)!.position.y;

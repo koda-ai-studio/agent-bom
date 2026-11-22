@@ -30,3 +30,17 @@ it("reserves an owner's context rows before placing unrelated peers in the same 
   expect(y("package")).toBeGreaterThan(y("a-workload"));
   expect(y("package")).toBeLessThan(y("b-config"));
 });
+
+it("packs a single layer's owner groups side by side in backend order with context below", () => {
+  const nodes: Node<LineageNodeData>[] = [["z-owner", "code"], ["a-owner", "code"], ["z-package", "package"], ["a-package", "package"]]
+    .map(([id, semanticLayer]) => ({ id: id!, position: { x: 0, y: 0 }, data: { label: id!, nodeType: "container", semanticLayer } }));
+  const edges = ["z", "a"].map(prefix => ({ id: prefix, source: `${prefix}-owner`, target: `${prefix}-package`, data: { relationship: "contains" } }));
+  const placed = semanticGraphLayout(nodes, edges).nodes;
+  const pos = (id: string) => placed.find(node => node.id === id)!.position;
+  expect(pos("z-owner").x).toBeLessThan(pos("a-owner").x);
+  expect(pos("z-owner").y).toBe(pos("a-owner").y);
+  for (const prefix of ["z", "a"]) {
+    expect(pos(`${prefix}-package`).x).toBe(pos(`${prefix}-owner`).x);
+    expect(pos(`${prefix}-package`).y).toBeGreaterThan(pos(`${prefix}-owner`).y);
+  }
+});
