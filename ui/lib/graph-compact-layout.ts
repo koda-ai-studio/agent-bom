@@ -312,7 +312,7 @@ function placementCost(links: readonly Link[], positions: ReadonlyMap<string, Po
 
 /** A card with the run of single-link cards leading into it from the left (an entry chain such as
  * Internet, service, workload), which moves with it so the chain stays straight. */
-function leadChain(id: string, links: readonly Link[], positions: ReadonlyMap<string, Point>, spine: ReadonlySet<string>): string[] {
+function leadChain(id: string, links: readonly Link[], positions: ReadonlyMap<string, Point>, spine: ReadonlySet<string>, slack = 0): string[] {
   const chain = [id];
   for (let current = id; ;) {
     const here = positions.get(current)!;
@@ -320,7 +320,7 @@ function leadChain(id: string, links: readonly Link[], positions: ReadonlyMap<st
       .map(link => link.source === current ? link.target : link.source).filter(other => positions.get(other) && positions.get(other)!.x < here.x);
     if (left.length !== 1) return chain;
     const next = left[0]!, degree = links.filter(link => link.source === next || link.target === next).length;
-    if (spine.has(next) || chain.includes(next) || degree > 2 || positions.get(next)!.y !== here.y) return chain;
+    if (spine.has(next) || chain.includes(next) || degree > 2 || Math.abs(positions.get(next)!.y - here.y) > slack) return chain;
     chain.push(next);
     current = next;
   }
@@ -425,9 +425,14 @@ function refineRows(ids: readonly string[], links: readonly Link[], positions: M
         if (chain.every(member => free(member, y, chain)) && attempt(chain.map(member => [member, y]))) improved = true;
       }
       // Swap with a peer of the same rank.
+      let branch = leadChain(id, links, positions, spine, COMPACT_ROW_GAP / 2).filter(member => !spine.has(member));
       for (const other of movable) {
-        if (other <= id || positions.get(other)!.x !== positions.get(id)!.x || tall(other) !== tall(id)) continue;
-        if (attempt([[id, positions.get(other)!.y], [other, positions.get(id)!.y]])) improved = true;
+        if (other <= id || positions.get(other)!.x !== positions.get(id)!.x) continue;
+        if (tall(other) === tall(id) && attempt([[id, positions.get(other)!.y], [other, positions.get(id)!.y]])) improved = true;
+        if (branch.length > 1 && swapBranches(branch, other)) {
+          improved = true;
+          branch = leadChain(id, links, positions, spine, COMPACT_ROW_GAP / 2).filter(member => !spine.has(member));
+        }
       }
     }
     // A link no curve can draw yet: also try moving two cards at once, on whole rows.
@@ -436,6 +441,29 @@ function refineRows(ids: readonly string[], links: readonly Link[], positions: M
   }
 
   return cost;
+
+  /** Two branches of the same shape trade rows whole, card for card: a card-by-card swap would cross its own chain
+   * first. A branch nudged apart by a taller caption still counts as one, and a taller caption that lands above a
+   * peer pushes the rest of its rank down instead of blocking the swap. */
+  function swapBranches(mine: string[], other: string): boolean {
+    const theirs = leadChain(other, links, positions, spine, COMPACT_ROW_GAP / 2).filter(member => !spine.has(member));
+    if (mine.length !== theirs.length || mine.some(member => theirs.includes(member))
+      || !mine.every((member, k) => positions.get(member)!.x === positions.get(theirs[k]!)!.x)) return false;
+    const trial = new Map(positions);
+    mine.forEach((member, k) => {
+      trial.set(member, { x: positions.get(member)!.x, y: positions.get(theirs[k]!)!.y });
+      trial.set(theirs[k]!, { x: positions.get(member)!.x, y: positions.get(member)!.y });
+    });
+    const xs = new Set(mine.map(member => positions.get(member)!.x));
+    const touched = ids.filter(card => xs.has(trial.get(card)!.x));
+    for (const x of xs) {
+      const items = touched.filter(card => trial.get(card)!.x === x).sort((a, b) => trial.get(a)!.y - trial.get(b)!.y || a.localeCompare(b))
+        .map(card => ({ id: card, desired: trial.get(card)!.y, fixed: spine.has(card), below: tall(card) }));
+      for (const [card, y] of packRank(items, COMPACT_ROW_GAP, true)) trial.set(card, { x, y: Math.round(y) });
+    }
+    const moves = touched.filter(card => trial.get(card)!.y !== positions.get(card)!.y).map(card => [card, trial.get(card)!.y] as [string, number]);
+    return moves.every(([card]) => !spine.has(card)) && rowsClear(touched, trial, tall) && attempt(moves);
+  }
 
   function pairMoves(): boolean {
     const ys = [...positions.values()].map(p => p.y);

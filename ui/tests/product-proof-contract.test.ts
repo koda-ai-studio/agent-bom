@@ -133,11 +133,11 @@ describe("product proof capture contract", () => {
     expect(source).toContain("[body.current.scan_id, body.scenario.base_scan_id]");
     expect(source).toContain('newCapturePage("dark", { width: 1512, height: 811 })');
     expect(source).toContain('newCapturePage("light", { width: 1568, height: 780 })');
-    expect(source).toContain('data-testid="graph-rollup-decision-surface"');
-    expect(source).toContain('data-testid="graph-rollup-relationship-completeness"');
+    // Fifteen scopes sit below the ranked-list threshold, so the current state is the grouped map.
+    expect(source).toContain('canvasPage.locator(".react-flow__node:visible").first().waitFor');
+    expect(source).toContain('expectedText: ["Investigation", "Scope overview", "aggregate links"]');
     expect(source).toContain("const body = rollupResponse();");
     expect(source).not.toContain("top_level: graph.nodes.slice(0, 30)");
-    expect(source).toContain('data-testid="graph-rollup-card-grid"');
     expect(source).toContain('page.route("**/v1/graph/scenarios"');
     expect(source).toContain('page.route(`**/v1/graph/scenarios/${SCENARIO_ID}/comparison?**`');
     expect(source).toContain("Proposed scenario — not observed or deployed");

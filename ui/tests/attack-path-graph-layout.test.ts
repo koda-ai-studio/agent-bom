@@ -13,12 +13,12 @@ import { attackPathViewport } from "@/lib/attack-path-graph-viewport";
 import { branchingFixture, demoFixture, fanOutFixture } from "./fixtures/attack-path-graph-fixture";
 
 describe("attack path graph layout", () => {
-  it("uses backend layer order even when a path visits identity before an agent", () => {
+  it("reads the selected path left to right in hop order even when it visits identity before an agent", () => {
     const { graph, selected } = branchingFixture();
     const model = buildAttackPathGraphModel(graph, selected);
     const layout = layoutAttackPathGraph(model, "LR");
     expect(model.nodes.find(node => node.id === "user:contractor")?.semanticLayer).toBe("user");
-    const x = ["user:contractor", "agent:copilot", "server:github", "sa:jit", "role:admin", "pkg:next", "cve:next"].map(id => layout.positions.get(id)!.x);
+    const x = ["user:contractor", "sa:jit", "role:admin", "agent:copilot", "server:github", "pkg:next", "cve:next"].map(id => layout.positions.get(id)!.x);
     expect(x).toEqual([...x].sort((a, b) => a - b));
     expect(new Set(x).size).toBe(x.length);
   });

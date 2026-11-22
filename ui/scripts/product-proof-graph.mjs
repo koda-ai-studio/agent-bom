@@ -182,7 +182,7 @@ export function buildGraph() {
     edge("agent:sre-runbook", "server:slack", "uses"),
     edge("agent:finance-rag", "server:snowflake", "uses"),
     edge("agent:finance-rag", "server:slack", "uses"),
-    edge("agent:developer-copilot", "agent:sre-runbook", "shares_server", 1, { server: "filesystem MCP" }),
+    edge("agent:developer-copilot", "agent:sre-runbook", "shares_server", 1, { server: "server:filesystem" }),
     edge("agent:sre-runbook", "agent:finance-rag", "shares_cred", 1, { credential: "INCIDENT_WEBHOOK_TOKEN" }),
     edge("server:github", "tool:repo-write", "provides_tool"),
     edge("server:filesystem", "tool:exec", "provides_tool"),
@@ -440,7 +440,7 @@ export function contextGraph() {
     link("server:snowflake", "cred:snowflake", "exposes_cred", { effective_reach_score: 9.0 }),
     link("server:snowflake", "tool:query", "provides_tool", { effective_reach_score: 8.4 }),
     link("server:snowflake", "cve:protobuf", "vulnerable_to", { effective_reach_score: advisory("CVE-2025-4565").cvss_score, package: packageRef("CVE-2025-4565") }),
-    link("agent:developer-copilot", "agent:sre-runbook", "shares_server", { server: "filesystem MCP" }),
+    link("agent:developer-copilot", "agent:sre-runbook", "shares_server", { server: "server:filesystem" }),
     link("agent:sre-runbook", "agent:finance-rag", "shares_credential", { credential: "INCIDENT_WEBHOOK_TOKEN" }),
   ];
   const byId = new Map(nodes.map((item) => [item.id, { ...item, type: item.kind }]));

@@ -82,6 +82,8 @@ function typeLine(data: LineageNodeData, title: string): string {
   if (data.nodeType === "misconfiguration" && data.attributes?.finding_kind === "iac") return "IaC finding";
   // A recorded agent type (workflow, assistant, ...) says more than the generic client role.
   if (data.nodeType === "agent" && data.agentType) return topologyAgentTypeLabel(data.agentType);
+  // Two visible containers with one name: the recorded role (image inventory or deployment) tells them apart.
+  if (data.occurrenceRole) return data.occurrenceRole;
   return caption?.meta ?? data.readingLabel ?? (repository ? "Repository" : data.nodeType === "agent"
     ? (data.agentType ? topologyAgentTypeLabel(data.agentType) : "Agent")
     : assetKindLabel({ entityType: data.entityType, nodeType: data.nodeType, attributes: data.attributes, provider: data.dimensions?.cloud_provider }));

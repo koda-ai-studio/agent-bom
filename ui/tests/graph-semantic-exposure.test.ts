@@ -53,3 +53,30 @@ it("names display exposure links by their target without leaking synthetic ids",
   expect(result.nodes.find(node => node.data.displayOnly)?.ariaLabel).toBe("Internet, recorded exposure context");
   expect(result.edges[0]?.ariaLabel).toBe("Recorded internet exposure for Public API; display context, not a traversable relationship");
 });
+
+it("reads a configuring file and job before the workload they configure inside one layer", () => {
+  const code = (id: string, nodeType: LineageNodeData["nodeType"]): Node<LineageNodeData> => ({ id, position: { x: 0, y: 0 }, data: { label: id, nodeType, semanticLayer: "code" } });
+  const link = (source: string, target: string, relationship: string) => ({ id: `${source}-${target}`, source, target, data: { relationship } });
+  const result = semanticGraphLayout([code("repo", "directory"), code("file", "configFile"), { ...code("job", "ciJob"), data: { ...code("job", "ciJob").data, semanticLayer: "ci" } }, node("workload", {})],
+    [link("repo", "file", "contains"), link("file", "job", "configures"), link("job", "workload", "configures")]);
+  const x = (id: string) => result.nodes.find(n => n.id === id)!.position.x;
+  expect(x("repo")).toBeLessThan(x("file"));
+  expect(x("file")).toBeLessThan(x("job"));
+  expect(x("job")).toBeLessThan(x("workload"));
+});
+
+it("keeps the Internet anchor left of an exposed workload that a later-column agent leads into", () => {
+  const agent: Node<LineageNodeData> = { id: "agent", position: { x: 0, y: 0 }, data: { label: "agent", nodeType: "agent", semanticLayer: "orchestration" } };
+  const workload: Node<LineageNodeData> = { id: "workload", position: { x: 0, y: 0 }, data: { label: "workload", nodeType: "container", semanticLayer: "app", attributes: { internet_exposed: true } } };
+  const result = semanticGraphLayout([agent, workload], [{ id: "hosted", source: "agent", target: "workload", data: { relationship: "hosted_on" } }]);
+  const x = (id: string) => result.nodes.find(n => n.id === id)!.position.x;
+  const anchor = result.nodes.find(n => n.data.displayOnly)!;
+  expect(x(anchor.id)).toBeLessThan(x("workload"));
+});
+
+it("reads an identity before the role it assumes inside the identity layer, so the link runs forward", () => {
+  const identity = (id: string): Node<LineageNodeData> => ({ id, position: { x: 0, y: 0 }, data: { label: id, nodeType: "role", semanticLayer: "identity" } });
+  const result = semanticGraphLayout([identity("sa"), identity("role")], [{ id: "assumes", source: "sa", target: "role", data: { relationship: "assumes" } }]);
+  const x = (id: string) => result.nodes.find(n => n.id === id)!.position.x;
+  expect(x("sa")).toBeLessThan(x("role"));
+});

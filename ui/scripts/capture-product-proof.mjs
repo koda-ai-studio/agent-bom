@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { nodeAggregatesResponse, rollupResponse } from "./product-proof-rollup.mjs";
+import { graphNodeAggregatesResponse, nodeAggregatesResponse, rollupResponse } from "./product-proof-rollup.mjs";
 import { auditRenderedGraph, graphGrammarExpression, renderedRelationshipCurves, sharedRelationshipRuns } from "./graph-visual-audit.mjs";
 import { chromium, expect } from "@playwright/test";
 import { spawn, spawnSync } from "node:child_process";
@@ -1478,8 +1478,11 @@ export async function installRoutes(page, fixtureGraph = graph) {
     return fulfill(route, body);
   });
   await page.route("**/v1/graph/node-aggregates?**", (route) => {
-    const body = nodeAggregatesResponse(new URL(route.request().url()));
-    assertCaptureSnapshotScope(route.request().url(), SCAN_ID, [body.scan_id]);
+    const url = new URL(route.request().url());
+    // The reference correlation view reads its path card's finding counts from the reference lab graph.
+    const reference = url.searchParams.get("scan_id") === REFERENCE_CORRELATION_ID;
+    const body = reference ? graphNodeAggregatesResponse(url, referenceGraph) : nodeAggregatesResponse(url);
+    assertCaptureSnapshotScope(route.request().url(), reference ? REFERENCE_CORRELATION_ID : SCAN_ID, [body.scan_id]);
     return fulfill(route, body);
   });
   await page.route("**/v1/graph/attack-paths?**", (route) => {
@@ -2088,9 +2091,9 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
       if (badgeAudit.logos.some(logo => logo.overlapsCaption)) {
         throw new Error(`Vendor badge overlaps a node caption on ${filename}: ${JSON.stringify(badgeAudit.logos)}`);
       }
-      // Display-only anchors (the Internet entry, finding groups) are not graph entities.
+      // Display-only anchors (the Internet entry, finding groups) and their links are not graph entities.
       const graphNodeCount = await page.locator('.react-flow__node:visible:not([data-id^="display:"])').count();
-      const graphEdgeCount = await page.locator(".react-flow__edge").count();
+      const graphEdgeCount = await page.locator('.react-flow__edge:not([data-id^="display:"])').count();
       if (graphNodeCount < options.minGraphNodes || graphEdgeCount < (options.minGraphEdges ?? 1)) {
         throw new Error(`Incomplete graph on ${urlPath}: ${graphNodeCount} nodes / ${graphEdgeCount} edges`);
       }
@@ -2118,7 +2121,7 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
         }
       }
       if (options.minGraphBadgeFontPx) {
-        const sizes = await page.locator(".react-flow__node [data-node-badge], .react-flow__node .graph-finding-metadata > span").evaluateAll(badges => badges.map(badge => {
+        const sizes = await page.locator(".react-flow__node [data-node-badge], .react-flow__node .graph-finding-metadata > span, .react-flow__node [data-graph-caption]").evaluateAll(badges => badges.map(badge => {
           const viewport = badge.closest(".react-flow__viewport");
           const transform = viewport ? getComputedStyle(viewport).transform : "none";
           const scale = transform === "none" ? 1 : new DOMMatrixReadOnly(transform).a;
@@ -2656,7 +2659,9 @@ async function main() {
           await view.click();
           await expect(view).toHaveAttribute("aria-pressed", "true");
           await p.getByRole("button", { name: "View & layers", exact: true }).click();
-          if (scope === "cloud") await p.getByRole("button", { name: /^Expand findings/ }).click();
+          // Findings fold only under an owner with a backend aggregate; the showcase draws every one.
+          const expandFindings = p.getByRole("button", { name: /^Expand findings/ });
+          if (await expandFindings.count()) await expandFindings.click();
           // Every fixture node is drawn; display-only anchors (the Internet entry) are extra, and only for backend-true exposure.
           await expect(p.locator('.react-flow__node:not([data-id^="display:"])')).toHaveCount(fixture.nodes.length);
           const exposed = fixture.nodes.some(item => (item.attributes?.risk_context?.internet_exposed ?? item.attributes?.internet_exposed) === true);
@@ -2739,7 +2744,8 @@ async function main() {
       await proofPage.waitForTimeout(500);
     };
     const correlationReceiptAssertions = {
-      expectedText: ["Correlation result", "Modeled customer records", "Analysis complete", "Inspect source receipts"],
+      // The card leads with the backend's top-ranked retained path; the crown-jewel path stays in the path list.
+      expectedText: ["Correlation result", "CVE-2023-4863", "Analysis complete", "Inspect source receipts"],
       rejectedText: ["Exploitable Via", "Gateway block observed"],
       expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/correlations"],
       readySelector: '[data-testid="graph-correlation-decision"]',
@@ -2750,7 +2756,8 @@ async function main() {
     const prepareCorrelationPath = async (proofPage) => {
       await proofPage.locator(".react-flow__node").first().waitFor({ state: "visible" });
       await fitReactFlow(proofPage);
-      await expect(proofPage.locator(".react-flow__edge-path[marker-end]")).toHaveCount(referenceGraph.edges.length);
+      // Every recorded relationship is drawn with its direction; the Internet anchor's display link is extra context.
+      await expect(proofPage.locator('.react-flow__edge:not([data-id^="display:"]) .react-flow__edge-path[marker-end]')).toHaveCount(referenceGraph.edges.length);
       await expect(proofPage.locator(".graph-relationship-label")).toHaveCount(0);
       await scrollTo(proofPage, 0);
     };
@@ -3012,7 +3019,8 @@ async function main() {
       assertNodeLabelsWithinBounds: true, assertNoSharedRelationshipRuns: true,
       assertEdgeLabelsClearOfNodes: true,
       assertNoHorizontalOverflow: true,
-      maxGraphBottomGapPx: 64,
+      // The frame follows the graph's geometry; a wide six-card mesh opens in a shorter frame. It must never clip.
+      maxGraphBottomGapPx: 400,
       minGraphBadgeFontPx: 11,
     });
     await page.setViewportSize({ width: 1440, height: 980 });
@@ -3031,10 +3039,9 @@ async function main() {
           }).map(node => node.getAttribute("data-id"));
         }), { message: "The whole selected path and its branches fit the canvas" }).toEqual([]);
       }
-      // The finding is a badge on the asset at risk, not the last hop of the chain.
-      await expect(pathCanvas.locator('.react-flow__node[data-id="cve:next"]')).toHaveCount(0);
-      await expect(pathCanvas.getByTestId("attack-path-node-pkg:next")).toHaveAttribute("data-role", "target");
-      await expect(pathCanvas.getByRole("button", { name: "1 finding on next@15.2.2, worst critical (1 critical). Open findings" })).toHaveText("1 critical");
+      // The path ends at the advisory, drawn as the terminal hop; the package keeps the backend's finding count.
+      await expect(pathCanvas.getByTestId("attack-path-node-cve:next")).toHaveAttribute("data-role", "target");
+      await expect(pathCanvas.getByLabel("Findings (1) on next@15.2.2, worst critical", { exact: true })).toBeVisible();
       // Relationship names appear on hover or focus only.
       const tooltip = pathCanvas.getByRole("tooltip");
       await expect(tooltip).toHaveCount(0);
@@ -3115,7 +3122,7 @@ async function main() {
           await scrollTo(p, 0);
         }, {
           expectedText: ["Has finding", "pillow@9.0.0 is recorded as affected by CVE-2023-4863.", "Bundled advisory database", "Technical details", /Image inventory/i, /^Deployment$/im, "pinned-package.txt", "CVE-2023-4863",
-            "1 high finding in view · 1 KEV-listed · 1 attack path across the whole snapshot (deduplicated)", "Path analysis complete for this snapshot", /Reference evidence lab/i],
+            `1 high finding in view · 1 KEV-listed · ${referenceGraph.attack_paths.length} attack path${referenceGraph.attack_paths.length === 1 ? "" : "s"} across the whole snapshot (deduplicated)`, "Path analysis complete for this snapshot", /Reference evidence lab/i],
           expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph"],
           minGraphNodes: 5, maxGraphNodes: 5, minGraphEdges: 4, maxGraphEdges: 4,
           minGraphNodeFontPx: 12, minGraphEdgeLabelFontPx: 12,
@@ -3135,31 +3142,17 @@ async function main() {
           state: "visible",
           timeout: 30_000,
         });
-        await canvasPage.locator('[data-testid="graph-rollup-decision-surface"]').waitFor({
-          state: "visible",
-          timeout: 30_000,
-        });
-        await canvasPage.locator('[data-testid="graph-rollup-relationship-completeness"]').waitFor({
-          state: "visible",
-          timeout: 30_000,
-        });
-        await canvasPage.locator('[data-testid="graph-rollup-card-grid"] article').first().waitFor({
-          state: "visible",
-          timeout: 30_000,
-        });
+        // Fifteen top-level scopes open as the grouped map (the ranked list takes over above 24).
+        await canvasPage.locator(".react-flow__node:visible").first().waitFor({ state: "visible", timeout: 30_000 });
         await canvasPage.waitForTimeout(500);
-        await canvasPage.locator('[data-testid="graph-rollup-decision-surface"]').waitFor({
-          state: "visible",
-          timeout: 30_000,
-        });
       },
       {
         awaitResponses: [
           (response) => new URL(response.url()).pathname === "/v1/graph/rollup" && response.ok(),
         ],
-        expectedText: ["Investigation", "Which collected scope needs investigation?", "aggregated relationship rows"],
+        expectedText: ["Investigation", "Scope overview", "aggregate links"],
         expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/rollup", "/v1/graph/scenarios"],
-        readySelector: '[data-testid="graph-rollup-decision-surface"]',
+        readySelector: ".react-flow__node",
         assertNoHorizontalOverflow: true,
       },
     );
