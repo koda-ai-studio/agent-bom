@@ -30,6 +30,8 @@ DEMO = "tests/test_demo_estate_bootstrap.py"
         (["tests/test_policy_engine.py", "tests/test_demo_estate_bootstrap_lifecycle.py"], 4, 3),
         (["tests/test_demo_estate_bootstrap_rollover.py"], 4, 3),
         (["tests/test_demo_estate_bootstrap_live_feeds.py"], 4, 3),
+        (["tests/test_demo_estate_bootstrap_restart.py"], 4, 3),
+        (["tests/test_demo_estate_bootstrap_refresh.py"], 4, 3),
         (["tests/test_demo_estate_bootstrap_reads.py"], 4, 4),
     ],
 )
