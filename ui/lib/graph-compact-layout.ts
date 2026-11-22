@@ -3,12 +3,14 @@
  * ordered by its neighbours and fanned evenly around them. Presentation only:
  * ranks come from the caller's backend-derived keys, never from entity types. */
 
+import { linkArcs } from "@/lib/graph-compact-arcs";
+
 // Cards grow in layout units as Fit all zooms out; these gaps keep the separation
 // pass's clear space (24 units) at the zooms graphs of this size fit at, so it does not move placed cards.
 export const COMPACT_RANK_GAP = 240;
 export const COMPACT_ROW_GAP = 200;
 /** Layout-unit width of a compact node box; the name truncates inside it. */
-export const COMPACT_NODE_WIDTH = 200;
+export const COMPACT_NODE_WIDTH = 216;
 
 type Link = { id?: string; source: string; target: string; data?: Record<string, unknown> | undefined };
 export type PackItem = { id: string; desired: number; fixed?: boolean };
@@ -80,7 +82,7 @@ export type CompactInput = {
   spine: readonly string[];
   /** Parent and child of a link inside one column, or null for a peer link that splits no rank. */
   containment?: (link: Link) => readonly [string, string] | null;
-  /** Display nodes placed relative to another node's rank (offset in ranks, may be fractional). */
+  /** Display nodes placed relative to another node's rank: a whole offset joins a later column's rank, a fraction sits between ranks. */
   attached?: ReadonlyMap<string, { to: string; offset: number }>;
 };
 
@@ -95,7 +97,9 @@ function rankKeys({ ids, links, column, attached, containment }: CompactInput) {
       const targets = to.split("\n");
       if (targets.some(target => pending.has(target) && target !== id)) continue;
       const base = targets.map(target => key.get(target)).filter((value): value is number => value !== undefined);
-      key.set(id, (base.length ? (offset < 0 ? Math.min(...base) : Math.max(...base)) : 0) + offset);
+      const anchor = base.length ? (offset < 0 ? Math.min(...base) : Math.max(...base)) : 0;
+      // A whole-number offset joins the rank of the column that many columns along; a fraction sits between ranks.
+      key.set(id, Number.isInteger(offset) ? (Math.floor(anchor / 1000) + offset) * 1000 : anchor + offset);
       pending.delete(id);
     }
   }
@@ -128,11 +132,10 @@ function rankGap(ranks: number[][]) {
 }
 
 const LANE_SLOT_BUDGET = 4000;
-/** Layout units a card occupies above and below its row: half a glyph above, glyph and caption below. */
-const CARD_ABOVE = 60, CARD_BELOW = 130;
 
-/** A link spanning several ranks reserves a lane slot in every rank it crosses,
- * so its curve never runs through a node standing in between. */
+
+/** A link spanning several ranks reserves a placeholder slot in every rank it crosses.
+ * The slots only space the ordering; the link itself is drawn as one curve. */
 function laneLinks(links: readonly Link[], rank: Map<string, number>, spine: ReadonlySet<string>) {
   const lanes: Link[] = [], dummies = new Map<string, { rank: number; spine: boolean; ends: [string, string] }>(), chains = new Map<string, string[]>();
   const span = (link: Link) => Math.abs((rank.get(link.source) ?? 0) - (rank.get(link.target) ?? 0)) - 1;
@@ -164,13 +167,13 @@ export function compactPositions(input: CompactInput): Map<string, Point> {
   return compactLayout(input).positions;
 }
 
-/** Positions plus, for each link that skips ranks, its lane points from left to right. */
-export function compactLayout(input: CompactInput): { positions: Map<string, Point>; lanes: Map<string, Point[]> } {
+/** Positions, plus an arc height for each long link whose direct curve would still cross a card. */
+export function compactLayout(input: CompactInput): { positions: Map<string, Point>; arcs: Map<string, [number, number]>; behind: Set<string> } {
   const { ids, links, spine } = input;
   const rank = rankKeys(input);
-  if (new Set(rank.values()).size === 1 && ids.length > 2 && ![...neighbourMap(ids, links).values()].some(list => list.length)) return { positions: gridPositions(ids), lanes: new Map() };
+  if (new Set(rank.values()).size === 1 && ids.length > 2 && ![...neighbourMap(ids, links).values()].some(list => list.length)) return { positions: gridPositions(ids), arcs: new Map(), behind: new Set() };
   const onSpine = new Set(spine.filter(id => rank.has(id)));
-  const { lanes, dummies, chains } = laneLinks(links, rank, onSpine);
+  const { lanes, dummies } = laneLinks(links, rank, onSpine);
   for (const [id, lane] of dummies) rank.set(id, lane.rank);
   const all = [...ids, ...dummies.keys()];
   const neighbours = neighbourMap(all, lanes);
@@ -219,31 +222,26 @@ export function compactLayout(input: CompactInput): { positions: Map<string, Poi
   const rankIndex = new Map(order.map((r, i) => [r, i]));
   const gap = rankGap(order.map(r => byRank.get(r)!.map(id => y.get(id)!)));
   const point = (id: string) => ({ x: rankIndex.get(rank.get(id)!)! * gap, y: Math.round(y.get(id)!) });
-  const cards = new Map(order.map(r => [r, byRank.get(r)!.filter(id => !dummies.has(id)).map(id => y.get(id)!)]));
-  return { positions: new Map(ids.map(id => [id, point(id)])), lanes: new Map([...chains].map(([id, chain]) => [id, keptSlots(chain).map(point)])) };
+  for (const r of order) transposeRank(byRank.get(r)!.filter(id => !dummies.has(id)), r, rank, neighbours, y, onSpine);
+  const positions = new Map(ids.map(id => [id, point(id)]));
+  return { positions, ...linkArcs(links, positions) };
+}
 
-  /** A slot the packer pushed outside its link's two ends would draw a loop. Drop such slots
-   * when the direct curve across their ranks clears every card there; otherwise keep the lane. */
-  function keptSlots(chain: string[]) {
-    const [a, b] = dummies.get(chain[0]!)!.ends;
-    const ends = [y.get(a!)!, y.get(b!)!], lo = Math.min(...ends) - 1, hi = Math.max(...ends) + 1;
-    const kept = chain.filter(slot => y.get(slot)! >= lo && y.get(slot)! <= hi);
-    if (kept.length === chain.length) return chain;
-    const [left, right] = rank.get(a!)! <= rank.get(b!)! ? [a!, b!] : [b!, a!];
-    const route = [left, ...kept, right];
-    const clear = chain.every(slot => {
-      if (kept.includes(slot)) return true;
-      const r = rank.get(slot)!;
-      const after = route.findIndex(id => rank.get(id)! > r), p = route[after - 1]!, q = route[after]!;
-      // Sample the curve across the card's width in this rank, not only at its centre.
-      const span = rank.get(q)! - rank.get(p)!;
-      return [-0.4, 0, 0.4].every(offset => {
-        const t = Math.min(1, Math.max(0, (r + offset - rank.get(p)!) / span)), ease = t * t * (3 - 2 * t);
-        const at = y.get(p)! + (y.get(q)! - y.get(p)!) * ease;
-        // A card's glyph sits on its row; its caption hangs below it.
-        return cards.get(r)!.every(cardY => at < cardY - CARD_ABOVE || at > cardY + CARD_BELOW);
-      });
-    });
-    return clear ? kept : chain;
+/** Swap neighbouring cards of one rank when that removes crossings with the ranks either side. */
+function transposeRank(members: string[], r: number, rank: Map<string, number>, neighbours: Map<string, string[]>, y: Map<string, number>, spine: ReadonlySet<string>) {
+  const rows = members.filter(id => !spine.has(id)).sort((a, b) => y.get(a)! - y.get(b)!);
+  const crossings = (upper: string, lower: string) => {
+    let count = 0;
+    for (const side of [-1, 1]) {
+      const near = (id: string) => neighbours.get(id)!.filter(n => Math.sign(rank.get(n)! - r) === side).map(n => y.get(n)!);
+      for (const a of near(upper)) for (const b of near(lower)) if (a > b) count++;
+    }
+    return count;
+  };
+  for (let i = 0; i + 1 < rows.length; i++) {
+    const [a, b] = [rows[i]!, rows[i + 1]!];
+    if (crossings(b, a) >= crossings(a, b)) continue;
+    const ya = y.get(a)!; y.set(a, y.get(b)!); y.set(b, ya);
+    rows[i] = b; rows[i + 1] = a;
   }
 }

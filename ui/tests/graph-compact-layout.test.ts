@@ -50,11 +50,14 @@ describe("compact attack-path layout", () => {
     expect(result.edges.every(e => e.sourceHandle == null && e.targetHandle == null)).toBe(true);
   });
 
-  it("gives a link that skips ranks its own lane instead of running through the nodes it skips", () => {
-    const nodes = [node("account", "account"), node("gateway", "container"), node("cluster", "cloudResource"), node("bucket", "package")];
-    const result = semanticGraphLayout(nodes, ["gateway", "cluster", "bucket"].map(id => edge("account", id, "contains")));
-    const ys = ["gateway", "cluster", "bucket"].map(id => at(result, id).y);
-    expect(new Set(ys).size).toBe(3);
+  it("arcs a long link around a card that stands on its direct curve", () => {
+    const nodes = [node("person", "user"), node("agent", "agent"), node("tool", "tool")];
+    const result = semanticGraphLayout(nodes, [edge("person", "agent"), edge("agent", "tool"), edge("person", "tool", "invoked")], ["person", "agent", "tool"]);
+    const long = result.edges.find(e => e.id === "person->tool")!;
+    const arc = long.data?.arcDy as [number, number] | undefined;
+    expect(arc).toHaveLength(2);
+    expect(Math.max(...arc!.map(Math.abs))).toBeGreaterThan(0);
+    expect(result.edges.find(e => e.id === "person->agent")!.data?.arcDy).toBeUndefined();
   });
 
   it("puts a package one rank right of its far-left owner and its finding one rank further", () => {
@@ -66,17 +69,10 @@ describe("compact attack-path layout", () => {
     expect(at(result, "cve").x).toBeLessThan(at(result, "tool").x);
   });
 
-  it("never draws a link's lane outside the span of its own two ends", () => {
+  it("draws a star's long links as single curves with no lane points", () => {
     const nodes = [node("account", "account"), node("bucket", "package"), node("cluster", "cloudResource"), node("gateway", "container")];
     const result = semanticGraphLayout(nodes, ["bucket", "cluster", "gateway"].map(id => edge("account", id, "contains")));
-    for (const link of result.edges) {
-      const from = at(result, link.source), to = at(result, link.target);
-      for (const point of (link.data?.lanePoints as { dy: number }[] | undefined) ?? []) {
-        const y = from.y + point.dy;
-        expect(y).toBeGreaterThanOrEqual(Math.min(from.y, to.y) - 1);
-        expect(y).toBeLessThanOrEqual(Math.max(from.y, to.y) + 1);
-      }
-    }
+    expect(result.edges.every(link => link.type === "compact" && link.data?.lanePoints === undefined)).toBe(true);
   });
 
   it("never stacks two nodes of one rank closer than the row gap", () => {

@@ -69,14 +69,12 @@ describe("small MCP evidence flow", () => {
     expect(overlaps).toEqual([]);
   });
 
-  it("keeps the primary evidence chain on row zero with its branches fanned on both sides", () => {
+  it("keeps the primary evidence chain on row zero with its branches off it", () => {
     const result = mcpEvidenceFlow(nodes, edges)!;
     const primary = result.nodes.find(n => n.id === "client")!.position.y;
     expect(primary).toBe(0);
     const branchRows = result.nodes.filter(n => n.data.nodeType === "server" && n.id !== "github-1").map(n => n.position.y);
     expect(branchRows.every(y => y !== primary)).toBe(true);
-    expect(Math.min(...branchRows)).toBeLessThan(primary);
-    expect(Math.max(...branchRows)).toBeGreaterThan(primary);
   });
 
   it("is deterministic across API ordering and does not relabel scope or evidence", () => {

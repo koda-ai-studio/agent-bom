@@ -36,7 +36,9 @@ it("branches recorded findings from their assets while preserving access order",
   const result = graphHierarchyLayout(nodes, edges);
   const byId = new Map(result.nodes.map(n => [n.id, n]));
   expect(byId.get("gateway")!.position.x).toBeLessThan(byId.get("cluster")!.position.x);
-  expect(byId.get("checkout")!.position.x).toBe(byId.get("ledger")!.position.x);
+  // The gateway exposes checkout inside the app layer, so checkout reads one rank after its entry.
+  expect(byId.get("checkout")!.position.x).toBeGreaterThan(byId.get("gateway")!.position.x);
+  expect(byId.get("ledger")!.position.x).toBeLessThan(byId.get("checkout")!.position.x);
   // Backend layer order (scope, app, infra, identity, asset), with empty layers compressed.
   const chain = ["account", "checkout", "cluster", "role", "bucket"].map(id => byId.get(id)!.position.x);
   expect(chain).toEqual([...chain].sort((a, b) => a - b));
@@ -119,7 +121,9 @@ it("distinguishes identity kinds without inventing role semantics or hidden inve
 it("retains backend layers when parent depth changes", () => {
   const result = cloudHierarchyLayout(nodes, edges.filter(e => e.target !== "ledger").concat(edge("account", "ledger", "hosts")))!;
   const at = new Map(result.nodes.map(n => [n.id, n.position]));
-  expect(at.get("ledger")!.x).toBe(at.get("checkout")!.x);
+  // Ledger stays in its backend layer whatever its parent's depth; checkout follows the gateway that exposes it.
+  expect(at.get("ledger")!.x).toBeLessThan(at.get("checkout")!.x);
+  expect(at.get("ledger")!.x).toBe(at.get("gateway")!.x);
   expect(result.nodes.every(n => !n.style?.paddingTop)).toBe(true);
 });
 

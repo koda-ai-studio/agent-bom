@@ -1,9 +1,10 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
-import { BaseEdge, EdgeLabelRenderer, Position, useInternalNode, useStore, type EdgeProps } from "@xyflow/react";
+import { BaseEdge, EdgeLabelRenderer, Position, useStore, type EdgeProps } from "@xyflow/react";
 import { RelationshipBadge } from "@/components/relationship-edge";
 import { edgeFamily, edgeFamilyColor, edgeIsDashed } from "@/lib/graph-edge-family";
+import { ARC_REACH } from "@/lib/graph-compact-arcs";
 import { relationshipEdgeLabelText } from "@/lib/graph-utils";
 
 type Point = { x: number; y: number };
@@ -15,40 +16,21 @@ function control(point: Point, position: Position, offset: number): Point {
   return { x: point.x, y: point.y + offset };
 }
 
-type LanePoint = { dx: number; dy: number; half?: number };
-const isLane = (value: unknown): value is LanePoint[] => Array.isArray(value) && value.every(p => typeof p?.dx === "number" && typeof p?.dy === "number");
-
-/** A link that skips ranks runs level through each reserved lane slot, joined by
- * horizontal-tangent curves: one smooth line that never cuts a neighbouring card. */
-function laneCurve(source: Point, target: Point, lane: LanePoint[], sourceCentreX: number) {
-  const glyphHalf = Math.abs(source.x - sourceCentreX), direction = Math.sign(target.x - source.x) || 1;
-  // The lane holds its slot's whole card width, so it only turns in the gaps between cards.
-  const slots = lane.flatMap(p => {
-    const x = sourceCentreX + p.dx, y = source.y + p.dy, half = p.half ?? glyphHalf;
-    return [{ x: x - direction * half, y }, { x: x + direction * half, y }];
-  });
-  const points = [source, ...slots, target];
-  const segments = points.slice(1).map((q, i) => {
-    const p = points[i]!, mid = (q.x - p.x) / 2;
-    return p.y === q.y ? `L ${q.x},${q.y}` : `C ${p.x + mid},${p.y} ${q.x - mid},${q.y} ${q.x},${q.y}`;
-  });
-  const m = Math.floor(points.length / 2);
-  return { path: `M ${source.x},${source.y} ${segments.join(" ")}`, mid: { x: (points[m - 1]!.x + points[m]!.x) / 2, y: (points[m - 1]!.y + points[m]!.y) / 2 } };
-}
-
 /** One smooth curve between the two handles; never routed through a gutter. */
-export function compactEdgeCurve(props: Pick<EdgeProps, "sourceX" | "sourceY" | "targetX" | "targetY" | "sourcePosition" | "targetPosition"> & { data?: EdgeProps["data"] }, sourceCentreX?: number) {
+export function compactEdgeCurve(props: Pick<EdgeProps, "sourceX" | "sourceY" | "targetX" | "targetY" | "sourcePosition" | "targetPosition"> & { data?: EdgeProps["data"] }) {
   const source = { x: props.sourceX, y: props.sourceY }, target = { x: props.targetX, y: props.targetY };
-  if (sourceCentreX !== undefined && isLane(props.data?.lanePoints) && props.data.lanePoints.length && !props.data.phoneLayout) return laneCurve(source, target, props.data.lanePoints, sourceCentreX);
-  // Each end leaves along its handle: a side handle by half the horizontal run, a top/bottom handle by half the vertical run.
+  // Each end leaves along its handle: a side handle by 45% of the horizontal run, a top/bottom handle by half the vertical run.
   const sameSide = props.sourcePosition === props.targetPosition;
   const dx = Math.abs(target.x - source.x), dy = Math.abs(target.y - source.y);
   const upright = (position: Position) => position === Position.Top || position === Position.Bottom;
-  const reach = (position: Position) => sameSide ? Math.max(110, dy * 0.3) : upright(position) ? Math.max(24, dy * 0.5) : Math.max(24, dx * 0.5);
+  const reach = (position: Position) => sameSide ? Math.max(110, dy * 0.3) : upright(position) ? Math.max(24, dy * 0.5) : Math.max(24, dx * ARC_REACH);
   let c1 = control(source, props.sourcePosition, reach(props.sourcePosition)), c2 = control(target, props.targetPosition, reach(props.targetPosition));
   // One upright end and one side end: run along the upright axis, then turn into the side.
   if (upright(props.sourcePosition) && !upright(props.targetPosition)) { c1 = { x: source.x, y: source.y + (target.y - source.y) * 0.75 }; c2 = { x: source.x, y: target.y }; }
   if (!upright(props.sourcePosition) && upright(props.targetPosition)) { c1 = { x: target.x, y: source.y }; c2 = { x: target.x, y: target.y - (target.y - source.y) * 0.75 }; }
+  // A link whose plain curve would cross a card bends around it: the layout sets both control heights.
+  const arc = props.data?.arcDy;
+  if (Array.isArray(arc) && arc.length === 2 && !props.data?.phoneLayout && !sameSide) { c1 = { ...c1, y: source.y + Number(arc[0]) }; c2 = { ...c2, y: source.y + Number(arc[1]) }; }
   const mid = { x: (source.x + 3 * c1.x + 3 * c2.x + target.x) / 8, y: (source.y + 3 * c1.y + 3 * c2.y + target.y) / 8 };
   return { path: `M ${source.x},${source.y} C ${c1.x},${c1.y} ${c2.x},${c2.y} ${target.x},${target.y}`, mid };
 }
@@ -78,14 +60,12 @@ export function CompactRelationshipEdge(props: EdgeProps) {
   }, []);
   const relationship = typeof props.data?.relationship === "string" ? props.data.relationship : "";
   const family = edgeFamily(relationship);
-  const sourceNode = useInternalNode(props.source);
-  const sourceCentreX = sourceNode?.measured.width ? sourceNode.internals.positionAbsolute.x + sourceNode.measured.width / 2 : undefined;
-  const { path, mid } = compactEdgeCurve(props, sourceCentreX);
+  const { path, mid } = compactEdgeCurve(props);
   const spine = props.data?.pathEmphasis === true;
   const inspecting = hovered || focused || Boolean(props.selected);
   const text = inspecting && props.data?.labelVisibility !== "hide"
     ? props.label ?? (relationship ? relationshipEdgeLabelText(relationship, props.data) : null) : null;
-  const style = { stroke: edgeFamilyColor(family), strokeWidth: spine ? 2.4 : inspecting ? 2 : 1.4, opacity: spine || inspecting ? 1 : 0.78,
+  const style = { stroke: edgeFamilyColor(family), strokeWidth: spine ? 2.4 : inspecting ? 2 : 1.4, opacity: spine || inspecting ? 1 : props.data?.passesBehind ? 0.4 : 0.78,
     strokeDasharray: edgeIsDashed(family, props.data) ? "6 4" : undefined, fill: "none" };
   return <g ref={ref} data-relationship={relationship || undefined} data-edge-family={family} data-label-disclosure={relationship === "vulnerable_to" ? "on-demand" : undefined} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
     {typeof props.data?.hoverDescription === "string" && <title>{props.data.hoverDescription}</title>}

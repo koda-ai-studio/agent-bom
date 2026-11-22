@@ -37,13 +37,14 @@ function attachedRanks(visible: Node<LineageNodeData>[], edges: Edge[], columns:
     const owner = node.data.displayTargetId;
     if (node.type === "findingGroupNode" && node.data.displayOnly && owner && ids.has(owner)) attached.set(node.id, { to: owner, offset: 0.5 });
   }
-  for (const [id, owners] of ownerAdjacent(visible, edges, columns)) if (!attached.has(id)) attached.set(id, { to: owners.join("\n"), offset: 0.5 });
+  for (const [id, owners] of ownerAdjacent(visible, edges, columns)) if (!attached.has(id)) attached.set(id, { to: owners.join("\n"), offset: 1 });
   return attached;
 }
 
-const PARENT_FIRST = new Set(["contains", "hosts", "runs", "depends_on", "manages", "owns", "provides_tool"]);
+// An exposure inside one layer reads entry first, so the exposed node takes the next rank.
+const PARENT_FIRST = new Set(["contains", "hosts", "runs", "depends_on", "manages", "owns", "provides_tool", "exposed_to"]);
 const CHILD_FIRST = new Set(["part_of", "hosted_on", "belongs_to", "member_of"]);
-/** Parent and child of a containment-like link inside one backend layer; any other link splits no rank. */
+/** Parent and child of a containment-like or exposure link inside one backend layer; any other link splits no rank. */
 function containment(link: { source: string; target: string; data?: Record<string, unknown> | undefined }): [string, string] | null {
   const kind = String(link.data?.relationship ?? "");
   return PARENT_FIRST.has(kind) ? [link.source, link.target] : CHILD_FIRST.has(kind) ? [link.target, link.source] : null;
@@ -96,7 +97,7 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
   const owners = contextOwners(visible, edges, onPath);
   const images = workloadImageContext(visible, edges);
   for (const [id, owner] of images.owners) if (!onPath.has(id)) owners.set(id, owner);
-  const { positions, lanes } = compactLayout({ ids: visible.map(node => node.id), links: drawn, column: id => columns.get(id) ?? 0, containment,
+  const { positions, arcs, behind } = compactLayout({ ids: visible.map(node => node.id), links: drawn, column: id => columns.get(id) ?? 0, containment,
     spine: primary, attached: attachedRanks(visible, drawn, columns) });
   const pathPairs = new Set(primary.slice(1).map((id, index) => `${primary[index]}\u0000${id}`));
   return {
@@ -118,12 +119,11 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
       const from = positions.get(edge.source), to = positions.get(edge.target);
       const reverse = Boolean(from && to && from.x > to.x);
       const sameRank = Boolean(from && to && from.x === to.x);
-      const lane = from && lanes.get(edge.id)?.map(point => ({ dx: point.x - from.x, dy: point.y - from.y, half: COMPACT_NODE_WIDTH / 2 }));
       const color = edgeFamilyColor(edgeFamily(String(edge.data?.relationship ?? "")));
       const marker = (value: Edge["markerEnd"]) => value && typeof value === "object" ? { ...value, color, width: 14, height: 14 } : value;
       return { ...edge, type: "compact", animated: false, ...(edge.markerEnd ? { markerEnd: marker(edge.markerEnd)! } : {}),
         ...(edge.markerStart ? { markerStart: marker(edge.markerStart)! } : {}), sourceHandle: reverse ? "context" : null, targetHandle: reverse || sameRank ? "context" : null,
-        data: { ...edge.data, semanticLayout: true, individualLabel: true, lanePoints: lane && (reverse ? lane.reverse() : lane), quietLabel: edge.data?.isClusterEdge !== true,
+        data: { ...edge.data, semanticLayout: true, individualLabel: true, arcDy: arcs.get(edge.id), passesBehind: behind.has(edge.id) || undefined, quietLabel: edge.data?.isClusterEdge !== true,
           pathEmphasis: pathPairs.has(`${edge.source}\u0000${edge.target}`) || edge.data?.pathEmphasis === true } };
     }),
   };
