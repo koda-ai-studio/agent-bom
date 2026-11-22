@@ -149,7 +149,8 @@ export function buildRollupFlowGraph(
       // The aggregate count spans every listed kind; it is not a per-kind count.
       type: "smoothstep",
       label: `${edge.count.toLocaleString()} relationship${edge.count === 1 ? "" : "s"}`,
-      data: { aggregate: edge, hoverDescription: `${edge.count} recorded relationship${edge.count === 1 ? "" : "s"} between entities · ${edge.directions?.join(", ") || "Direction not recorded"}. Select to inspect the aggregate.` },
+      // A single recorded kind orders the scopes like the entity graph does (a cluster before what it hosts).
+      data: { aggregate: edge, ...(edge.relationships.length === 1 ? { relationship: edge.relationships[0] } : {}), hoverDescription: `${edge.count} recorded relationship${edge.count === 1 ? "" : "s"} between entities · ${edge.directions?.join(", ") || "Direction not recorded"}. Select to inspect the aggregate.` },
       ariaLabel: `${edge.count} recorded relationship${edge.count === 1 ? "" : "s"} between entities; ${edge.directions?.length === 1 ? edge.directions[0] : edge.directions?.length ? "mixed directions" : "direction unavailable"}`,
       ...(oneWay(edge) && (!edge.reverse || oneWay(edge.reverse))
         ? { markerEnd: { type: MarkerType.ArrowClosed, color: "var(--text-secondary)" } } : {}),

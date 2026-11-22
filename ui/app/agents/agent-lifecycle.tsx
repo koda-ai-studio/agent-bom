@@ -36,9 +36,9 @@ export function LifecycleFlow({ data, agentName }: { data: AgentLifecycleRespons
       <button onClick={handleExport} className="agents-flow-export"><Download className="h-4 w-4" /> Export</button>
     </div>
     <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm" aria-label="Unique inventory counts">
-      {[["Servers", data.stats.total_servers], ["Packages", data.stats.total_packages], ["Tools", data.stats.total_tools],
-        ["Credential slots", data.stats.total_credentials], ["Advisories", data.stats.total_vulnerabilities]].map(([label, count]) =>
-        <span key={label}><strong>{count ?? 0}</strong> {label}</span>)}
+      {([["Server", "Servers", data.stats.total_servers], ["Package", "Packages", data.stats.total_packages], ["Tool", "Tools", data.stats.total_tools],
+        ["Credential slot", "Credential slots", data.stats.total_credentials], ["Advisory", "Advisories", data.stats.total_vulnerabilities]] as const).map(([one, many, count]) =>
+        <span key={many}><strong>{count ?? 0}</strong> {(count ?? 0) === 1 ? one : many}</span>)}
     </div>
     <div className="flex flex-wrap items-center gap-2" aria-label="Inventory view">
       {([["servers", "Server connections"], ["packages", "Packages and advisories"], ["tools", "Tools and credentials"]] as const).map(([key, label]) =>

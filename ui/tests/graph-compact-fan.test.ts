@@ -1,4 +1,4 @@
-import { expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { linkEndFans } from "@/lib/graph-compact-fan";
 
 it("spreads the ends of links that meet one side of a glyph, ordered by the far card's row", () => {
@@ -11,4 +11,14 @@ it("spreads the ends of links that meet one side of a glyph, ordered by the far 
   // A back link enters through the side handle and is not part of the fan; a lone source end does not spread.
   expect(fans.has("back-t")).toBe(false);
   expect(fans.get("a-t")!.sourceFan).toBeUndefined();
+});
+
+describe("a back link and a forward link on one side", () => {
+  it("spread apart where a back link enters the side a forward link leaves", () => {
+    const positions = new Map([["agent", { x: 400, y: 0 }], ["portal", { x: 200, y: 0 }], ["pkg", { x: 400, y: 200 }]]);
+    const fans = linkEndFans([{ id: "hosted", source: "agent", target: "portal" }, { id: "depends", source: "portal", target: "pkg" }], positions);
+    expect(fans.get("hosted")?.targetFan).toBeDefined();
+    expect(fans.get("depends")?.sourceFan).toBeDefined();
+    expect(fans.get("hosted")!.targetFan).not.toBe(fans.get("depends")!.sourceFan);
+  });
 });

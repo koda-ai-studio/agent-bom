@@ -3,7 +3,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { get } from "@/lib/api-transport";
 import { useGraphNodeAggregates } from "@/lib/graph-node-aggregates";
 vi.mock("@/lib/api-transport", () => ({ get: vi.fn() }));
-beforeEach(() => vi.mocked(get).mockReset());
+beforeEach(() => { vi.mocked(get).mockReset(); });
 const row = { node_id: "node:a", semantic_layer: "app", aggregate: { issue_count: 37, worst_severity: "high", exposed_count: 4 } };
 it("requests the selected hops in one snapshot-pinned batch and keeps backend totals", async () => {
   vi.mocked(get).mockResolvedValue({ scan_id: "scan", snapshot_generation: "revision", aggregates: [row], missing_node_ids: ["node:b"] });
@@ -17,6 +17,14 @@ it("requests the selected hops in one snapshot-pinned batch and keeps backend to
   expect(result.current.has("node:b")).toBe(false);
   rerender({ hops: ["node:a", "node:b"] });
   expect(get).toHaveBeenCalledTimes(1);
+});
+it("reads once for the hop list a page settles on, never starting a read it then cancels", async () => {
+  vi.mocked(get).mockResolvedValue({ scan_id: "scan", aggregates: [row], missing_node_ids: [] });
+  const { result, rerender } = renderHook(({ hops }) => useGraphNodeAggregates("scan", hops), { initialProps: { hops: ["node:a", "node:b", "node:c"] } });
+  rerender({ hops: ["node:a"] });
+  await waitFor(() => expect(result.current.size).toBe(1));
+  expect(get).toHaveBeenCalledTimes(1);
+  expect(new URL(vi.mocked(get).mock.calls[0]![0], "https://example.test").searchParams.getAll("node_id")).toEqual(["node:a"]);
 });
 it("hides old aggregates immediately when the path snapshot changes", async () => {
   vi.mocked(get).mockResolvedValueOnce({ scan_id: "first", aggregates: [row], missing_node_ids: [] }).mockImplementationOnce(() => new Promise(() => {}));
