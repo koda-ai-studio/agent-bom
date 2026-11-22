@@ -128,6 +128,8 @@ function rankGap(ranks: number[][]) {
 }
 
 const LANE_SLOT_BUDGET = 4000;
+/** Layout units a card occupies above and below its row: half a glyph above, glyph and caption below. */
+const CARD_ABOVE = 60, CARD_BELOW = 130;
 
 /** A link spanning several ranks reserves a lane slot in every rank it crosses,
  * so its curve never runs through a node standing in between. */
@@ -233,9 +235,14 @@ export function compactLayout(input: CompactInput): { positions: Map<string, Poi
       if (kept.includes(slot)) return true;
       const r = rank.get(slot)!;
       const after = route.findIndex(id => rank.get(id)! > r), p = route[after - 1]!, q = route[after]!;
-      const t = (r - rank.get(p)!) / (rank.get(q)! - rank.get(p)!), ease = t * t * (3 - 2 * t);
-      const at = y.get(p)! + (y.get(q)! - y.get(p)!) * ease;
-      return cards.get(r)!.every(cardY => Math.abs(cardY - at) >= COMPACT_ROW_GAP / 2);
+      // Sample the curve across the card's width in this rank, not only at its centre.
+      const span = rank.get(q)! - rank.get(p)!;
+      return [-0.4, 0, 0.4].every(offset => {
+        const t = Math.min(1, Math.max(0, (r + offset - rank.get(p)!) / span)), ease = t * t * (3 - 2 * t);
+        const at = y.get(p)! + (y.get(q)! - y.get(p)!) * ease;
+        // A card's glyph sits on its row; its caption hangs below it.
+        return cards.get(r)!.every(cardY => at < cardY - CARD_ABOVE || at > cardY + CARD_BELOW);
+      });
     });
     return clear ? kept : chain;
   }
