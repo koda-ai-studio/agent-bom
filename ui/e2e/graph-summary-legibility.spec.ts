@@ -17,7 +17,13 @@ test("compact inventory names remain readable after zooming out", async ({ page 
   await page.getByRole("button", { name: "Show full map (30)" }).click();
   await expect(page.locator(".react-flow__node")).toHaveCount(30);
   // An explicit user zoom selects the summary renderer without changing data.
-  await page.getByRole("button", { name: /zoom out/i }).click();
+  // The opening frame shows full cards; zooming out below it and the card threshold hands over to the summary renderer,
+  // within a few steps and before the minimum zoom.
+  await expect(page.locator('[data-testid="summary-node"]')).toHaveCount(0);
+  for (let step = 0; step < 6 && !(await page.getByTestId("summary-node").count()); step++) {
+    await page.getByRole("button", { name: /zoom out/i }).click();
+    await page.waitForTimeout(250);
+  }
   await expect(page.getByTestId("summary-node").first()).toBeAttached();
   expect(await page.getByTestId("summary-node").first().evaluate(node => {
     const label = node.querySelector("span")!, flowNode = node.closest(".react-flow__node")! as HTMLElement;

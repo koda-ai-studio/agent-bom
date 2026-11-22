@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Panel, getViewportForBounds, useNodesInitialized, useReactFlow, useStore, type Node, type FitViewOptions, type Rect } from "@xyflow/react";
-import { CONTROLS_RESERVE, GRAPH_FIT_MAX_ZOOM, PHONE_CONTROLS_PX, GRAPH_LEGIBLE_FIT_ZOOM, GRAPH_PHONE_FOCUS_MIN_ZOOM, graphAdaptiveFrame, legibleFitZoom } from "@/lib/graph-adaptive-frame";
+import { CONTROLS_RESERVE, GRAPH_FIT_MAX_ZOOM, PHONE_CONTROLS_PX, recordFittedZoom, GRAPH_LEGIBLE_FIT_ZOOM, GRAPH_PHONE_FOCUS_MIN_ZOOM, graphAdaptiveFrame, legibleFitZoom } from "@/lib/graph-adaptive-frame";
 import { graphInspectorTargets } from "@/lib/graph-inspector-framing";
 import { readableNodeId } from "@/lib/node-id-tail";
 
@@ -156,6 +156,7 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
               void setViewport({ x, zoom: viewport.zoom, y: PRIMARY_PATH_TOP_MARGIN - after.y * viewport.zoom });
             }
             lastAutoFitKey.current = autoFitKey;
+            if (typeof getViewport === "function") recordFittedZoom(getViewport().zoom);
             frameElement.dataset.graphCameraSettled = "true";
           }
           else if (pass < 3) settle(pass + 1);

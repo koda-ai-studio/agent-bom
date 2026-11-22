@@ -249,8 +249,10 @@ export function compactLayout(input: CompactInput): { positions: Map<string, Poi
   // grow the layout past it: what it makes drawable stays drawable at the zoom Fit all then picks.
   const zoom = ids.length <= REFINE_CARDS ? fitZoom(positions, COMPACT_NODE_WIDTH) * ZOOM_BUDGET : undefined;
   if (input.caption && zoom !== undefined) {
-    refinePlacement(ids, links, positions, onSpine, input.caption, input.levelLeaf, tall, zoom);
-    levelLeaves(ids, positions, leaf, neighbours, onSpine, tall);
+    // Findings stay level with their asset inside the search: every candidate is re-levelled before it is scored.
+    const relevel = (map: Map<string, Point>) => levelLeaves(ids, map, leaf, neighbours, onSpine, tall);
+    refinePlacement(ids, links, positions, onSpine, input.caption, input.levelLeaf, tall, zoom, relevel);
+    relevel(positions);
   }
   clearLevelLinks(ids, links, positions, tall, onSpine);
   let { arcs, behind } = linkArcs(links, positions, input.caption, COMPACT_NODE_WIDTH, zoom);
@@ -329,7 +331,8 @@ function leadChain(id: string, links: readonly Link[], positions: ReadonlyMap<st
 /** Searches from the sweep's placement and from its mirror image (branches flipped across the spine), keeping
  * the better result: a greedy search from one start can settle where a link still has no clear curve. */
 function refinePlacement(ids: readonly string[], links: readonly Link[], positions: Map<string, Point>, spine: ReadonlySet<string>,
-  caption: (id: string) => CaptionText, levelLeaf: ((id: string) => boolean) | undefined, tall: (id: string) => number | undefined, zoom: number) {
+  caption: (id: string) => CaptionText, levelLeaf: ((id: string) => boolean) | undefined, tall: (id: string) => number | undefined, zoom: number,
+  relevel: (positions: Map<string, Point>) => void = () => {}) {
   if (ids.length < 3) return;
   // Deterministic restarts: the sweep's placement, its mirror image, and variants with some branches flipped.
   // One evaluation budget across every restart keeps the search to a few tens of milliseconds.
@@ -343,7 +346,7 @@ function refinePlacement(ids: readonly string[], links: readonly Link[], positio
   let best: { copy: Map<string, Point>; cost: number } | null = null;
   for (const [i, start] of starts.entries()) {
     if (i > 0 && (!rowsClear(ids, start, tall) || heightOf(start) > maxSpan)) continue;
-    const copy = new Map(start), cost = refineRows(ids, links, copy, spine, caption, zoom, levelLeaf, tall, budget);
+    const copy = new Map(start), cost = refineRows(ids, links, copy, spine, caption, zoom, levelLeaf, tall, budget, relevel);
     if (!best || cost < best.cost - 1e-6) best = { copy, cost };
     if (best.cost < 1000 || budget.left <= 0) break;
   }
@@ -370,12 +373,14 @@ function rowsClear(ids: readonly string[], positions: ReadonlyMap<string, Point>
 }
 
 function refineRows(ids: readonly string[], links: readonly Link[], positions: Map<string, Point>, spine: ReadonlySet<string>,
-  caption: (id: string) => CaptionText, zoom: number, levelLeaf?: (id: string) => boolean, tall: (id: string) => number | undefined = () => undefined, budget = { left: SEARCH_BUDGET }): number {
+  caption: (id: string) => CaptionText, zoom: number, levelLeaf?: (id: string) => boolean, tall: (id: string) => number | undefined = () => undefined, budget = { left: SEARCH_BUDGET },
+  relevel: (positions: Map<string, Point>) => void = () => {}): number {
   const movable = ids.filter(id => !spine.has(id) && !levelLeaf?.(id)).sort();
   let cost = placementCost(links, positions, caption, zoom);
   const attempt = (moves: [string, number][]) => {
-    const before = moves.map(([id]) => [id, positions.get(id)!] as const);
+    const before = [...positions];
     for (const [id, y] of moves) positions.set(id, { x: positions.get(id)!.x, y });
+    relevel(positions);
     const next = budget.left-- > 0 && fitZoom(positions, COMPACT_NODE_WIDTH) >= zoom ? placementCost(links, positions, caption, zoom) : Infinity;
     if (next < cost - 1e-6) { cost = next; return true; }
     for (const [id, point] of before) positions.set(id, point);

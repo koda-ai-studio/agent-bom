@@ -98,8 +98,10 @@ describe("finding leaves in a shared rank", () => {
     expect(y("cve-a1")).toBe(y("pkg-a"));
     expect([y("cve-b1"), y("cve-b2")]).toContain(y("pkg-b"));
     expect(Math.abs(y("cve-b1") - y("cve-b2"))).toBeGreaterThanOrEqual(200);
-    const order = ["cve-a1", "cve-b1", "cve-b2", "cve-c1"].map(y);
-    expect([...order].sort((p, q) => p - q)).toEqual(order);
+    // Finding links never cross: the findings read in the same order as their packages.
+    const owner: Record<string, string> = { "cve-a1": "pkg-a", "cve-b1": "pkg-b", "cve-b2": "pkg-b", "cve-c1": "pkg-c" };
+    const byY = Object.keys(owner).sort((p, q) => y(p) - y(q)).map(id => y(owner[id]!));
+    expect([...byY].sort((p, q) => p - q)).toEqual(byY);
   });
 });
 
@@ -116,5 +118,20 @@ describe("layout reuse", () => {
     expect(b.nodes.map(node => node.position)).toEqual(a.nodes.map(node => node.position));
     expect(b.nodes.find(node => node.id === nodes[0]!.id)!.data.highlighted).toBe(true);
     expect(warm).toBeLessThan(Math.max(5, cold / 4));
+  });
+});
+
+describe("reference correlation with the side navigation open", () => {
+  it("keeps the tool between the service account and pillow and clears every card box at the nav-open canvas", async () => {
+    const { setLayoutFrame } = await import("@/lib/graph-compact-arcs");
+    setLayoutFrame(1135, 552);
+    try {
+      const result = semanticGraphLayout(nodes, edges, reference.selectedPath);
+      const y = (id: string) => result.nodes.find(node => node.id === id)!.position.y;
+      const [sa, tool, pillow] = [y("identity:model:reference-workload"), y("tool:runtime:render-untrusted-image"), y("package:mcp:pillow")];
+      expect((sa < tool && tool < pillow) || (sa > tool && tool > pillow)).toBe(true);
+      // Only the manifest's link into its package's left side may be drawn quieter; the browser gate checks it clears text.
+      expect(result.edges.filter(edge => edge.data?.passesBehind && edge.source !== "source:pinned-package").map(edge => edge.id)).toEqual([]);
+    } finally { setLayoutFrame(0, 0); }
   });
 });

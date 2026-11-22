@@ -81,7 +81,7 @@ let frameKey = "default";
 /** Places later layouts for the canvas actually measured (less Fit all's padding). Returns the bucket key, which
  * callers add to their layout memo so a real resize re-places the graph. */
 export function setLayoutFrame(width: number, height: number): string {
-  if (!(width > 0 && height > 0)) return frameKey;
+  if (!(width > 0 && height > 0)) { FRAME = { ...DEFAULT_FRAME }; frameKey = "default"; return frameKey; }
   const w = Math.round(width / FRAME_BUCKET) * FRAME_BUCKET, h = Math.round(height / FRAME_BUCKET) * FRAME_BUCKET;
   // The measured canvas only ever makes the caption model more cautious: a larger canvas keeps the laptop frame.
   FRAME = { width: Math.min(DEFAULT_FRAME.width, w * MEASURED_SHARE), height: Math.min(DEFAULT_FRAME.height, h * MEASURED_SHARE) };

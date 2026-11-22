@@ -75,3 +75,20 @@ export function graphAdaptiveFrame({ bounds, width, availableHeight, inspector, 
     : 0;
   return { height: Math.max(window, focusFloor), fitAll, layoutAspect: Math.round(width / ceiling * 100) / 100 };
 }
+
+/** The zoom the last automatic or Fit all camera settled at; the opening frame always shows full cards. */
+let fittedZoom: number | null = null;
+const fittedListeners = new Set<() => void>();
+export function recordFittedZoom(zoom: number) {
+  if (fittedZoom === zoom) return;
+  fittedZoom = zoom;
+  for (const listener of fittedListeners) listener();
+}
+export function subscribeFittedZoom(listener: () => void) { fittedListeners.add(listener); return () => { fittedListeners.delete(listener); }; }
+export function currentFittedZoom() { return fittedZoom; }
+
+/** Evidence flows keep full cards at and above the fitted zoom; once the operator zooms below both that zoom and the
+ * card threshold, the zoom band (summary renderer) applies. */
+export function evidenceFlowKeepsDetail(zoom: number, fitted: number | null): boolean {
+  return fitted === null || zoom >= fitted - 1e-3 || zoom >= GRAPH_CARD_ZOOM;
+}

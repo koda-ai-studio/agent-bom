@@ -10,7 +10,7 @@ import { boundedGraphElements } from "@/lib/graph-neighbor-expansion";
 import { declutterRelationshipLabels, hideRedundantDerivedEdges } from "@/lib/graph-label-declutter";
 import { graphInvestigationContext, selectInvestigationContext, investigationRankEdges, restoreInvestigationEdges } from "@/lib/graph-investigation-context";
 import { completeDirectedHopCount, visibleGraphFocus, pathRelationshipIds } from "@/lib/security-graph-focus";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useStore, type FitViewOptions, type Node } from "@xyflow/react";
 import { CONTROLS_OVERLAY, fitPaddingAroundOverlay } from "@/lib/graph-viewport-fit";
 import { withFindingContext } from "@/lib/finding-investigation-href";
@@ -21,7 +21,7 @@ import { findingEvidenceContext } from "@/lib/graph-mcp-flow";
 import { COMPACT_GRAPH_MIN_ZOOM, compactInvestigationLayout, readableLineageDagreLr } from "@/lib/graph-node-dimensions";
 import { effectiveLodBandForGraph, useLodBand } from "@/lib/lod-renderer";
 import { flowFromParam, flowPinnedIds } from "@/lib/graph-investigation-flow";
-import { GRAPH_CARD_ZOOM, legibleFit, legibleFitZoom } from "@/lib/graph-adaptive-frame";
+import { currentFittedZoom, evidenceFlowKeepsDetail, GRAPH_CARD_ZOOM, legibleFit, legibleFitZoom, recordFittedZoom, subscribeFittedZoom } from "@/lib/graph-adaptive-frame";
 import { aggregateSiblings, EXPANDED_AGGREGATION_THRESHOLD, FOCUSED_AGGREGATION_THRESHOLD, isClusterPillNode } from "@/lib/sibling-aggregator";
 import { type UnifiedNode } from "@/lib/graph-schema";
 import { resolveSnapshotAttackPathCount } from "@/lib/graph-snapshot-metrics";
@@ -576,7 +576,8 @@ export function useGraphCanvasModel(page: GraphPageData) {
   // Levels of detail: the zoom band keeps dense graphs readable without moving nodes.
   const zoomBand = useLodBand();
   const lodBand = zoomBand === "summary" && graphViewport.zoom >= GRAPH_CARD_ZOOM ? "detail" : zoomBand;
-  const effectiveLodBand = canvasLayoutNodes.some(node => node.data.evidenceFlow) || compactInvestigationTopology || compactGroupedTopology || (scenarioContextIds && scenarioContextIds.size <= 8) ? "detail" : effectiveLodBandForGraph(lodBand, {
+  const fittedZoom = useSyncExternalStore(subscribeFittedZoom, currentFittedZoom, () => null);
+  const effectiveLodBand = (canvasLayoutNodes.some(node => node.data.evidenceFlow) && evidenceFlowKeepsDetail(graphViewport.zoom, fittedZoom)) || compactInvestigationTopology || compactGroupedTopology || (scenarioContextIds && scenarioContextIds.size <= 8) ? "detail" : effectiveLodBandForGraph(lodBand, {
     sourceNodeCount: flow.nodes.length,
     renderedNodeCount: aggregated.nodes.length,
     clusterCount: aggregated.clusters.size,
@@ -736,6 +737,8 @@ export function useGraphCanvasModel(page: GraphPageData) {
     const fit = () => {
       if (fitGeneration.current !== generation) return;
       void reactFlow.fitView({ ...options, duration: 240 }).then(() => {
+        // Fit all re-opens the frame: its zoom is again the one that shows full cards.
+        recordFittedZoom(reactFlow.getViewport().zoom);
         if (!investigationContext && !selectedScenarioId) return;
         // Caption sizes change with zoom. Include their final measured extent,
         // but abandon the settling pass after a scope change or user movement.

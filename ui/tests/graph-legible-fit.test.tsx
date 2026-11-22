@@ -89,3 +89,12 @@ it("reserves the zoom controls' corner when Fit all sets no padding of its own",
   expect(legibleFit({}, 0.4).padding).toEqual({ top: 0.08, right: 0.08, bottom: 0.08, left: CONTROLS_RESERVE });
   expect(legibleFit({ padding: 0.2 }, 0.4).padding).toBe(0.2);
 });
+
+it("keeps full evidence cards at the opening zoom and hands over to the zoom band only below it and the card threshold", async () => {
+  const { evidenceFlowKeepsDetail } = await import("@/lib/graph-adaptive-frame");
+  expect(evidenceFlowKeepsDetail(1, 1)).toBe(true);
+  expect(evidenceFlowKeepsDetail(0.83, 1)).toBe(true);
+  expect(evidenceFlowKeepsDetail(0.5, 0.45)).toBe(true);
+  expect(evidenceFlowKeepsDetail(0.6, 1)).toBe(false);
+  expect(evidenceFlowKeepsDetail(0.6, null)).toBe(true);
+});

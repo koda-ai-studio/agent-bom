@@ -118,7 +118,13 @@ test("an operator's zoom still chooses the summary renderer on a full map", asyn
   await page.setViewportSize(VIEWPORTS[0]!);
   await serve(page, fixtures.projectScan, "light");
   await open(page, "&map_view=full");
-  await page.getByRole("button", { name: /zoom out/i }).click();
+  // The opening frame shows full cards; zooming out below it and the card threshold hands over to the summary renderer,
+  // within a few steps and before the minimum zoom.
+  await expect(page.locator('[data-testid="summary-node"]')).toHaveCount(0);
+  for (let step = 0; step < 6 && !(await page.getByTestId("summary-node").count()); step++) {
+    await page.getByRole("button", { name: /zoom out/i }).click();
+    await page.waitForTimeout(250);
+  }
   await expect(page.getByTestId("summary-node").first()).toBeAttached();
 });
 
