@@ -1,3 +1,4 @@
+import { GRAPH_SEMANTIC_LAYER_META } from "@/lib/graph-schema.generated";
 import { expect, it } from "vitest";
 import type { Edge, Node } from "@xyflow/react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
@@ -8,7 +9,7 @@ const n = (id: string, nodeType: LineageNodeData["nodeType"], semanticLayer: str
   id, type: "containerNode", position: { x: 0, y: 0 }, data: { label: id, nodeType, semanticLayer, attributes },
 });
 const e = (source: string, target: string, relationship: string): Edge => ({ id: `${source}-${target}`, source, target, data: { relationship } });
-const nodes = [n("account", "account", "infra"), n("cluster", "cluster", "infra"), n("endpoint", "apiGateway", "api_gateway", { resource_id: "api-1" }),
+const nodes = [n("account", "account", "scope"), n("cluster", "cluster", "infra"), n("endpoint", "apiGateway", "api_gateway", { resource_id: "api-1" }),
   n("pod", "container", "app", { kubernetes_kind: "Pod" }), n("role", "role", "identity"), n("bucket", "dataStore", "asset"), n("cve", "vulnerability", "finding")];
 const edges = [e("account", "cluster", "contains"), e("cluster", "pod", "contains"), e("endpoint", "pod", "exposed_to"), e("pod", "role", "assumes"), e("role", "bucket", "has_permission"), e("pod", "cve", "vulnerable_to")];
 const pinned = (input: Node<LineageNodeData>[], ids: string[]) => input.map(node => ids.includes(node.id)
@@ -57,8 +58,9 @@ it("keeps a finding shared with a hidden asset outside a single-owner group", ()
 
 it("does not derive columns from recorded ownership depth", () => {
   const result = investigationFlow(nodes, edges, "inventory");
-  expect(at(result, "account").x).toBe(at(result, "cluster").x);
-  expect(at(result, "cluster").x).toBe(at(result, "pod").x);
+  expect(at(result, "account").x).toBe(GRAPH_SEMANTIC_LAYER_META.scope.column * 380);
+  expect(at(result, "cluster").x).toBe(GRAPH_SEMANTIC_LAYER_META.infra.column * 380);
+  expect(at(result, "pod").x).toBe(GRAPH_SEMANTIC_LAYER_META.app.column * 380);
   expect(new Set(result.nodes.map(node => `${node.position.x}:${node.position.y}`)).size).toBe(nodes.length);
 });
 
@@ -69,7 +71,7 @@ it("keeps sibling workloads and their findings off the server-ranked spine", () 
   expect(result.primaryPath).not.toContain("sibling-cve");
   expect(at(result, "sibling").y).not.toBe(at(result, "pod").y);
   expect(at(result, "sibling-cve").y).toBeGreaterThan(at(result, "sibling").y);
-  expect(at(result, "sibling").x).toBe(at(result, "cluster").x);
+  expect(at(result, "sibling").x).toBe(GRAPH_SEMANTIC_LAYER_META.app.column * 380);
 });
 
 it("applies the same semantic layout to a package correlation view", () => {
@@ -124,6 +126,6 @@ it("does not invent a path for disconnected workloads", () => {
 
 it("keeps containment edges without moving parents out of their backend layer", () => {
   const result = investigationFlow(nodes, edges, "exposure");
-  for (const id of ["account", "cluster", "endpoint", "pod"]) expect(at(result, id).x).toBe(at(result, "pod").x);
+  for (const node of nodes.slice(0, 4)) expect(at(result, node.id).x).toBe(GRAPH_SEMANTIC_LAYER_META[node.data.semanticLayer as keyof typeof GRAPH_SEMANTIC_LAYER_META].column * 380);
   expect(result.edges.filter(edge => edge.data?.relationship === "contains").map(edge => [edge.source, edge.target])).toEqual([["account", "cluster"], ["cluster", "pod"]]);
 });

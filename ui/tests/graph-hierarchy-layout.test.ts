@@ -125,7 +125,8 @@ describe("evidence-driven graph flow", () => {
   it("follows recorded engineering relationships and keeps warnings downstream of their subject", () => {
     const result = graphHierarchyLayout(nodes, edges);
     const x = new Map(result.nodes.map(n => [n.id, n.position.x]));
-    for (const id of ["source", "ci", "app"]) expect(x.get(id)).toBe(x.get("repo"));
+    for (const id of ["source", "ci"]) expect(x.get(id)).toBe(x.get("repo"));
+    expect(x.get("app")).toBeLessThan(x.get("repo")!);
     expect(x.get("package")).toBe(x.get("app"));
     expect(x.get("cve")).toBe(x.get("package"));
     expect(x.get("warning")).toBe(x.get("ci"));
