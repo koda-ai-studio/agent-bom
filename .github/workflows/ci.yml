@@ -961,6 +961,57 @@ jobs:
       - name: UI tests
         run: cd ui && npm run test:run -- --shard=${{ matrix.shard }}/2
 
+  ui-product-proof:
+    name: UI product proof
+    runs-on: ubuntu-latest
+    # Install, build and the full capture took 236 s on a hosted runner; it runs beside
+    # the E2E shards, so the queue's wall time is unchanged. The limit only stops a hang.
+    timeout-minutes: 10
+    needs: changes
+    # Run beside the other UI lanes; never publish or commit PR captures.
+    if: >-
+      !cancelled() && needs.changes.outputs.queue_proven != 'true' && (
+        (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+        (github.event_name != 'pull_request' && github.event_name != 'push') ||
+        needs.changes.result != 'success' ||
+        needs.changes.outputs.ui == 'true'
+      )
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up UI toolchain
+        uses: ./.github/actions/setup-ui
+      - name: Set up Python for capture projections
+        uses: ./.github/actions/setup-python
+      - name: Install capture dependencies
+        run: |
+          uv sync --frozen --extra api
+          cd ui
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Build committed dashboard
+        run: |
+          cd ui
+          rm -rf .next
+          npm run build
+      - name: Verify product proof without publishing
+        run: |
+          set -euo pipefail
+          cd ui
+          PYTHON="$GITHUB_WORKSPACE/.venv/bin/python" npm run capture:product-proof 2>&1 | tee "$RUNNER_TEMP/product-proof.log"
+      - name: Retain capture failure diagnostics
+        if: ${{ failure() || cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: product-proof-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/product-proof.log
+            /tmp/agent-bom-capture-failure-*/**
+            ${{ runner.temp }}/agent-bom-capture-failure-*/**
+          retention-days: 3
+          if-no-files-found: warn
+
   ui-export:
     name: UI export build
     runs-on: ubuntu-latest
@@ -1257,7 +1308,7 @@ jobs:
     name: UI E2E and container smoke
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [changes, ui-e2e-shard, ui-e2e-smoke, ui-container-smoke]
+    needs: [changes, ui-e2e-shard, ui-e2e-smoke, ui-container-smoke, ui-product-proof]
     if: >-
       !cancelled() && needs.changes.outputs.queue_proven != 'true' && (
         (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
@@ -1276,9 +1327,11 @@ jobs:
           SMOKE_REQUIRED: ${{ github.event_name == 'pull_request' && (needs.changes.result != 'success' || needs.changes.outputs.ui_e2e != 'false') }}
           CONTAINER_RESULT: ${{ needs.ui-container-smoke.result }}
           CONTAINER_REQUIRED: ${{ github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.ui_container != 'false' }}
+          PROOF_RESULT: ${{ needs.ui-product-proof.result }}
+          PROOF_REQUIRED: "true"
         run: |
           set -euo pipefail
-          for lane in SHARD SMOKE CONTAINER; do
+          for lane in SHARD SMOKE CONTAINER PROOF; do
             result_var="${lane}_RESULT"
             required_var="${lane}_REQUIRED"
             result="${!result_var}"
