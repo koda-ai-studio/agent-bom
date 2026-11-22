@@ -2416,7 +2416,7 @@ async function writeScreenshotManifest(outputDir = IMAGE_DIR) {
     },
     {
       path: "correlation-graph-live.png",
-      page: `/graph?capture=1&scan=${REFERENCE_CORRELATION_ID}&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`,
+      page: `/graph?capture=1&scan=${REFERENCE_CORRELATION_ID}&layers=cloudResource,server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`,
       scope: "Reference evidence lab graph with scanned dependency evidence, local tool invocation, and separate modeled identity permissions",
       presentation: "dark desktop",
       evidence_artifact: path.relative(REPO_ROOT, REFERENCE_LAB_PROOF_PATH),
@@ -2443,7 +2443,7 @@ async function writeScreenshotManifest(outputDir = IMAGE_DIR) {
     },
     {
       path: "correlation-path-live.png",
-      page: `/graph?capture=1&scan=${REFERENCE_CORRELATION_ID}&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`,
+      page: `/graph?capture=1&scan=${REFERENCE_CORRELATION_ID}&layers=cloudResource,server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`,
       scope: "Reference evidence lab recorded relationships; exploitability and cloud resource activity remain unestablished",
       presentation: `${CAPTURE_THEME} desktop`,
       evidence_artifact: path.relative(REPO_ROOT, REFERENCE_LAB_PROOF_PATH),
@@ -2461,7 +2461,7 @@ async function writeScreenshotManifest(outputDir = IMAGE_DIR) {
     },
     {
       path: "correlation-path-light-live.png",
-      page: `/graph?capture=1&scan=${REFERENCE_CORRELATION_ID}&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`,
+      page: `/graph?capture=1&scan=${REFERENCE_CORRELATION_ID}&layers=cloudResource,server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`,
       scope: "Reference evidence lab recorded relationships and evidence boundaries in the light theme",
       presentation: "light desktop",
       evidence_artifact: path.relative(REPO_ROOT, REFERENCE_LAB_PROOF_PATH),
@@ -2479,7 +2479,7 @@ async function writeScreenshotManifest(outputDir = IMAGE_DIR) {
     },
     {
       path: "correlation-path-mobile-live.png",
-      page: `/graph?capture=1&scan=${REFERENCE_CORRELATION_ID}&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`,
+      page: `/graph?capture=1&scan=${REFERENCE_CORRELATION_ID}&layers=cloudResource,server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`,
       scope: "Reference evidence lab recorded relationships as readable sequential hops at a 390 by 844 viewport; each hop opens its evidence, and Graph shows the canvas",
       presentation: "dark mobile",
       evidence_artifact: path.relative(REPO_ROOT, REFERENCE_LAB_PROOF_PATH),
@@ -3084,7 +3084,7 @@ async function main() {
     await page.setViewportSize({ width: 1920, height: 1080 });
     await capture(
       page,
-      `/graph?capture=1&scan=${REFERENCE_CORRELATION_ID}&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`,
+      `/graph?capture=1&scan=${REFERENCE_CORRELATION_ID}&layers=cloudResource,server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`,
       "correlation-path-live.png",
       prepareCorrelationPath,
       correlationPathAssertions,
@@ -3093,7 +3093,7 @@ async function main() {
     const referenceGraphPage = await newCapturePage("dark", { width: 1920, height: 1080 });
     await capture(
       referenceGraphPage,
-      `/graph?capture=1&scan=${REFERENCE_CORRELATION_ID}&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`,
+      `/graph?capture=1&scan=${REFERENCE_CORRELATION_ID}&layers=cloudResource,server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`,
       "correlation-graph-live.png",
       prepareCorrelationGraphReadme,
       correlationPathAssertions,
@@ -3418,7 +3418,7 @@ async function main() {
     await lightPage.setViewportSize({ width: 1920, height: 1080 });
     await capture(
       lightPage,
-      `/graph?capture=1&scan=${REFERENCE_CORRELATION_ID}&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`,
+      `/graph?capture=1&scan=${REFERENCE_CORRELATION_ID}&layers=cloudResource,server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`,
       "correlation-path-light-live.png",
       prepareCorrelationPath,
       correlationPathAssertions,
@@ -3459,7 +3459,7 @@ async function main() {
     );
     await capture(
       mobilePage,
-      `/graph?capture=1&scan=${REFERENCE_CORRELATION_ID}&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`,
+      `/graph?capture=1&scan=${REFERENCE_CORRELATION_ID}&layers=cloudResource,server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`,
       "correlation-path-mobile-live.png",
       prepareCorrelationPathList,
       {

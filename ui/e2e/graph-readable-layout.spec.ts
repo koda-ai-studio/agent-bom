@@ -204,8 +204,8 @@ for (const theme of ["light", "dark"] as const) test(`reference correlation read
   const proof = JSON.parse(await readFile("../examples/reference-evidence-lab/generated/correlation-proof.json", "utf8"));
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.addInitScript(t => localStorage.setItem("agent-bom-theme", t), theme);
-  await fixture(page, proof.capture_fixture.graph.nodes, proof.capture_fixture.graph.edges);
-  await page.goto("/graph?scan=snapshot&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile");
+  await fixture(page, proof.capture_fixture.graph.nodes, proof.capture_fixture.graph.edges, false, { stats: proof.capture_fixture.graph.stats, attack_paths: proof.capture_fixture.graph.attack_paths });
+  await page.goto("/graph?scan=snapshot&layers=cloudResource,server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile");
   await expect(page.locator(".react-flow__node")).not.toHaveCount(0);
   await page.locator(".react-flow__controls-fitview").click();
   await settle(page);
@@ -361,8 +361,8 @@ for (const theme of ["light", "dark"] as const) {
 test("a correlation opens on a readable neighbourhood, never a lone card", async ({ page }, info) => {
   const proof = JSON.parse(await readFile("../examples/reference-evidence-lab/generated/correlation-proof.json", "utf8"));
   await page.setViewportSize({ width: 1440, height: 900 });
-  await fixture(page, proof.capture_fixture.graph.nodes, proof.capture_fixture.graph.edges);
-  await page.goto("/graph?capture=1&scan=snapshot&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile");
+  await fixture(page, proof.capture_fixture.graph.nodes, proof.capture_fixture.graph.edges, false, { stats: proof.capture_fixture.graph.stats, attack_paths: proof.capture_fixture.graph.attack_paths });
+  await page.goto("/graph?capture=1&scan=snapshot&layers=cloudResource,server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile");
   await expect(page.locator(".react-flow__node")).not.toHaveCount(0);
   await settle(page);
   // No Fit all click: the first frame itself must show whole, readable cards in context.

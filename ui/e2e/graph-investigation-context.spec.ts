@@ -4,8 +4,8 @@ import { withSemanticLayer } from "./helpers/graph-rollup-mocks";
 const stamp = "2026-10-15T00:00:00Z";
 const node = (id: string, entity_type: string, label = id) => withSemanticLayer({ id, entity_type, label, severity: "none", status: "active", risk_score: 0, attributes: {}, dimensions: {}, data_sources: ["synthetic-fixture"], compliance_tags: [] });
 const edge = (source: string, target: string, relationship: string) => ({ id: `${source}:${relationship}:${target}`, source, target, relationship, direction: "directed", traversable: true, weight: 1, evidence: { tier: "static_scan", source: "synthetic-fixture" }, first_seen: stamp, last_seen: stamp });
-async function fixture(page: Page, nodes: ReturnType<typeof node>[], edges: ReturnType<typeof edge>[], correlation = false) {
-  const graph = { scan_id: "snapshot", tenant_id: "fixture", created_at: stamp, nodes, edges, attack_paths: [], interaction_risks: [], stats: { total_nodes: nodes.length, total_edges: edges.length, severity_counts: {} } };
+async function fixture(page: Page, nodes: ReturnType<typeof node>[], edges: ReturnType<typeof edge>[], correlation = false, graphMetadata: Record<string, unknown> = {}) {
+  const graph = { scan_id: "snapshot", tenant_id: "fixture", created_at: stamp, nodes, edges, attack_paths: [], interaction_risks: [], stats: { total_nodes: nodes.length, total_edges: edges.length, severity_counts: {} }, ...graphMetadata };
   await page.route("**/health", r => r.fulfill({ json: { status: "ok" } }));
   await page.route("**/v1/**", r => {
     const u = new URL(r.request().url());
@@ -158,8 +158,8 @@ for (const theme of ["light", "dark"]) test(`complete correlation captions remai
   const proof = JSON.parse(await readFile("../examples/reference-evidence-lab/generated/correlation-proof.json", "utf8"));
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.addInitScript(t => localStorage.setItem("agent-bom-theme", t), theme);
-  await fixture(page, proof.capture_fixture.graph.nodes, proof.capture_fixture.graph.edges, true);
-  await page.goto("/graph?capture=1&scan=snapshot&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile");
+  await fixture(page, proof.capture_fixture.graph.nodes, proof.capture_fixture.graph.edges, true, { stats: proof.capture_fixture.graph.stats, attack_paths: proof.capture_fixture.graph.attack_paths });
+  await page.goto("/graph?capture=1&scan=snapshot&layers=cloudResource,server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile");
   await expect(page.locator(".react-flow__node")).toHaveCount(11);
   await page.locator(".react-flow__controls-fitview").click();
   await expect.poll(() => page.locator(".react-flow").evaluate(canvas => {
