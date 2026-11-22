@@ -167,7 +167,8 @@ for (const theme of ["light", "dark"]) {
     await page.unrouteAll();
     await serve(page, fixtures.twoServices, theme);
     await open(page);
-    const x = (label: string) => page.locator(`.react-flow__node[data-id="${nodeId(fixtures.twoServices, label)}"]`).evaluate(node => node.getBoundingClientRect().x);
+    // A phone reads top to bottom on its vertical spine; a desktop reads left to right.
+    const x = (label: string) => page.locator(`.react-flow__node[data-id="${nodeId(fixtures.twoServices, label)}"]`).evaluate((node, phone) => phone ? node.getBoundingClientRect().y : node.getBoundingClientRect().x, viewport.width < 640);
     const pod = await x("pod: prod/web-7c9f-1");
     expect(await x("ingress: prod/web")).toBeLessThan(await x("service: prod/web"));
     expect(await x("service: prod/web")).toBeLessThan(pod);

@@ -5,6 +5,7 @@ import { SegmentedLabel } from "@/components/graph-segmented-label";
 import { canvasCaption } from "@/lib/graph-canvas-caption";
 import { GraphFindingGroupNode } from "@/components/graph-finding-group-node";
 import { CompactGraphNode } from "@/components/graph-compact-node";
+import { CompactClusterNode } from "@/components/graph-compact-cluster";
 import { agentExecutionCaption, type AgentContext } from "@/lib/graph-agent-context";
 import { topologyAgentTypeLabel } from "@/lib/agent-topology-graph";
 
@@ -711,6 +712,7 @@ function CloudResourceNode({ data }: { data: LineageNodeData }) {
  * land here under that key.
  */
 function ClusterPillNode({ data }: { data: LineageNodeData }) {
+  if (data.semanticLayout) return <CompactClusterNode data={data} />;
   const cluster = data as LineageNodeData & {
     count?: number;
     childType?: LineageNodeType;
@@ -913,8 +915,8 @@ const DETAIL_RENDERERS: Record<
 
 function AdaptiveLineageNode({ data }: { data: LineageNodeData }) {
   if (data.rollup && !data.semanticLayout) return <GraphScopeNode item={data.rollup} identityContext={data.identityContext} compact={data.rollupCompact} dimmed={data.dimmed} highlighted={data.highlighted} />;
-  if (data.renderBand === "cluster" && !data.semanticLayout) return <ClusterBubbleNode data={data} />;
-  if (data.renderBand === "summary" && !data.semanticLayout) return <SummaryNode data={data} />;
+  if (data.renderBand === "cluster") return <ClusterBubbleNode data={data} />;
+  if (data.renderBand === "summary") return <SummaryNode data={data} />;
   const Renderer = DETAIL_RENDERERS[data.nodeType] ?? SummaryNode;
   return <Renderer data={data} />;
 }

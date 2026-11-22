@@ -91,7 +91,7 @@ export function investigationFlow(input: FlowNode[], inputEdges: Edge[], request
   const byId = new Map(input.map(node => [node.id, node]));
   const tokenless = new Set(inputEdges.filter(edge => isBlockedIdentityHop(edge) && byId.get(edge.source)?.data.attributes?.token_mounted === false).map(edge => edge.target));
   return { ...result,
-    nodes: result.nodes.map(node => ({ ...node, data: { ...node.data, renderBand: "detail", ...(tokenless.has(node.id) ? { flowNote: "token not mounted" } : {}) } })),
+    nodes: result.nodes.map(node => ({ ...node, data: { ...node.data, ...(input.length > 24 ? {} : { renderBand: "detail" as const }), ...(tokenless.has(node.id) ? { flowNote: "token not mounted" } : {}) } })),
     edges: result.edges.map(edge => {
       const source = byId.get(edge.source);
       const blocked = isBlockedIdentityHop(edge);

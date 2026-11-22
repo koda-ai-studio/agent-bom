@@ -13,7 +13,7 @@ it("offers explicit connection expansion from the bounded preview", () => {
   const preview = graphConnectionPreview([{ id: "one", position: { x: 0, y: 0 }, data: { label: "One", nodeType: "server" } }], [])!;
   let expanded = false;
   render(<GraphConnectionPreviewControls preview={preview} expanded={false} onRoot={() => undefined} onExplore={() => undefined} onExpanded={value => { expanded = value; }} />);
-  fireEvent.click(screen.getByRole("button", { name: /Show more connections/ }));
+  fireEvent.click(screen.getByRole("button", { name: /Show full map/ }));
   expect(expanded).toBe(true);
 });
 

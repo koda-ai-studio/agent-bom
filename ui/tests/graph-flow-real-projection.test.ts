@@ -255,12 +255,13 @@ describe("a large map with no specific flow", () => {
     expect(result.edges.map(edge => [edge.source, edge.target])).toEqual(edges.map(edge => [edge.source, edge.target]));
   });
 
-  it("keeps semantic nodes detailed at the compact card width", () => {
+  it("keeps an operator's zoom band on a map past one readable page", () => {
     const { nodes, edges } = k8sFlowGraph("projectScan");
     const banded = nodes.map(n => ({ ...n, data: { ...n.data, renderBand: "summary" as const } }));
     const result = investigationFlow(banded, edges, "auto");
     expect(result.applied).toBe(true);
-    expect(result.nodes.every(n => n.data.renderBand === "detail" && n.style?.width === COMPACT_NODE_WIDTH)).toBe(true);
+    expect(banded.length).toBeGreaterThan(24);
+    expect(result.nodes.every(n => n.data.renderBand === "summary" && n.style?.width === COMPACT_NODE_WIDTH)).toBe(true);
   });
 
   it("uses the same semantic layout for small maps", () => {

@@ -4,13 +4,12 @@ import { ReactFlowProvider } from "@xyflow/react";
 import { lineageNodeTypes } from "@/components/lineage-nodes";
 import { canvasName } from "@/components/graph-compact-node";
 
-it("keeps names up to 28 characters whole and shortens image digests", () => {
+it("keeps names whole to wrap, and shortens only digests and single tokens past 24 characters", () => {
   expect(canvasName("Reference Evidence Workload")).toBe("Reference Evidence Workload");
   expect(canvasName("reference-evidence-api@sha256:0123456789abcdeff477d58a")).toBe("reference-evidence-api @ f477d58a");
-  expect(canvasName("GITHUB_PERSONAL_ACCESS_TOKEN")).toBe("GITHUB_PER…ESS_TOKEN");
-  const long = canvasName("an extremely long deployment name with many words");
-  expect(long.length).toBeLessThanOrEqual(28);
-  expect(long).toContain("…");
+  expect(canvasName("GITHUB_PERSONAL_ACCESS_TOKEN")).toBe("GITHUB_PERSO…CESS_TOKEN");
+  expect(canvasName("AN_UNBROKEN_IDENTIFIER_FAR_LONGER_THAN_TWO_LINES")).toBe("AN_UNBROKEN_…_TWO_LINES");
+  expect(canvasName("an extremely long deployment name with many words")).toBe("an extremely long deployment name with many words");
 });
 
 it("draws one circle, a two-line name and one type line with no canvas chips", () => {

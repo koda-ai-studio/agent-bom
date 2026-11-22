@@ -17,6 +17,7 @@ import { nodeBadges } from "@/lib/graph-node-badges";
 import { findingSeverity, graphNodeTooltip } from "@/lib/graph-node-tooltip";
 import { graphRepositoryContext } from "@/lib/graph-repository-context";
 import { showsProviderMark } from "@/lib/graph-scope-context";
+import { compactScopeCaption } from "@/lib/graph-compact-scope";
 
 export type CompactNodeTone = { data: LineageNodeData; borderClass: string; bgClass: string; ringClass: string; iconClass: string; source?: boolean; target?: boolean };
 
@@ -25,29 +26,32 @@ const GLYPH = "calc(var(--graph-node-glyph-size, 56px) * 0.7)";
 const ICON = "calc(var(--graph-node-icon-size, 28px) * 0.7)";
 const META = { fontSize: "var(--graph-node-meta-size, 12px)" };
 
-const NAME_LIMIT = 28;
+const TOKEN_LIMIT = 24;
 
-/** Canvas name: an image digest reads as its short tail, and only names past
- * 28 characters lose their middle. The full name stays in the title and drawer. */
+/** Canvas name: an image digest reads as its short tail; everything else is kept whole
+ * and wraps. The full name stays in the title and drawer. */
 export function canvasName(name: string): string {
   const digest = name.match(/^(.*)@sha256:([0-9a-f]{8,})$/i);
   const base = digest ? digest[1]! : name, suffix = digest ? ` @ ${digest[2]!.slice(-8)}` : "";
-  // One unbroken token wraps across the two lines; past 24 characters it keeps its two ends instead.
+  // Names wrap to two lines and clamp only when they truly do not fit; a single unbroken token
+  // past 24 characters keeps its two ends, since it cannot wrap at a word.
   const longestToken = Math.max(...base.split(/[\s-]+/).map(token => token.length));
-  if (longestToken > 24 && base.length > 24) return `${base.slice(0, 10)}…${base.slice(-9)}${suffix}`;
-  return (base.length <= NAME_LIMIT ? base : `${base.slice(0, 18).trimEnd()}…${base.slice(-9).trimStart()}`) + suffix;
+  if (longestToken > TOKEN_LIMIT) return `${base.slice(0, 12)}…${base.slice(-10)}${suffix}`;
+  return base + suffix;
 }
 
 function typeLine(data: LineageNodeData, title: string): string {
   const repository = graphRepositoryContext(data);
   const caption = data.evidenceFlow ? mcpNodeCaption(data, title) : null;
   if (data.nodeType === "misconfiguration" && data.attributes?.finding_kind === "iac") return "IaC finding";
+  // A recorded agent type (workflow, assistant, ...) says more than the generic client role.
+  if (data.nodeType === "agent" && data.agentType) return topologyAgentTypeLabel(data.agentType);
   return caption?.meta ?? data.readingLabel ?? (repository ? "Repository" : data.nodeType === "agent"
     ? (data.agentType ? topologyAgentTypeLabel(data.agentType) : "Agent")
     : assetKindLabel({ entityType: data.entityType, nodeType: data.nodeType, attributes: data.attributes, provider: data.dimensions?.cloud_provider }));
 }
 
-function Handles({ data, source, target }: { data: LineageNodeData; source: boolean; target: boolean }) {
+export function CompactHandles({ data, source, target }: { data: LineageNodeData; source: boolean; target: boolean }) {
   const phone = data.phoneLayout;
   return <>
     <Handle type="target" position={phone ? Position.Top : Position.Left} className={`${HANDLE} ${target ? "" : "!opacity-0"}`} />
@@ -110,6 +114,7 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
   const severity = findingSeverity(data);
   const { badges, ring } = nodeBadges(data);
   const title = typeof data.attributes?.display_title === "string" && data.attributes.display_title.trim() ? data.attributes.display_title : data.label;
+  const scope = data.rollup ? compactScopeCaption(data.rollup) : null;
   const held = data.heldConnections ? `${data.heldConnections} more ${data.heldConnections === 1 ? "connection" : "connections"} not drawn` : undefined;
   const tooltip = [graphNodeTooltip(data), data.evidenceFlowContext, ring?.description, held,
     ...(data.readingConnections ?? []).map(summary => `${summary.relationship === "hosts" ? "Hosts" : "Contains"} ${summary.label} in this view`)].filter(Boolean).join(" · ");
@@ -119,7 +124,7 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
     <div ref={glyphRef} data-severity-ring={severity} style={{ width: GLYPH, height: GLYPH }}
       className={`graph-entity-glyph relative flex items-center justify-center rounded-full border-2 ${borderClass} ${bgClass} ${data.highlighted ? `ring-2 ring-offset-2 ring-offset-[var(--graph-canvas)] ${ringClass}` : ""}`}>
       {severity && <span className="sr-only" data-finding-severity={severity}>{`${severity} severity`}</span>}
-      <Handles data={data} source={source} target={target} />
+      <CompactHandles data={data} source={source} target={target} />
       <GraphPackageGlyph ecosystem={data.nodeType === "package" ? badges.find(badge => badge.kind === "ecosystem")?.value : undefined}
         fallback={<Icon aria-hidden="true" style={{ width: ICON, height: ICON }} className={iconClass} />} />
       {provider && <GraphProviderMark source={provider} attributes={repository ? undefined : data.attributes} className="graph-provider-mark-node graph-provider-mark-compact absolute" />}
@@ -128,10 +133,11 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
       {held && <span data-testid="graph-held-connections" className="sr-only">{held}</span>}
     </div>
     <p data-semantic-name title={title} className="mt-[0.3em] line-clamp-2 max-w-full font-semibold leading-[1.15] text-foreground [overflow-wrap:anywhere]" style={{ fontSize: "calc(var(--graph-node-label-size, 14px) * 0.88)" }}>
-      <span>{canvasName(title)}</span>
+      {canvasName(title) === title ? <span>{title}</span> : <><span aria-hidden="true">{canvasName(title)}</span><span className="sr-only">{title}</span></>}
     </p>
     <span data-graph-caption data-entity-role className="block max-w-full truncate leading-[1.15] text-ink-secondary" style={META}>
-      {typeLine(data, title)}
+      {scope ? scope.visible : typeLine(data, title)}
     </span>
+    {scope && <span className="sr-only">{scope.spoken}</span>}
   </div>;
 }

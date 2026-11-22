@@ -169,7 +169,6 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
   // other loaded nodes, including inventory views without an ordered path.
   if (boundedPreview || !initialized || width >= 640 || width <= 0) return null;
   const visibleNodes = getNodes().filter(node => !node.hidden);
-  if (visibleNodes.length && visibleNodes.every(node => node.data.phoneLayout === true)) return null;
   const orderedIds = navigationIds?.length ? navigationIds : [...visibleNodes]
     .sort((a, b) => a.position.x - b.position.x || a.position.y - b.position.y || a.id.localeCompare(b.id)).map(node => node.id);
   const navigator = <GraphNodeNavigator nodes={visibleNodes} orderedIds={orderedIds} />;

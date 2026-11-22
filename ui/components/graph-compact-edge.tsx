@@ -36,10 +36,10 @@ export function compactEdgeCurve(props: Pick<EdgeProps, "sourceX" | "sourceY" | 
 }
 
 /** An inspected link names its relationship and evidence in full, just above the line: names hang below glyphs. */
-function InspectLabel({ id, at, relationship, text }: { id: string; at: Point; relationship: string; text: React.ReactNode }) {
+function InspectLabel({ id, at, relationship, text, aggregate, inspecting }: { id: string; at: Point; relationship: string; text: React.ReactNode; aggregate: boolean; inspecting: boolean }) {
   const zoom = useStore(state => state.transform[2]);
   return <EdgeLabelRenderer>
-    <div data-edge-id={id} data-inspecting="true" className="nodrag nopan graph-relationship-label"
+    <div data-edge-id={id} data-inspecting={inspecting ? "true" : "false"} className={`nodrag nopan graph-relationship-label ${aggregate ? "graph-aggregate-label" : ""}`}
       style={{ position: "absolute", transform: `translate(-50%, -100%) translate(${at.x}px, ${at.y - 28 / Math.max(zoom, 0.16)}px)`, fontSize: 12.5 / Math.max(zoom, 0.16), pointerEvents: "none", whiteSpace: "nowrap" }}>
       <RelationshipBadge relationship={relationship}>{text}</RelationshipBadge>
     </div>
@@ -63,9 +63,11 @@ export function CompactRelationshipEdge(props: EdgeProps) {
   const { path, mid } = compactEdgeCurve(props);
   const spine = props.data?.pathEmphasis === true;
   const inspecting = hovered || focused || Boolean(props.selected);
-  const text = inspecting && props.data?.labelVisibility !== "hide"
+  // A roll-up link stands for many folded relationships; its count reads at rest, as a summary, not a verb.
+  const aggregate = Boolean(props.data?.aggregate) && typeof props.label === "string";
+  const text = (inspecting || aggregate) && props.data?.labelVisibility !== "hide"
     ? props.label ?? (relationship ? relationshipEdgeLabelText(relationship, props.data) : null) : null;
-  const style = { stroke: edgeFamilyColor(family), strokeWidth: spine ? 2.4 : inspecting ? 2 : 1.4, opacity: spine || inspecting ? 1 : props.data?.passesBehind ? 0.4 : 0.78,
+  const style = { stroke: edgeFamilyColor(family), strokeWidth: spine ? 2.4 : inspecting ? 2 : 1.4, opacity: spine || inspecting ? 1 : props.data?.passesBehind ? 0.4 : 0.85,
     strokeDasharray: edgeIsDashed(family, props.data) ? "6 4" : undefined, fill: "none" };
   return <g ref={ref} data-relationship={relationship || undefined} data-edge-family={family} data-label-disclosure={relationship === "vulnerable_to" ? "on-demand" : undefined} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
     {typeof props.data?.hoverDescription === "string" && <title>{props.data.hoverDescription}</title>}
@@ -73,6 +75,6 @@ export function CompactRelationshipEdge(props: EdgeProps) {
       {...(props.markerStart ? { markerStart: props.markerStart } : {})}
       {...(props.markerEnd ? { markerEnd: props.markerEnd } : {})}
       {...(props.interactionWidth !== undefined ? { interactionWidth: props.interactionWidth } : {})} />
-    {text != null && <InspectLabel id={props.id} at={mid} relationship={relationship} text={text} />}
+    {text != null && <InspectLabel id={props.id} at={mid} relationship={relationship} text={text} aggregate={aggregate} inspecting={inspecting} />}
   </g>;
 }

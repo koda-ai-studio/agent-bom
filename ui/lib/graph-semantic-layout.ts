@@ -7,6 +7,9 @@ import { workloadImageContext } from "@/lib/graph-workload-image";
 import { edgeFamily, edgeFamilyColor } from "@/lib/graph-edge-family";
 import { COMPACT_NODE_WIDTH, COMPACT_RANK_GAP, COMPACT_ROW_GAP, compactLayout } from "@/lib/graph-compact-layout";
 
+const DENSE_MAP_NODES = 24;
+/** A map past one readable page has a tangle to quiet; smaller maps draw every connection. */
+const QUIET_MIN_NODES = DENSE_MAP_NODES + 1;
 export const SEMANTIC_COLUMN_GAP = COMPACT_RANK_GAP;
 export const SEMANTIC_ROW_GAP = COMPACT_ROW_GAP;
 
@@ -92,6 +95,8 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
   if (primary.length && primary[0] !== INTERNET_ANCHOR_ID
     && internetExposure(visible.find(node => node.id === primary[0])?.data.attributes) === true) primary = [INTERNET_ANCHOR_ID, ...primary];
   const onPath = new Set(primary);
+  // A map past one readable page keeps the zoom band, so an operator zooming out gets the summary renderer.
+  const dense = visible.length > DENSE_MAP_NODES;
   const drawn = edges.filter(edge => !edge.hidden);
   const columns = semanticColumns(visible, drawn, primary);
   const owners = contextOwners(visible, edges, onPath);
@@ -104,7 +109,7 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
     nodes: nodes.map(node => ({ ...node, position: positions.get(node.id) ?? node.position,
       style: { ...node.style, width: COMPACT_NODE_WIDTH, "--graph-node-card-width": `${COMPACT_NODE_WIDTH}px` },
       data: { ...node.data, evidenceFlow: true, semanticLayout: true,
-        ...(onPath.has(node.id) ? { semanticPathIndex: primary.indexOf(node.id) } : {}), renderBand: "detail" as const,
+        ...(onPath.has(node.id) ? { semanticPathIndex: primary.indexOf(node.id) } : {}), renderBand: dense ? node.data.renderBand : "detail" as const,
         readingLabel: node.data.readingLabel ?? assetServiceLabel({ nodeType: node.data.nodeType, entityType: node.data.entityType, attributes: node.data.attributes, provider: node.data.dimensions?.cloud_provider }) ?? assetKindLabel({ nodeType: node.data.nodeType, entityType: node.data.entityType, attributes: node.data.attributes }),
         readingFinding: semanticLayer(node) === "finding",
         evidenceFlowContext: node.data.evidenceFlowContext ?? (semanticLayer(node) === "mcp_server" ? (() => {
@@ -119,11 +124,15 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
       const from = positions.get(edge.source), to = positions.get(edge.target);
       const reverse = Boolean(from && to && from.x > to.x);
       const sameRank = Boolean(from && to && from.x === to.x);
+      // On a map with a tangle to quiet, a line that runs back or jumps a rank or a row waits for focus;
+      // the selected path and every short forward link stay drawn.
+      const roundabout = Boolean(from && to) && (reverse || Math.abs(to!.x - from!.x) > SEMANTIC_COLUMN_GAP * 1.5 || Math.abs(to!.y - from!.y) > SEMANTIC_ROW_GAP);
+      const quietUntilFocus = visible.length >= QUIET_MIN_NODES && roundabout && !pathPairs.has(`${edge.source}\u0000${edge.target}`);
       const color = edgeFamilyColor(edgeFamily(String(edge.data?.relationship ?? "")));
       const marker = (value: Edge["markerEnd"]) => value && typeof value === "object" ? { ...value, color, width: 14, height: 14 } : value;
       return { ...edge, type: "compact", animated: false, ...(edge.markerEnd ? { markerEnd: marker(edge.markerEnd)! } : {}),
         ...(edge.markerStart ? { markerStart: marker(edge.markerStart)! } : {}), sourceHandle: reverse ? "context" : null, targetHandle: reverse || sameRank ? "context" : null,
-        data: { ...edge.data, semanticLayout: true, individualLabel: true, arcDy: arcs.get(edge.id), passesBehind: behind.has(edge.id) || undefined, quietLabel: edge.data?.isClusterEdge !== true,
+        data: { ...edge.data, semanticLayout: true, individualLabel: true, arcDy: arcs.get(edge.id), ...(quietUntilFocus ? { quietUntilFocus } : {}), passesBehind: behind.has(edge.id) || undefined, quietLabel: edge.data?.isClusterEdge !== true,
           pathEmphasis: pathPairs.has(`${edge.source}\u0000${edge.target}`) || edge.data?.pathEmphasis === true } };
     }),
   };

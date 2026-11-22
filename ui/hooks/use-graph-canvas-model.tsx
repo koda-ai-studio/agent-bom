@@ -317,7 +317,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
 
   const aggregated = useMemo(
     () => {
-      if (rollupNavigationActive || flow.nodes.every(node => Boolean(node.data.semanticLayer))) {
+      if (rollupNavigationActive) {
         return {
           nodes: flow.nodes,
           edges: flow.edges,
@@ -380,10 +380,11 @@ export function useGraphCanvasModel(page: GraphPageData) {
   const previewExpanded = searchParams.get("map_view") === "full";
   const previewRoot = searchParams.get("preview_root") ?? undefined;
   const connectionPreview = useMemo(() => {
-    if (investigationMode || selectedAttackPath || selectedScenarioId || aggregated.nodes.length <= 12) return null;
+    if (investigationMode || selectedAttackPath || selectedScenarioId || rollupNavigationActive || aggregated.nodes.length <= 24) return null;
+    if (decideGraphRenderer({ nodeCount: aggregated.nodes.length, edgeCount: aggregated.edges.length, captureMode }).kind === "webgl") return null;
     return graphConnectionPreview(aggregated.nodes, aggregated.edges,
-      previewRoot, 6);
-  }, [aggregated, investigationMode, selectedAttackPath, selectedScenarioId, previewRoot]);
+      previewRoot, narrowViewport ? 2 : 6);
+  }, [aggregated, investigationMode, selectedAttackPath, selectedScenarioId, rollupNavigationActive, captureMode, previewRoot, narrowViewport]);
   const previewActive = Boolean(connectionPreview) && !previewExpanded;
   const setPreviewRoot = (root: string) => {
     const url = new URL(window.location.href);

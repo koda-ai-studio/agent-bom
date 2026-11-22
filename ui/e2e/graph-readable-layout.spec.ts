@@ -189,13 +189,14 @@ for (const theme of (name === "agents sharing an MCP server" && width === 390) |
     const repeats = texts.filter((text, index) => texts.indexOf(text) !== index);
     expect(repeats, `repeated labels: ${texts.join(" | ")}`).toEqual([]);
     if (name === "agent fans out to six roles") {
-      // Semantic-layer graphs are never folded into a remainder pill; every role is its own readable node.
-      await expect(page.locator('.react-flow__node[data-id^="role-"]')).toHaveCount(6);
-      const nameSize = await page.locator("[data-semantic-name]").first().evaluate(label => {
+      const remainderLink = page.locator('.react-flow__edge[data-id^="cluster:"] .react-flow__edge-path');
+      await expect(remainderLink).toHaveCount(1);
+      expect(await remainderLink.evaluate(path => Number(getComputedStyle(path).opacity))).toBeGreaterThanOrEqual(0.8);
+      const groupLabelSize = await page.getByTestId("cluster-pill").locator("button span").first().evaluate(label => {
         const zoom = new DOMMatrixReadOnly(getComputedStyle(document.querySelector(".react-flow__viewport")!).transform).a;
         return parseFloat(getComputedStyle(label).fontSize) * zoom;
       });
-      expect(nameSize, "names stay readable after Fit all").toBeGreaterThanOrEqual(11);
+      expect(groupLabelSize, "remainder labels stay readable after Fit all").toBeGreaterThanOrEqual(11);
     }
     await page.screenshot({ path: info.outputPath(`${name.replace(/\s+/g, "-")}-${width}.png`), animations: "disabled" });
   });
@@ -512,8 +513,9 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
       await settle(page);
       const zoom = await page.locator(".react-flow__viewport").evaluate(el => new DOMMatrixReadOnly(getComputedStyle(el).transform).a);
       expect(zoom).toBeGreaterThanOrEqual(0.8);
-      // The portrait spine draws every node in one column, so no separate node navigator is offered.
-      await expect(page.getByRole("group", { name: "Navigate loaded graph nodes" })).toHaveCount(0);
+      await expect(page.getByRole("group", { name: "Navigate loaded graph nodes" })).toBeVisible();
+      await page.getByRole("button", { name: "Next graph node", exact: true }).click();
+      await settle(page);
       await page.screenshot({ path: info.outputPath(`cloud-roles-initial-${theme}-${width}.png`), animations: "disabled" });
     }
     await page.locator(".react-flow__controls-fitview").click();

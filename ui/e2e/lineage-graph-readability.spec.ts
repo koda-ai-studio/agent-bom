@@ -932,7 +932,8 @@ for (const theme of ["light", "dark"] as const) {
       const box = element.getBoundingClientRect();
       const label = element.querySelector("p")!;
       const zoom = new DOMMatrixReadOnly(getComputedStyle(element.closest(".react-flow__viewport")!).transform).a;
-      return box.width >= 180 && box.left >= 0 && box.right <= innerWidth && box.top >= 0 && box.bottom <= innerHeight && parseFloat(getComputedStyle(label).fontSize) * zoom >= 12
+      // The compact portrait card is 144 units wide (it was a 180px card before the compact canvas).
+      return box.width >= 140 && box.left >= 0 && box.right <= innerWidth && box.top >= 0 && box.bottom <= innerHeight && parseFloat(getComputedStyle(label).fontSize) * zoom >= 12
         ? true : { left: box.left, right: box.right, top: box.top, bottom: box.bottom, width: box.width, zoom };
     })).toBe(true);
     const headerBox = (await header.boundingBox())!;
