@@ -21,8 +21,8 @@ for (const recorded of [true,false]) test(`credential context only joins recorde
   });
   await page.goto("/security-graph?lens=attack-path&scan=snapshot");
   const canvas=page.locator('.react-flow');
-  // A finding is a badge on the asset it affects, never a hop of its own.
-  const drawn=recorded ? nodes : nodes.filter(n=>n.entity_type!=="vulnerability");
+  // A recorded finding is the path's terminal hop; the asset it affects also carries its badge.
+  const drawn=nodes;
   await expect(canvas.locator('.react-flow__node')).toHaveCount(drawn.length);
   await expect(canvas.locator('.react-flow__edge')).toHaveCount(drawn.length-1);
   if(recorded) {
@@ -30,6 +30,7 @@ for (const recorded of [true,false]) test(`credential context only joins recorde
     await expect(canvas.locator('.react-flow__node[data-id="Customer records"]')).toBeVisible();
   } else {
     await expect(canvas.getByText("WAREHOUSE_TOKEN_REFERENCE")).toHaveCount(0);
+    await expect(canvas.locator('.react-flow__node[data-id="CVE-2026-1000"]')).toBeVisible();
     await expect(canvas.getByRole("button",{name:"1 finding on warehouse-mcp, worst high (1 high). Open findings"})).toBeVisible();
     await page.getByText("Evidence & relationships",{exact:true}).click();
     await expect(page.getByRole("region",{name:"Reported exposure context"})).toContainText("WAREHOUSE_TOKEN_REFERENCE");

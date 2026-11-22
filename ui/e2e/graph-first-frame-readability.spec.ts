@@ -90,9 +90,13 @@ for (const theme of ["light", "dark"]) for (const viewport of VIEWPORTS) {
       expect(view.overlaps).toEqual([]);
       expect(view.undersized).toEqual([]);
       expect(view.framed).toBeGreaterThanOrEqual(viewport.width < 640 ? 1 : 6);
+      // The whole map in frame at a readable size needs no note; a partial frame says how much is in view.
       const hint = page.getByTestId("graph-in-view");
-      await expect(hint).toContainText(/Showing \d+ of \d+ nodes/);
-      await expect(hint).toContainText("Fit all");
+      if (await hint.count()) {
+        const [shown, total] = ((await hint.textContent())!.match(/Showing (\d+) of (\d+) nodes/) ?? []).slice(1).map(Number);
+        expect(shown).toBeLessThan(total!);
+        await expect(hint).toContainText("Fit all");
+      } else expect(view.framed).toBe(view.total);
       await page.screenshot({ path: info.outputPath(`full-${scenario}-${theme}-${viewport.width}.png`) });
     });
   }

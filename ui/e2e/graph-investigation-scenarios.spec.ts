@@ -50,7 +50,9 @@ for (const theme of ["light", "dark"]) test(`distinct flows, finding drilldown a
   const flow = page.getByRole("combobox", { name: "Investigation flow" });
   await expect(flow).toBeVisible();
   await flow.selectOption("exposure");
-  await expect(page.locator('.react-flow__node[data-id="display:internet:endpoint"]')).toBeVisible();
+  // One Internet anchor; its display edge to the exposed endpoint is named for the endpoint.
+  await expect(page.locator('.react-flow__node[data-id="display:internet"]')).toBeVisible();
+  await expect(page.locator('.react-flow__edge[data-id="display:internet:endpoint"]')).toHaveCount(1);
   await expect(page.locator('.react-flow__node[data-id="deployment"]')).toBeVisible();
   await expect(page.locator('[data-graph-entity="finding-group"]')).toBeVisible();
   await expect(page.locator("[data-graph-adaptive-frame]")).toHaveAttribute("data-graph-camera-settled", "true");
@@ -67,7 +69,7 @@ for (const theme of ["light", "dark"]) test(`distinct flows, finding drilldown a
   await page.screenshot({ path: testInfo.outputPath(`finding-${theme}.png`), fullPage: false });
   for (const scenario of ["identity", "vulnerability", "inventory"]) {
     await flow.selectOption(scenario);
-    await expect(page.locator('.react-flow__node[data-id="display:internet:endpoint"]')).toHaveCount(0);
+    await expect(page.locator('.react-flow__node[data-id="display:internet"]')).toHaveCount(0);
     await expect(page.locator("[data-graph-adaptive-frame]")).toHaveAttribute("data-graph-camera-settled", "true");
     const entry = scenario === "identity" ? "role" : scenario === "vulnerability" ? "pod" : "account";
     await expect(async () => {

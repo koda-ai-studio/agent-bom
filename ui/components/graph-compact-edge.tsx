@@ -17,38 +17,18 @@ function control(point: Point, position: Position, offset: number): Point {
 }
 
 /** One smooth curve between the two handles; never routed through a gutter. */
-type LaneSlot = { enter: number; leave: number; dy: number };
-const isLane = (value: unknown): value is LaneSlot[] => Array.isArray(value) && value.length > 0
-  && value.every(slot => typeof slot?.enter === "number" && typeof slot?.leave === "number" && typeof slot?.dy === "number");
-
-/** A link no single curve can route clear of cards: level through each reserved lane slot, joined by smooth turns in the gaps. */
-function laneCurve(source: Point, target: Point, slots: LaneSlot[]) {
-  const points = [source, ...slots.flatMap(slot => [{ x: slot.enter, y: source.y + slot.dy }, { x: slot.leave, y: source.y + slot.dy }]), target];
-  const segments = points.slice(1).map((q, i) => {
-    const p = points[i]!, half = (q.x - p.x) / 2;
-    return p.y === q.y ? `L ${q.x},${q.y}` : `C ${p.x + half},${p.y} ${q.x - half},${q.y} ${q.x},${q.y}`;
-  });
-  const m = Math.floor(points.length / 2);
-  return { path: `M ${source.x},${source.y} ${segments.join(" ")}`, mid: { x: (points[m - 1]!.x + points[m]!.x) / 2, y: (points[m - 1]!.y + points[m]!.y) / 2 } };
-}
-
-/** An adjacent link with no clear curve: level out of its source, down the empty gap between ranks, level into its target. */
-function gutterCurve(source: Point, target: Point, x: number) {
-  const dy = target.y - source.y, r = Math.min(Math.abs(dy) / 2, Math.abs(x - source.x), Math.abs(target.x - x), 40) * Math.sign(dy || 1);
-  const sx = Math.sign(x - source.x) || 1, tx = Math.sign(target.x - x) || 1, ar = Math.abs(r);
-  return { path: `M ${source.x},${source.y} L ${x - sx * ar},${source.y} Q ${x},${source.y} ${x},${source.y + r} L ${x},${target.y - r} Q ${x},${target.y} ${x + tx * ar},${target.y} L ${target.x},${target.y}`,
-    mid: { x, y: (source.y + target.y) / 2 } };
-}
+/** How far a phone's same-side link bows out from its handles, in layout units: under half the gap between portrait columns. */
+const PHONE_SIDE_REACH = 44;
 
 export function compactEdgeCurve(props: Pick<EdgeProps, "sourceX" | "sourceY" | "targetX" | "targetY" | "sourcePosition" | "targetPosition"> & { data?: EdgeProps["data"] }) {
   const source = { x: props.sourceX, y: props.sourceY }, target = { x: props.targetX, y: props.targetY };
-  if (isLane(props.data?.lanePoints) && !props.data?.phoneLayout) return laneCurve(source, target, props.data.lanePoints);
-  if (typeof props.data?.gutterX === "number" && !props.data.phoneLayout) return gutterCurve(source, target, props.data.gutterX);
   // Each end leaves along its handle: a side handle by 45% of the horizontal run, a top/bottom handle by half the vertical run.
   const sameSide = props.sourcePosition === props.targetPosition;
   const dx = Math.abs(target.x - source.x), dy = Math.abs(target.y - source.y);
   const upright = (position: Position) => position === Position.Top || position === Position.Bottom;
-  const reach = (position: Position) => sameSide ? Math.max(110, dy * 0.3) : upright(position) ? Math.max(24, dy * 0.5) : Math.max(24, dx * ARC_REACH);
+  // On a phone a same-side link runs close beside its column, inside the gap before the next column's cards.
+  const sideReach = props.data?.phoneLayout ? PHONE_SIDE_REACH : Math.max(110, dy * 0.3);
+  const reach = (position: Position) => sameSide ? sideReach : upright(position) ? Math.max(24, dy * 0.5) : Math.max(24, dx * ARC_REACH);
   let c1 = control(source, props.sourcePosition, reach(props.sourcePosition)), c2 = control(target, props.targetPosition, reach(props.targetPosition));
   // One upright end and one side end: run along the upright axis, then turn into the side.
   if (upright(props.sourcePosition) && !upright(props.targetPosition)) { c1 = { x: source.x, y: source.y + (target.y - source.y) * 0.75 }; c2 = { x: source.x, y: target.y }; }

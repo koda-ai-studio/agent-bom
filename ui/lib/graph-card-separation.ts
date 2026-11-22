@@ -35,8 +35,12 @@ export function separateCards<T extends Node>(nodes: T[]): T[] {
     .sort((a, b) => spinePriority(a.node) - spinePriority(b.node) || a.b.top - b.b.top || a.b.left - b.b.left);
   const placed: Box[] = [];
   const moved = new Map<number, { x: number; y: number }>();
+  // A finding drawn level with its owner (the package it was found on) follows the owner down, so the pair stays level.
+  const shifted = new Map<string, { from: number; dy: number }>();
   for (const item of order) {
     let current = item.b;
+    const owner = typeof item.node.data.readingOwner === "string" ? shifted.get(item.node.data.readingOwner) : undefined;
+    if (owner && Math.abs(owner.from - current.top) < 1) current = { ...current, top: current.top + owner.dy, bottom: current.bottom + owner.dy };
     for (let attempt = 0; attempt < nodes.length * 2; attempt++) {
       const blocker = placed.find(other => intersects(current, other, CARD_GAP));
       if (!blocker) break;
@@ -47,6 +51,7 @@ export function separateCards<T extends Node>(nodes: T[]): T[] {
       current = { left, top, right: left + width, bottom: top + height };
     }
     placed.push(current);
+    if (current.top !== item.b.top) shifted.set(item.node.id, { from: item.b.top, dy: current.top - item.b.top });
     if (current.left !== item.b.left || current.top !== item.b.top) moved.set(item.index, { x: current.left, y: current.top });
   }
   if (!moved.size) return nodes;

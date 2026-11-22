@@ -68,3 +68,14 @@ it("keeps the backend-selected spine straight while separating its context", () 
   expect(nodes.slice(0, 2).map(node => node.position)).toEqual([{ x: 0, y: 0 }, { x: 380, y: 0 }]);
   expect(cardOverlaps(nodes)).toEqual([]);
 });
+
+it("moves a finding with its package when the package is pushed down, so the pair stays level", () => {
+  const semantic = (node: FlowNode, extra: Partial<LineageNodeData> = {}) => ({ ...node, data: { ...node.data, semanticLayout: true, ...extra } });
+  const input = [semantic(card("tall", 0, 0, 220, 300)), semantic(card("pkg", 0, 200, 220, 170)),
+    semantic(card("cve", 400, 200, 220, 170), { readingOwner: "pkg" }), semantic(card("other-cve", 400, 420, 220, 170))];
+  const nodes = separateCards(input);
+  const at = (id: string) => nodes.find(node => node.id === id)!.position;
+  expect(at("pkg").y).toBe(300 + CARD_GAP);
+  expect(at("cve").y).toBe(at("pkg").y);
+  expect(cardOverlaps(nodes)).toEqual([]);
+});

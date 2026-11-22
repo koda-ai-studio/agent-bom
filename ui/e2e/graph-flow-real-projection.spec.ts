@@ -189,16 +189,19 @@ test("the exposure path runs through the controller to the identity when the tok
 
 test("an unmounted token is captioned, and evidence counts exclude display objects", async ({ page }) => {
   await page.setViewportSize(VIEWPORTS[0]!);
-  const assessed: Graph = { ...fixtures.snapshot, nodes: fixtures.snapshot.nodes.map(node => node.label === "ingress: prod/web" ? { ...node, attributes: { ...node.attributes, resource_id: "ing-1",
+  // The backend records the exposure verdict; the assessment is the receipt behind it.
+  const assessed: Graph = { ...fixtures.snapshot, nodes: fixtures.snapshot.nodes.map(node => node.label === "ingress: prod/web" ? { ...node, attributes: { ...node.attributes, resource_id: "ing-1", internet_exposed: true,
     network_reachability_assessment: { complete: true, decision: "allow", source_scope: "internet", target_id: "ing-1", evidence_refs: ["receipt-1"] } } } : node) };
   await serve(page, assessed, "light");
   await open(page);
   await expect(page.locator(`.react-flow__node[data-id="${nodeId(fixtures.snapshot, "service account: prod/web-sa")}"]`)).toContainText("token not mounted");
   await expect(page.getByLabel("Visible relationship evidence").first()).toContainText("Recorded observation");
   await expect(page.getByLabel("Visible relationship evidence").first()).not.toContainText("Mixed");
-  const internet = page.locator(`.react-flow__node[data-id^="display:internet:"]`);
-  await expect(internet).toHaveAttribute("aria-label", "Internet, assessed ingress to ingress: prod/web");
-  await expect(page.locator(".react-flow__edge[aria-label='Assessed ingress from Internet to ingress: prod/web']")).toHaveCount(1);
+  // One Internet anchor, linked to each exposed entry by a display edge named for that entry.
+  const ingress = nodeId(fixtures.snapshot, "ingress: prod/web");
+  const internet = page.locator('.react-flow__node[data-id="display:internet"]');
+  await expect(internet).toHaveCount(1);
+  await expect(page.locator(`.react-flow__edge[data-id="display:internet:${ingress}"]`)).toHaveAttribute("aria-label", "Assessed ingress from Internet to ingress: prod/web");
   await expect(page.locator('.react-flow__edge[aria-label*="display:"]')).toHaveCount(0);
 
   await internet.click();

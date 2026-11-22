@@ -3,7 +3,7 @@
  * ordered by its neighbours and fanned evenly around them. Presentation only:
  * ranks come from the caller's backend-derived keys, never from entity types. */
 
-import { linkArcs } from "@/lib/graph-compact-arcs";
+import { blockedLinkCount, type CaptionText, fitZoom, linkArcs } from "@/lib/graph-compact-arcs";
 
 // Cards grow in layout units as Fit all zooms out; these gaps keep the separation
 // pass's clear space (24 units) at the zooms graphs of this size fit at, so it does not move placed cards.
@@ -13,7 +13,8 @@ export const COMPACT_ROW_GAP = 200;
 export const COMPACT_NODE_WIDTH = 216;
 
 type Link = { id?: string; source: string; target: string; data?: Record<string, unknown> | undefined };
-export type PackItem = { id: string; desired: number; fixed?: boolean };
+/** `below`: the room a card needs under its row when more than the row gap (a two-line caption at the largest label size). */
+export type PackItem = { id: string; desired: number; fixed?: boolean; below?: number | undefined };
 type Point = { x: number; y: number };
 
 /** Clear space between two lanes, and between a lane and a card's row. */
@@ -25,16 +26,19 @@ export const COMPACT_LANE_CLEARANCE = 170;
  * `lane` items are link lanes, which need less room than a card. */
 export function packRank(items: readonly (PackItem & { lane?: boolean })[], gap: number, forwardOnly = false): Map<string, number> {
   const out = new Map<string, number>();
-  const between = (a: { lane?: boolean } | undefined, b: { lane?: boolean } | undefined) =>
-    a?.lane && b?.lane ? COMPACT_LANE_GAP : a?.lane || b?.lane ? Math.min(gap, COMPACT_LANE_CLEARANCE) : gap;
+  type Item = PackItem & { lane?: boolean };
+  // `upper` is the card above the pair: its caption decides how much room the pair needs.
+  const between = (a: Item | undefined, b: Item | undefined, upper: Item | undefined) =>
+    a?.lane && b?.lane ? COMPACT_LANE_GAP : a?.lane || b?.lane ? Math.min(gap, COMPACT_LANE_CLEARANCE) : Math.max(gap, upper?.below ?? 0);
   const spine = items.findIndex(item => item.fixed);
-  const spread = (list: readonly (PackItem & { lane?: boolean })[], anchor?: PackItem & { lane?: boolean }) => {
+  const spread = (list: readonly Item[], anchor?: Item, upward = false) => {
+    const pair = (a: Item | undefined, b: Item | undefined) => between(a, b, upward ? b : a);
     const floor: number[] = [];
-    list.forEach((item, i) => floor.push(anchor ? (i ? floor[i - 1]! : 0) + between(i ? list[i - 1] : anchor, item) : -Infinity));
+    list.forEach((item, i) => floor.push(anchor ? (i ? floor[i - 1]! : 0) + pair(i ? list[i - 1] : anchor, item) : -Infinity));
     const desired = list.map((item, i) => Math.max(item.desired, floor[i]!));
     const forward: number[] = [], backward: number[] = [];
-    desired.forEach((d, i) => forward.push(i ? Math.max(d, forward[i - 1]! + between(list[i - 1], list[i])) : d));
-    for (let i = desired.length - 1; i >= 0; i--) backward[i] = i === desired.length - 1 ? desired[i]! : Math.min(desired[i]!, backward[i + 1]! - between(list[i], list[i + 1]));
+    desired.forEach((d, i) => forward.push(i ? Math.max(d, forward[i - 1]! + pair(list[i - 1], list[i])) : d));
+    for (let i = desired.length - 1; i >= 0; i--) backward[i] = i === desired.length - 1 ? desired[i]! : Math.min(desired[i]!, backward[i + 1]! - pair(list[i], list[i + 1]));
     // Forward only: each item keeps its own row unless an earlier one pushes it down; nothing moves up.
     return list.map((item, i) => [item.id, Math.max(forwardOnly ? forward[i]! : (forward[i]! + backward[i]!) / 2, floor[i]!)] as const);
   };
@@ -43,7 +47,7 @@ export function packRank(items: readonly (PackItem & { lane?: boolean })[], gap:
   out.set(fixed.id, 0);
   for (const [id, y] of spread(items.slice(spine + 1), fixed)) out.set(id, y);
   const above = items.slice(0, spine).reverse().map(item => ({ ...item, desired: -item.desired }));
-  for (const [id, y] of spread(above, fixed)) out.set(id, y === 0 ? 0 : -y);
+  for (const [id, y] of spread(above, fixed, true)) out.set(id, y === 0 ? 0 : -y);
   return out;
 }
 
@@ -87,6 +91,12 @@ export type CompactInput = {
   containment?: (link: Link) => readonly [string, string] | null;
   /** Display nodes placed relative to another node's rank: a whole offset joins a later column's rank, a fraction sits between ranks. */
   attached?: ReadonlyMap<string, { to: string; offset: number }>;
+  /** The text each card draws under its glyph; links are kept clear of it. */
+  caption?: (id: string) => CaptionText;
+  /** Layout-unit width of a card's caption box, when wider than the compact default; ranks space apart to fit it. */
+  width?: (id: string) => number;
+  /** Room a card needs under its row when its caption is taller than one row gap allows. */
+  tall?: (id: string) => number | undefined;
 };
 
 function rankKeys({ ids, links, column, attached, containment }: CompactInput) {
@@ -171,12 +181,12 @@ export function compactPositions(input: CompactInput): Map<string, Point> {
 }
 
 /** Positions, plus an arc height for each long link whose direct curve would still cross a card. */
-export function compactLayout(input: CompactInput): { positions: Map<string, Point>; arcs: Map<string, [number, number]>; behind: Set<string>; lanes: Map<string, { left: number; right: number; y: number }[]>; gutters: Map<string, number> } {
+export function compactLayout(input: CompactInput): { positions: Map<string, Point>; arcs: Map<string, [number, number]>; behind: Set<string> } {
   const { ids, links, spine } = input;
   const rank = rankKeys(input);
-  if (new Set(rank.values()).size === 1 && ids.length > 2 && ![...neighbourMap(ids, links).values()].some(list => list.length)) return { positions: gridPositions(ids), arcs: new Map(), behind: new Set(), lanes: new Map(), gutters: new Map() };
+  if (new Set(rank.values()).size === 1 && ids.length > 2 && ![...neighbourMap(ids, links).values()].some(list => list.length)) return { positions: gridPositions(ids), arcs: new Map(), behind: new Set() };
   const onSpine = new Set(spine.filter(id => rank.has(id)));
-  const { lanes, dummies, chains } = laneLinks(links, rank, onSpine);
+  const { lanes, dummies } = laneLinks(links, rank, onSpine);
   for (const [id, lane] of dummies) rank.set(id, lane.rank);
   const all = [...ids, ...dummies.keys()];
   const neighbours = neighbourMap(all, lanes);
@@ -190,6 +200,7 @@ export function compactLayout(input: CompactInput): { positions: Map<string, Poi
   const order = [...byRank.keys()].sort((a, b) => a - b);
   const y = new Map<string, number>();
   for (const r of order) byRank.get(r)!.forEach((id, i) => y.set(id, onSpine.has(id) ? 0 : (i + 1) * COMPACT_ROW_GAP));
+  const tall = (id: string) => dummies.has(id) ? undefined : input.tall?.(id);
   const mean = (list: string[]) => list.length ? list.reduce((sum, id) => sum + y.get(id)!, 0) / list.length : undefined;
   const placeRank = (r: number, leftToRight: boolean) => {
     const members = byRank.get(r)!;
@@ -212,43 +223,37 @@ export function compactLayout(input: CompactInput): { positions: Map<string, Poi
     const towardSpine = (a: string, b: string) => (Number(dummies.has(b)) - Number(dummies.has(a))) * (key.get(a)! < 0 ? -1 : 1);
     const rest = members.filter(id => id !== spineId)
       .sort((a, b) => key.get(a)! - key.get(b)! || towardSpine(a, b) || y.get(a)! - y.get(b)! || a.localeCompare(b));
-    let items: (PackItem & { lane?: boolean })[] = rest.map(id => ({ id, desired: desired.get(id)!, lane: dummies.has(id) }));
+    let items: (PackItem & { lane?: boolean })[] = rest.map(id => ({ id, desired: desired.get(id)!, lane: dummies.has(id), below: tall(id) }));
     if (spineId) {
       const above: typeof items = [], below: typeof items = [];
       // On a tie the upper side fills first: captions hang below glyphs, so a link rising from the spine meets none.
       for (const item of items) (key.get(item.id)! < 0 || (key.get(item.id) === 0 && !item.lane && above.length <= below.length) ? above : below).push(item);
-      items = [...above, { id: spineId, desired: 0, fixed: true, lane: dummies.has(spineId) }, ...below];
+      items = [...above, { id: spineId, desired: 0, fixed: true, lane: dummies.has(spineId), below: tall(spineId) }, ...below];
     }
-    // A rank of pure leaves (findings under their packages) keeps each leaf on its parent's row,
-    // stacking siblings downward, so their links stay level and never cross a neighbour's.
-    const leaves = leftToRight && Boolean(input.levelLeaf) && members.every(id => !dummies.has(id) && input.levelLeaf!(id)
-      && neighbours.get(id)!.length > 0 && neighbours.get(id)!.every(n => rank.get(n)! < r));
-    for (const [id, value] of packRank(items, COMPACT_ROW_GAP, leaves)) y.set(id, value);
+    for (const [id, value] of packRank(items, COMPACT_ROW_GAP)) y.set(id, value);
   };
   // Ordering sweeps in both directions, then the final left-to-right row assignment.
   for (const leftToRight of [true, false, true, false, true]) for (const r of leftToRight ? order : [...order].reverse()) placeRank(r, leftToRight);
   const rankIndex = new Map(order.map((r, i) => [r, i]));
   const gap = rankGap(order.map(r => byRank.get(r)!.map(id => y.get(id)!)));
-  const point = (id: string) => ({ x: rankIndex.get(rank.get(id)!)! * gap, y: Math.round(y.get(id)!) });
+  // Each rank starts far enough right of the previous one for both ranks' widest caption boxes.
+  const rankWidth = order.map(r => Math.max(COMPACT_NODE_WIDTH, ...byRank.get(r)!.filter(id => !dummies.has(id)).map(id => input.width?.(id) ?? COMPACT_NODE_WIDTH)));
+  const rankX: number[] = [];
+  rankWidth.forEach((width, i) => rankX.push(i ? rankX[i - 1]! + Math.max(gap, (rankWidth[i - 1]! + width) / 2 + COMPACT_RANK_GAP - COMPACT_NODE_WIDTH) : 0));
+  const point = (id: string) => ({ x: rankX[rankIndex.get(rank.get(id)!)!]!, y: Math.round(y.get(id)!) });
   for (const r of order) transposeRank(byRank.get(r)!.filter(id => !dummies.has(id)), r, rank, neighbours, y, onSpine);
   const positions = new Map(ids.map(id => [id, point(id)]));
-  const { arcs, behind } = linkArcs(links, positions);
-  // A link no single curve can route clear of cards runs through its reserved lane slots instead.
-  const laned = new Map<string, { left: number; right: number; y: number }[]>();
-  const gutters = new Map<string, number>();
-  for (const id of behind) {
-    const chain = chains.get(id);
-    if (!chain?.length) {
-      // An adjacent link with no clear curve turns down the empty gap between the two ranks.
-      const link = links.find(item => item.id === id);
-      const from = link && positions.get(link.source), to = link && positions.get(link.target);
-      if (from && to && from.x !== to.x) { gutters.set(id, Math.min(from.x, to.x) + COMPACT_NODE_WIDTH + (gap - COMPACT_NODE_WIDTH) / 2); behind.delete(id); }
-      continue;
-    }
-    laned.set(id, chain.map(slot => { const at = point(slot); return { left: at.x, right: at.x + COMPACT_NODE_WIDTH, y: at.y }; }));
-    behind.delete(id);
+  const leaf = (id: string) => Boolean(input.levelLeaf?.(id)) && (neighbours.get(id) ?? []).length > 0 && neighbours.get(id)!.every(n => rank.get(n)! < rank.get(id)!);
+  levelLeaves(ids, positions, leaf, neighbours, onSpine, tall);
+  // Captions are judged at a fixed zoom a little below the one the starting layout fits at, and the search may not
+  // grow the layout past it: what it makes drawable stays drawable at the zoom Fit all then picks.
+  const zoom = ids.length <= REFINE_CARDS ? fitZoom(positions, COMPACT_NODE_WIDTH) * ZOOM_BUDGET : undefined;
+  if (input.caption && zoom !== undefined) {
+    refinePlacement(ids, links, positions, onSpine, input.caption, input.levelLeaf, tall, zoom);
+    levelLeaves(ids, positions, leaf, neighbours, onSpine, tall);
   }
-  return { positions, arcs, behind, lanes: laned, gutters };
+  const { arcs, behind } = linkArcs(links, positions, input.caption, COMPACT_NODE_WIDTH, zoom);
+  return { positions, arcs, behind };
 }
 
 /** Swap neighbouring cards of one rank when that removes crossings with the ranks either side. */
@@ -267,5 +272,167 @@ function transposeRank(members: string[], r: number, rank: Map<string, number>, 
     if (crossings(b, a) >= crossings(a, b)) continue;
     const ya = y.get(a)!; y.set(a, y.get(b)!); y.set(b, ya);
     rows[i] = b; rows[i + 1] = a;
+  }
+}
+
+/** Past this many cards the ordering sweeps alone place rows; the search below is for readable investigations. */
+const REFINE_CARDS = 24;
+const REFINE_STEP = COMPACT_ROW_GAP / 2;
+
+function segmentsCross(a: Point, b: Point, c: Point, d: Point): boolean {
+  const side = (p: Point, q: Point, r: Point) => Math.sign((q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x));
+  return side(a, b, c) * side(a, b, d) < 0 && side(c, d, a) * side(c, d, b) < 0;
+}
+
+/** Placement cost: a link that cannot be drawn as a plain curve clear of every caption costs most,
+ * then crossings between links, then how far links climb or fall. */
+function placementCost(links: readonly Link[], positions: ReadonlyMap<string, Point>, caption: (id: string) => CaptionText, zoom: number): number {
+  const drawn = links.filter(link => positions.has(link.source) && positions.has(link.target) && link.source !== link.target);
+  let crossings = 0, climb = 0;
+  drawn.forEach((link, i) => {
+    const a = positions.get(link.source)!, b = positions.get(link.target)!;
+    climb += Math.abs(a.y - b.y) / COMPACT_ROW_GAP;
+    for (const other of drawn.slice(i + 1)) {
+      if ([other.source, other.target].some(id => id === link.source || id === link.target)) continue;
+      if (segmentsCross(a, b, positions.get(other.source)!, positions.get(other.target)!)) crossings++;
+    }
+  });
+  return blockedLinkCount(drawn, positions, caption, COMPACT_NODE_WIDTH, zoom) * 1000 + crossings * 40 + climb * 4;
+}
+
+/** A card with the run of single-link cards leading into it from the left (an entry chain such as
+ * Internet, service, workload), which moves with it so the chain stays straight. */
+function leadChain(id: string, links: readonly Link[], positions: ReadonlyMap<string, Point>, spine: ReadonlySet<string>): string[] {
+  const chain = [id];
+  for (let current = id; ;) {
+    const here = positions.get(current)!;
+    const left = links.filter(link => (link.target === current || link.source === current) && link.source !== link.target)
+      .map(link => link.source === current ? link.target : link.source).filter(other => positions.get(other) && positions.get(other)!.x < here.x);
+    if (left.length !== 1) return chain;
+    const next = left[0]!, degree = links.filter(link => link.source === next || link.target === next).length;
+    if (spine.has(next) || chain.includes(next) || degree > 2 || positions.get(next)!.y !== here.y) return chain;
+    chain.push(next);
+    current = next;
+  }
+}
+
+/** Moves cards (with their lead chains) to free rows of their own rank, or swaps two cards of a rank,
+ * while that lowers the placement cost. The spine never moves; a finding leaf stays on its parent's row. */
+/** Searches from the sweep's placement and from its mirror image (branches flipped across the spine), keeping
+ * the better result: a greedy search from one start can settle where a link still has no clear curve. */
+function refinePlacement(ids: readonly string[], links: readonly Link[], positions: Map<string, Point>, spine: ReadonlySet<string>,
+  caption: (id: string) => CaptionText, levelLeaf: ((id: string) => boolean) | undefined, tall: (id: string) => number | undefined, zoom: number) {
+  if (ids.length < 3) return;
+  // Deterministic restarts: the sweep's placement, its mirror image, and variants with some branches flipped.
+  // One evaluation budget across every restart keeps the search to a few tens of milliseconds.
+  const budget = { left: SEARCH_BUDGET };
+  const flips = (seed: number) => new Map([...positions].map(([id, p]) => [id, spine.has(id) || !flipped(seed, id) ? p : { x: p.x, y: -p.y }]));
+  const starts = [positions, ...Array.from({ length: RESTARTS }, (_, seed) => flips(seed))];
+  const runs = starts.filter((start, i) => i === 0 || rowsClear(ids, start, tall))
+    .map(start => { const copy = new Map(start); return { copy, cost: refineRows(ids, links, copy, spine, caption, zoom, levelLeaf, tall, budget) }; });
+  const best = runs.reduce((a, b) => b.cost < a.cost - 1e-6 ? b : a);
+  for (const [id, p] of best.copy) positions.set(id, p);
+}
+
+const RESTARTS = 8;
+/** Placement evaluations one layout may spend searching. */
+const SEARCH_BUDGET = 2500;
+/** Seed 0 flips every branch (the mirror image); later seeds flip a hashed half of them. */
+function flipped(seed: number, id: string): boolean {
+  if (seed === 0) return true;
+  let hash = seed * 2654435761;
+  for (let i = 0; i < id.length; i++) hash = Math.imul(hash ^ id.charCodeAt(i), 16777619);
+  return ((hash >>> 0) & 1) === 1;
+}
+
+function rowsClear(ids: readonly string[], positions: ReadonlyMap<string, Point>, tall: (id: string) => number | undefined): boolean {
+  return ids.every(a => ids.every(b => {
+    const pa = positions.get(a)!, pb = positions.get(b)!;
+    return a === b || pa.x !== pb.x || pa.y > pb.y || pb.y - pa.y >= Math.max(COMPACT_ROW_GAP, tall(a) ?? 0);
+  }));
+}
+
+function refineRows(ids: readonly string[], links: readonly Link[], positions: Map<string, Point>, spine: ReadonlySet<string>,
+  caption: (id: string) => CaptionText, zoom: number, levelLeaf?: (id: string) => boolean, tall: (id: string) => number | undefined = () => undefined, budget = { left: SEARCH_BUDGET }): number {
+  const movable = ids.filter(id => !spine.has(id) && !levelLeaf?.(id)).sort();
+  let cost = placementCost(links, positions, caption, zoom);
+  const attempt = (moves: [string, number][]) => {
+    const before = moves.map(([id]) => [id, positions.get(id)!] as const);
+    for (const [id, y] of moves) positions.set(id, { x: positions.get(id)!.x, y });
+    const next = budget.left-- > 0 && fitZoom(positions, COMPACT_NODE_WIDTH) >= zoom ? placementCost(links, positions, caption, zoom) : Infinity;
+    if (next < cost - 1e-6) { cost = next; return true; }
+    for (const [id, point] of before) positions.set(id, point);
+    return false;
+  };
+  const room = (upper: string) => Math.max(COMPACT_ROW_GAP, tall(upper) ?? 0);
+  const free = (id: string, y: number, ignore: readonly string[]) => ids.every(other => {
+    if (other === id || ignore.includes(other) || positions.get(other)!.x !== positions.get(id)!.x) return true;
+    const peer = positions.get(other)!.y;
+    return peer < y ? y - peer >= room(other) : peer - y >= room(id);
+  });
+  for (let pass = 0; pass < 6 && cost > 0; pass++) {
+    let improved = false;
+    for (const id of movable) {
+      const ys = [...positions.values()].map(p => p.y);
+      const top = Math.floor((Math.min(...ys) - COMPACT_ROW_GAP) / REFINE_STEP), bottom = Math.ceil((Math.max(...ys) + COMPACT_ROW_GAP) / REFINE_STEP);
+      for (let step = top; step <= bottom; step++) {
+        const y = step * REFINE_STEP, home = positions.get(id)!.y;
+        if (y === home) continue;
+        const chain = leadChain(id, links, positions, spine).filter(member => !spine.has(member));
+        if (chain.every(member => free(member, y, chain)) && attempt(chain.map(member => [member, y]))) improved = true;
+      }
+      // Swap with a peer of the same rank.
+      for (const other of movable) {
+        if (other <= id || positions.get(other)!.x !== positions.get(id)!.x || tall(other) !== tall(id)) continue;
+        if (attempt([[id, positions.get(other)!.y], [other, positions.get(id)!.y]])) improved = true;
+      }
+    }
+    // A link no curve can draw yet: also try moving two cards at once, on whole rows.
+    if (cost >= 1000 && ids.length <= PAIR_CARDS && pairMoves()) improved = true;
+    if (!improved) break;
+  }
+
+  return cost;
+
+  function pairMoves(): boolean {
+    const ys = [...positions.values()].map(p => p.y);
+    const rows: number[] = [];
+    for (let y = Math.floor(Math.min(...ys) / COMPACT_ROW_GAP) - 1; y <= Math.ceil(Math.max(...ys) / COMPACT_ROW_GAP) + 1; y++) rows.push(y * COMPACT_ROW_GAP);
+    let moved = false;
+    for (const [i, a] of movable.entries()) for (const b of movable.slice(i + 1)) {
+      const shared = positions.get(a)!.x === positions.get(b)!.x;
+      for (const ya of rows) for (const yb of rows) {
+        if (!free(a, ya, [b]) || !free(b, yb, [a])) continue;
+        if (shared && (ya < yb ? yb - ya < room(a) : ya - yb < room(b))) continue;
+        if (attempt([[a, ya], [b, yb]])) moved = true;
+      }
+    }
+    return moved;
+  }
+}
+
+/** Room the placement search may take: the layout may grow until Fit all zooms this much further out. */
+const ZOOM_BUDGET = 0.9;
+/** Two-card moves are tried only on small investigations, where they stay cheap. */
+const PAIR_CARDS = 16;
+
+/** A finding leaf sits level with its parent (the package or asset it was found on), even in a rank it shares
+ * with other cards: each leaf takes its parent's row and the cards after it in the rank move apart to make room. */
+function levelLeaves(ids: readonly string[], positions: Map<string, Point>, leaf: (id: string) => boolean,
+  neighbours: ReadonlyMap<string, string[]>, spine: ReadonlySet<string>, tall: (id: string) => number | undefined) {
+  const ranks = new Map<number, string[]>();
+  for (const id of ids) ranks.set(positions.get(id)!.x, [...(ranks.get(positions.get(id)!.x) ?? []), id]);
+  for (const members of ranks.values()) {
+    if (!members.some(leaf)) continue;
+    const target = (id: string) => {
+      if (!leaf(id)) return positions.get(id)!.y;
+      const parents = neighbours.get(id)!.filter(n => positions.has(n)).map(n => positions.get(n)!.y);
+      return parents.length ? parents.reduce((sum, value) => sum + value, 0) / parents.length : positions.get(id)!.y;
+    };
+    const spineId = members.find(id => spine.has(id));
+    const rest = members.filter(id => id !== spineId).sort((a, b) => target(a) - target(b) || Number(leaf(b)) - Number(leaf(a)) || a.localeCompare(b));
+    let items: PackItem[] = rest.map(id => ({ id, desired: target(id), below: tall(id) }));
+    if (spineId) items = [...items.filter(item => item.desired < 0), { id: spineId, desired: 0, fixed: true, below: tall(spineId) }, ...items.filter(item => item.desired >= 0)];
+    for (const [id, value] of packRank(items, COMPACT_ROW_GAP, true)) positions.set(id, { x: positions.get(id)!.x, y: Math.round(value) });
   }
 }

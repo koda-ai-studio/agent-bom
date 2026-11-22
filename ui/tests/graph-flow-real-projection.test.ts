@@ -240,7 +240,8 @@ describe("Internet boundary display context", () => {
     const boundary = result.nodes.find(n => n.data.displayOnly)!;
     const link = result.edges.find(e => e.data?.displayOnly)!;
     expect(boundary.ariaLabel).toBe("Internet, recorded exposure context");
-    expect(link.ariaLabel).toBe("Recorded internet exposure for ingress: prod/web; display context, not a traversable relationship");
+    // This entry carries a recorded ingress assessment, so its display link names the receipt behind it.
+    expect(link.ariaLabel).toBe("Assessed ingress from Internet to ingress: prod/web");
   });
 });
 
@@ -261,7 +262,7 @@ describe("a large map with no specific flow", () => {
     const result = investigationFlow(banded, edges, "auto");
     expect(result.applied).toBe(true);
     expect(banded.length).toBeGreaterThan(24);
-    expect(result.nodes.every(n => n.data.renderBand === "summary" && n.style?.width === COMPACT_NODE_WIDTH)).toBe(true);
+    expect(result.nodes.every(n => n.data.renderBand === "summary" && Number(n.style?.width) >= COMPACT_NODE_WIDTH)).toBe(true);
   });
 
   it("uses the same semantic layout for small maps", () => {

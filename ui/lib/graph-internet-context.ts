@@ -1,5 +1,6 @@
 import { MarkerType, type Edge, type Node } from "@xyflow/react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
+import { ingressAssessment } from "@/lib/graph-flow-model";
 
 export const INTERNET_ANCHOR_ID = "display:internet";
 
@@ -23,10 +24,15 @@ export function withInternetAnchor(nodes: Node<LineageNodeData>[], edges: Edge[]
     data: { label: "Internet", nodeType: "cloudResource", semanticLayer: "user", displayOnly: true,
       readingLabel: "Exposure context", attributes: { resource_type: "internet_boundary" } },
   };
-  return { nodes: [...cleanNodes, anchor], edges: [...cleanEdges, ...visible.map(node => ({
-    id: `${INTERNET_ANCHOR_ID}:${node.id}`, ariaLabel: `Recorded internet exposure for ${node.data.label}; display context, not a traversable relationship`, source: INTERNET_ANCHOR_ID, target: node.id, type: "relationship",
-    label: "Internet-exposed", markerEnd: { type: MarkerType.ArrowClosed },
-    style: { stroke: "var(--text-secondary)", strokeWidth: 1, strokeDasharray: "6 3" },
-    data: { relationship: "exposed_to", displayOnly: true, traversable: false, evidenceMode: "inferred", individualLabel: true },
-  }))] };
+  return { nodes: [...cleanNodes, anchor], edges: [...cleanEdges, ...visible.map(node => {
+    // A recorded ingress assessment is the receipt behind the verdict; it never creates exposure on its own.
+    const assessment = ingressAssessment(node);
+    return {
+      id: `${INTERNET_ANCHOR_ID}:${node.id}`, source: INTERNET_ANCHOR_ID, target: node.id, type: "relationship",
+      ariaLabel: assessment ? `Assessed ingress from Internet to ${node.data.label}` : `Recorded internet exposure for ${node.data.label}; display context, not a traversable relationship`,
+      label: "Internet-exposed", markerEnd: { type: MarkerType.ArrowClosed },
+      style: { stroke: "var(--text-secondary)", strokeWidth: 1, strokeDasharray: "6 3" },
+      data: { relationship: "exposed_to", displayOnly: true, traversable: false, evidenceMode: "inferred", individualLabel: true, ...(assessment ? { evidence: assessment } : {}) },
+    };
+  })] };
 }

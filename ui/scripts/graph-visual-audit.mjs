@@ -117,7 +117,7 @@ export function renderedRelationshipCurves() {
  * Runs inside Playwright's page context: the agreed graph grammar, measured on the first frame.
  * Returns only violations; an empty object means the frame passes.
  */
-export function auditGraphGrammar({ margin = 48, minGlyph = 32, minFill = 0.6, maxDetour = 1.6 } = {}) {
+export function auditGraphGrammar({ margin = 48, minGlyph = 32, minFill = 0.6, maxDetour = 1.6, maxLength = 2.5 } = {}) {
   const canvas = document.querySelector(".react-flow")?.getBoundingClientRect();
   if (!canvas) return {};
   const nodes = [...document.querySelectorAll(".react-flow__node")].filter(node => getComputedStyle(node).visibility !== "hidden")
@@ -170,6 +170,8 @@ export function auditGraphGrammar({ margin = 48, minGlyph = 32, minFill = 0.6, m
     const drawn = points.slice(1).reduce((sum, p, i) => sum + Math.hypot(p.x - points[i].x, p.y - points[i].y), 0);
     const chord = Math.hypot(points.at(-1).x - points[0].x, points.at(-1).y - points[0].y);
     if (chord > 24 && drawn / chord > maxDetour) add("detours", `${id}:${(drawn / chord).toFixed(2)}`);
+    // A link is one smooth curve: never routed through lanes or gutters that multiply its length.
+    if (chord > 0 && drawn / chord > maxLength) add("longLinks", `${id}:${(drawn / chord).toFixed(2)}`);
     // Across columns a line leaves the left node's right side and enters the right node's left side.
     const [left, right] = (source.box.left + source.box.right) / 2 <= (target.box.left + target.box.right) / 2 ? [source, target] : [target, source];
     const leftEnd = left === source ? points[0] : points.at(-1), rightEnd = left === source ? points.at(-1) : points[0];

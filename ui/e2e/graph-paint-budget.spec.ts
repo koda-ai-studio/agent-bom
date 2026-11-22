@@ -53,7 +53,8 @@ for(const agents of [12,120]) test(`first useful graph paint below two seconds a
       await expect(page.locator(".react-flow__node")).toHaveCount(5);
       await expect(page.locator(".react-flow__node-serverNode")).toHaveCount(3);
       await expect(page.locator(".react-flow__edge")).toHaveCount(4);
-      await expect(page.locator(".graph-relationship-label")).toHaveCount(0);
+      // At rest only a folded link's count ("×N") is printed on the canvas; relationship names wait for hover or focus.
+      expect((await page.locator(".graph-relationship-label").allTextContents()).every(text => /^×\d+$/.test(text.trim()))).toBe(true);
       expect(await page.locator(".react-flow__node").evaluateAll(nodes => nodes.every(node => {
         const box = node.getBoundingClientRect();
         const frame = node.closest(".react-flow")!.getBoundingClientRect();
