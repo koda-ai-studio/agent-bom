@@ -118,7 +118,7 @@ export function GraphFlowCanvas({ page, flowView }: { page: GraphPageModel; flow
                 onLayoutAspect={setCanvasLayoutAspect}
               />
               <Background color={BACKGROUND_COLOR} gap={BACKGROUND_GAP} />
-              <LegibleFitControls floor={narrowViewport ? GRAPH_PHONE_LEGIBLE_FIT_ZOOM : GRAPH_LEGIBLE_FIT_ZOOM} onFit={fitVisible} orientation={selectedScenarioId ? "horizontal" : "vertical"} position="bottom-left" className={CONTROLS_CLASS} />
+              <LegibleFitControls floor={narrowViewport ? GRAPH_PHONE_LEGIBLE_FIT_ZOOM : GRAPH_LEGIBLE_FIT_ZOOM} onFit={fitVisible} orientation={selectedScenarioId || narrowViewport ? "horizontal" : "vertical"} position={narrowViewport ? "top-right" : "bottom-left"} className={CONTROLS_CLASS} />
               {minimapExpanded && showMiniMap && (canvasLens !== "estate" || graphViewport.zoom >= 1) && (
                 <MiniMap
                   position={narrowViewport ? "top-right" : "bottom-right"}

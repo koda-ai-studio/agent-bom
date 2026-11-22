@@ -947,8 +947,12 @@ for (const theme of ["light", "dark"] as const) {
     await testInfo.attach("mobile-lineage-geometry", { body: JSON.stringify({ headerBox, canvasBox }), contentType: "application/json" });
     await page.screenshot({ path: testInfo.outputPath(`lineage-compact-${theme}.png`) });
     expect(headerBox.height).toBeLessThanOrEqual(240);
-    // Both preview endpoints fit the canvas; the picker reaches the remaining map.
-    await expect(page.getByRole("group", { name: "Connection preview" })).toContainText("2 of 37 nodes");
+    // A phone previews two nodes, or the whole recorded path when one is selected (a path is never clipped);
+    // the picker reaches the remaining map.
+    const preview = page.getByRole("group", { name: "Connection preview" });
+    const shown = Number((await preview.textContent())!.match(/(\d+) of 37 nodes/)![1]);
+    const pathHops = await page.locator(".react-flow__node").evaluateAll(nodes => nodes.length);
+    expect(shown === 2 || shown === pathHops).toBe(true);
     const navigation = page.getByRole("group", { name: "Investigation view" });
     await expect(navigation).toBeInViewport();
     const navigationBox = (await navigation.boundingBox())!;

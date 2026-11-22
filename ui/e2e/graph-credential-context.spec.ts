@@ -34,7 +34,8 @@ for (const recorded of [true,false]) test(`credential context only joins recorde
   } else {
     await expect(canvas.getByText("WAREHOUSE_TOKEN_REFERENCE")).toHaveCount(0);
     await expect(canvas.locator('.react-flow__node[data-id="CVE-2026-1000"]')).toBeVisible();
-    await expect(canvas.getByRole("button",{name:"Findings (1) on warehouse-mcp, worst high. Open loaded findings"})).toBeVisible();
+    // The finding is drawn as the path's terminal hop, so the asset's badge only states the count (nothing more to open).
+    await expect(canvas.getByLabel("Findings (1) on warehouse-mcp, worst high", { exact: true })).toBeVisible();
     await page.getByText("Evidence & relationships",{exact:true}).click();
     await expect(page.getByRole("region",{name:"Reported exposure context"})).toContainText("WAREHOUSE_TOKEN_REFERENCE");
     await expect(page.getByRole("region",{name:"Reported exposure context"})).toContainText("do not add path hops or establish access");

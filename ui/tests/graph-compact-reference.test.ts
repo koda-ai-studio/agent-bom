@@ -102,3 +102,19 @@ describe("finding leaves in a shared rank", () => {
     expect([...order].sort((p, q) => p - q)).toEqual(order);
   });
 });
+
+describe("layout reuse", () => {
+  it("reuses the placement for a graph whose structure is unchanged, so re-renders stay fast", () => {
+    const first = performance.now();
+    const a = semanticGraphLayout(nodes, edges, reference.selectedPath);
+    const cold = performance.now() - first;
+    // Same structure, new objects with a presentation-only change (a highlight).
+    const again = nodes.map(node => ({ ...node, data: { ...node.data, highlighted: !node.data.highlighted } }));
+    const start = performance.now();
+    const b = semanticGraphLayout(again, edges.map(edge => ({ ...edge })), reference.selectedPath);
+    const warm = performance.now() - start;
+    expect(b.nodes.map(node => node.position)).toEqual(a.nodes.map(node => node.position));
+    expect(b.nodes.find(node => node.id === nodes[0]!.id)!.data.highlighted).toBe(true);
+    expect(warm).toBeLessThan(Math.max(5, cold / 4));
+  });
+});

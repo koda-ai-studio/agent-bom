@@ -39,7 +39,9 @@ function attachedRanks(visible: Node<LineageNodeData>[], edges: Edge[], columns:
   // The anchor sits in its own column left of each exposed entry; when something already leads into the entry from the
   // column before (an account that contains the gateway), it shares that column instead, so no link into the entry
   // has to pass the anchor's caption.
-  const upstream = edges.filter(edge => exposed.includes(edge.target) && ids.has(edge.source) && edge.source !== INTERNET_ANCHOR_ID).map(edge => edge.source);
+  const layerOf = new Map(visible.map(node => [node.id, semanticLayer(node)]));
+  const upstream = edges.filter(edge => exposed.includes(edge.target) && ids.has(edge.source) && edge.source !== INTERNET_ANCHOR_ID
+    && layerOf.get(edge.source) !== "finding").map(edge => edge.source);
   if (ids.has(INTERNET_ANCHOR_ID) && exposed.length) attached.set(INTERNET_ANCHOR_ID, upstream.length
     ? { to: [...new Set(upstream)].join("\n"), offset: 0 } : { to: exposed.join("\n"), offset: -0.5 });
   for (const node of visible) {
@@ -139,6 +141,15 @@ function twoLineName(node: Node<LineageNodeData> | undefined, id: string): boole
   return lines > 1;
 }
 
+/** The last few placements, by graph signature. Results are never mutated after layout. */
+const LAYOUT_CACHE = new Map<string, ReturnType<typeof compactLayout>>();
+const LAYOUT_CACHE_SIZE = 16;
+function remember(signature: string, result: ReturnType<typeof compactLayout>) {
+  LAYOUT_CACHE.set(signature, result);
+  if (LAYOUT_CACHE.size > LAYOUT_CACHE_SIZE) LAYOUT_CACHE.delete(LAYOUT_CACHE.keys().next().value!);
+  return result;
+}
+
 /** One left-to-right grammar for every canvas. The backend's selected path
  * owns row zero; every other branch fans around the nodes it connects to. */
 export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[], selectedPath?: readonly string[]) {
@@ -164,11 +175,15 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
       || (found!.type === "findingGroupNode" && !onPath.has(String(found!.data.displayTargetId ?? "")))); },
     spine: primary, attached: attachedRanks(visible, drawn, columns) };
   const boxes = new Map(visible.map(node => [node.id, cardWidth(node, node.id)]));
-  const { positions, arcs, behind } = compactLayout({ ...base,
+  // Placement depends only on the graph's structure and its captions; a re-render that changes nothing else reuses it.
+  const signature = JSON.stringify([visible.map(node => [node.id, node.type, node.data.label, node.data.semanticLayer, node.data.readingLabel,
+    node.data.displayTargetId, node.data.readingFindings?.count, internetExposure(node.data.attributes)]),
+    drawn.map(edge => [edge.id, edge.source, edge.target, edge.data?.relationship]), primary]);
+  const { positions, arcs, behind } = LAYOUT_CACHE.get(signature) ?? remember(signature, compactLayout({ ...base,
     caption: id => { const found = byId.get(id);
       if (found?.type === "findingGroupNode") return { name: `Findings (${found.data.readingFindings?.count ?? 0})`, typeLine: "Click to explore" };
       return { name: shownName(found, id), typeLine: String(found?.data.readingLabel ?? found?.data.entityType ?? ""), box: boxes.get(id) ?? cardWidth(found, id) }; },
-    width: id => boxes.get(id) ?? cardWidth(byId.get(id), id), tall: id => twoLineName(byId.get(id), id) ? TALL_CARD_ROOM : undefined });
+    width: id => boxes.get(id) ?? cardWidth(byId.get(id), id), tall: id => twoLineName(byId.get(id), id) ? TALL_CARD_ROOM : undefined }));
   const pathPairs = new Set(primary.slice(1).map((id, index) => `${primary[index]}\u0000${id}`));
   return {
     nodes: nodes.map(node => {

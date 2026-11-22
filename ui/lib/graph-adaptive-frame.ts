@@ -27,6 +27,8 @@ export function legibleZoomForText(textPx: number): number {
 /** Fit options that never zoom below `floor`: a topology too large for that is panned, not shrunk. */
 /** The zoom controls sit at the canvas's left edge; a fit keeps this much clear there so no caption hides under them. */
 export const CONTROLS_RESERVE = "72px";
+/** On a phone the zoom controls run across the canvas's top-right corner: the frame grows by, and a fit keeps clear, this band. */
+export const PHONE_CONTROLS_PX = 60;
 type FitPadding = number | `${number}px` | `${number}%` | { top?: number | string; right?: number | string; bottom?: number | string; left?: number | string };
 
 export function legibleFit<T extends { minZoom?: number; maxZoom?: number; padding?: FitPadding }>(options: T, floor: number): T & { minZoom: number; padding: FitPadding } {
@@ -53,7 +55,7 @@ export function graphAdaptiveFrame({ bounds, width, availableHeight, inspector, 
   const floor = Math.min(ceiling, inspector ? 432 : 320);
   const readableScale = Math.min(GRAPH_FIT_MAX_ZOOM, width / Math.max(1, bounds.width));
   let height = Math.round(boundedPreview && width < 640
-    ? Math.max(floor, bounds.height * readableScale + 64)
+    ? Math.max(floor, bounds.height * readableScale + 64 + PHONE_CONTROLS_PX)
     : Math.min(ceiling, Math.max(floor, bounds.height * readableScale + 64)));
   if (boundedPreview && width >= 640) height = Math.max(height, Math.ceil(bounds.height * GRAPH_LEGIBLE_FIT_ZOOM * (1 + focusPadding) + 80));
   const viewport = getViewportForBounds(bounds, width, height, 0.05, 2, 0.08);

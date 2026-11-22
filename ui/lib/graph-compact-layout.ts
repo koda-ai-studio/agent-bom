@@ -110,7 +110,7 @@ function rankKeys({ ids, links, column, attached, containment }: CompactInput) {
       const targets = to.split("\n");
       if (targets.some(target => pending.has(target) && target !== id)) continue;
       const base = targets.map(target => key.get(target)).filter((value): value is number => value !== undefined);
-      const anchor = base.length ? (offset < 0 ? Math.min(...base) : Math.max(...base)) : 0;
+      const anchor = base.length ? (offset <= 0 ? Math.min(...base) : Math.max(...base)) : 0;
       // A whole-number offset joins the rank of the column that many columns along; a fraction sits between ranks.
       key.set(id, Number.isInteger(offset) ? (Math.floor(anchor / 1000) + offset) * 1000 : anchor + offset);
       pending.delete(id);
@@ -346,7 +346,7 @@ function refinePlacement(ids: readonly string[], links: readonly Link[], positio
 
 const RESTARTS = 8;
 /** Placement evaluations one layout may spend searching. */
-const SEARCH_BUDGET = 2200;
+const SEARCH_BUDGET = 2500;
 /** Seed 0 flips every branch (the mirror image); later seeds flip a hashed half of them. */
 function flipped(seed: number, id: string): boolean {
   if (seed === 0) return true;
@@ -456,18 +456,21 @@ function levelLeaves(ids: readonly string[], positions: Map<string, Point>, leaf
 function clearLevelLinks(ids: readonly string[], links: readonly Link[], positions: Map<string, Point>, tall: (id: string) => number | undefined, spine: ReadonlySet<string>) {
   const linked = (a: string, b: string) => links.some(link => (link.source === a && link.target === b) || (link.source === b && link.target === a));
   const level = links.filter(link => positions.has(link.source) && positions.has(link.target) && positions.get(link.source)!.y === positions.get(link.target)!.y);
+  // A card in a chain with both ends (A → B → C under A → C) belongs on that row.
+  const blocks = (id: string, at: Point) => level.some(link => link.source !== id && link.target !== id && !(linked(id, link.source) && linked(id, link.target))
+    && positions.get(link.source)!.y === at.y
+    && at.x > Math.min(positions.get(link.source)!.x, positions.get(link.target)!.x) && at.x < Math.max(positions.get(link.source)!.x, positions.get(link.target)!.x));
   for (const id of ids) {
     if (spine.has(id)) continue;
     const here = positions.get(id)!;
-    // A card in a chain with both ends (A → B → C under A → C) belongs on that row.
-    const blocking = level.some(link => link.source !== id && link.target !== id && !(linked(id, link.source) && linked(id, link.target)) && positions.get(link.source)!.y === here.y
-      && here.x > Math.min(positions.get(link.source)!.x, positions.get(link.target)!.x) && here.x < Math.max(positions.get(link.source)!.x, positions.get(link.target)!.x));
-    if (!blocking) continue;
+    if (!blocks(id, here)) continue;
     const peers = ids.filter(other => other !== id && positions.get(other)!.x === here.x).map(other => ({ y: positions.get(other)!.y, room: Math.max(COMPACT_ROW_GAP, tall(other) ?? 0) }));
     const room = Math.max(COMPACT_ROW_GAP, tall(id) ?? 0);
+    // The nearest free row, above first, that stands on no other level link either.
     for (let step = 1; step < 20; step++) {
-      const y = here.y - step * COMPACT_ROW_GAP;
-      if (peers.every(peer => peer.y < y ? y - peer.y >= peer.room : peer.y - y >= room)) { positions.set(id, { x: here.x, y }); break; }
+      const target = [here.y - step * COMPACT_ROW_GAP, here.y + step * COMPACT_ROW_GAP]
+        .find(y => peers.every(peer => peer.y < y ? y - peer.y >= peer.room : peer.y - y >= room) && !blocks(id, { x: here.x, y }));
+      if (target !== undefined) { positions.set(id, { x: here.x, y: target }); break; }
     }
   }
 }

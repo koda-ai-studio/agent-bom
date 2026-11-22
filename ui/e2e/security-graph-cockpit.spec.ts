@@ -1140,7 +1140,10 @@ test(`large estates lead with non-overlapping clusters in ${theme}`, async ({ pa
   const [firstBox, secondBox] = await Promise.all([cards.nth(0).boundingBox(), cards.nth(1).boundingBox()]);
   expect(firstBox).not.toBeNull();
   expect(secondBox).not.toBeNull();
-  expect(firstBox!.x + firstBox!.width).toBeLessThanOrEqual(secondBox!.x);
+  // Both accounts share the scope column, so they stack top to bottom; they must never overlap.
+  const apart = firstBox!.x + firstBox!.width <= secondBox!.x || secondBox!.x + secondBox!.width <= firstBox!.x
+    || firstBox!.y + firstBox!.height <= secondBox!.y || secondBox!.y + secondBox!.height <= firstBox!.y;
+  expect(apart).toBe(true);
   await page.screenshot({ path: testInfo.outputPath(`investigation-large-estate-clustered-${theme}.png`), fullPage: true });
 
   await page.getByRole("button", { name: "Open node view" }).click();
