@@ -75,8 +75,8 @@ function manifestSources(visible: Node<LineageNodeData>[], edges: Edge[], moved:
 }
 
 // An exposure inside one layer reads entry first, so the exposed node takes the next rank; a configuring file or job
-// reads before what it configures.
-const PARENT_FIRST = new Set(["contains", "hosts", "runs", "depends_on", "manages", "owns", "provides_tool", "exposed_to", "configures"]);
+// reads before what it configures, and an identity before the role it assumes.
+const PARENT_FIRST = new Set(["contains", "hosts", "runs", "depends_on", "manages", "owns", "provides_tool", "exposed_to", "configures", "assumes"]);
 const CHILD_FIRST = new Set(["part_of", "hosted_on", "belongs_to", "member_of"]);
 /** Parent and child of a containment-like or exposure link inside one backend layer; any other link splits no rank. */
 function containment(link: { source: string; target: string; data?: Record<string, unknown> | undefined }): [string, string] | null {

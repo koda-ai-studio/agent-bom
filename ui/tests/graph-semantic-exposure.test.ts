@@ -73,3 +73,10 @@ it("keeps the Internet anchor left of an exposed workload that a later-column ag
   const anchor = result.nodes.find(n => n.data.displayOnly)!;
   expect(x(anchor.id)).toBeLessThan(x("workload"));
 });
+
+it("reads an identity before the role it assumes inside the identity layer, so the link runs forward", () => {
+  const identity = (id: string): Node<LineageNodeData> => ({ id, position: { x: 0, y: 0 }, data: { label: id, nodeType: "role", semanticLayer: "identity" } });
+  const result = semanticGraphLayout([identity("sa"), identity("role")], [{ id: "assumes", source: "sa", target: "role", data: { relationship: "assumes" } }]);
+  const x = (id: string) => result.nodes.find(n => n.id === id)!.position.x;
+  expect(x("sa")).toBeLessThan(x("role"));
+});
