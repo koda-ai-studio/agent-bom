@@ -60,5 +60,7 @@ it("keeps captions inside the ordinary footprint beyond the compact context limi
   const layout = compactInvestigationLayout(true, 17, true);
   const style = readableGraphNodeStyle(0.4, true, Boolean(layout)) as Record<string, string>;
   expect(parseFloat(style["--graph-node-card-width"]!)).toBeLessThanOrEqual(READABLE_LINEAGE_DAGRE_LR.nodeWidth!);
-  expect(parseFloat(style["--graph-node-label-size"]!)).toBeLessThanOrEqual(30);
+  // The compact canvas draws names at 0.88 of this size, so a 36-unit ceiling stays inside the footprint
+  // while keeping Fit all text at 12px or more down to the legible zoom.
+  expect(parseFloat(style["--graph-node-label-size"]!)).toBeLessThanOrEqual(36);
 });

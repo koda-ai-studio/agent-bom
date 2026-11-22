@@ -80,11 +80,11 @@ it("places navigation outside the canvas so controls cannot cover graph nodes", 
   mount.remove();
 });
 
-it("keeps the complete portrait graph instead of offering one-node focus", () => {
+it("offers the node navigator on the portrait spine too", () => {
   for (const node of fixture.nodes) Object.assign(node.data, { phoneLayout: true });
   try {
     render(<GraphCanvasAutoFit {...props} navigationIds={path} />);
-    expect(screen.queryByRole("button", { name: "Next graph node" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next graph node" })).toBeInTheDocument();
   } finally {
     for (const node of fixture.nodes) Reflect.deleteProperty(node.data, "phoneLayout");
   }

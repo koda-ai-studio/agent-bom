@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 import { render } from "@testing-library/react";
 import { ReactFlowProvider } from "@xyflow/react";
 import { lineageNodeTypes } from "@/components/lineage-nodes";
-import { canvasName } from "@/components/graph-compact-node";
+import { canvasName, prosePreview } from "@/components/graph-compact-node";
 
 it("keeps names whole to wrap, and shortens only digests and single tokens past 24 characters", () => {
   expect(canvasName("Reference Evidence Workload")).toBe("Reference Evidence Workload");
@@ -21,4 +21,9 @@ it("draws one circle, a two-line name and one type line with no canvas chips", (
   expect(container.querySelector("[data-semantic-badges]")).toBeNull();
   expect(container.querySelector('[data-compact-marker="kev"]')).not.toBeNull();
   expect(container.querySelector('[data-compact-marker="internet"]')).not.toBeNull();
+});
+
+it("previews a prose finding title in about two lines, cut at a word, and keeps identifiers whole", () => {
+  expect(prosePreview("AI agent can reach a credential or privileged tool through a configured MCP server")).toBe("AI agent can reach a credential…");
+  expect(prosePreview("CVE-2025-29927")).toBe("CVE-2025-29927");
 });

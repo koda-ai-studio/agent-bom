@@ -26,7 +26,7 @@ const GLYPH = "calc(var(--graph-node-glyph-size, 56px) * 0.7)";
 const ICON = "calc(var(--graph-node-icon-size, 28px) * 0.7)";
 const META = { fontSize: "var(--graph-node-meta-size, 12px)" };
 
-const TOKEN_LIMIT = 24;
+const TOKEN_LIMIT = 24, PROSE_LIMIT = 36;
 
 /** Canvas name: an image digest reads as its short tail; everything else is kept whole
  * and wraps. The full name stays in the title and drawer. */
@@ -38,6 +38,12 @@ export function canvasName(name: string): string {
   const longestToken = Math.max(...base.split(/[\s-]+/).map(token => token.length));
   if (longestToken > TOKEN_LIMIT) return `${base.slice(0, 12)}…${base.slice(-10)}${suffix}`;
   return base + suffix;
+}
+
+/** A prose finding title (a sentence, not an identifier) previews in about two lines, cut at a word. */
+export function prosePreview(title: string): string {
+  if (title.length <= PROSE_LIMIT || !title.includes(" ")) return title;
+  return `${title.slice(0, PROSE_LIMIT - 2).replace(/\s+\S*$/, "")}…`;
 }
 
 function typeLine(data: LineageNodeData, title: string): string {
@@ -113,7 +119,9 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
   const provider = repository?.source ?? (showsProviderMark(data) ? entitySource(data) : null);
   const severity = findingSeverity(data);
   const { badges, ring } = nodeBadges(data);
-  const title = typeof data.attributes?.display_title === "string" && data.attributes.display_title.trim() ? data.attributes.display_title : data.label;
+  const fullTitle = typeof data.attributes?.display_title === "string" && data.attributes.display_title.trim() ? data.attributes.display_title : data.label;
+  // A prose finding draws its short preview; the full title stays in the tooltip, drawer and assistive text.
+  const preview = ["misconfiguration", "vulnerability"].includes(data.nodeType) ? prosePreview(fullTitle) : fullTitle;
   const scope = data.rollup ? compactScopeCaption(data.rollup) : null;
   const held = data.heldConnections ? `${data.heldConnections} more ${data.heldConnections === 1 ? "connection" : "connections"} not drawn` : undefined;
   const tooltip = [graphNodeTooltip(data), data.evidenceFlowContext, ring?.description, held,
@@ -132,11 +140,12 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
       <FindingDisclosure data={data} />
       {held && <span data-testid="graph-held-connections" className="sr-only">{held}</span>}
     </div>
-    <p data-semantic-name title={title} className="mt-[0.3em] line-clamp-2 max-w-full font-semibold leading-[1.15] text-foreground [overflow-wrap:anywhere]" style={{ fontSize: "calc(var(--graph-node-label-size, 14px) * 0.88)" }}>
-      {canvasName(title) === title ? <span>{title}</span> : <><span aria-hidden="true">{canvasName(title)}</span><span className="sr-only">{title}</span></>}
+    <p data-semantic-name title={fullTitle} className="mt-[0.3em] line-clamp-2 max-w-full font-semibold leading-[1.15] text-foreground [overflow-wrap:anywhere]" style={{ fontSize: "calc(var(--graph-node-label-size, 14px) * 0.88)" }}>
+      {canvasName(preview) === fullTitle ? <span>{fullTitle}</span> : <span aria-hidden="true">{canvasName(preview)}</span>}
     </p>
+    {canvasName(preview) !== fullTitle && <span className="sr-only">{fullTitle}</span>}
     <span data-graph-caption data-entity-role className="block max-w-full truncate leading-[1.15] text-ink-secondary" style={META}>
-      {scope ? scope.visible : typeLine(data, title)}
+      {scope ? scope.visible : typeLine(data, fullTitle)}
     </span>
     {scope && <span className="sr-only">{scope.spoken}</span>}
   </div>;
