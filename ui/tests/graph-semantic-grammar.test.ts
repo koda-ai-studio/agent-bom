@@ -97,11 +97,13 @@ it("retains backend columns even when a selected spine traverses them in reverse
   expect(columns.get("tool")).toBeGreaterThan(columns.get("server")!);
 });
 
-it("centres sibling context symmetrically around its owner", () => {
+it("keeps sibling context below the highlighted top path", () => {
   const nodes = [node("root", "agent"), node("left", "server"), node("right", "server")];
   const edges = ["left", "right"].map(id => ({ id, source: "root", target: id, data: { relationship: "uses" } }));
   const result = semanticGraphLayout(nodes, edges, ["root"]);
-  expect(result.nodes.find(n => n.id === "left")!.position.y).toBe(-result.nodes.find(n => n.id === "right")!.position.y);
+  const left = result.nodes.find(n => n.id === "left")!, right = result.nodes.find(n => n.id === "right")!;
+  expect(left.position.y).toBeGreaterThan(0);
+  expect(right.position.y).toBeGreaterThan(left.position.y);
 });
 
 it("keeps semantic columns and the straight spine through mobile preview placement", () => {
