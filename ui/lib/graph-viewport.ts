@@ -102,7 +102,7 @@ export function shouldShowGraphMiniMap(input: GraphViewportInput): boolean {
 }
 
 
-type ViewportAnchorNode = { id: string; data: { nodeType?: string } };
+type ViewportAnchorNode = { id: string; data: { phoneLayout?: boolean; nodeType?: string } };
 
 /** Selects a viewport anchor only; never filters nodes, edges, or evidence. */
 export function graphInitialFitViewOptions(
@@ -130,6 +130,7 @@ export function graphReadableFitViewOptions(
   options: GraphFitViewOptions,
   selectedNodeId?: string | null,
 ) {
+  if (nodes.length && nodes.every(node => node.data.phoneLayout)) return { ...options, padding: 0.08, nodes: nodes.map(node => ({ id: node.id })), minZoom: 48 / 56, maxZoom: 1 };
   const selected = nodes.some(node => node.id === selectedNodeId) ? selectedNodeId : null;
   const fallback = [...nodes].sort((a, b) => a.id.localeCompare(b.id))[0]?.id;
   return graphInitialFitViewOptions(nodes, options, selected ?? fallback);

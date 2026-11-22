@@ -283,7 +283,7 @@ function NodeCard({
           className="absolute -bottom-1 -right-2 rounded-full border border-outline bg-surface px-1.5 font-medium leading-snug text-ink-secondary">+{data.heldConnections}<span className="sr-only"> more connections not drawn</span></span> : null}
       </div>
       {data.semanticLayout
-        ? <span data-semantic-name title={displayTitle} className={`mb-1 block w-full min-w-0 truncate text-lg font-semibold leading-[1.2] text-foreground ${rowLayout ? "col-start-2" : ""}`} style={{ fontSize: "var(--graph-node-label-size, 18px)" }}>{displayTitle}</span>
+        ? <span data-semantic-name title={displayTitle} className={`mb-1 line-clamp-2 w-full min-w-0 whitespace-normal break-words text-lg font-semibold leading-[1.2] text-foreground ${rowLayout ? "col-start-2" : ""}`} style={{ fontSize: "var(--graph-node-label-size, 18px)" }}>{displayTitle}</span>
         : <SegmentedLabel caption text={caption?.title ?? (repository?.slug || shortTitle.text)} className="mb-1 line-clamp-3 w-full min-w-0 text-lg font-semibold leading-[1.2] text-foreground" style={{ fontSize: "var(--graph-node-label-size, 18px)" }} />}
       {shortTitle.shortened && !caption && !repository && <span className="sr-only">{displayTitle}</span>}
       {/* The vendor mark names the provider; a second text chip would repeat it. */}

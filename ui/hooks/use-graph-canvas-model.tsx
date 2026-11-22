@@ -728,11 +728,10 @@ export function useGraphCanvasModel(page: GraphPageData) {
     setManualCameraScope(cameraScope);
     const generation = ++fitGeneration.current;
     const whole = selectedScenarioId ? { ...initialViewportOptions, nodes: reactFlow.getNodes() } : { ...viewportOptions, padding: Math.max(investigationContext ? 0.25 : 0.2, viewportOptions.padding) };
-    // Fit all never shrinks cards below legible text; a topology larger than that is panned.
-    // A capture cannot be panned, so it keeps the whole graph in the image.
-    const options = narrowViewport && !captureMode
+    // Captures and interactive fits share the same readability floor.
+    const options = narrowViewport
       ? graphReadableFitViewOptions(reactFlow.getNodes(), viewportOptions, selectedNodeId ?? investigationMode?.rootId)
-      : captureMode ? whole : legibleFit(whole, legibleFitZoom(canvasWidth));
+      : legibleFit(whole, legibleFitZoom(canvasWidth));
     const fit = () => {
       if (fitGeneration.current !== generation) return;
       void reactFlow.fitView({ ...options, duration: 240 }).then(() => {

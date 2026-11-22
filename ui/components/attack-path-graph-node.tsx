@@ -24,7 +24,7 @@ export type AttackPathFlowNode = Node<AttackPathNodeData, "attackPathNode">;
 const GLYPH_INSET_X = glyphInsetX(PATH_NODE.width);
 const BOX: CSSProperties = { width: PATH_NODE.width, height: PATH_NODE.height };
 /** Names wrap to two lines under the glyph, only at a separator, before truncating; the full name is on hover. */
-const NAME = "pointer-events-auto block w-full rounded-t bg-surface px-1 pt-0.5 text-[15px] font-semibold leading-tight truncate [overflow-wrap:normal] [word-break:normal]";
+const NAME = "pointer-events-auto block w-full rounded-t bg-surface px-1 pt-0.5 text-[15px] font-semibold leading-tight line-clamp-2 whitespace-normal [overflow-wrap:anywhere]";
 const SUBTITLE = "pointer-events-auto block w-full truncate rounded-b bg-surface px-1 pb-0.5 pt-0.5 text-[13px] leading-tight";
 const RATED = new Set(["critical", "high", "medium", "low"]);
 const ROLE_CAPTION: Record<PathGraphNode["role"], string> = { entry: "Entry", path: "", target: "At risk", branch: "" };

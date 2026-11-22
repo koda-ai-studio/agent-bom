@@ -100,3 +100,10 @@ describe("explicit readable view", () => {
     expect(graphReadableFitViewOptions([], options)).toBe(options);
   });
 });
+
+it("fits every node of an already arranged portrait graph at the glyph floor", () => {
+  const nodes = [{ id: "a", data: { phoneLayout: true } }, { id: "b", data: { phoneLayout: true } }];
+  const fit = graphReadableFitViewOptions(nodes, graphFitViewOptions({ nodeCount: 2 }), "b");
+  expect(fit.nodes).toEqual([{ id: "a" }, { id: "b" }]);
+  expect(fit.minZoom).toBe(48 / 56);
+});

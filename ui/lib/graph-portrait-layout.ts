@@ -40,9 +40,12 @@ export function graphPortraitLayout(nodes: Node<LineageNodeData>[], edges: Edge[
     edges: edges.map(edge => {
       const from = positions.get(edge.source), to = positions.get(edge.target);
       if (!from || !to) return edge;
-      const across = from.x !== to.x;
-      return { ...edge, sourceHandle: across ? from.x < to.x ? "phone-right" : "phone-left" : from.y > to.y ? "phone-up" : null,
-        targetHandle: across ? from.x < to.x ? "phone-left" : "phone-right" : from.y > to.y ? "phone-down" : null,
+      const skippedRow = visible.some(node => {
+        const point = positions.get(node.id)!;
+        return node.id !== edge.source && node.id !== edge.target && point.y > Math.min(from.y, to.y) && point.y < Math.max(from.y, to.y);
+      });
+      return { ...edge, sourceHandle: skippedRow ? "phone-left" : from.y > to.y ? "phone-up" : null,
+        targetHandle: skippedRow ? "phone-left" : from.y > to.y ? "phone-down" : null,
         data: { ...edge.data, phoneLayout: true } };
     }),
   };
