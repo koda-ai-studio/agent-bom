@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import threading
 import time
+from contextlib import contextmanager
 from datetime import datetime, timezone
 
 import pytest
@@ -11,6 +13,7 @@ from starlette.testclient import TestClient
 from agent_bom.api import stores as api_stores
 from agent_bom.api.graph_store import SQLiteGraphStore
 from agent_bom.api.server import app, configure_api
+from agent_bom.api.store import InMemoryJobStore
 from agent_bom.graph import EntityType, RelationshipType, UnifiedEdge, UnifiedGraph, UnifiedNode
 from agent_bom.graph.analysis import GraphAnalysisState, GraphAnalysisStatus
 from agent_bom.graph.attack_path_counts import attack_paths_summary
@@ -81,6 +84,7 @@ def client(tmp_path, monkeypatch):
     store.save_graph(_image_scan())
     store.save_graph(_iac_scan())
     monkeypatch.setattr(api_stores, "_graph_store", store)
+    monkeypatch.setattr(api_stores, "_store", InMemoryJobStore())
     configure_api(api_key=None, allow_unauthenticated=True)
     try:
         with TestClient(app) as test_client:
@@ -142,6 +146,47 @@ def test_summary_counts_fusion_and_derived_candidates() -> None:
     }
     # Nothing recorded: assessed is the retained set, never a guess.
     assert attack_paths_summary(retained_count=2, basis="persisted_graph_paths", analysis_status={})["assessed_count"] == 2
+
+
+def test_client_isolates_completed_jobs_before_startup(tmp_path, monkeypatch):
+    """Inherited scan jobs must not start a current-estate derivation in this fixture."""
+    from agent_bom.api import current_graph_prewarm
+    from tests.api.test_scan_job_sla_history import job
+
+    previous = InMemoryJobStore()
+    previous.put(job(8, tenant="default", target="previous-target", findings=[]))
+    monkeypatch.setattr(api_stores, "_store", previous)
+    entered, release = threading.Event(), threading.Event()
+    recent_tenants = current_graph_prewarm._recent_tenants
+
+    def delayed(job_store):
+        entered.set()
+        assert release.wait(10)
+        return recent_tenants(job_store)
+
+    monkeypatch.setattr(current_graph_prewarm, "_recent_tenants", delayed)
+    monkeypatch.setenv("AGENT_BOM_CURRENT_GRAPH_PREWARM", "1")
+    with contextmanager(client.__wrapped__)(tmp_path, monkeypatch) as api:
+
+        class OrderedClient:
+            def post(self, *args, **kwargs):
+                # The counter is installed now. Complete startup before posting
+                # so any inherited tenant produces the CI failure deterministically.
+                release.set()
+                for thread in threading.enumerate():
+                    if thread.name == "current-graph-prewarm":
+                        thread.join(5)
+                        assert not thread.is_alive()
+                return api.post(*args, **kwargs)
+
+            def get(self, *args, **kwargs):
+                return api.get(*args, **kwargs)
+
+        try:
+            assert entered.wait(5)
+            test_receipt_and_graph_report_the_same_retained_paths(OrderedClient(), monkeypatch)
+        finally:
+            release.set()
 
 
 def _ref(schema: dict) -> str:
