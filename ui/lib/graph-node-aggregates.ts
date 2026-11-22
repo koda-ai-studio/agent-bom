@@ -38,7 +38,6 @@ export function useGraphNodeAggregates(scanId: string | undefined, hops: readonl
 export function withGraphNodeAggregates(nodes: Node<LineageNodeData>[], records: ReadonlyMap<string, GraphNodeAggregate>): Node<LineageNodeData>[] {
   return nodes.map(node => {
     const record = records.get(node.id);
-    return record ? { ...node, data: { ...node.data, findingAggregate: record.aggregate,
-      semanticLayer: record.semantic_layer } } : node;
+    return record ? { ...node, data: { ...node.data, findingAggregate: record.aggregate } } : node;
   });
 }

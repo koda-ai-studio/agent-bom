@@ -121,6 +121,7 @@ export function layoutAttackPathGraph(model: AttackPathGraphModel, _requestedDir
   const spacing = SPACING[direction];
   const columns = rankColumns(model);
   const lanes = assignLanes(model, columns);
+  const occupiedColumns = [...new Set(columns.values())].sort((a, b) => a - b);
   const minLane = Math.min(0, ...lanes.values());
   const maxLane = Math.max(0, ...lanes.values());
   const row = direction === "LR";
@@ -130,19 +131,12 @@ export function layoutAttackPathGraph(model: AttackPathGraphModel, _requestedDir
   const positions = new Map<string, { x: number; y: number }>();
   let width = 0, height = 0;
   for (const node of model.nodes) {
-    const along = columns.get(node.id)! * (mainSize + spacing.rank);
+    const along = occupiedColumns.indexOf(columns.get(node.id)!) * (mainSize + spacing.rank);
     const across = margin + (lanes.get(node.id)! - minLane) * (crossSize + spacing.lane);
     const x = row ? along : across, y = row ? across : along;
     positions.set(node.id, { x, y });
     width = Math.max(width, x + PATH_NODE.width + (row ? 0 : margin));
     height = Math.max(height, y + PATH_NODE.height + (row ? margin : 0));
-  }
-  // Empty semantic layers do not consume canvas space before the first node.
-  // Translate the whole layout; retain every backend column and relative gap.
-  const occupiedLeft = positions.size ? Math.min(...[...positions.values()].map(point => point.x)) : 0;
-  if (occupiedLeft) {
-    for (const [id, point] of positions) positions.set(id, { ...point, x: point.x - occupiedLeft });
-    width -= occupiedLeft;
   }
   return {
     direction, positions, columns, lanes, minLane, maxLane, rankGap: spacing.rank, laneGap: spacing.lane, margin,

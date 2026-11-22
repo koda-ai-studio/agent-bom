@@ -8,7 +8,7 @@ import { cloudHierarchyLayout } from "@/lib/graph-cloud-hierarchy";
 
 const node = (id: string, nodeType: LineageNodeData["nodeType"]): Node<LineageNodeData> => ({
   id, type: "containerNode", position: { x: 0, y: 0 },
-  data: { label: id, nodeType, semanticLayer: ({ account: "infra", cluster: "infra", apiGateway: "api_gateway", container: "app", role: "identity", dataStore: "asset", vulnerability: "finding", misconfiguration: "finding" } as Record<string, string>)[nodeType], ...(nodeType === "container" ? { attributes: { container_kind: "workload" } } : {}) },
+  data: { label: id, nodeType, semanticLayer: ({ account: "scope", cluster: "infra", apiGateway: "api_gateway", container: "app", role: "identity", dataStore: "asset", vulnerability: "finding", misconfiguration: "finding" } as Record<string, string>)[nodeType], ...(nodeType === "container" ? { attributes: { container_kind: "workload" } } : {}) },
 });
 const edge = (source: string, target: string, relationship: string): Edge => ({
   id: `${source}-${target}`, source, target, markerEnd: "arrow", data: { relationship, evidenceMode: "inferred" },
@@ -34,10 +34,10 @@ it("preserves recorded service names in the readable cloud view", () => {
 it("branches recorded findings from their assets while preserving access order", () => {
   const result = graphHierarchyLayout(nodes, edges);
   const byId = new Map(result.nodes.map(n => [n.id, n]));
-  expect(byId.get("cluster")!.position.x).toBe(byId.get("gateway")!.position.x);
+  expect(byId.get("gateway")!.position.x).toBeLessThan(byId.get("cluster")!.position.x);
   expect(byId.get("checkout")!.position.x).toBe(byId.get("ledger")!.position.x);
   const chain = ["account", "cluster", "checkout", "role", "bucket"].map(id => byId.get(id)!.position.x);
-  expect(chain).toEqual([380, 380, 380, 1520, 1900]);
+  expect(chain).toEqual([0, 1140, 760, 2280, 2660]);
   for (const [finding, owner] of [["cve", "checkout"], ["grant-finding", "role"]]) {
     expect(byId.get(finding!)!.position.x).toBe(byId.get(owner!)!.position.x);
     expect(byId.get(finding!)!.position.y).toBeGreaterThan(byId.get(owner!)!.position.y);
