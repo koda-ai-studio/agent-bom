@@ -102,7 +102,7 @@ export function shouldShowGraphMiniMap(input: GraphViewportInput): boolean {
 }
 
 
-type ViewportAnchorNode = { id: string; data: { phoneLayout?: boolean; nodeType?: string } };
+type ViewportAnchorNode = { id: string; data: { phoneLayout?: boolean | undefined; nodeType?: string } };
 
 /** Selects a viewport anchor only; never filters nodes, edges, or evidence. */
 export function graphInitialFitViewOptions(

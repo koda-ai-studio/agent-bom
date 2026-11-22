@@ -65,15 +65,15 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
     const column = columns.get(node.id)!;
     siblings.set(column, [...(siblings.get(column) ?? []), node]);
   }
-  for (const [column, members] of siblings) {
+  for (const members of siblings.values()) {
     const parentRows = members.flatMap(node => edges.filter(edge => edge.target === node.id).flatMap(edge => {
       const parent = positions.get(edge.source);
       return parent ? [parent.y] : [];
     }));
     const center = parentRows.length ? parentRows.reduce((sum, y) => sum + y, 0) / parentRows.length : 0;
-    const spineHere = occupied.has(column);
-    members.forEach((node, index) => place(node.id, center + SEMANTIC_ROW_GAP * (spineHere
-      ? (Math.floor(index / 2) + 1) * (index % 2 ? -1 : 1) : index - (members.length - 1) / 2)));
+    members.forEach((node, index) => place(node.id, primary.length
+      ? SEMANTIC_ROW_GAP * (index + 1)
+      : center + SEMANTIC_ROW_GAP * (index - (members.length - 1) / 2)));
   }
   const owned = pending.filter(node => owners.has(node.id));
   for (let pass = 0; pass < owned.length; pass++) for (const node of owned) {
