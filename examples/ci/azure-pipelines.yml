@@ -12,7 +12,7 @@ steps:
   - task: UsePythonVersion@0
     inputs:
       versionSpec: "3.11"
-  - script: pip install --quiet agent-bom==0.115.4
+  - script: pip install --quiet agent-bom==0.115.5
     displayName: Install agent-bom
   - script: agent-bom scan . -f sarif -o agent-bom-results.sarif --fail-on-severity high
     displayName: Scan with agent-bom
