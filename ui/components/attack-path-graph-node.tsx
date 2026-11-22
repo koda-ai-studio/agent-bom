@@ -91,10 +91,12 @@ function Handles({ vertical, small = false }: { vertical: boolean; small?: boole
       <Handle id={`context-${position}`} type="target" position={position} className={hidden} style={{ top: GLYPH_CENTER_Y, [position]: inset }} />
     </Fragment>)}
   </> : <>
-    <Handle id="context" type="source" position={Position.Left} className={hidden} style={{ top: GLYPH_CENTER_Y, left: inset }} />
-    <Handle id="context" type="target" position={Position.Right} className={hidden} style={{ top: GLYPH_CENTER_Y, right: inset }} />
+    {/* An edge with no handle id takes the first measured handle of its type: the reading-order pair renders first. */}
     <Handle type="target" position={Position.Left} className={hidden} style={{ top: GLYPH_CENTER_Y, left: inset }} />
     <Handle type="source" position={Position.Right} className={hidden} style={{ top: GLYPH_CENTER_Y, right: inset }} />
+    <Handle id="context" type="source" position={Position.Left} className={hidden} style={{ top: GLYPH_CENTER_Y, left: inset }} />
+    <Handle id="context" type="target" position={Position.Right} className={hidden} style={{ top: GLYPH_CENTER_Y, right: inset }} />
+    <Handle id="side" type="source" position={Position.Right} className={hidden} style={{ top: GLYPH_CENTER_Y, right: inset }} />
   </>;
 }
 

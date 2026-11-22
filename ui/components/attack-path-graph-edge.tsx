@@ -1,6 +1,6 @@
 "use client";
 
-import { BaseEdge, EdgeLabelRenderer, useStore, type Edge, type EdgeProps } from "@xyflow/react";
+import { BaseEdge, EdgeLabelRenderer, Position, useStore, type Edge, type EdgeProps } from "@xyflow/react";
 
 import type { AttackPathDirection } from "@/lib/attack-path-graph-layout";
 import { compactEdgeCurve } from "@/components/graph-compact-edge";
@@ -29,6 +29,13 @@ export function edgeStroke(onPath: boolean): string {
   return (onPath ? PATH_STROKE.selected : PATH_STROKE.connected).color;
 }
 
+/** Two cards of one column on a row layout: one C-curve from the lower card's right rim to the other's, bowing right
+ * of both glyphs and the names under them. */
+export function sideArcPath(source: { x: number; y: number }, target: { x: number; y: number }): string {
+  const reach = Math.max(80, Math.abs(target.y - source.y) * 0.35);
+  return `M${source.x},${source.y} C${source.x + reach},${source.y} ${target.x + reach},${target.y} ${target.x},${target.y}`;
+}
+
 export function AttackPathGraphEdge(props: EdgeProps<AttackPathFlowEdge>) {
   const { id, data } = props;
   const edges = useStore(state => state.edges);
@@ -45,7 +52,10 @@ export function AttackPathGraphEdge(props: EdgeProps<AttackPathFlowEdge>) {
   const lane = relationshipLaneFor(id, edges, nodeId => nodes.find(node => node.id === nodeId)?.position.y,
     nodeId => nodes.find(node => node.id === nodeId)?.position.x);
   // A phone column draws one smooth curve between the two handles; routing around obstacles there looped past the column.
-  const curve = direction === "TB" ? compactEdgeCurve(props) : null;
+  const sideArc = direction === "LR" && props.sourcePosition === Position.Right && props.targetPosition === Position.Right && Math.abs(props.sourceX - props.targetX) < 1;
+  const curve = direction === "TB" ? compactEdgeCurve(props)
+    : sideArc ? { path: sideArcPath({ x: props.sourceX, y: props.sourceY }, { x: props.targetX, y: props.targetY }),
+      mid: { x: props.sourceX + 0.75 * Math.max(80, Math.abs(props.targetY - props.sourceY) * 0.35), y: (props.sourceY + props.targetY) / 2 } } : null;
   const [path, labelX, labelY] = curve ? [curve.path, curve.mid.x, curve.mid.y] : relationshipPath(props, nodes.filter(node => !node.hidden).map(node => ({ id: node.id, ...node.position,
     width: node.measured?.width ?? node.width ?? 152, height: node.measured?.height ?? node.height ?? 136 })), lane);
   const label = { x: labelX, y: labelY };

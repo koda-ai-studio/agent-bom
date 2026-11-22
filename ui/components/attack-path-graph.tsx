@@ -14,6 +14,7 @@ import { activateGraphNodeFromKeyboard } from "@/lib/graph-keyboard-selection";
 import { useWheelZoomGate, WheelZoomHint } from "@/hooks/use-wheel-zoom-gate";
 import { NARROW_MIN_ZOOM, PATH_DESKTOP_MIN_ZOOM, attackPathCanvasHeight, attackPathCanvasWidth, layoutAttackPathGraph, type AttackPathLayout } from "@/lib/attack-path-graph-layout";
 import { GLYPH_CENTER_Y, glyphInsetX } from "@/lib/attack-path-graph-routes";
+import { pathEdgeHandles } from "@/lib/attack-path-graph-handles";
 import { attackPathViewport } from "@/lib/attack-path-graph-viewport";
 import { pathTraceTiming } from "@/lib/attack-path-trace";
 import { prefersReducedMotion } from "@/lib/reduced-motion";
@@ -87,14 +88,6 @@ function traceByEdge(model: AttackPathGraphModel, key: string): Map<string, Edge
   return new Map(hops.map((edge, index) => [edge.id, { ...timing[index]!, index, key }]));
 }
 
-function pathEdgeHandles(layout: AttackPathLayout, source: string, target: string) {
-  const from = layout.positions.get(source)!, to = layout.positions.get(target)!;
-  if (layout.direction === "TB") {
-    if (from.x !== to.x) return { sourceHandle: from.x < to.x ? "context-right" : "context-left", targetHandle: from.x < to.x ? "context-left" : "context-right" };
-    return { sourceHandle: from.y > to.y ? "reverse" : null, targetHandle: from.y > to.y ? "reverse" : null };
-  }
-  return { sourceHandle: from.x > to.x ? "context" : null, targetHandle: from.x > to.x ? "context" : null };
-}
 
 function useFlowElements(model: AttackPathGraphModel, narrow: boolean, activeEdge: string | null, markerPrefix: string,
   handlers: { onOpenFindings: AttackPathGraphProps["onOpenFindings"]; onExpandGroup: (id: string) => void }, traceKey: string | null) {
@@ -112,7 +105,8 @@ function useFlowElements(model: AttackPathGraphModel, narrow: boolean, activeEdg
       : [{ type: "target" as const, position: Position.Left, x: inset, y: GLYPH_CENTER_Y, width: 1, height: 1, id: null },
         { type: "source" as const, position: Position.Right, x: layout.nodeWidth - inset, y: GLYPH_CENTER_Y, width: 1, height: 1, id: null },
         { type: "source" as const, position: Position.Left, x: inset, y: GLYPH_CENTER_Y, width: 1, height: 1, id: "context" },
-        { type: "target" as const, position: Position.Right, x: layout.nodeWidth - inset, y: GLYPH_CENTER_Y, width: 1, height: 1, id: "context" }];
+        { type: "target" as const, position: Position.Right, x: layout.nodeWidth - inset, y: GLYPH_CENTER_Y, width: 1, height: 1, id: "context" },
+        { type: "source" as const, position: Position.Right, x: layout.nodeWidth - inset, y: GLYPH_CENTER_Y, width: 1, height: 1, id: "side" }];
     return {
       id: node.id, type: "attackPathNode", position: layout.positions.get(node.id)!,
       width: layout.nodeWidth, height: layout.nodeHeight, handles,
