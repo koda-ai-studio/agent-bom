@@ -22,8 +22,8 @@ function leaderPath() {
     nodes: [
       node("vm:web", "container", "member-portal", context({ internet_exposed: true }, [
         { field: "internet_exposed", rule: "recorded_internet_exposed", attribute: "internet_exposed", value: true }])),
-      node("role:app", "role", "phi-export-approver", { admin_equivalent: true, privilege_level: "admin" }),
-      node("db:claims", "data_store", "claims-ledger", { data_classification: "phi" }),
+      node("role:app", "role", "phi-export-approver", context({ is_admin: true, privilege_level: "admin" }, [])),
+      node("db:claims", "data_store", "claims-ledger", context({ data_sensitivity: "phi" }, [])),
     ],
     edges: [edge("vm:web", "role:app", "assumes"), edge("role:app", "db:claims", "can_access")],
     attack_paths: [],
