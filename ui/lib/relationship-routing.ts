@@ -1,17 +1,11 @@
-import { getBezierPath, getSmoothStepPath, Position, type EdgeProps } from "@xyflow/react";
-import { LANE_GAP, type RelationshipLane } from "@/lib/relationship-lanes";
+import { obstacleWaypoints } from "@/lib/relationship-obstacles";
+import { getBezierPath, type EdgeProps } from "@xyflow/react";
+import type { RelationshipLane } from "@/lib/relationship-lanes";
 
 type Obstacle = { id: string; x: number; y: number; width: number; height: number };
 type Endpoints = Pick<EdgeProps, "source" | "target" | "sourceX" | "sourceY" | "targetX" | "targetY" | "sourcePosition" | "targetPosition">;
-
 type Point = [number, number];
-
-/** A full canvas page plus the display nodes a flow can add. */
 export const ROUTED_NODE_LIMIT = 130;
-/** A corridor beyond this multiple of the direct distance reads as a stray line across the map, not a route. */
-const MAX_DETOUR = 2;
-/** How far below a glyph's centre row a caption-avoiding route runs. */
-const EXIT_OFFSET = 18;
 
 /** Straight runs joined by rounded corners: the one line style every relationship uses. */
 export function roundedRoute(points: Point[]): string {
@@ -29,191 +23,164 @@ export function roundedRoute(points: Point[]): string {
   return `${path} L${distinct.at(-1)![0]},${distinct.at(-1)![1]}`;
 }
 
-/** A vertical rank still uses glyph-side ports. Exit beside the full caption
- * before turning down, and reverse the route for an incoming relationship. */
-function endpointCaptionRoute(edge: Endpoints, obstacles: Obstacle[], path: string): [string, number, number] | null {
-  if (obstacles.length > ROUTED_NODE_LIMIT || Math.abs(edge.targetY - edge.sourceY) < 80) return null;
-  const forward = edge.sourceY < edge.targetY;
-  const upper = { id: forward ? edge.source : edge.target, x: forward ? edge.sourceX : edge.targetX, y: forward ? edge.sourceY : edge.targetY, position: forward ? edge.sourcePosition : edge.targetPosition };
-  const lower = { id: forward ? edge.target : edge.source, x: forward ? edge.targetX : edge.sourceX, y: forward ? edge.targetY : edge.sourceY, position: forward ? edge.targetPosition : edge.sourcePosition };
-  const upperNode = obstacles.find(node => node.id === upper.id);
-  const lowerNode = obstacles.find(node => node.id === lower.id);
-  if (!upperNode || !lowerNode || ![Position.Left, Position.Right, Position.Bottom].includes(upper.position)) return null;
-  const captionTop = upper.position === Position.Bottom ? upper.y + 8 : 2 * upper.y - upperNode.y + 8;
-  const bottom = upperNode.y + upperNode.height;
-  if (captionTop >= bottom || lowerNode.y < bottom + 16) return null;
-  const coordinates = path.match(/-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi)?.map(Number) ?? [];
-  if (coordinates.length !== 8) return null;
-  let crossesCaption = false;
-  for (let step = 1; step < 48 && !crossesCaption; step++) {
-    const t = step / 48, u = 1 - t;
-    const x = u ** 3 * coordinates[0]! + 3 * u ** 2 * t * coordinates[2]! + 3 * u * t ** 2 * coordinates[4]! + t ** 3 * coordinates[6]!;
-    const y = u ** 3 * coordinates[1]! + 3 * u ** 2 * t * coordinates[3]! + 3 * u * t ** 2 * coordinates[5]! + t ** 3 * coordinates[7]!;
-    crossesCaption = x > upperNode.x && x < upperNode.x + upperNode.width && y > captionTop && y < bottom;
+type Cubic = [Point, Point, Point, Point];
+
+function cubicPoint(curve: Cubic, t: number): Point {
+  const u = 1 - t;
+  return [0, 1].map(axis => u ** 3 * curve[0][axis]! + 3 * u ** 2 * t * curve[1][axis]!
+    + 3 * u * t ** 2 * curve[2][axis]! + t ** 3 * curve[3][axis]!) as Point;
+}
+
+function curveHits(curve: Cubic, obstacles: Obstacle[]): boolean {
+  for (let step = 1; step < 96; step++) {
+    const [x, y] = cubicPoint(curve, step / 96);
+    if (obstacles.some(box => x > box.x - 16 && x < box.x + box.width + 16
+      && y > box.y - 16 && y < box.y + box.height + 16)) return true;
   }
-  if (!crossesCaption) return null;
-  const upperX = upper.position === Position.Left ? upperNode.x - 24 : upperNode.x + upperNode.width + 24;
-  const lowerX = lower.position === Position.Top ? lower.x : lower.position === Position.Left ? lowerNode.x - 24 : lowerNode.x + lowerNode.width + 24;
-  const laneY = (bottom + lowerNode.y) / 2;
-  // Run beside the glyph a little below its centre row: a sibling edge to a same-row neighbour
-  // leaves the same handle along that row, and sharing it would read as one line splitting.
-  const exitY = upper.y + Math.min(EXIT_OFFSET, Math.max(0, (captionTop - upper.y) / 2));
-  const exit = (x: number): Point[] => exitY === upper.y ? [[x, upper.y]] : [[upper.x + Math.sign(x - upper.x) * 12, exitY], [x, exitY]];
-  // The lower card's side handle gets the same treatment, a little above its row.
-  const sideEntry = lower.position === Position.Left || lower.position === Position.Right;
-  const enterY = sideEntry ? lower.y - Math.min(EXIT_OFFSET, Math.max(0, (lower.y - lowerNode.y) / 2)) : lower.y;
-  const enter = (x: number): Point[] => enterY === lower.y ? [[x, lower.y]] : [[x, enterY], [lower.x + Math.sign(x - lower.x) * 12, enterY]];
-  const points: Point[] = [[upper.x, upper.y], ...exit(upperX), [upperX, laneY], [lowerX, laneY], ...enter(lowerX), [lower.x, lower.y]];
-  const intervening = obstacles.filter(node => node.id !== upper.id && node.id !== lower.id
-    && node.y < lower.y && node.y + node.height > upper.y);
-  // A skipped rank can contain another entity. Test every segment, reserving
-  // room for rounded corners, before using an interior or exterior corridor.
-  const clear = (route: Point[]) => route.slice(1).every((point, index) => {
-    const previous = route[index]!;
-    return intervening.every(node => Math.max(previous[0], point[0]) <= node.x - 16
-      || Math.min(previous[0], point[0]) >= node.x + node.width + 16
-      || Math.max(previous[1], point[1]) <= node.y - 16
-      || Math.min(previous[1], point[1]) >= node.y + node.height + 16);
+  return false;
+}
+
+function followsPorts(curve: Cubic, edge: Endpoints): boolean {
+  const outward = (position: string, point: Point, control: Point) => position === "right" ? control[0] > point[0]
+    : position === "left" ? control[0] < point[0] : position === "bottom" ? control[1] > point[1] : control[1] < point[1];
+  return outward(edge.sourcePosition, curve[0], curve[1]) && outward(edge.targetPosition, curve[3], curve[2]);
+}
+function portExit(point: Point, position: string): Point {
+  return [point[0] + (position === "right" ? 32 : position === "left" ? -32 : 0),
+    point[1] + (position === "bottom" ? 32 : position === "top" ? -32 : 0)];
+}
+
+/** Do not choose a distant single bend when the endpoints have a local corridor. */
+function staysLocal(curve: Cubic, boxes: Obstacle[]): boolean {
+  if (!boxes.length) return true;
+  const left = Math.min(...boxes.map(box => box.x)) - 48;
+  const right = Math.max(...boxes.map(box => box.x + box.width)) + 48;
+  const top = Math.min(...boxes.map(box => box.y)) - 48;
+  const bottom = Math.max(...boxes.map(box => box.y + box.height)) + 48;
+  for (let step = 1; step < 96; step++) {
+    const [x, y] = cubicPoint(curve, step / 96);
+    if (x < left || x > right || y < top || y > bottom) return false;
+  }
+  return true;
+}
+
+/** Search nearby obstacle boundaries, not the envelope of the whole canvas. */
+function clearCurve(curve: Cubic, obstacles: Obstacle[], edge: Endpoints, endpointBoxes: Obstacle[]): Cubic | null {
+  if (!curveHits(curve, obstacles)) return curve;
+  const candidates: { curve: Cubic; cost: number }[] = [];
+  const budget = Math.max(160, Math.hypot(curve[3][0] - curve[0][0], curve[3][1] - curve[0][1]) * 2);
+  for (const axis of [1, 0] as const) {
+    const middle = (curve[0][axis] + curve[3][axis]) / 2;
+    const boundaries = obstacles.flatMap(box => [32, 48, 64, 96].flatMap(gap => axis
+      ? [box.y - gap, box.y + box.height + gap] : [box.x - gap, box.x + box.width + gap]));
+    for (const control of new Set(boundaries)) {
+      if (Math.abs(control - middle) > budget) continue;
+      const first: Point = [...curve[1]], second: Point = [...curve[2]];
+      first[axis] = control; second[axis] = control;
+      const candidate: Cubic = [curve[0], first, second, curve[3]];
+      if (followsPorts(candidate, edge) && staysLocal(candidate, endpointBoxes) && !curveHits(candidate, obstacles)) candidates.push({ curve: candidate, cost: Math.abs(control - middle) });
+    }
+  }
+  return candidates.sort((a, b) => a.cost - b.cost)[0]?.curve ?? null;
+}
+
+/** A continuous curve through a local gap. The pair's channel shifts the gap
+ * so unrelated connections do not acquire a common trunk. */
+function corridorCurve(start: Point, end: Point, obstacles: Obstacle[], channel: number): Cubic[] | null {
+  const candidates: { curves: Cubic[]; cost: number }[] = [];
+  for (const axis of [0, 1] as const) {
+    const boundaries = obstacles.flatMap(box => axis ? [box.y - 32, box.y + box.height + 32] : [box.x - 32, box.x + box.width + 32]);
+    for (const boundary of new Set(boundaries)) {
+      const middle = boundary + channel * 3;
+      const first: Point = [...start], second: Point = [...end];
+      first[axis] = middle; second[axis] = middle;
+      const points = [start, first, second, end];
+      const cost = points.slice(1).reduce((sum, point, i) => sum + Math.hypot(point[0] - points[i]![0], point[1] - points[i]![1]), 0);
+      if (cost > Math.max(160, Math.hypot(end[0] - start[0], end[1] - start[1]) * 2)) continue;
+      for (const tension of [0.15, 0.08, 0.03]) {
+        const curves: Cubic[] = points.slice(1).map((point, i) => {
+          const previous = points[i]!, before = points[Math.max(0, i - 1)]!, after = points[Math.min(3, i + 2)]!;
+          return [previous,
+            [previous[0] + (point[0] - before[0]) * tension, previous[1] + (point[1] - before[1]) * tension],
+            [point[0] - (after[0] - previous[0]) * tension, point[1] - (after[1] - previous[1]) * tension], point];
+        });
+        if (curves.some(curve => curveHits(curve, obstacles))) continue;
+        candidates.push({ curves, cost }); break;
+      }
+    }
+  }
+  return candidates.sort((a, b) => a.cost - b.cost)[0]?.curves ?? null;
+}
+
+function smoothWaypoints(points: Point[], obstacles: Obstacle[]): Cubic[] | null {
+  for (const tension of [0.15, 0.05, 0.01, 0.002, 0]) {
+    const curves: Cubic[] = points.slice(1).map((point, i) => {
+      const previous = points[i]!, before = points[Math.max(0, i - 1)]!, after = points[Math.min(points.length - 1, i + 2)]!;
+      return [previous,
+        [previous[0] + (point[0] - before[0]) * tension, previous[1] + (point[1] - before[1]) * tension],
+        [point[0] - (after[0] - previous[0]) * tension, point[1] - (after[1] - previous[1]) * tension], point];
+    });
+    if (!curves.some(curve => curveHits(curve, obstacles))) return curves;
+  }
+  return null;
+}
+
+/** Reserve endpoint labels and badges while leaving a tunnel through the glyph. */
+function endpointGuards(edge: Endpoints, boxes: Obstacle[]): Obstacle[] {
+  return (["source", "target"] as const).flatMap(side => {
+    const box = boxes.find(item => item.id === edge[side]);
+    if (!box) return [];
+    const position = side === "source" ? edge.sourcePosition : edge.targetPosition;
+    const x = side === "source" ? edge.sourceX : edge.targetX;
+    const y = side === "source" ? edge.sourceY : edge.targetY;
+    const horizontal = position === "left" || position === "right";
+    const behind = position === "right" ? { ...box, width: x - box.x - 17 }
+      : position === "left" ? { ...box, x: x + 17, width: box.x + box.width - x - 17 }
+      : position === "bottom" ? { ...box, height: y - box.y - 17 }
+      : { ...box, y: y + 17, height: box.y + box.height - y - 17 };
+    return [behind, ...(horizontal ? [
+      { ...box, height: y - 40 - box.y },
+      { ...box, y: y + 40, height: box.y + box.height - y - 40 },
+    ] : [
+      { ...box, width: x - 40 - box.x },
+      { ...box, x: x + 40, width: box.x + box.width - x - 40 },
+    ])].filter(guard => guard.width > 0 && guard.height > 0);
   });
-  if (clear(points)) return [roundedRoute(forward ? points : points.reverse()), (upperX + lowerX) / 2, laneY];
-  const gap = Math.min(24, (lowerNode.y - bottom) / 3);
-  const firstLane = bottom + gap, lastLane = lowerNode.y - gap;
-  const outerLanes = [Math.min(upperNode.x, lowerNode.x, ...intervening.map(node => node.x)) - 24,
-    Math.max(upperNode.x + upperNode.width, lowerNode.x + lowerNode.width, ...intervening.map(node => node.x + node.width)) + 24];
-  const candidates = outerLanes.map(x => ({ x, route: [
-    [upper.x, upper.y], ...exit(upperX), [upperX, firstLane], [x, firstLane],
-    [x, lastLane], [lowerX, lastLane], ...enter(lowerX), [lower.x, lower.y],
-  ] as Point[] })).filter(candidate => clear(candidate.route));
-  const length = (route: Point[]) => route.slice(1).reduce((total, point, index) => total + Math.abs(point[0] - route[index]![0]) + Math.abs(point[1] - route[index]![1]), 0);
-  const direct = Math.abs(edge.targetX - edge.sourceX) + Math.abs(edge.targetY - edge.sourceY);
-  const candidate = candidates.filter(item => length(item.route) <= direct * MAX_DETOUR).sort((a, b) => length(a.route) - length(b.route))[0];
-  if (!candidate) return null;
-  return [roundedRoute(forward ? candidate.route : candidate.route.reverse()), candidate.x, (firstLane + lastLane) / 2];
 }
 
-/** How far a lane's turn moves per unit of lane offset, so same-direction lanes nest instead of crossing. */
-const LANE_TURN_SHIFT = 1.2;
-/** Horizontal spacing between the turn columns of lines bound for different targets. */
-const CHANNEL_GAP = 16;
-
-/**
- * A different relationship type leaving or entering the same port runs on its
- * own parallel lane and turns at its own column, so its dash never shares a
- * run with another type's line.
- */
-function laneRoute(edge: Endpoints, lane: RelationshipLane | undefined): [string, number, number] | null {
-  if (!lane || (!lane.source && !lane.target && !lane.channel)) return null;
-  // A backward edge runs from its source's left port to its target's right port:
-  // route it as the forward line between those ports, then point it source to target.
-  if (edge.sourcePosition === Position.Left && edge.targetPosition === Position.Right) {
-    const forward = forwardLaneRoute({ ...edge, sourceX: edge.targetX, sourceY: edge.targetY, targetX: edge.sourceX, targetY: edge.sourceY,
-      sourcePosition: Position.Right, targetPosition: Position.Left }, { source: lane.target, target: lane.source });
-    return forward && [roundedRoute(forward[0].reverse()), forward[1], forward[2]];
-  }
-  const forward = forwardLaneRoute(edge, lane);
-  return forward && [roundedRoute(forward[0]), forward[1], forward[2]];
-}
-
-function forwardLaneRoute(edge: Endpoints, lane: RelationshipLane): [Point[], number, number] | null {
-  if (edge.sourcePosition !== Position.Right || edge.targetPosition !== Position.Left || edge.targetX - edge.sourceX < 48) return null;
-  // Channels share at most half the gap, so the outermost still turns well clear of both columns.
-  const channelGap = Math.min(CHANNEL_GAP, (edge.targetX - edge.sourceX) / 2 / Math.max(1, (lane.channels ?? 1) - 1));
-  let sourceY = edge.sourceY + lane.source;
-  let targetY = edge.targetY + lane.target;
-  // A line between ports on one row stays straight rather than jogging by a lane's width,
-  // along the lane an end was given so it keeps a full lane from the other types at that port.
-  if (Math.abs(edge.targetY - edge.sourceY) < 1 && Math.abs(targetY - sourceY) <= LANE_GAP) {
-    if (lane.source) targetY = sourceY;
-    else sourceY = targetY;
-  }
-  const shift = (targetY > sourceY ? -1 : 1) * (lane.source + lane.target) * LANE_TURN_SHIFT;
-  const turnX = (edge.sourceX + edge.targetX) / 2 + (lane.channel ?? 0) * channelGap + shift;
-  return [[[edge.sourceX, sourceY], [turnX, sourceY], [turnX, targetY], [edge.targetX, targetY]], turnX, (sourceY + targetY) / 2];
-}
-
-/** Route bounded relationships around captions and intervening entities. */
-export function relationshipPath(edge: Endpoints, obstacles: Obstacle[], portLane?: RelationshipLane): [string, number, number] {
-  // The caption check samples the direct curve between the ports; the drawn line is always right-angle runs.
-  const [path] = getBezierPath(edge);
-  const captionRoute = endpointCaptionRoute(edge, obstacles, path);
-  if (captionRoute) return captionRoute;
-  // A serpentine path changes rows on the same side of both circular glyphs.
-  // Keep its turn and caption outside the wider name/metadata column.
-  if (obstacles.length <= ROUTED_NODE_LIMIT && Math.abs(edge.targetX - edge.sourceX) < 8
-      && Math.abs(edge.targetY - edge.sourceY) > 80
-      && edge.sourcePosition === edge.targetPosition
-      && [Position.Left, Position.Right].includes(edge.sourcePosition)) {
-    const endpoints = obstacles.filter(node => node.id === edge.source || node.id === edge.target);
-    const right = edge.sourcePosition === Position.Right;
-    const laneX = right
-      ? Math.max(edge.sourceX, ...endpoints.map(node => node.x + node.width)) + 48
-      : Math.min(edge.sourceX, ...endpoints.map(node => node.x)) - 48;
-    return [
-      roundedRoute([[edge.sourceX, edge.sourceY], [laneX, edge.sourceY], [laneX, edge.targetY], [edge.targetX, edge.targetY]]),
-      laneX, (edge.sourceY + edge.targetY) / 2,
-    ];
-  }
-  // Every other relationship draws as right-angle runs with rounded corners, matching the attack-path graph.
-  const [stepPath, stepX, stepY] = getSmoothStepPath({ ...edge, borderRadius: 12 });
-  const laned = laneRoute(edge, portLane);
-  // Keep dense/vertical layouts on the standard renderer. This correction is
-  // bounded to short investigations and does not change relationship direction.
-  if (obstacles.length > ROUTED_NODE_LIMIT || edge.targetX - edge.sourceX < 240
-      || edge.sourcePosition !== Position.Right || edge.targetPosition !== Position.Left) return laned ?? [stepPath, stepX, stepY];
-  const between = obstacles.filter(node => node.id !== edge.source && node.id !== edge.target
-    && node.x > edge.sourceX + 24 && node.x + node.width < edge.targetX - 24);
-  // The drawn route turns once, midway between the ends; test each of its runs, not its bounding box.
-  const intersects = (x: number, y: number, padX: number, padY: number) => between.some(node =>
-    x + padX > node.x && x - padX < node.x + node.width
-    && y + padY > node.y && y - padY < node.y + node.height);
-  const turnX = (edge.sourceX + edge.targetX) / 2;
-  const runs: [Point, Point][] = [[[edge.sourceX, edge.sourceY], [turnX, edge.sourceY]], [[turnX, edge.sourceY], [turnX, edge.targetY]], [[turnX, edge.targetY], [edge.targetX, edge.targetY]]];
-  let blocked = intersects(stepX, stepY, 48, 16);
-  for (const [[ax, ay], [bx, by]] of runs) {
-    const steps = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / 8));
-    for (let step = 0; step <= steps && !blocked; step++) blocked = intersects(ax + (bx - ax) * step / steps, ay + (by - ay) * step / steps, 2, 2);
-  }
-  if (!blocked) return laned ?? [stepPath, stepX, stepY];
-  // A fixed 40-unit offset can skip a clear gap between sibling rows and send
-  // the connector outside the fitted node envelope. Include those interior
-  // lanes before choosing the shortest clear route.
-  const rows = [...between].sort((a, b) => a.y - b.y);
-  const gaps = rows.slice(1).flatMap((node, index) => {
-    const previous = rows[index]!;
-    const bottom = previous.y + previous.height;
-    return node.y - bottom > 32 ? [(bottom + node.y) / 2] : [];
+/** Every source-target pair owns a cubic curve and distinct endpoint offsets.
+ * No shared horizontal/vertical trunk can imply a relationship to another source. */
+export function relationshipPath(edge: Endpoints, obstacles: Obstacle[], lane?: RelationshipLane, clearance = 16): [string, number, number] {
+  let [path] = getBezierPath({ ...edge,
+    curvature: 0.25 + Math.abs(lane?.channel ?? 0) * 0.025,
   });
-  // A card that only partly overlaps the corridor still sits under the lane's straight run.
-  const corridor = obstacles.filter(node => node.id !== edge.source && node.id !== edge.target
-    && node.x < edge.targetX - 24 && node.x + node.width > edge.sourceX + 24);
-  const clearOf = (y: number) => corridor.every(node => y < node.y - 16 || y > node.y + node.height + 16);
-  const candidates = [...gaps, ...corridor.flatMap(node => [node.y - 40, node.y + node.height + 40])];
-  const lanes = candidates.filter(clearOf);
-  const top = Math.min(...obstacles.map(node => node.y));
-  const bottom = Math.max(...obstacles.map(node => node.y + node.height));
-  const outside = (y: number) => Number(y < top || y > bottom);
-  lanes.sort((a, b) => outside(a) - outside(b) || (Math.abs(edge.sourceY - a) + Math.abs(edge.targetY - a))
-    - (Math.abs(edge.sourceY - b) + Math.abs(edge.targetY - b)) || a - b);
-  const baseLane = lanes[0] ?? Math.min(edge.sourceY, edge.targetY, ...corridor.map(node => node.y)) - 40;
-  const branchLane = baseLane + Math.sign(edge.targetY - edge.sourceY) * 16;
-  const lane = clearOf(branchLane) ? branchLane : baseLane;
-  const sourceNode = obstacles.find(node => node.id === edge.source);
-  const targetNode = obstacles.find(node => node.id === edge.target);
-  const start = Math.max(edge.sourceX + 32, sourceNode ? sourceNode.x + sourceNode.width + 24 : edge.sourceX + 32);
-  const end = Math.min(edge.targetX - 32, targetNode ? targetNode.x - 24 : edge.targetX - 32);
-  // Turn into and out of the lane in the clear space beside each end, with rounded corners.
-  const entry = Math.max(start, Math.min(start + 64, ...between.map(node => node.x - 24)));
-  const exit = Math.min(end, Math.max(end - 64, ...between.map(node => node.x + node.width + 24)));
-  return [
-    roundedRoute([[edge.sourceX, edge.sourceY], [entry, edge.sourceY], [entry, lane], [exit, lane], [exit, edge.targetY], [edge.targetX, edge.targetY]]),
-    entry + (exit - entry) * (edge.targetY < edge.sourceY ? 0.3 : edge.targetY > edge.sourceY ? 0.7 : 0.5), lane,
-  ];
+  const numbers = path.match(/-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi)!.map(Number);
+  const original = Array.from({ length: 4 }, (_, index) => [numbers[index * 2]!, numbers[index * 2 + 1]!] as Point) as Cubic;
+  original[1][1] += lane?.source ?? 0;
+  original[2][1] += lane?.target ?? 0;
+  path = `M${original[0].join(",")} C${original.slice(1).map(point => point.join(",")).join(" ")}`;
+  const [x, y] = cubicPoint(original, 0.5);
+  const blockers = [...obstacles.filter(box => box.id !== edge.source && box.id !== edge.target), ...endpointGuards(edge, obstacles)]
+    .map(box => ({ ...box, x: box.x + 16 - clearance, y: box.y + 16 - clearance, width: box.width - 2 * (16 - clearance), height: box.height - 2 * (16 - clearance) }))
+    .filter(box => box.width > 0 && box.height > 0);
+  if (!blockers.length || obstacles.length > ROUTED_NODE_LIMIT) return [path, x, y];
+  const curve = clearCurve(original, blockers, edge, obstacles.filter(box => box.id === edge.source || box.id === edge.target));
+  if (!curve) {
+    let curves = corridorCurve(original[0], original[3], blockers, lane?.channel ?? 0);
+    if (curves && !followsPorts([curves[0]![0], curves[0]![1], curves.at(-1)![2], curves.at(-1)![3]], edge)) curves = null;
+    if (!curves) {
+      const points = obstacleWaypoints(portExit(original[0], edge.sourcePosition), portExit(original[3], edge.targetPosition), blockers, lane?.channel ?? 0);
+      if (points) curves = smoothWaypoints([original[0], ...points, original[3]], blockers);
+    }
+    if (!curves) return clearance === 16 ? relationshipPath(edge, obstacles, lane, 8) : [path, x, y];
+    const label = cubicPoint(curves[Math.floor(curves.length / 2)]!, 0.5);
+    return [`M${original[0].join(",")} ${curves.map(part => `C${part.slice(1).map(point => point.join(",")).join(" ")}`).join(" ")}`, ...label];
+  }
+  if (curve === original) return [path, x, y];
+  const label = cubicPoint(curve, 0.5);
+  return [`M${curve[0].join(",")} C${curve.slice(1).map(point => point.join(",")).join(" ")}`, ...label];
 }
 
-/**
- * Where a counted caption ("Depends On ×3") sits: beside the port its lines
- * split from (or join at), on that node's row, rather than mid-canvas.
- */
 export function anchoredLabelPoint(edge: Pick<EdgeProps, "sourceX" | "sourceY" | "targetX" | "targetY">, side: "source" | "target"): { x: number; y: number } {
   const offset = Math.min(56, Math.max(24, Math.abs(edge.targetX - edge.sourceX) / 4));
   return side === "source" ? { x: edge.sourceX + offset, y: edge.sourceY } : { x: edge.targetX - offset, y: edge.targetY };

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { withSemanticLayer } from "./helpers/graph-rollup-mocks";
 
 // The ranked occurrence, its canonical node, and a path that records only the advisory.
 const occurrenceId = "7a1c0e52-0000-5000-8000-000000000001";
@@ -7,7 +8,7 @@ const advisory = "CVE-2026-7101";
 const estate = "current-estate:0123456789abcdef0123456789abcdef";
 const stamp = "2026-10-18T00:00:00Z";
 
-const node = (id: string, entity_type: string, label: string, severity = "none") => ({
+const node = (id: string, entity_type: string, label: string, severity = "none") => withSemanticLayer({
   id, entity_type, label, severity, status: "active", risk_score: 0, attributes: {}, dimensions: {}, data_sources: ["synthetic-fixture"], compliance_tags: [],
 });
 const nodes = [

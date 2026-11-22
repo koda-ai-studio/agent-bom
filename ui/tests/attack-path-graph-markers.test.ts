@@ -11,13 +11,11 @@ const context = (fields: Record<string, unknown>, reasons: Record<string, unknow
 });
 
 describe("node context markers from the stored risk context", () => {
-  it("draws a crown-jewel marker only when the context establishes one", () => {
-    const jewel = context({ data_sensitivity: "phi", crown_jewel: true }, [
-      { field: "crown_jewel", rule: "sensitive_data_store", attribute: "data_sensitivity", value: "phi" },
-    ]);
-    expect(kinds(jewel)).toEqual(["sensitive", "crown_jewel"]);
-    expect(nodeContextMarkers(jewel).find(marker => marker.kind === "crown_jewel")!.label).toBe("Crown jewel: holds sensitive data (phi) (recorded)");
-    expect(kinds(context({ data_sensitivity: "none" }))).toEqual([]);
+  it("uses the canonical data classification without deriving crown-jewel status", () => {
+    expect(kinds({ data_classification: "phi" })).toEqual(["sensitive"]);
+    expect(nodeContextMarkers({ data_classification: "phi" })[0]!.label).toBe("Sensitive data: phi (recorded)");
+    expect(kinds(context({ data_sensitivity: "phi", crown_jewel: true }))).toEqual(["sensitive"]);
+    expect(kinds({ data_classification: "none" })).toEqual([]);
     expect(kinds({ crown_jewel: true })).toEqual([]);
   });
 
@@ -28,15 +26,15 @@ describe("node context markers from the stored risk context", () => {
   });
 
   it("separates standing admin from a path to admin", () => {
-    const admin = nodeContextMarkers(context({ privilege_level: "admin", is_admin: true }));
+    const admin = nodeContextMarkers({ privilege_level: "admin", admin_equivalent: true });
     expect(admin.map(marker => marker.label)).toEqual(["Privileged: admin (recorded)"]);
-    const escalates = nodeContextMarkers(context({ privilege_level: "escalates_to_admin" }));
+    const escalates = nodeContextMarkers({ privilege_level: "escalates_to_admin" });
     expect(escalates.map(marker => marker.label)).toEqual(["Privileged: can assume an admin role (recorded)"]);
-    expect(kinds(context({ privilege_level: "read", is_admin: false }))).toEqual([]);
+    expect(kinds({ privilege_level: "read", admin_equivalent: false })).toEqual([]);
   });
 
-  it("falls back to the recorded flat attributes on snapshots without a context", () => {
-    expect(kinds({ internet_exposed: true, is_admin: true, data_sensitivity: "pii" })).toEqual(["internet", "sensitive", "privileged"]);
+  it("reads canonical flat badges on snapshots without a context", () => {
+    expect(kinds({ internet_exposed: true, admin_equivalent: true, data_classification: "pii" })).toEqual(["internet", "sensitive", "privileged"]);
     expect(riskContextOf({ internet_exposed: true })).toBeNull();
   });
 
@@ -53,4 +51,14 @@ describe("node context markers from the stored risk context", () => {
     expect(riskReasonText({ field: "privilege_level", rule: "kubernetes_cluster_admin_binding", attribute: "role", value: "ClusterRole/cluster-admin",
       evidence: { binding: "ClusterRoleBinding/ops" } })).toBe("Privilege: bound to ClusterRole/cluster-admin by ClusterRoleBinding/ops");
   });
+});
+
+it("reads folded privilege and data sensitivity without recomputing them from raw flags", () => {
+  expect(kinds(context({ is_admin: true, privilege_level: "admin", data_sensitivity: "phi" }))).toEqual(["sensitive", "privileged"]);
+  expect(kinds({ ...context({ is_admin: false, privilege_level: "read", data_sensitivity: "public" }), admin_equivalent: true,
+    privilege_level: "admin", data_classification: "restricted" })).toEqual([]);
+  expect(nodeContextMarkers(context({ is_admin: false, privilege_level: "escalates_to_admin" }))).toEqual([
+    { kind: "privileged", label: "Privileged: can assume an admin role (recorded)" },
+  ]);
+  expect(kinds({ is_admin: true, data_sensitivity: "phi" })).toEqual([]);
 });

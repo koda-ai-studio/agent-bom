@@ -4,20 +4,34 @@ import type { LineageNodeData } from "@/components/lineage-nodes";
 import { readableGraphEdges } from "@/lib/graph-utils";
 import { graphHierarchyLayout, orderHierarchyBranches } from "@/lib/graph-hierarchy-layout";
 import { readableLineageDagreLr } from "@/lib/graph-node-dimensions";
+import { graphConnectionPreview } from "@/lib/graph-connection-preview";
 import { graphAdaptiveFrame } from "@/lib/graph-adaptive-frame";
+import { COMPACT_NODE_WIDTH } from "@/lib/graph-compact-layout";
+import { SEMANTIC_COLUMN_GAP, SEMANTIC_ROW_GAP } from "@/lib/graph-semantic-layout";
 
+// Recorded semantic layers supplied by these API examples.
+const layers: Record<string, string> = { agent: "orchestration", server: "mcp_server", container: "app", environment: "infra",
+  sourceFile: "code", directory: "code", configFile: "code", ciJob: "ci", package: "package", vulnerability: "finding",
+  misconfiguration: "finding", serviceAccount: "identity", role: "identity", tool: "tool", credential: "asset", dataStore: "asset", dataset: "asset", model: "orchestration" };
 const node = (id: string, nodeType: LineageNodeData["nodeType"]): Node<LineageNodeData> => ({
-  id, type: "containerNode", position: { x: 0, y: 0 }, data: { label: id, nodeType },
+  id, type: "containerNode", position: { x: 0, y: 0 }, data: { label: id, nodeType, semanticLayer: layers[nodeType] },
 });
 const edge = (id: string, source: string, target: string, relationship: string): Edge => ({
   id, source, target, data: { relationship, evidenceMode: "inferred" }, markerEnd: "arrow",
 });
 
+/** No two compact cards come closer than a row in one rank, or a rank across. */
+function expectCompactCardsClear(nodes: Node[]) {
+  for (const [i, a] of nodes.entries()) for (const b of nodes.slice(i + 1)) {
+    expect(Math.abs(a.position.x - b.position.x) >= SEMANTIC_COLUMN_GAP || Math.abs(a.position.y - b.position.y) >= SEMANTIC_ROW_GAP).toBe(true);
+  }
+}
+
 describe("evidence-driven graph flow", () => {
-  it("frames a collapsed peer group by its actual cards instead of an empty row cell", () => {
+  it("reserves the semantic renderer footprint for a peer group", () => {
     const group = { ...node("peers", "server"), type: "clusterPillNode" };
     const result = graphHierarchyLayout([node("workspace", "agent"), group], [edge("uses", "workspace", "peers", "uses")]);
-    expect(result.nodes.every(node => node.style?.minHeight === 0)).toBe(true);
+    expect(result.nodes.every(node => node.style?.width === COMPACT_NODE_WIDTH)).toBe(true);
     expect(result.nodes[1]!.position.x).toBeGreaterThan(result.nodes[0]!.position.x);
   });
   it("fits a compact three-source correlation without hiding its finding off canvas", () => {
@@ -32,7 +46,7 @@ describe("evidence-driven graph flow", () => {
     expect(graphAdaptiveFrame({ bounds: { x: left, y: top, width: right - left, height: bottom - top }, width: 1134, availableHeight: 684, inspector: false }).fitAll).toBe(true);
   });
 
-  it("centres a bounded multi-source workload across its relationship ranks", () => {
+  it("orders a bounded multi-source workload by recorded semantic layers", () => {
     const entries = [node("service", "server"), node("deployment", "container"), node("image", "container"), node("file", "sourceFile"),
       node("workload", "agent"), node("package", "package"), node("identity", "serviceAccount"), node("tool", "tool"),
       node("finding", "vulnerability"), node("records", "dataStore")];
@@ -42,12 +56,12 @@ describe("evidence-driven graph flow", () => {
       edge("identity", "workload", "identity", "authenticates_as"), edge("invocation", "workload", "tool", "invoked"),
       edge("permission", "identity", "records", "has_permission"), edge("finding", "package", "finding", "vulnerable_to")];
     const result = graphHierarchyLayout(entries, links, readableLineageDagreLr({ fitAspect: 1.65 }));
-    const ranks = new Map<number, number[]>();
-    for (const n of result.nodes) ranks.set(n.position.x, [...(ranks.get(n.position.x) ?? []), n.position.y]);
-    const centres = [...ranks.values()].map(ys => (Math.min(...ys) + Math.max(...ys)) / 2);
-    expect(Math.max(...centres) - Math.min(...centres)).toBeLessThan(1);
     const byId = new Map(result.nodes.map(n => [n.id, n.position]));
-    for (const link of links) expect(byId.get(link.source)!.x).toBeLessThan(byId.get(link.target)!.x);
+    expect(byId.get("deployment")!.x).toBeLessThan(byId.get("workload")!.x);
+    expect(byId.get("workload")!.x).toBeLessThan(byId.get("service")!.x);
+    expect(byId.get("service")!.x).toBeLessThan(byId.get("tool")!.x);
+    expect(byId.get("tool")!.x).toBe(byId.get("identity")!.x);
+    expect(byId.get("identity")!.x).toBeLessThan(byId.get("records")!.x);
     expect(result.edges.map(e => [e.id, e.source, e.target])).toEqual(links.map(e => [e.id, e.source, e.target]));
   });
 
@@ -57,11 +71,7 @@ describe("evidence-driven graph flow", () => {
     const links = entries.slice(0, 3).map(n => edge(n.id, n.id, "package", "contains"));
     links.push(edge("finding", "package", "finding", "vulnerable_to"));
     const { nodes } = graphHierarchyLayout(entries, links, readableLineageDagreLr());
-    for (const a of nodes) for (const b of nodes) {
-      if (a.id !== b.id && Math.abs(a.position.x - b.position.x) < 240) {
-        expect(Math.abs(a.position.y - b.position.y)).toBeGreaterThanOrEqual(324);
-      }
-    }
+    expectCompactCardsClear(nodes);
   });
 
   it("reserves finding footer space in a compact branched AI environment", () => {
@@ -69,12 +79,7 @@ describe("evidence-driven graph flow", () => {
     const pairs = [["environment", "model"], ["environment", "triage"], ["environment", "intake"], ["model", "torch"], ["triage", "tickets"], ["intake", "documents"], ["torch", "cve"], ["tickets", "credential"], ["documents", "pillow"]];
     const links = pairs.map(([source, target]) => edge(`${source}-${target}`, source!, target!, "contains"));
     const result = graphHierarchyLayout(entries, links, readableLineageDagreLr({ fitAspect: 2.2 }));
-    for (const a of result.nodes) for (const b of result.nodes) {
-      if (a.id !== b.id && Math.abs(a.position.x - b.position.x) < 240) {
-        expect(Math.abs(a.position.y - b.position.y)).toBeGreaterThanOrEqual(324);
-      }
-    }
-    expect(result.nodes.every(n => Number(n.style?.minHeight) >= 300)).toBe(true);
+    expectCompactCardsClear(result.nodes);
     expect(result.edges.map(e => [e.source, e.target])).toEqual(links.map(e => [e.source, e.target]));
   });
 
@@ -85,12 +90,7 @@ describe("evidence-driven graph flow", () => {
     const links = ["server", "model", "dataset"].map(id => edge(id, "agent", id, "uses"));
     links.push(edge("tool", "server", "tool", "has_tool"));
     const { nodes } = graphHierarchyLayout(entries, links, readableLineageDagreLr());
-    for (const a of nodes) for (const b of nodes) {
-      if (a.id !== b.id && Math.abs(a.position.x - b.position.x) < 240) {
-        expect(Math.abs(a.position.y - b.position.y)).toBeGreaterThanOrEqual(324);
-      }
-    }
-    expect(nodes.every(n => Number(n.style?.minHeight) >= 300)).toBe(true);
+    expectCompactCardsClear(nodes);
   });
 
   it("keeps aggregate member counts visible when overview relationship captions are quiet", () => {
@@ -112,18 +112,23 @@ describe("evidence-driven graph flow", () => {
     for (const original of nodes) {
       const displayed = result.nodes.find(n => n.id === original.id)!;
       expect(displayed.type).toBe(original.type);
-      expect(displayed.data).toEqual(original.data);
+      expect(displayed.data).toMatchObject(original.data);
     }
   });
 
   it("follows recorded engineering relationships and keeps warnings downstream of their subject", () => {
     const result = graphHierarchyLayout(nodes, edges);
     const x = new Map(result.nodes.map(n => [n.id, n.position.x]));
-    for (const [from, to] of [["repo", "source"], ["repo", "ci"], ["ci", "app"], ["app", "package"], ["package", "cve"], ["ci", "warning"]]) {
-      expect(x.get(from!)).toBeLessThan(x.get(to!)!);
-    }
+    // Contained items take the rank right of their container; a package and its CVE branch right of their owner.
+    for (const id of ["source", "ci"]) expect(x.get(id)).toBeGreaterThan(x.get("repo")!);
+    expect(x.get("source")).toBe(x.get("ci"));
+    expect(x.get("app")).toBeLessThan(x.get("repo")!);
+    expect(x.get("package")).toBeGreaterThan(x.get("app")!);
+    expect(x.get("cve")).toBeGreaterThan(x.get("package")!);
+    expect(x.get("warning")).toBeGreaterThan(x.get("ci")!);
     expect(result.edges.map(e => [e.id, e.source, e.target, e.data?.relationship, e.data?.evidenceMode, e.markerEnd]))
       .toEqual(edges.map(e => [e.id, e.source, e.target, e.data?.relationship, e.data?.evidenceMode, e.markerEnd]));
+    // The warning reads downstream of its subject, so its recorded link is drawn back into it.
     expect(result.edges.find(e => e.id === "warning")?.sourceHandle).toBe("context");
   });
 
@@ -139,12 +144,20 @@ describe("evidence-driven graph flow", () => {
     expect(positions(graphHierarchyLayout(nodes, edges))).toEqual(positions(graphHierarchyLayout([...nodes].reverse(), [...edges].reverse())));
   });
 
-  it("keeps an expanded repository fan-out wrapped instead of making a tall stack", () => {
+  it("bounds the initial repository view without changing its backend columns", () => {
     const folders = Array.from({ length: 40 }, (_, i) => node(`folder-${i}`, "directory"));
-    const result = graphHierarchyLayout([node("repo", "directory"), ...folders], folders.map(n => edge(n.id, "repo", n.id, "contains")), readableLineageDagreLr());
+    const preview = graphConnectionPreview([node("repo", "directory"), ...folders], folders.map(n => edge(n.id, "repo", n.id, "contains")), "repo", 12)!;
+    const result = graphHierarchyLayout(preview.nodes, preview.edges, readableLineageDagreLr());
+    expect(preview.totalNodes).toBe(41);
+    expect(preview.totalEdges).toBe(40);
+    // The repository and the folders it contains share a layer: the folders take the next rank together.
+    const centre = (node: (typeof result.nodes)[number]) => node.position.x + Number(node.style?.width ?? 0) / 2;
+    const folderXs = new Set(result.nodes.filter(n => n.id !== "repo").map(centre));
+    expect(folderXs.size).toBe(1);
+    expect([...folderXs][0]).toBeGreaterThan(centre(result.nodes.find(n => n.id === "repo")!));
     const ys = result.nodes.map(n => n.position.y);
     expect(Math.max(...ys) - Math.min(...ys)).toBeLessThan(4000);
-    expect(result.edges).toHaveLength(40);
+    expect(result.edges).toHaveLength(11);
   });
 
   it("aligns sibling folders even when one branch has a deeper build pipeline", () => {
@@ -167,7 +180,7 @@ describe("evidence-driven graph flow", () => {
     const result = graphHierarchyLayout(nodes, edges);
     const quiet = readableGraphEdges(result.edges);
     expect(quiet.find(e => e.id === "source")?.label).toBeUndefined();
-    expect(result.edges.every(e => e.data?.directionEmphasis === true)).toBe(true);
+    expect(result.edges.every(e => e.markerEnd === "arrow")).toBe(true);
     expect(quiet.find(e => e.id === "config")?.label).toBeUndefined();
     const selected = readableGraphEdges(result.edges, new Set(["repo", "source"]));
     expect(selected.find(e => e.id === "source")?.label).toBeDefined();

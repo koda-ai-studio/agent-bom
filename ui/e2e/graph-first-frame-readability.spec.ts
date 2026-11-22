@@ -89,10 +89,15 @@ for (const theme of ["light", "dark"]) for (const viewport of VIEWPORTS) {
       const view = await firstFrame(page);
       expect(view.overlaps).toEqual([]);
       expect(view.undersized).toEqual([]);
-      expect(view.framed).toBeGreaterThanOrEqual(viewport.width < 640 ? 1 : 6);
+      // A map this size opens at the legible zoom on part of the map; the note below states how much is in view.
+      expect(view.framed).toBeGreaterThanOrEqual(1);
+      // The whole map in frame at a readable size needs no note; a partial frame says how much is in view.
       const hint = page.getByTestId("graph-in-view");
-      await expect(hint).toContainText(/Showing \d+ of \d+ nodes/);
-      await expect(hint).toContainText("Fit all");
+      if (await hint.count()) {
+        const [shown, total] = ((await hint.textContent())!.match(/Showing (\d+) of (\d+) nodes/) ?? []).slice(1).map(Number);
+        expect(shown).toBeLessThan(total!);
+        await expect(hint).toContainText("Fit all");
+      } else expect(view.framed).toBe(view.total);
       await page.screenshot({ path: info.outputPath(`full-${scenario}-${theme}-${viewport.width}.png`) });
     });
   }
@@ -113,8 +118,28 @@ test("an operator's zoom still chooses the summary renderer on a full map", asyn
   await page.setViewportSize(VIEWPORTS[0]!);
   await serve(page, fixtures.projectScan, "light");
   await open(page, "&map_view=full");
-  await page.getByRole("button", { name: /zoom out/i }).click();
+  // The opening frame shows full cards; zooming out below it and the card threshold hands over to the summary renderer,
+  // within a few steps and before the minimum zoom.
+  await expect(page.locator('[data-testid="summary-node"]')).toHaveCount(0);
+  for (let step = 0; step < 6 && !(await page.getByTestId("summary-node").count()); step++) {
+    await page.getByRole("button", { name: /zoom out/i }).click();
+    await page.waitForTimeout(250);
+  }
   await expect(page.getByTestId("summary-node").first()).toBeAttached();
+  // The hand-over happens before the minimum zoom: from the switch, zooming out still goes further.
+  const zoomOut = page.getByRole("button", { name: /zoom out/i });
+  const viewportZoom = () => page.locator(".react-flow__viewport").evaluate(element => new DOMMatrixReadOnly(getComputedStyle(element).transform).a);
+  await expect(zoomOut).toBeEnabled();
+  const handOver = await viewportZoom();
+  let floor = handOver;
+  for (let step = 0; step < 40 && await zoomOut.isEnabled(); step++) {
+    await zoomOut.click();
+    await page.waitForTimeout(150);
+    const next = await viewportZoom();
+    if (next >= floor - 1e-4) break;
+    floor = next;
+  }
+  expect(floor, "the summary renderer takes over above the lowest zoom").toBeLessThan(handOver * 0.95);
 });
 
 test("captions sit on a plate so a passing edge cannot run through their text", async ({ page }) => {
@@ -223,13 +248,15 @@ test("no connection leaves the map to go around it", async ({ page }) => {
   }))).toEqual([]);
 });
 
-test("a Kubernetes flow keeps its steps and holds back only far context", async ({ page }, info) => {
+test("a Kubernetes map of one readable page draws every recorded relationship and holds none back", async ({ page }, info) => {
   await page.setViewportSize(VIEWPORTS[0]!);
   await serve(page, fixtures.snapshot, "dark");
   await open(page);
   const edges = await drawnEdges(page);
   expect(edges.filter(edge => edge.id.startsWith("exposed_to:"))).not.toEqual([]);
-  await expect(page.getByTestId("graph-edge-note")).toContainText(new RegExp(`^${edges.length} of \\d+ connections drawn`));
+  // Twenty cards fit one readable page, so nothing waits for focus and no "N of M connections" note appears.
+  expect(edges.length).toBeLessThanOrEqual(fixtures.snapshot.edges.length);
+  await expect(page.getByTestId("graph-edge-note")).toHaveCount(0);
   await page.screenshot({ path: info.outputPath("quiet-k8s-dark.png") });
 });
 

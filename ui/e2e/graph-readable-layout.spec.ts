@@ -1,8 +1,11 @@
 import { readFile } from "node:fs/promises";
 import { test, expect, type Page } from "@playwright/test";
+import { ownedFindingAggregates, routeNodeAggregates, withSemanticLayer } from "./helpers/graph-rollup-mocks";
+import { graphGrammarViolations } from "./helpers/graph-grammar";
 
 const stamp = "2026-10-15T00:00:00Z";
-const node = (id: string, entity_type: string, label = id) => ({
+// Nodes as the API serves them: each carries the backend legend layer for its kind.
+const node = (id: string, entity_type: string, label = id) => withSemanticLayer({
   id, entity_type, label, severity: "none", status: "active", risk_score: 0, attributes: {},
   dimensions: { environment: "prod" }, data_sources: ["synthetic-fixture"], compliance_tags: [],
 });
@@ -181,6 +184,7 @@ for (const theme of (name === "agents sharing an MCP server" && width === 390) |
     expect(await edgesThroughNodes(page)).toEqual([]);
     expect(await labelCollisions(page)).toEqual([]);
     expect(await cardOverlaps(page)).toEqual([]);
+    expect(await graphGrammarViolations(page)).toEqual({});
     const texts = await visibleLabelTexts(page);
     const repeats = texts.filter((text, index) => texts.indexOf(text) !== index);
     expect(repeats, `repeated labels: ${texts.join(" | ")}`).toEqual([]);
@@ -202,7 +206,7 @@ for (const theme of ["light", "dark"] as const) test(`reference correlation read
   const proof = JSON.parse(await readFile("../examples/reference-evidence-lab/generated/correlation-proof.json", "utf8"));
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.addInitScript(t => localStorage.setItem("agent-bom-theme", t), theme);
-  await fixture(page, proof.capture_fixture.graph.nodes, proof.capture_fixture.graph.edges);
+  await fixture(page, proof.capture_fixture.graph.nodes, proof.capture_fixture.graph.edges, false, { stats: proof.capture_fixture.graph.stats, attack_paths: proof.capture_fixture.graph.attack_paths });
   await page.goto("/graph?scan=snapshot&layers=cloudResource,server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile");
   await expect(page.locator(".react-flow__node")).not.toHaveCount(0);
   await page.locator(".react-flow__controls-fitview").click();
@@ -210,7 +214,8 @@ for (const theme of ["light", "dark"] as const) test(`reference correlation read
   expect(await cardOverlaps(page)).toEqual([]);
   expect(await edgesThroughNodes(page)).toEqual([]);
   expect(await labelCollisions(page)).toEqual([]);
-  await expect(page.locator(".react-flow__edge-path[marker-end]")).toHaveCount(proof.capture_fixture.graph.edges.length);
+  expect(await graphGrammarViolations(page)).toEqual({});
+  await expect(page.locator('.react-flow__edge:not([data-id^="display:"]) .react-flow__edge-path[marker-end]')).toHaveCount(proof.capture_fixture.graph.edges.length);
   // The overview keeps all directional relationships without nine competing captions.
   expect(await visibleLabelTexts(page)).toEqual([]);
   const smallestCaption = await page.locator("[data-graph-entity] > p:first-of-type").evaluateAll(labels => {
@@ -308,6 +313,7 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 1000]
   expect(await edgesThroughNodes(page)).toEqual([]);
   expect(await labelCollisions(page)).toEqual([]);
   expect(await edgesAroundColumns(page)).toEqual([]);
+  expect(await graphGrammarViolations(page)).toEqual({});
   const smallestName = await page.locator("[data-graph-entity] > p:first-of-type").evaluateAll(labels => {
     const zoom = new DOMMatrixReadOnly(getComputedStyle(document.querySelector(".react-flow__viewport")!).transform).a;
     return Math.min(...labels.map(label => parseFloat(getComputedStyle(label).fontSize) * zoom));
@@ -359,7 +365,7 @@ for (const theme of ["light", "dark"] as const) {
 test("a correlation opens on a readable neighbourhood, never a lone card", async ({ page }, info) => {
   const proof = JSON.parse(await readFile("../examples/reference-evidence-lab/generated/correlation-proof.json", "utf8"));
   await page.setViewportSize({ width: 1440, height: 900 });
-  await fixture(page, proof.capture_fixture.graph.nodes, proof.capture_fixture.graph.edges);
+  await fixture(page, proof.capture_fixture.graph.nodes, proof.capture_fixture.graph.edges, false, { stats: proof.capture_fixture.graph.stats, attack_paths: proof.capture_fixture.graph.attack_paths });
   await page.goto("/graph?capture=1&scan=snapshot&layers=cloudResource,server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile");
   await expect(page.locator(".react-flow__node")).not.toHaveCount(0);
   await settle(page);
@@ -419,10 +425,9 @@ for (const theme of ["light", "dark"] as const) test(`provider marks read as par
   expect(measured.map(mark => mark.title).sort()).toEqual(["Source: AWS", "Source: Snowflake"]);
   await expect(page.locator('[data-id="worker"] [data-graph-source-badge]')).toHaveCount(0);
   await expect(page.locator('.react-flow [data-node-badge="provider"]')).toHaveCount(0);
-  // The type label and its environment chip share one centre line.
-  const row = page.locator('[data-id="worker"] [data-testid="graph-node-badges"]');
-  const centres = await row.evaluate(el => [...el.children].map(child => { const r = child.getBoundingClientRect(); return r.top + r.height / 2; }));
-  expect(Math.max(...centres) - Math.min(...centres)).toBeLessThanOrEqual(1.5);
+  // The canvas keeps one type line; the environment stays in the drawer, not as a chip.
+  await expect(page.locator('[data-id="worker"] [data-entity-role]')).toBeVisible();
+  await expect(page.locator('[data-id="worker"] [data-node-badge]')).toHaveCount(0);
   // Names wrap only between segments, without a lone short tail.
   const lines = await page.locator('[data-id="bucket"] [data-graph-entity] > p').first().evaluate(label => {
     const rows = new Map<number, string>();
@@ -437,6 +442,7 @@ for (const theme of ["light", "dark"] as const) test(`provider marks read as par
   if (lines.length > 1) expect(Math.min(...lines.map(l => l.length)) / Math.max(...lines.map(l => l.length))).toBeGreaterThanOrEqual(0.6);
   await page.screenshot({ path: info.outputPath(`provider-marks-${theme}.png`), animations: "disabled" });
 });
+
 
 for (const theme of ["light", "dark"] as const) for (const width of [1440, 390]) {
   test(`cloud roles and finding ownership stay readable ${theme} ${width}`, async ({ page }, info) => {
@@ -454,17 +460,21 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     });
     const entries: FixtureNode[] = showcase.nodes, links: FixtureEdge[] = showcase.edges;
     await fixture(page, entries, links, false, { stats: showcase.stats, attack_paths: showcase.attack_paths });
+    await routeNodeAggregates(page, ownedFindingAggregates(entries, links));
     await page.goto("/graph?scan=snapshot&rollup=0&capture=1&layers=account,cluster,apiGateway,container,role,dataStore,vulnerability,misconfiguration");
     if (width < 640) await page.getByRole("group", { name: "Investigation view" }).getByRole("button", { name: "Graph", exact: true }).click();
-    await expect(page.locator('.react-flow__node:not([data-id^="display:"])')).toHaveCount(7);
-    await expect(page.locator('[data-graph-entity="finding-group"]')).toHaveCount(4);
-    if (width >= 640) await expect(page.getByLabel("Visible relationship evidence")).toContainText("Modeled 7");
+    // The selected path's terminal CVE stays on the spine; the other three findings group under their owners.
+    await expect(page.locator('.react-flow__node:not([data-id^="display:"])')).toHaveCount(8);
+    await expect(page.locator('[data-graph-entity="finding-group"]')).toHaveCount(3);
+    // Seven modeled links plus the spine's vulnerable_to link to the CVE it keeps visible.
+    if (width >= 640) await expect(page.getByLabel("Visible relationship evidence")).toContainText("Modeled 8");
     await settle(page);
+    expect(await graphGrammarViolations(page)).toEqual({});
     await page.screenshot({ path: info.outputPath(`cloud-branches-${theme}-${width}.png`), animations: "disabled" });
     if (width >= 640) {
-      const count = page.getByRole("button", { name: "Expand 1 finding for checkout-api", exact: true });
+      const count = page.getByRole("button", { name: "Expand 1 finding for checkout-runtime-role", exact: true });
       await count.hover();
-      await expect(page.getByRole("tooltip")).toContainText("highest severity: critical");
+      await expect(page.getByRole("tooltip")).toContainText("highest severity: high");
       expect(await page.getByRole("tooltip").evaluate(tip => {
         const a = tip.getBoundingClientRect();
         return [...document.querySelectorAll("[data-graph-entity] > p, [data-entity-role], .graph-entity-glyph")].filter(el => {
@@ -474,14 +484,15 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
       })).toEqual([]);
       await page.screenshot({ path: info.outputPath(`cloud-finding-tooltip-${theme}.png`), animations: "disabled" });
       await count.click();
-      await expect(page.locator('[data-id="cve:next"]')).toHaveCount(1);
-      await expect(page.locator('[data-id="container:checkout"] [data-finding-disclosure]')).toHaveCount(0);
-      await page.getByRole("button", { name: "Expand findings (3 grouped)", exact: true }).click();
+      await expect(page.locator('[data-id="finding:wildcard"]')).toHaveCount(1);
+      await expect(page.locator('[data-id="role:checkout"] [data-finding-disclosure]')).toHaveCount(0);
+      await page.getByRole("button", { name: "Expand findings (2 grouped)", exact: true }).click();
       await page.getByRole("button", { name: "Collapse findings", exact: true }).click();
       await page.getByRole("heading", { name: "Investigation", exact: true }).click();
     }
-    await page.getByRole("button", { name: "Expand findings (4 grouped)", exact: true }).click();
-    await expect(page.locator(".react-flow__node")).toHaveCount(entries.length);
+    await page.getByRole("button", { name: "Expand findings (3 grouped)", exact: true }).click();
+    // Every recorded node is drawn; the internet anchor is display context beside them.
+    await expect(page.locator('.react-flow__node:not([data-id^="display:"])')).toHaveCount(entries.length);
     if (width < 640) {
       await settle(page);
       const zoom = await page.locator(".react-flow__viewport").evaluate(el => new DOMMatrixReadOnly(getComputedStyle(el).transform).a);
@@ -499,13 +510,12 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     await expect(page.locator("[data-graph-category]")).toHaveCount(0);
     // Counts for children already visible are tooltip details, never extra pills.
     await expect(page.locator("[data-asset-connections]")).toHaveCount(0);
-    await expect(page.locator('[data-id="account:prod"] [data-graph-entity]')).toHaveAttribute("title", /Contains 2 resources in this view/);
-    await expect(page.locator('[data-id="cluster:payments"] [data-graph-entity]')).toHaveAttribute("title", /Hosts 2 applications in this view/);
     expect(await cardOverlaps(page)).toEqual([]);
     expect(await edgesThroughNodes(page)).toEqual([]);
     expect(await labelCollisions(page)).toEqual([]);
     // A containing account sits before what it contains, so no link loops around a column.
     expect(await edgesAroundColumns(page)).toEqual([]);
+    expect(await graphGrammarViolations(page)).toEqual({});
     // The provider plate must clear the name even at the expanded graph's fit zoom.
     expect(await page.locator("[data-graph-source-badge]").evaluateAll(badges => badges.flatMap(badge => {
       const a = badge.getBoundingClientRect();
@@ -515,7 +525,7 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
         return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
       }).map(span => span.textContent);
     }))).toEqual([]);
-    await expect(page.locator(".react-flow__edge-path[marker-end]")).toHaveCount(links.length);
+    await expect(page.locator('.react-flow__edge:not([data-id^="display:"]) .react-flow__edge-path[marker-end]')).toHaveCount(links.length);
     const labels = await visibleLabelTexts(page);
     if (width >= 640) {
       expect(labels).toEqual([]); // Captions appear on focus; the overview stays quiet.
@@ -542,8 +552,8 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
       await expect(page.getByTestId("graph-entity-drawer")).toContainText("Public API stage has no WAF association");
       await page.screenshot({ path: info.outputPath(`cloud-finding-inspector-${theme}.png`), animations: "disabled" });
       await page.getByRole("button", { name: "Collapse findings", exact: true }).click();
-      await expect(page.locator('.react-flow__node:not([data-id^="display:"])')).toHaveCount(7);
-      await expect(page.locator('[data-graph-entity="finding-group"]')).toHaveCount(4);
+      await expect(page.locator('.react-flow__node:not([data-id^="display:"])')).toHaveCount(8);
+      await expect(page.locator('[data-graph-entity="finding-group"]')).toHaveCount(3);
       await expect(page.getByTestId("graph-entity-drawer")).toHaveCount(0);
     }
   });

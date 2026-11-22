@@ -14,7 +14,7 @@ describe("relationship lanes", () => {
     const lower = { id: "server", x: 420, y: 420, width: 220, height: 200 };
     const edge = { source: "agent", target: "server", sourceX: 182, sourceY: 36, targetX: 494, targetY: 456,
       sourcePosition: Position.Right, targetPosition: Position.Left };
-    const [path] = relationshipPath(edge, [upper, lower]);
+    const [path] = relationshipPath(edge, [upper, lower], { source: 14, target: -14 });
     const alongRow = pairs(path).filter(point => point.x > edge.sourceX + 4 && Math.abs(point.y - edge.sourceY) < 6);
     expect(alongRow).toEqual([]);
   });
@@ -25,10 +25,16 @@ describe("relationship lanes", () => {
     const lower = { id: "agent", x: 0, y: 420, width: 300, height: 200 };
     const edge = { source: "agent", target: "server", sourceX: 182, sourceY: 456, targetX: 472, targetY: 36,
       sourcePosition: Position.Right, targetPosition: Position.Left };
-    const [path] = relationshipPath(edge, [upper, lower]);
-    expect(path).not.toContain("C");
-    const alongRow = pairs(path).filter(point => point.x > edge.sourceX + 14 && Math.abs(point.y - edge.sourceY) < 6);
-    expect(alongRow).toEqual([]);
+    const [path] = relationshipPath(edge, [upper, lower], { source: 14, target: -14 });
+    expect(path).toContain("C");
+    const points = pairs(path);
+    expect(points[0]!.y).toBe(edge.sourceY);
+    // A Bezier control point is not a point on the rendered line. Reject a
+    // shared horizontal segment, while allowing an isolated crossing.
+    for (let i = 0; i + 3 < points.length; i += 3) {
+      const curve = points.slice(i, i + 4);
+      expect(curve.every(point => Math.abs(point.y - edge.sourceY) < 6)).toBe(false);
+    }
   });
 
   it("keeps a detour lane clear of a card that only partly overlaps the corridor", () => {
@@ -36,11 +42,26 @@ describe("relationship lanes", () => {
       sourcePosition: Position.Right, targetPosition: Position.Left };
     const between = { id: "between", x: 260, y: 0, width: 220, height: 180 };
     const partial = { id: "partial", x: 560, y: -200, width: 220, height: 180 };
-    const [path, , lane] = relationshipPath(edge, [between, partial, { id: "a", x: 0, y: 0, width: 144, height: 180 }, { id: "b", x: 600, y: 0, width: 144, height: 180 }]);
+    const [path, labelX, lane] = relationshipPath(edge, [between, partial, { id: "a", x: 0, y: 0, width: 144, height: 180 }, { id: "b", x: 600, y: 0, width: 144, height: 180 }]);
     const clear = (y: number, node: typeof partial) => y < node.y - 16 || y > node.y + node.height + 16;
-    expect(clear(lane, partial)).toBe(true);
-    expect(clear(lane, between)).toBe(true);
-    const run = pairs(path).filter(point => point.y === lane);
-    expect(run.every(point => point.x <= partial.x - 16 || clear(point.y, partial))).toBe(true);
+    expect(labelX <= partial.x - 16 || labelX >= partial.x + partial.width + 16 || clear(lane, partial)).toBe(true);
+    expect(labelX <= between.x - 16 || labelX >= between.x + between.width + 16 || clear(lane, between)).toBe(true);
+    const values = path.match(/-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi)!.map(Number);
+    for (let index = 0; index < values.length - 2; index += 6) for (let step = 0; step <= 200; step++) {
+      const t = step / 200, u = 1 - t;
+      const [x, y] = [0, 1].map(axis => u ** 3 * values[index + axis]! + 3 * u ** 2 * t * values[index + axis + 2]!
+        + 3 * u * t ** 2 * values[index + axis + 4]! + t ** 3 * values[index + axis + 6]!);
+      expect([between, partial].some(box => x! > box.x - 12 && x! < box.x + box.width + 12 && y! > box.y - 12 && y! < box.y + box.height + 12)).toBe(false);
+    }
   });
+});
+
+it("separates pair curves while keeping their ends at the measured glyph ports", () => {
+  const edge = { source: "a", target: "b", sourceX: 72, sourceY: 36, targetX: 672, targetY: 220,
+    sourcePosition: Position.Right, targetPosition: Position.Left };
+  const [first] = relationshipPath(edge, [], { source: 12, target: -12 });
+  const [second] = relationshipPath(edge, [], { source: -12, target: 12 });
+  expect(first).toMatch(/^M72,36 /);
+  expect(first).toMatch(/672,220$/);
+  expect(first).not.toBe(second);
 });

@@ -17,6 +17,7 @@ export function formatGraphFindingCounts(summary: HeadlineSummary, scope: "view"
   return kevListed > 0 ? `${text} · ${kevListed.toLocaleString()} KEV-listed` : text;
 }
 
-export function formatGraphHeadline(summary: HeadlineSummary, snapshotPaths: number, scope: "view" | "loaded scope" = "view"): string {
+export function formatGraphHeadline(summary: HeadlineSummary, snapshotPaths: number | null, scope: "view" | "loaded scope" = "view"): string {
+  if (snapshotPaths === null) return `${formatGraphFindingCounts(summary, scope)} · Attack path count unavailable`;
   return `${formatGraphFindingCounts(summary, scope)} · ${snapshotPaths.toLocaleString()} ${snapshotPaths === 1 ? "attack path" : "attack paths"} across the whole snapshot (deduplicated)`;
 }

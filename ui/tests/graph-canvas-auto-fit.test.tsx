@@ -389,3 +389,24 @@ it("waits for the store dimensions to match the mounted canvas before fitting", 
   await act(() => vi.advanceTimersByTimeAsync(50));
   expect(flow.fitView).toHaveBeenCalled();
 });
+
+it("starts a phone on inventory rather than a display-only exposure anchor", async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal("requestAnimationFrame", (callback: () => void) => setTimeout(callback, 0));
+  vi.stubGlobal("cancelAnimationFrame", clearTimeout);
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+  vi.stubGlobal("innerHeight", 844);
+  flow.width = 356; flow.zoom = 0.25;
+  flow.getNodes.mockReturnValue([
+    { id: "display:internet", position: { x: 0, y: 0 }, data: {} },
+    { id: "workload", position: { x: 380, y: 0 }, data: {} },
+  ]);
+  flow.frame = document.createElement("div");
+  flow.frame.setAttribute("data-graph-adaptive-frame", "");
+  const view = render(<GraphCanvasAutoFit enabled layoutKey="phone-internet" inspector={false} preserveViewport={false} onLayoutAspect={vi.fn()} />);
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  expect(flow.fitView).toHaveBeenLastCalledWith(expect.objectContaining({ nodes: [{ id: "workload" }] }));
+  view.rerender(<GraphCanvasAutoFit enabled layoutKey="phone-selected-internet" anchorId="display:internet" inspector={false} preserveViewport={false} onLayoutAspect={vi.fn()} />);
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  expect(flow.fitView).toHaveBeenLastCalledWith(expect.objectContaining({ nodes: [{ id: "display:internet" }] }));
+});

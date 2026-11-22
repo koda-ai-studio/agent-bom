@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { nodeAggregatesResponse, rollupResponse } from "./product-proof-rollup.mjs";
-import { auditRenderedGraph, renderedRelationshipCurves, sharedRelationshipRuns } from "./graph-visual-audit.mjs";
+import { auditRenderedGraph, graphGrammarExpression, renderedRelationshipCurves, sharedRelationshipRuns } from "./graph-visual-audit.mjs";
 import { chromium, expect } from "@playwright/test";
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -2088,7 +2088,8 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
       if (badgeAudit.logos.some(logo => logo.overlapsCaption)) {
         throw new Error(`Vendor badge overlaps a node caption on ${filename}: ${JSON.stringify(badgeAudit.logos)}`);
       }
-      const graphNodeCount = await page.locator(".react-flow__node:visible").count();
+      // Display-only anchors (the Internet entry, finding groups) are not graph entities.
+      const graphNodeCount = await page.locator('.react-flow__node:visible:not([data-id^="display:"])').count();
       const graphEdgeCount = await page.locator(".react-flow__edge").count();
       if (graphNodeCount < options.minGraphNodes || graphEdgeCount < (options.minGraphEdges ?? 1)) {
         throw new Error(`Incomplete graph on ${urlPath}: ${graphNodeCount} nodes / ${graphEdgeCount} edges`);
@@ -2296,6 +2297,10 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
     }
     const viewport = page.viewportSize();
     if (options.fitContentHeight) await fitViewportToContent(page, options.fitContentHeight);
+    if (await page.locator(".react-flow__node").count()) {
+      const grammar = await page.evaluate(graphGrammarExpression({}));
+      if (Object.keys(grammar).length) throw new Error(`Graph grammar violated on ${filename}: ${JSON.stringify(grammar)}`);
+    }
     await page.screenshot({ path: path.join(captureOutputDir, filename), fullPage: false, animations: "disabled" });
     if (options.fitContentHeight) await page.setViewportSize(viewport);
     console.log(`captured ${filename}`);

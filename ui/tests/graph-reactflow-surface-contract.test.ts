@@ -90,3 +90,16 @@ describe("interactive React Flow surface contract", () => {
     expect(source(path)).toContain('localMode: session?.recommended_ui_mode === "no_auth"');
   });
 });
+
+ it("fits proposed scenarios after measured layout settles with one camera owner", () => {
+ const content = source("components/graph-flow-canvas.tsx");
+ expect(content).toContain("fitView={false}");
+ expect(content).toContain("enabled={!layoutPending && !motion.animating}");
+ expect(content).toContain("${selectedScenarioId ??");
+ });
+
+it("uses the readable phone framing in capture and interactive modes", () => {
+  const content = source("hooks/use-graph-canvas-model.tsx");
+  expect(content).not.toContain("captureMode ? whole : legibleFit");
+  expect(content).toContain("graphReadableFitViewOptions(reactFlow.getNodes(), viewportOptions");
+});

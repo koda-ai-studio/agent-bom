@@ -23,17 +23,17 @@ describe("flowEdgeLegend", () => {
     expect(legend.more).toBe(0);
   });
 
-  it("names runtime motion and caps the colour list with a remainder", () => {
+  it("names runtime motion and every drawn relationship colour", () => {
     const edges = Array.from({ length: 9 }, (_, index) => edge(`e${index}`, `rel_${index}`, `var(--c${index})`, index === 0 ? { animated: true } : {}));
     const legend = flowEdgeLegend(edges);
     expect(legend.styles).toEqual(["solid", "runtime"]);
-    expect(legend.relationships).toHaveLength(6);
-    expect(legend.more).toBe(3);
+    expect(legend.relationships).toHaveLength(9);
+    expect(legend.more).toBe(0);
   });
 
-  it("lists no colours when every line is drawn in the same colour", () => {
+  it("keeps relationship meanings visible even when colours match", () => {
     const legend = flowEdgeLegend([edge("a", "uses", "var(--line)"), edge("b", "depends_on", "var(--line)")]);
-    expect(legend.relationships).toEqual([]);
+    expect(legend.relationships.map(item => item.relationship)).toEqual(["depends_on", "uses"]);
     expect(legend.more).toBe(0);
   });
 

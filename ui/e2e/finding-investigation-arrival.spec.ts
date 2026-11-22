@@ -1,10 +1,11 @@
 import { test, expect, type Page } from "@playwright/test";
+import { withSemanticLayer } from "./helpers/graph-rollup-mocks";
 
 const stamp = "2026-10-18T00:00:00Z";
 const estate = "current-estate:0123456789abcdef0123456789abcdef";
 const packageId = "package:pypi:langchain@0.0.150:dce85e7272e8";
 const findingId = "16530e6c-ddaf-5651-ac6c-396b32d92af8";
-const node = (id: string, entity_type: string, label: string, severity = "none") => ({ id, entity_type, label, severity, status: "active", risk_score: 0, attributes: {}, dimensions: {}, data_sources: ["synthetic-fixture"], compliance_tags: [] });
+const node = (id: string, entity_type: string, label: string, severity = "none") => withSemanticLayer({ id, entity_type, label, severity, status: "active", risk_score: 0, attributes: {}, dimensions: {}, data_sources: ["synthetic-fixture"], compliance_tags: [] });
 const nodes = [node("agent:copilot", "agent", "Member copilot"), node(packageId, "package", "langchain@0.0.150"), node(`vuln:${findingId}`, "vulnerability", "CVE-2023-36258", "critical")];
 const path = { source: "agent:copilot", target: `vuln:${findingId}`, hops: nodes.map((n) => n.id), edges: ["depends_on", "has_finding"], composite_risk: 80, summary: "", credential_exposure: [], tool_exposure: [], vuln_ids: ["CVE-2023-36258"], finding_ids: [findingId] };
 

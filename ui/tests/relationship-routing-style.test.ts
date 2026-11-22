@@ -8,7 +8,7 @@ const lr = { source: "a", target: "b", sourcePosition: Position.Right, targetPos
 const curved = /[CcSsTt]/;
 
 describe("one relationship line style", () => {
-  it("draws every routed relationship as straight runs with rounded corners, never a sweeping curve", () => {
+  it("draws each relationship as a separate cubic curve", () => {
     const cases: [string, Parameters<typeof relationshipPath>][] = [
       ["level", [{ ...lr, sourceX: 72, sourceY: 36, targetX: 672, targetY: 36 }, []]],
       ["diagonal", [{ ...lr, sourceX: 72, sourceY: 300, targetX: 672, targetY: 0 }, []]],
@@ -17,7 +17,10 @@ describe("one relationship line style", () => {
         [{ id: "a", x: 100, y: -40, width: 220, height: 180 }, { id: "b", x: 100, y: 360, width: 220, height: 180 }]]],
       ["vertical", [{ ...lr, sourcePosition: Position.Bottom, targetPosition: Position.Top, sourceX: 100, sourceY: 0, targetX: 400, targetY: 300 }, []]],
     ];
-    for (const [name, args] of cases) expect(relationshipPath(...args)[0], name).not.toMatch(curved);
+    for (const [name, args] of cases) {
+      expect(relationshipPath(...args)[0], name).toMatch(curved);
+      expect(relationshipPath(...args)[0], name).not.toMatch(/[LQ]/);
+    }
   });
 
   it("draws an MCP evidence branch in the same style", () => {

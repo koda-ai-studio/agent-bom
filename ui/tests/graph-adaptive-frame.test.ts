@@ -55,3 +55,10 @@ it("gives a bounded phone preview scrollable height to show both connected nodes
   expect(frame.fitAll).toBe(true);
   expect(frame.height).toBeGreaterThan(520);
 });
+
+it("keeps a bounded desktop context whole at the readable floor when it needs a little more height", () => {
+  const frame = graphAdaptiveFrame({ width: 1134, availableHeight: 594, inspector: false,
+    bounds: { x: 0, y: 0, width: 2200, height: 1440 }, boundedPreview: true });
+  expect(frame.height).toBeGreaterThanOrEqual(1440 * 0.4 * 1.08 + 80);
+  expect(frame.fitAll).toBe(true);
+});

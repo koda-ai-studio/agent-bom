@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { createRequire } from "node:module";
+import { withSemanticLayer } from "./helpers/graph-rollup-mocks";
 const resolveModule = createRequire(`${__dirname}/../package.json`);
 test.use({ bypassCSP: true });
 
@@ -8,7 +9,7 @@ test.use({ bypassCSP: true });
 const root = "agent:root";
 const stamp = "2026-10-12T00:00:00Z";
 const observed = "2026-09-01T00:00:00Z";
-const node = (id: string, entity_type = "server", attributes = {}) => ({ id, label: id.split(":").at(-1), entity_type, attributes, severity: "none", risk_score: 0, status: "active", data_sources: ["fixture"], dimensions: {}, compliance_tags: [] });
+const node = (id: string, entity_type = "server", attributes = {}) => withSemanticLayer({ id, label: id.split(":").at(-1), entity_type, attributes, severity: "none", risk_score: 0, status: "active", data_sources: ["fixture"], dimensions: {}, compliance_tags: [] });
 const role = node("role:conditional", "role", { admin_equivalence_status: "conditional_admin", admin_equivalence_resource_scopes: ["arn:aws:iam::123456789012:*"] });
 const nodes = [node(root, "agent"), role, ...Array.from({ length: 30 }, (_, i) => node(`server:${i}`))];
 const edges = nodes.slice(1).map(n => ({ id: `edge:${n.id}`, source: root, target: n.id, relationship: n.id === role.id ? "assumes" : "uses", direction: "bidirectional", weight: 1, traversable: false, first_seen: stamp, last_seen: stamp, evidence: { basis: "configured", observed_at: observed, packages: ["fixture-package@1.0"] } }));
@@ -55,10 +56,11 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
       if (await inspector.isVisible()) await inspector.getByRole("button", {name: "Close", exact: true}).click();
       await page.getByRole("group", {name: "Investigation view"}).getByRole("button", {name: "Graph", exact: true}).click();
     } else {
-      // Repeated verbs from the root show once with their count; each keeps its evidence qualifier.
-      await expect(page.locator(".graph-relationship-label")).toHaveCount(2);
-      await expect(page.locator(".graph-relationship-label").filter({hasText: /configured/})).toHaveCount(2);
-      await expect(page.locator(".graph-relationship-label").filter({hasText: /×2/})).toHaveCount(1);
+      // The compact canvas names a relationship only when it is inspected.
+      await expect(page.locator(".graph-relationship-label")).toHaveCount(0);
+      await page.locator('.react-flow__edge:not([data-id^="display:"])').first().focus();
+      await expect(page.locator(".graph-relationship-label")).toHaveCount(1);
+      await page.locator('.react-flow__edge:not([data-id^="display:"])').first().blur();
     }
     if (width === 390 && await inspector.isVisible()) await inspector.getByRole("button", {name: "Close", exact: true}).click();
     await page.getByRole("button", {name: "Show more connections", exact: true}).click();

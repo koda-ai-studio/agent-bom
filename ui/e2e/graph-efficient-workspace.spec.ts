@@ -54,10 +54,11 @@ for (const theme of ["light", "dark"]) test(`small graph uses its canvas and def
   await expect(findingLabel).toHaveCount(0);
   await expect(page.getByTestId("graph-entity-drawer").getByRole("heading",{name:"CVE-2023-4863",exact:true})).toBeVisible();
   await expect.poll(async()=>Math.round((await page.locator(".react-flow").boundingBox())!.height)).toBeLessThanOrEqual(560);
+  // The compact circle draws 36-46px on screen (it was 66px before the compact canvas).
   await expect.poll(async()=>{
     const canvas=(await page.locator(".react-flow").boundingBox())!;
     const glyphs=await page.locator(".react-flow .graph-entity-glyph").evaluateAll(es=>es.map(e=>e.getBoundingClientRect().toJSON()));
-    return glyphs.length===2 && glyphs.every(g=>g.width>=65 && g.x>=canvas.x && g.right<=canvas.x+canvas.width && g.y>=canvas.y && g.bottom<=canvas.y+canvas.height);
+    return glyphs.length===2 && glyphs.every(g=>g.width>=36 && g.x>=canvas.x && g.right<=canvas.x+canvas.width && g.y>=canvas.y && g.bottom<=canvas.y+canvas.height);
   }).toBe(true);
   expect(requests.filter(p=>p.startsWith("/v1/graph/diff?")||p.startsWith("/v1/graph/edges/changes?"))).toEqual([]);
   expect(requests.filter(p=>p.startsWith("/v1/graph/node/"))).toHaveLength(1);
@@ -92,7 +93,7 @@ for (const theme of ["light", "dark"]) test(`three evidence sources stay readabl
   await page.locator('.react-flow__node[data-id="vuln:demo"]').click();
   await expect(page.getByTestId("graph-entity-drawer")).toBeVisible();
   await expect.poll(async () => page.locator(".react-flow .graph-entity-glyph").evaluateAll(es => Math.min(...es.map(e => e.getBoundingClientRect().width))))
-    .toBeGreaterThanOrEqual(62);
+    .toBeGreaterThanOrEqual(36); // The compact circle draws 36-46px; it was 62px before the compact canvas.
   const before = (await page.locator(".react-flow").boundingBox())!;
   await page.screenshot({ path: info.outputPath(`evidence-${theme}.png`), animations: "disabled" });
   await page.setViewportSize({ width: 1680, height: 900 });
@@ -102,8 +103,10 @@ for (const theme of ["light", "dark"]) test(`three evidence sources stay readabl
     return canvas.y + canvas.height <= 900;
   }).toBe(true);
   await page.screenshot({ path: info.outputPath(`evidence-resized-${theme}.png`), animations: "disabled" });
+  // Opening the layers panel gives it room by shortening the canvas, and closing it gives the room back.
+  const open = (await page.locator(".react-flow").boundingBox())!.height;
   await page.getByRole("button", { name: "View & layers" }).click();
-  await expect.poll(async () => (await page.locator(".react-flow").boundingBox())!.height).toBeLessThanOrEqual(320);
+  await expect.poll(async () => (await page.locator(".react-flow").boundingBox())!.height).toBeLessThan(open);
   await page.getByRole("button", { name: "View & layers" }).click();
-  await expect.poll(async () => (await page.locator(".react-flow").boundingBox())!.height).toBeGreaterThan(400);
+  await expect.poll(async () => (await page.locator(".react-flow").boundingBox())!.height).toBeGreaterThanOrEqual(open - 1);
 });

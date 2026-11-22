@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
+import { withSemanticLayer } from "./helpers/graph-rollup-mocks";
 
 const scanId = "scan-large-overview";
 const createdAt = "2026-05-08T16:00:00Z";
@@ -79,7 +80,7 @@ type GraphEdge = {
 
 function node(id: string, entityType: string, label: string, severity = "none", riskScore = 0): GraphNode {
   const severityRank: Record<string, number> = { none: 0, low: 1, medium: 2, high: 3, critical: 4 };
-  return {
+  return withSemanticLayer({
     id,
     entity_type: entityType,
     label,
@@ -96,7 +97,7 @@ function node(id: string, entityType: string, label: string, severity = "none", 
     compliance_tags: [],
     data_sources: ["e2e"],
     dimensions: {},
-  };
+  });
 }
 
 function edge(source: string, target: string, relationship: string, weight = 1): GraphEdge {

@@ -8,7 +8,6 @@ export interface FlowEdgeLegend {
   more: number;
 }
 
-const LISTED = 6;
 const STYLE_ORDER: FlowLineStyle[] = ["solid", "dashed", "runtime"];
 
 /** What the drawn lines mean: their styles, and the relationship each colour stands for, most drawn first. */
@@ -29,8 +28,6 @@ export function flowEdgeLegend(edges: readonly Edge[]): FlowEdgeLegend {
       label: typeof edge.data?.relationshipLabel === "string" ? edge.data.relationshipLabel : relationship.replaceAll("_", " "),
     });
   }
-  // One colour for every line carries no meaning to explain.
-  const coloured = new Set([...byRelationship.values()].map(entry => entry.stroke)).size > 1;
-  const relationships = coloured ? [...byRelationship.values()].sort((a, b) => b.count - a.count) : [];
-  return { styles: STYLE_ORDER.filter(style => styles.has(style)), relationships: relationships.slice(0, LISTED), more: Math.max(0, relationships.length - LISTED) };
+  const relationships = [...byRelationship.values()].sort((a, b) => b.count - a.count || a.relationship.localeCompare(b.relationship));
+  return { styles: STYLE_ORDER.filter(style => styles.has(style)), relationships, more: 0 };
 }

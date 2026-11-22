@@ -1,7 +1,7 @@
-import { Graph, layout } from "@dagrejs/dagre";
+import { semanticColumns } from "@/lib/graph-semantic-columns";
 
 import type { AttackPathGraphModel } from "@/lib/attack-path-graph-model";
-import { ATTACK_PATH_FIT_PADDING } from "@/lib/attack-path-graph-viewport";
+import { ATTACK_PATH_FIT_PADDING, FINDING_BADGE_OVERHANG } from "@/lib/attack-path-graph-viewport";
 import { legibleZoomForText } from "@/lib/graph-adaptive-frame";
 
 export type AttackPathDirection = "LR" | "TB";
@@ -36,17 +36,14 @@ export const ATTACK_PATH_CANVAS_BOUNDS = { min: 240, max: 640 } as const;
  */
 const SPACING = { LR: { rank: 48, lane: 32 }, TB: { rank: 40, lane: 20 } } as const;
 
-/** Layer per node from dagre's ranking, re-indexed 0..n along the reading direction. */
-function rankColumns(model: AttackPathGraphModel, direction: AttackPathDirection): Map<string, number> {
-  const graph = new Graph({ multigraph: true });
-  graph.setGraph({ rankdir: direction, ranksep: 40, nodesep: 20, ranker: "network-simplex" });
-  graph.setDefaultEdgeLabel(() => ({}));
-  for (const node of model.nodes) graph.setNode(node.id, { width: PATH_NODE.width, height: PATH_NODE.height });
-  for (const edge of model.edges) graph.setEdge(edge.source, edge.target, { weight: edge.onPath ? 8 : 1, minlen: 1 }, edge.id);
-  layout(graph);
-  const main = (id: string) => Math.round(direction === "LR" ? graph.node(id).x : graph.node(id).y);
-  const ranks = [...new Set(model.nodes.map(node => main(node.id)))].sort((a, b) => a - b);
-  return new Map(model.nodes.map(node => [node.id, ranks.indexOf(main(node.id))]));
+/** The same backend-layer columns as the estate canvas, with the selected spine retained. */
+function rankColumns(model: AttackPathGraphModel): Map<string, number> {
+  const columns = semanticColumns(model.nodes.map(node => ({ id: node.id, data: { entityType: node.entityType, semanticLayer: node.semanticLayer } })),
+    model.edges.map(edge => ({ ...edge, data: { relationship: edge.relationship } })), model.pathNodeIds);
+  for (let pass = 0; pass < model.nodes.length; pass++) for (const node of model.nodes) {
+    if (node.semanticOwner && columns.has(node.semanticOwner)) columns.set(node.id, columns.get(node.semanticOwner)!);
+  }
+  return columns;
 }
 
 /**
@@ -65,7 +62,7 @@ function assignLanes(model: AttackPathGraphModel, columns: Map<string, number>):
   }
   const byColumn = new Map<number, string[]>();
   for (const node of model.nodes) {
-    if (lanes.has(node.id)) continue;
+    if (lanes.has(node.id) || node.semanticOwner) continue;
     const column = columns.get(node.id)!;
     byColumn.set(column, [...(byColumn.get(column) ?? []), node.id]);
   }
@@ -76,19 +73,55 @@ function assignLanes(model: AttackPathGraphModel, columns: Map<string, number>):
       return { id, key: Math.max(mean, 0.5) };
     });
     keyed.sort((a, b) => a.key - b.key || a.id.localeCompare(b.id));
-    keyed.forEach((item, index) => lanes.set(item.id, index + 1));
+    keyed.forEach((item, index) => lanes.set(item.id, (Math.floor(index / 2) + 1) * (index % 2 ? -1 : 1)));
   }
+  for (let pass = 0; pass < model.nodes.length; pass++) for (const node of model.nodes) {
+    if (!node.semanticOwner || lanes.has(node.id) || !lanes.has(node.semanticOwner)) continue;
+    let lane = lanes.get(node.semanticOwner)! + 1;
+    while (model.nodes.some(other => columns.get(other.id) === columns.get(node.id) && lanes.get(other.id) === lane)) lane++;
+    lanes.set(node.id, lane);
+  }
+  for (const node of model.nodes) if (!lanes.has(node.id)) lanes.set(node.id, 1);
   return lanes;
+}
+
+/** A phone reads the supplied path vertically; context occupies one adjacent
+ * column, with additional rows instead of an off-screen third column. */
+function portraitPathLayout(model: AttackPathGraphModel): AttackPathLayout {
+  const columns = rankColumns(model), positions = new Map<string, { x: number; y: number }>();
+  const lanes = new Map<string, number>();
+  const spine = model.pathNodeIds.filter(id => model.nodes.some(node => node.id === id));
+  const spineSet = new Set(spine), groups = new Map<string, string[]>();
+  for (const node of model.nodes) {
+    if (spineSet.has(node.id)) continue;
+    const owner = node.semanticOwner && spineSet.has(node.semanticOwner) ? node.semanticOwner
+      : spine.find(id => model.edges.some(edge => edge.source === id && edge.target === node.id || edge.target === id && edge.source === node.id)) ?? spine.at(-1) ?? "";
+    groups.set(owner, [...(groups.get(owner) ?? []), node.id]);
+  }
+  let y = 0;
+  for (const id of spine.length ? spine : [""]) {
+    if (id) { positions.set(id, { x: 8, y }); lanes.set(id, 0); }
+    const context = groups.get(id) ?? [];
+    context.forEach((child, index) => { positions.set(child, { x: 120, y: y + (index + 1) * 168 }); lanes.set(child, 1); });
+    y += (1 + context.length) * 168;
+  }
+  return { direction: "TB", positions, columns, lanes, minLane: 0, maxLane: groups.size ? 1 : 0,
+    rankGap: 32, laneGap: 12, margin: 8, width: groups.size ? 280 : 168,
+    height: Math.max(136, y - 32), nodeWidth: PATH_NODE.width, nodeHeight: PATH_NODE.height };
 }
 
 /**
  * Layered DAG: the selected path is one straight line, every node sits in its
  * dagre layer, and branches take lanes above and below the path.
  */
-export function layoutAttackPathGraph(model: AttackPathGraphModel, direction: AttackPathDirection): AttackPathLayout {
+export function layoutAttackPathGraph(model: AttackPathGraphModel, _requestedDirection: AttackPathDirection): AttackPathLayout {
+  if (_requestedDirection === "TB") return portraitPathLayout(model);
+  // Desktop preserves the backend semantic columns.
+  const direction: AttackPathDirection = "LR";
   const spacing = SPACING[direction];
-  const columns = rankColumns(model, direction);
+  const columns = rankColumns(model);
   const lanes = assignLanes(model, columns);
+  const occupiedColumns = [...new Set(columns.values())].sort((a, b) => a - b);
   const minLane = Math.min(0, ...lanes.values());
   const maxLane = Math.max(0, ...lanes.values());
   const row = direction === "LR";
@@ -98,7 +131,7 @@ export function layoutAttackPathGraph(model: AttackPathGraphModel, direction: At
   const positions = new Map<string, { x: number; y: number }>();
   let width = 0, height = 0;
   for (const node of model.nodes) {
-    const along = columns.get(node.id)! * (mainSize + spacing.rank);
+    const along = occupiedColumns.indexOf(columns.get(node.id)!) * (mainSize + spacing.rank);
     const across = margin + (lanes.get(node.id)! - minLane) * (crossSize + spacing.lane);
     const x = row ? along : across, y = row ? across : along;
     positions.set(node.id, { x, y });
@@ -112,7 +145,7 @@ export function layoutAttackPathGraph(model: AttackPathGraphModel, direction: At
 }
 
 /** Phones keep text readable: the column fits the width down to where 15px names are 11px, then the page scrolls. */
-export const NARROW_MIN_ZOOM = legibleZoomForText(15);
+export const NARROW_MIN_ZOOM = Math.max(legibleZoomForText(15), 48 / 56);
 /** The path graph's desktop floor: its 15px names stay at least about 11px on screen. */
 export const PATH_DESKTOP_MIN_ZOOM = 0.75;
 
@@ -126,9 +159,9 @@ function fittedZoom(layout: Pick<AttackPathLayout, "width">, containerWidth: num
  * A phone never hides a node: a graph wider than the frame at the legible floor gets a wider
  * canvas that scrolls sideways. A desktop canvas always matches its frame.
  */
-export function attackPathCanvasWidth(layout: Pick<AttackPathLayout, "width">, narrow: boolean, containerWidth: number): number {
-  if (!narrow || !(containerWidth > 0)) return containerWidth;
-  const needed = layout.width * NARROW_MIN_ZOOM + ATTACK_PATH_FIT_PADDING.left + ATTACK_PATH_FIT_PADDING.right;
+export function attackPathCanvasWidth(layout: Pick<AttackPathLayout, "width"> & Partial<Pick<AttackPathLayout, "direction">>, narrow: boolean, containerWidth: number): number {
+  if (!narrow || layout.direction === "TB" || !(containerWidth > 0)) return containerWidth;
+  const needed = layout.width * NARROW_MIN_ZOOM + ATTACK_PATH_FIT_PADDING.left + ATTACK_PATH_FIT_PADDING.right + FINDING_BADGE_OVERHANG;
   return Math.max(containerWidth, Math.ceil(needed));
 }
 

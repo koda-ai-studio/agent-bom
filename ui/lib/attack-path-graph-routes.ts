@@ -17,7 +17,11 @@ function frame(layout: Geometry) {
   const row = layout.direction === "LR";
   const mainSize = row ? layout.nodeWidth : layout.nodeHeight;
   const crossSize = row ? layout.nodeHeight : layout.nodeWidth;
-  const colStart = (column: number) => column * (mainSize + layout.rankGap);
+  // Layouts may translate empty leading semantic columns out of the canvas.
+  // Route channels in the same coordinate frame as their measured endpoints.
+  const first = layout.positions.entries().next().value;
+  const offset = first ? (row ? first[1].x : first[1].y) - layout.columns.get(first[0])! * (mainSize + layout.rankGap) : 0;
+  const colStart = (column: number) => offset + column * (mainSize + layout.rankGap);
   const laneTop = (lane: number) => layout.margin + (lane - layout.minLane) * (crossSize + layout.laneGap);
   return {
     point: (main: number, cross: number): Point => row ? { x: main, y: cross } : { x: cross, y: main },

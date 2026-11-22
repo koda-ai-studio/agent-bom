@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
+import { graphGrammarViolations } from "./helpers/graph-grammar";
 import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
 import { routeNodeAggregates, withSemanticLayer } from "./helpers/graph-rollup-mocks";
+import nodeAggregateCases from "../tests/fixtures/node-aggregate-cases.json";
 
 // Non-empty fixture with two observed paths so the security graph page can
 // prove that queue selection updates the in-place graph and evidence panel.
@@ -76,7 +78,7 @@ type GraphEdge = {
 
 function node(id: string, entityType: string, label: string, severity = "none", riskScore = 0): GraphNode {
   const severityRank: Record<string, number> = { none: 0, low: 1, medium: 2, high: 3, critical: 4 };
-  return {
+  return withSemanticLayer({
     id,
     entity_type: entityType,
     label,
@@ -93,7 +95,7 @@ function node(id: string, entityType: string, label: string, severity = "none", 
     compliance_tags: [],
     data_sources: ["scan"],
     dimensions: {},
-  };
+  });
 }
 
 function edge(source: string, target: string, relationship: string, weight = 1): GraphEdge {
@@ -521,7 +523,8 @@ async function routeCockpit(
   await page.route("**/v1/graph?**", async (route) => {
     await route.fulfill({ contentType: "application/json", body: JSON.stringify(graph) });
   });
-  await routeNodeAggregates(page);
+  // The form-data package carries the aggregate the backend roll-up computes for it.
+  await routeNodeAggregates(page, { "pkg:form-data": nodeAggregateCases["cockpit:pkg:form-data"] });
   await page.route("**/v1/graph/rollup?**", async (route) => {
     if (options.rollupDelayMs) {
       await new Promise((resolve) => setTimeout(resolve, options.rollupDelayMs));
@@ -1137,7 +1140,10 @@ test(`large estates lead with non-overlapping clusters in ${theme}`, async ({ pa
   const [firstBox, secondBox] = await Promise.all([cards.nth(0).boundingBox(), cards.nth(1).boundingBox()]);
   expect(firstBox).not.toBeNull();
   expect(secondBox).not.toBeNull();
-  expect(firstBox!.x + firstBox!.width).toBeLessThanOrEqual(secondBox!.x);
+  // Both accounts share the scope column, so they stack top to bottom; they must never overlap.
+  const apart = firstBox!.x + firstBox!.width <= secondBox!.x || secondBox!.x + secondBox!.width <= firstBox!.x
+    || firstBox!.y + firstBox!.height <= secondBox!.y || secondBox!.y + secondBox!.height <= firstBox!.y;
+  expect(apart).toBe(true);
   await page.screenshot({ path: testInfo.outputPath(`investigation-large-estate-clustered-${theme}.png`), fullPage: true });
 
   await page.getByRole("button", { name: "Open node view" }).click();
@@ -1290,7 +1296,8 @@ for (const viewport of [
     expect(interactionBox!.y + interactionBox!.height).toBeLessThanOrEqual(nodeBandBox!.y + 1);
     expect(legendBox!.y).toBeGreaterThanOrEqual(nodeBandBox!.y + nodeBandBox!.height - 1);
     await expect(legend).toContainText("Selected path");
-    await expect(legend).toContainText("Findings on asset");
+    // The path's finding is its terminal hop, so the legend names the has-finding link that reaches it.
+    await expect(legend).toContainText("Has finding");
     await page.screenshot({
       path: testInfo.outputPath(`security-graph-${viewport.width}x${viewport.height}.png`),
       fullPage: true,
@@ -1647,8 +1654,8 @@ for (const theme of ["light", "dark"] as const) {
     const detail = page.getByTestId("selected-exposure-path");
     await detail.getByRole("button", { name: "Graph", exact: true }).click();
     const canvas = page.getByTestId("security-graph-investigation");
-    await expect(canvas.locator(".react-flow__node")).toHaveCount(4);
-    await expect(canvas.locator(".react-flow__edge")).toHaveCount(3);
+    await expect(canvas.locator(".react-flow__node")).toHaveCount(5);
+    await expect(canvas.locator(".react-flow__edge")).toHaveCount(4);
     let previousTransform = "";
     let unchangedSince = Date.now();
     await expect.poll(async () => {
@@ -1722,10 +1729,10 @@ for (const theme of ["light", "dark"] as const) {
     await detail.getByRole("button", { name: "Graph", exact: true }).click();
     const canvas = page.getByTestId("security-graph-investigation");
     // agent -> server -> package, the credential path branching off the shared server.
-    await expect(canvas.locator(".react-flow__node")).toHaveCount(4);
-    await expect(canvas.locator(".react-flow__edge")).toHaveCount(3);
-    await expect(canvas.locator('.react-flow__node[data-id="cve:form-data"]')).toHaveCount(0);
-    await expect(canvas.getByRole("button", { name: /^1 finding on form-data@4\.0\.0, worst critical/ })).toBeVisible();
+    await expect(canvas.locator(".react-flow__node")).toHaveCount(5);
+    await expect(canvas.locator(".react-flow__edge")).toHaveCount(4);
+    await expect(canvas.locator('.react-flow__node[data-id="cve:form-data"]')).toHaveCount(1);
+    await expect(canvas.getByLabel(/^Findings \(1\) on form-data@4\.0\.0, worst critical/)).toBeVisible();
     await expect(canvas.getByRole("tooltip")).toHaveCount(0);
     const firstLine = canvas.locator('.react-flow__edge[data-id="agent:desktop->server:github:uses"]');
     await firstLine.focus();
@@ -1760,8 +1767,8 @@ for (const theme of ["light", "dark"] as const) {
     await detail.getByRole("button", { name: "Graph", exact: true }).click();
     const canvas = page.getByTestId("security-graph-investigation");
     // The advisory is a badge on the package, not a final hop.
-    await expect(canvas.locator('[data-testid="attack-path-node-pkg:form-data"]')).toHaveAttribute("data-role", "target");
-    await expect(canvas.locator('.react-flow__node[data-id="cve:form-data"]')).toHaveCount(0);
+    await expect(canvas.locator('[data-testid="attack-path-node-pkg:form-data"]')).toHaveAttribute("data-role", "path");
+    await expect(canvas.locator('.react-flow__node[data-id="cve:form-data"]')).toHaveCount(1);
     // The column is never shrunk below a readable zoom; the page scrolls instead of a node stepper.
     await expect.poll(() => canvas.evaluate(element => {
       const flow = element.querySelector(".react-flow")!;
@@ -1990,6 +1997,7 @@ for (const estateSize of [10, 1_000, 10_000]) {
         expect(requests).toEqual([100]);
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
         expect(errors).toEqual([]);
+        if (estateSize === 10) expect(await graphGrammarViolations(page)).toEqual({});
         await page.screenshot({ path: testInfo.outputPath(`bounded-${estateSize}-${theme}-${width}.png`), fullPage: true });
       });
     }
@@ -2120,11 +2128,11 @@ test("long digest labels stay inside their graph nodes", async ({ page }) => {
   await page.goto(`/graph?scan=${scanId}&rollup=0`);
   const node = page.locator('.react-flow__node[data-id="server:github"]');
   await expect(node).toBeVisible();
-  const label = node.locator('[data-graph-entity="true"] > p').first();
+  const label = node.locator('[data-semantic-name]').first();
   await expect(label).toBeVisible();
   await expect.poll(() => node.evaluate(element => {
     const bounds = element.getBoundingClientRect();
-    const caption = element.querySelector('[data-graph-entity="true"] > p')!.getBoundingClientRect();
+    const caption = element.querySelector('[data-semantic-name]')!.getBoundingClientRect();
     return caption.left >= bounds.left - 1 && caption.right <= bounds.right + 1;
   })).toBe(true);
 });
@@ -2135,12 +2143,13 @@ for (const width of [1440, 1920]) for (const theme of ["light", "dark"]) {
     await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
     await routeCockpit(page, undefined, { referenceGraph: true });
     await page.goto(`/graph?scan=${scanId}&rollup=0&capture=1&layers=cloudResource,server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`);
-    await expect(page.locator(".react-flow__node")).toHaveCount(11);
+    await expect(page.locator('.react-flow__node:not([data-id^="display:"])')).toHaveCount(11);
     await page.locator(".react-flow__controls-fitview").click();
     await page.waitForLoadState("networkidle");
     await page.screenshot({ path: testInfo.outputPath("reference-captions.png"), fullPage: true });
     const collisions = await visibleGraphLabelCollisions(page);
     expect(collisions).toEqual([]);
+    expect(await graphGrammarViolations(page)).toEqual({});
   });
 }
 

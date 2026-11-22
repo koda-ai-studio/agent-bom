@@ -18,7 +18,6 @@ export type LaneEdge = {
  */
 export type RelationshipLane = { source: number; target: number; channel?: number; channels?: number };
 
-const relationshipOf = (edge: LaneEdge) => typeof edge.data?.relationship === "string" ? edge.data.relationship : "";
 
 /**
  * The card side an edge end attaches to. A backward edge leaves its source's
@@ -34,9 +33,8 @@ function cardSide(edge: LaneEdge, side: "source" | "target"): string {
 
 /**
  * Offset of this edge's relationship type among the types meeting one side of a
- * card, whether they leave or enter it. Edges of one type share a lane, so a
- * bundle still reads as one trunk; each other type runs on its own parallel
- * lane, ordered by where its far ends sit.
+ * card, whether they leave or enter it. Every edge owns a port offset, ordered by its far endpoint; two sources
+ * never share an incoming segment even when their relationship kinds match.
  */
 function portOffset(edge: LaneEdge, edges: LaneEdge[], side: "source" | "target", yOf: (id: string) => number | undefined): number {
   const node = edge[side];
@@ -47,18 +45,20 @@ function portOffset(edge: LaneEdge, edges: LaneEdge[], side: "source" | "target"
     for (const end of ["source", "target"] as const) {
       if (item[end] !== node || cardSide(item, end) !== at) continue;
       const y = yOf(item[end === "source" ? "target" : "source"]);
-      const ys = groups.get(relationshipOf(item)) ?? [];
+      const ys = groups.get(item.id) ?? [];
       if (y !== undefined) ys.push(y);
-      groups.set(relationshipOf(item), ys);
+      groups.set(item.id, ys);
     }
   }
   if (groups.size < 2) return 0;
   const mean = (ys: number[]) => ys.length ? ys.reduce((sum, y) => sum + y, 0) / ys.length : 0;
   const order = [...groups].sort(([a, ay], [b, by]) => mean(ay) - mean(by) || a.localeCompare(b)).map(([name]) => name);
-  return (order.indexOf(relationshipOf(edge)) - (order.length - 1) / 2) * LANE_GAP;
+  // Keep ports inside the glyph, clear of the caption below its lower rim.
+  const gap = Math.min(LANE_GAP, 40 / (order.length - 1));
+  return (order.indexOf(edge.id) - (order.length - 1) / 2) * gap;
 }
 
-const netKey = (edge: LaneEdge) => `${edge.target}\u0000${edge.targetHandle ?? ""}`;
+const netKey = (edge: LaneEdge) => `${edge.source}\u0000${edge.target}\u0000${edge.targetHandle ?? ""}`;
 
 /**
  * Lines crossing one column gap toward different targets each turn in their own

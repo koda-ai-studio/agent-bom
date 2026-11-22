@@ -4,6 +4,12 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { AttackPathGraph } from "@/components/attack-path-graph";
 import { branchingFixture, fanOutFixture } from "./fixtures/attack-path-graph-fixture";
 
+vi.mock("@/lib/graph-node-aggregates", () => ({
+  useGraphNodeAggregates: (_scan: string, hops: string[]) => new Map(hops.includes("pkg:next") ? [["pkg:next", {
+    node_id: "pkg:next", semantic_layer: "package", aggregate: { issue_count: 7, worst_severity: "critical", exposed_count: 0 },
+  }]] : []),
+}));
+
 beforeAll(() => {
   vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
   // React Flow reads the zoom pane matrix; jsdom has none.
@@ -21,41 +27,43 @@ function renderGraph(fixture = branchingFixture(), props: Partial<React.Componen
 }
 
 describe("AttackPathGraph", () => {
-  it("shows a finding badge whose count equals the findings recorded on the asset", () => {
+  it("shows the backend finding total independently of the loaded findings", () => {
     const { onOpenFindings } = renderGraph();
-    const badge = screen.getByRole("button", { name: "2 findings on next@15.2.2, worst critical (1 critical, 1 medium). Open findings" });
+    const badge = screen.getByRole("button", { name: "Findings (7) on next@15.2.2, worst critical. Open loaded findings" });
     // Severity is written out, not carried by colour alone.
-    expect(badge).toHaveTextContent("1 critical +1");
+    expect(badge).toHaveTextContent("Findings (7)");
     expect(badge).toHaveAttribute("data-severity", "critical");
     fireEvent.click(badge);
-    expect(onOpenFindings).toHaveBeenCalledWith("pkg:next", ["cve:next", "cve:next-2"]);
-    expect(screen.getByRole("button", { name: "1 finding on urllib3@2.2.1, worst high (1 high). Open findings" })).toHaveTextContent("1 high");
-    // The vulnerability is never a node of the chain.
-    expect(screen.queryByTestId("attack-path-node-cve:next")).toBeNull();
+    expect(onOpenFindings).toHaveBeenCalledWith("pkg:next", ["cve:next-2"]);
+    expect(screen.queryByRole("button", { name: /Findings.*on urllib3/ })).toBeNull();
+    // Explicit terminal findings remain selected-path hops.
+    expect(screen.getByTestId("attack-path-node-cve:next")).toHaveAttribute("data-role", "target");
   });
 
-  it("never draws an Internet node; exposure is a marker on the recorded node", () => {
-    renderGraph();
+  it("does not promote intermediate exposure to the entry or infer privilege from legacy flags", () => {
+    const fixture = branchingFixture();
+    fixture.graph.nodes.find(node => node.id === "role:admin")!.attributes = { is_admin: true };
+    renderGraph(fixture);
     expect(screen.queryByText(/^internet$/i)).toBeNull();
     const exposed = screen.getByTestId("attack-path-node-server:github");
     expect(within(exposed).getByLabelText("Internet-exposed (recorded)")).toBeInTheDocument();
     expect(within(screen.getByTestId("attack-path-node-server:filesystem")).queryByLabelText(/internet/i)).toBeNull();
-    expect(within(screen.getByTestId("attack-path-node-role:admin")).getByLabelText("Privileged: admin (recorded)")).toBeInTheDocument();
+    expect(within(screen.getByTestId("attack-path-node-role:admin")).queryByLabelText("Privileged: admin (recorded)")).toBeNull();
   });
 
   it("names every hop of the selected path on its line, and a branch's relationship on hover or focus", () => {
     const { container } = renderGraph();
-    for (const hop of ["Acted As", "Assumes", "Can Access", "Depends On"]) expect(screen.getByText(hop)).toBeInTheDocument();
-    expect(screen.queryByText("Accessed")).toBeNull();
+    for (const hop of ["Acted As", "Assumes", "Can Access", "Depends On"]) expect(screen.getAllByText(hop).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Accessed")).toHaveLength(1);
     const edge = container.querySelector('[data-id="server:filesystem->dataset:finance:accessed"]')!;
     expect(edge).not.toBeNull();
     expect(edge.getAttribute("aria-label")).toMatch(/filesystem MCP accessed finance-board-index/i);
     fireEvent.mouseEnter(edge);
-    expect(screen.getByText("Accessed")).toBeInTheDocument();
+    expect(screen.getAllByText("Accessed")).toHaveLength(2);
     fireEvent.mouseLeave(edge);
-    expect(screen.queryByText("Accessed")).toBeNull();
+    expect(screen.getAllByText("Accessed")).toHaveLength(1);
     fireEvent.focus(edge);
-    expect(screen.getByText("Accessed")).toBeInTheDocument();
+    expect(screen.getAllByText("Accessed")).toHaveLength(2);
   });
 
   it("wraps a long name only at its separators and keeps the full name for assistive tech", () => {

@@ -24,7 +24,7 @@ vi.mock("@xyflow/react", () => ({
 
 import { GraphCamera } from "@/components/attack-path-graph";
 import { LegibleFitControls } from "@/components/graph-legible-controls";
-import { LEGIBLE_CARD_TEXT_PX, legibleFit, legibleFitZoom, legibleZoomForText } from "@/lib/graph-adaptive-frame";
+import { CONTROLS_RESERVE, LEGIBLE_CARD_TEXT_PX, legibleFit, legibleFitZoom, legibleZoomForText } from "@/lib/graph-adaptive-frame";
 import { PATH_DESKTOP_MIN_ZOOM, NARROW_MIN_ZOOM } from "@/lib/attack-path-graph-layout";
 
 afterEach(() => { cleanup(); vi.clearAllMocks(); flow.width = 1440; flow.height = 520; });
@@ -35,9 +35,9 @@ it("floors a fit at the zoom where card text stays legible and keeps a stricter 
   expect(legibleFit({ padding: 0.2, maxZoom: 1.25 }, 0.4)).toEqual({ padding: 0.2, maxZoom: 1.25, minZoom: 0.4 });
   expect(legibleFit({ minZoom: 0.05, maxZoom: 1.25 }, legibleFitZoom(1440)).minZoom).toBe(0.4);
   expect(legibleFit({ minZoom: 0.05 }, legibleFitZoom(390)).minZoom).toBe(0.7);
-  expect(legibleFit({ minZoom: 1.1, maxZoom: 1.1 }, 0.4)).toEqual({ minZoom: 1.1, maxZoom: 1.1 });
+  expect(legibleFit({ minZoom: 1.1, maxZoom: 1.1 }, 0.4)).toMatchObject({ minZoom: 1.1, maxZoom: 1.1 });
   // A ceiling under the floor is raised to it: the camera never has to choose an illegible zoom.
-  expect(legibleFit({ maxZoom: 0.3 }, 0.4)).toEqual({ maxZoom: 0.4, minZoom: 0.4 });
+  expect(legibleFit({ maxZoom: 0.3 }, 0.4)).toMatchObject({ maxZoom: 0.4, minZoom: 0.4 });
 });
 
 it("the canvas fit button never fits below the legible floor", () => {
@@ -83,4 +83,18 @@ it("every graph canvas draws its fit button through the legible controls", () =>
     return [...source.matchAll(/<Controls\b[^>]*>/g)].some(([tag]) => !/showFitView=\{false\}/.test(tag));
   });
   expect(offenders).toEqual([]);
+});
+
+it("reserves the zoom controls' corner when Fit all sets no padding of its own", () => {
+  expect(legibleFit({}, 0.4).padding).toEqual({ top: 0.08, right: 0.08, bottom: 0.08, left: CONTROLS_RESERVE });
+  expect(legibleFit({ padding: 0.2 }, 0.4).padding).toBe(0.2);
+});
+
+it("keeps full evidence cards at the opening zoom and hands over to the zoom band only below it and the card threshold", async () => {
+  const { evidenceFlowKeepsDetail } = await import("@/lib/graph-adaptive-frame");
+  expect(evidenceFlowKeepsDetail(1, 1)).toBe(true);
+  expect(evidenceFlowKeepsDetail(0.83, 1)).toBe(true);
+  expect(evidenceFlowKeepsDetail(0.5, 0.45)).toBe(true);
+  expect(evidenceFlowKeepsDetail(0.6, 1)).toBe(false);
+  expect(evidenceFlowKeepsDetail(0.6, null)).toBe(true);
 });

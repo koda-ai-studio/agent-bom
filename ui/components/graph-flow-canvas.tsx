@@ -1,5 +1,8 @@
 "use client";
 
+import { useMemo } from "react";
+import { graphPortraitLayout } from "@/lib/graph-portrait-layout";
+import { withFindingDrilldowns } from "@/lib/graph-finding-disclosure";
 import { Background, MiniMap, ReactFlow } from "@xyflow/react";
 import { GraphCanvasAutoFit } from "@/components/graph-canvas-auto-fit";
 import { LegibleFitControls } from "@/components/graph-legible-controls";
@@ -19,7 +22,7 @@ import type { useInvestigationFlowView } from "@/hooks/use-investigation-flow-vi
 export function GraphFlowCanvas({ page, flowView }: { page: GraphPageModel; flowView: ReturnType<typeof useInvestigationFlowView> }) {
   const {
     graphViewport, investigationContext, narrowViewport, compactInvestigationTopology, selectedScenarioId, captureMode, presentation, scenarioExpanded,
-    manualCamera, selectedAttackPath, viewportOptions, initialViewportOptions, displayNodes, displayEdges, rollupNavigationActive, nodesInitialized, inspectRelationship,
+    manualCamera, selectedAttackPath, displayNodes, displayEdges, rollupNavigationActive, nodesInitialized, inspectRelationship,
     onNodeClick, onNodeMouseEnter, onNodeMouseLeave, fitGeneration, setSelectedRelationship, setSelectedNode, setSelectedNodeId, setHoveredNodeId, setPinnedFocusId,
     setReachabilitySummary, setReachabilityError, setBlastRadius, setBlastError, connectionPreview, previewExpanded, graphNavigationMount, selectedNodeId, layoutPending,
     compactLayoutKey, investigationMode, selectedNode, selectedRelationship, setCanvasLayoutAspect, fitVisible, minimapExpanded, showMiniMap, canvasLens,
@@ -28,6 +31,8 @@ export function GraphFlowCanvas({ page, flowView }: { page: GraphPageModel; flow
   const roomyOverview = displayEdges.some(edge => edge.data?.roomyOverview === true);
   // Layout changes glide once (never while dragging or capturing); the camera frames the final positions.
   const motion = useAnimatedLayout(measuredDisplay.nodes, captureMode || presentation.editing, narrowViewport ? "narrow" : "wide", `${compactLayoutKey}:${flowView.kind}:${disclosed.key}`);
+  const nodes = useMemo(() => withFindingDrilldowns(motion.nodes, page.drillIntoRollup), [motion.nodes, page.drillIntoRollup]);
+  const portrait = useMemo(() => narrowViewport ? graphPortraitLayout(nodes, quieted.edges) : { nodes, edges: quieted.edges }, [narrowViewport, nodes, quieted.edges]);
   return (
             <ReactFlow
               style={{ ...readableGraphNodeStyle(graphViewport.zoom, Boolean(investigationContext) || roomyOverview, (roomyOverview || Boolean(investigationContext) && compactInvestigationTopology) && !narrowViewport, displayNodes.length),
@@ -35,15 +40,14 @@ export function GraphFlowCanvas({ page, flowView }: { page: GraphPageModel; flow
                 ...(disclosed.available && !narrowViewport ? { "--graph-node-glyph-size": disclosedGlyphSize(graphViewport.zoom, displayNodes.length) } : {}) }}
               className={selectedScenarioId ? "scenario-context-canvas" : undefined}
               key={captureMode ? `lineage-capture:${scenarioExpanded ? "full" : "context"}` : `${presentation.storageKey}:${flowView.kind}:${presentation.restoredSavedState ? "restored" : "initial"}:${scenarioExpanded ? "full" : "context"}`}
-              nodes={motion.nodes}
-              edges={quieted.edges}
+              nodes={portrait.nodes}
+              edges={portrait.edges}
               nodeTypes={lineageNodeTypesAdaptive}
               edgeTypes={relationshipEdgeTypes}
               // Ordinary views have one camera owner: GraphCanvasAutoFit.
               // A concurrent animated initial fit can resize LOD cards after
               // the measured fit has settled, leaving the root offscreen.
-              fitView={Boolean(selectedScenarioId) && !manualCamera && !presentation.hasSavedState && !presentation.restoredSavedState}
-              fitViewOptions={manualCamera ? viewportOptions : initialViewportOptions}
+              fitView={false}
               defaultViewport={presentation.restoredViewport ?? presentation.viewport}
               minZoom={0.05}
               maxZoom={2.5}
@@ -63,7 +67,7 @@ export function GraphFlowCanvas({ page, flowView }: { page: GraphPageModel; flow
                 rollupActive: rollupNavigationActive,
                 nodesInitialized,
               })}
-              defaultEdgeOptions={{ type: "smoothstep" }}
+              defaultEdgeOptions={{ type: "relationship" }}
               proOptions={{ hideAttribution: true }}
               onEdgeClick={(_event, edge) => edge.data?.displayOnly ? flowView.inspectDisplayEdge(edge) : inspectRelationship(edge)}
               onKeyDownCapture={event => {
@@ -106,15 +110,15 @@ export function GraphFlowCanvas({ page, flowView }: { page: GraphPageModel; flow
                 navigationIds={selectedAttackPath?.hops ?? flowView.navigationIds}
                 primaryIds={selectedAttackPath?.hops ?? (selectedNodeId ? undefined : flowView.flow.primaryPath)}
                 primaryZoom={flowView.primaryZoom}
-                enabled={!layoutPending && !motion.animating && !selectedScenarioId}
-                layoutKey={`${compactLayoutKey}:${flowView.kind}:${disclosed.key}`}
-                anchorId={selectedNodeId ?? investigationMode?.rootId ?? flowView.anchorId}
+                enabled={!layoutPending && !motion.animating}
+                layoutKey={`${compactLayoutKey}:${flowView.kind}:${disclosed.key}:${selectedScenarioId ?? "estate"}`}
+                anchorId={selectedNodeId ?? investigationMode?.rootId ?? (flowView.anchorId?.startsWith("display:") ? undefined : flowView.anchorId)}
                 inspector={Boolean(selectedNode || selectedRelationship) && !narrowViewport}
                 preserveViewport={manualCamera || flowView.kind === "auto" && presentation.restoredSavedState}
                 onLayoutAspect={setCanvasLayoutAspect}
               />
               <Background color={BACKGROUND_COLOR} gap={BACKGROUND_GAP} />
-              <LegibleFitControls floor={narrowViewport ? GRAPH_PHONE_LEGIBLE_FIT_ZOOM : GRAPH_LEGIBLE_FIT_ZOOM} onFit={fitVisible} orientation={selectedScenarioId ? "horizontal" : "vertical"} position="bottom-left" className={CONTROLS_CLASS} />
+              <LegibleFitControls floor={narrowViewport ? GRAPH_PHONE_LEGIBLE_FIT_ZOOM : GRAPH_LEGIBLE_FIT_ZOOM} onFit={fitVisible} orientation={selectedScenarioId || narrowViewport ? "horizontal" : "vertical"} position={narrowViewport ? "top-right" : "bottom-left"} className={CONTROLS_CLASS} />
               {minimapExpanded && showMiniMap && (canvasLens !== "estate" || graphViewport.zoom >= 1) && (
                 <MiniMap
                   position={narrowViewport ? "top-right" : "bottom-right"}

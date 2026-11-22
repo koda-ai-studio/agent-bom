@@ -1,9 +1,10 @@
 import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
+import { withSemanticLayer } from "./helpers/graph-rollup-mocks";
 const root = "agent:endpoint-a:desktop";
 const server = "server:endpoint-a:files";
 const generation = "a".repeat(32);
-const node = (id: string, kind: string, label: string) => ({ id, entity_type: kind, label, attributes: {}, severity: "none", severity_id: 0, risk_score: 0, status: "active", data_sources: ["fixture"], dimensions: {}, compliance_tags: [] });
+const node = (id: string, kind: string, label: string) => withSemanticLayer({ id, entity_type: kind, label, attributes: {}, severity: "none", severity_id: 0, risk_score: 0, status: "active", data_sources: ["fixture"], dimensions: {}, compliance_tags: [] });
 const agent = node(root, "agent", "Desktop");
 const service = node(server, "server", "File server");
 const edge = { id: "recorded", source: root, target: server, relationship: "uses", direction: "bidirectional", weight: 1, evidence: { basis: "configured" } };

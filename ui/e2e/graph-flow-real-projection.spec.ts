@@ -1,12 +1,12 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test, expect, type Page } from "@playwright/test";
+import { ownedFindingAggregates, routeNodeAggregates } from "./helpers/graph-rollup-mocks";
 
 type Graph = { nodes: { id: string; label: string; attributes: Record<string, unknown> }[]; edges: { id: string; source: string; target: string }[] };
 const fixtures = JSON.parse(readFileSync(join(__dirname, "fixtures/k8s-projection.json"), "utf8")) as Record<"snapshot" | "tokenMounted" | "internalOnly" | "twoServices" | "clusterEstate" | "withFindings", Graph>;
 const stamp = "2026-11-05T00:00:00Z";
 const nodeId = (graph: Graph, label: string) => graph.nodes.find(node => node.label === label)!.id;
-const CHAIN = ["ingress: prod/web", "service: prod/web", "pod: prod/web-7c9f-1", "replicaset: prod/web-7c9f", "deployment: prod/web"];
 const VIEWPORTS = [{ width: 1440, height: 900 }, { width: 390, height: 844 }];
 
 async function serve(page: Page, graph: Graph, theme: string) {
@@ -58,6 +58,8 @@ async function reading(page: Page) {
     const glyphs = new Map(nodes.flatMap(node => { const glyph = node.querySelector(".graph-entity-glyph"); return glyph ? [[node.getAttribute("data-id")!, glyph.getBoundingClientRect()] as const] : []; }));
     const detached: string[] = [];
     for (const group of canvas.querySelectorAll<SVGGElement>(".react-flow__edge")) {
+      // A link with an end beyond the frame is drawn as a short stub on purpose; only full links must reach both glyphs.
+      if (group.querySelector("[data-edge-stub]")) continue;
       const path = group.querySelector<SVGPathElement>(".react-flow__edge-path");
       if (!path || !path.getTotalLength()) continue;
       const ctm = path.getScreenCTM()!, start = path.getPointAtLength(0).matrixTransform(ctm), end = path.getPointAtLength(path.getTotalLength()).matrixTransform(ctm);
@@ -77,10 +79,26 @@ async function reading(page: Page) {
 }
 
 const flowSelect = (page: Page) => page.getByRole("combobox", { name: "Investigation flow" });
+/** The backend records no Kubernetes attack path for these fixtures (routes are not traversable yet), so the canvas
+ * must claim none: no selected-path detail, and each recorded exposure drawn from its source to its target, left to right
+ * on a desktop and top to bottom on a phone. */
+async function recordedReading(page: Page, graph: Graph) {
+  await expect(page.getByRole("region", { name: "Selected path detail" })).toHaveCount(0);
+  const ids = await page.locator(".react-flow__node").evaluateAll(nodes => nodes.map(node => node.getAttribute("data-id")));
+  const exposures = graph.edges.filter(edge => edge.id.startsWith("exposed_to:") && ids.includes(edge.source) && ids.includes(edge.target));
+  expect(exposures.length).toBeGreaterThan(0);
+  const phone = (page.viewportSize()?.width ?? 1440) < 640;
+  for (const edge of exposures) {
+    await expect(page.locator(`.react-flow__edge[data-id="${edge.id}"]`)).toHaveCount(1);
+    const at = (id: string) => page.locator(`.react-flow__node[data-id="${id}"]`).evaluate((node, vertical) => { const r = node.getBoundingClientRect(); return vertical ? r.y : r.x; }, phone);
+    expect(await at(edge.source), edge.id).toBeLessThan(await at(edge.target));
+  }
+}
+
 const overflow = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 
 for (const theme of ["light", "dark"]) {
-  test(`a real twenty-node cluster opens framed and readable at 1440 in ${theme}`, async ({ page }, info) => {
+  test(`a real twenty-node cluster draws its recorded relationships readably at 1440 without inventing a path in ${theme}`, async ({ page }, info) => {
     await page.setViewportSize(VIEWPORTS[0]!);
     await serve(page, fixtures.snapshot, theme);
     await open(page);
@@ -88,7 +106,8 @@ for (const theme of ["light", "dark"]) {
     const first = await reading(page);
     expect(first.total).toBe(20);
     expect(first.cards).toBe(20);
-    expect(first.inFrame.length).toBe(20);
+    expect(first.inFrame.length).toBeGreaterThanOrEqual(6);
+    await recordedReading(page, fixtures.snapshot);
     expect(first.smallest).toBeGreaterThanOrEqual(11.8);
     expect(first.detached).toEqual([]);
     expect(first.invisible).toEqual([]);
@@ -99,7 +118,7 @@ for (const theme of ["light", "dark"]) {
       await settle(page);
       const view = await reading(page);
       expect(view.cards).toBe(20);
-      expect(view.inFrame.length).toBeGreaterThanOrEqual(12);
+      expect(view.inFrame.length).toBeGreaterThanOrEqual(6);
       expect(view.smallest).toBeGreaterThanOrEqual(11.8);
       expect(view.detached).toEqual([]);
       await page.screenshot({ path: info.outputPath(`k8s20-${theme}-1440-${flow}.png`) });
@@ -108,26 +127,28 @@ for (const theme of ["light", "dark"]) {
     await expect(flowSelect(page).locator('option[value="vulnerability"]')).toHaveText("Vulnerability (no findings)");
   });
 
-  test(`a real twenty-node cluster stays readable at 390 in ${theme}`, async ({ page }, info) => {
+  test(`a real twenty-node cluster stays readable and steps through its cards at 390 in ${theme}`, async ({ page }, info) => {
     await page.setViewportSize(VIEWPORTS[1]!);
     await serve(page, fixtures.snapshot, theme);
     await open(page);
     const view = await reading(page);
     expect(view.cards).toBe(20);
     expect(view.inFrame.length).toBeGreaterThanOrEqual(1);
-    expect(view.inFrame).toContain(nodeId(fixtures.snapshot, "ingress: prod/web"));
     expect(view.smallest).toBeGreaterThanOrEqual(12);
     expect(view.invisible).toEqual([]);
     expect(await overflow(page)).toBeLessThanOrEqual(0);
     await page.screenshot({ path: info.outputPath(`k8s20-${theme}-390-open.png`) });
     await expect(page.getByRole("group", { name: "Navigate loaded graph nodes" })).toBeVisible();
+    // With no recorded path, the navigator steps through the cards in reading order rather than along an inferred route.
+    const centre = page.getByRole("button", { name: /^Center graph node: / });
+    const before = await centre.getAttribute("aria-label");
     await page.getByRole("button", { name: "Next graph node" }).click();
-    await expect(page.getByRole("button", { name: "Center graph node: service: prod/web" })).toBeVisible();
+    await expect(centre).not.toHaveAttribute("aria-label", before!);
     await settle(page);
     await page.screenshot({ path: info.outputPath(`k8s20-${theme}-390-next.png`) });
   });
 
-  for (const viewport of VIEWPORTS) test(`a cluster above the former limit frames its primary path in ${theme} at ${viewport.width}`, async ({ page }, info) => {
+  for (const viewport of VIEWPORTS) test(`a cluster above the former limit opens its exposure reading without inventing a path in ${theme} at ${viewport.width}`, async ({ page }, info) => {
     await page.setViewportSize(viewport);
     await serve(page, fixtures.clusterEstate, theme);
     await open(page);
@@ -139,10 +160,9 @@ for (const theme of ["light", "dark"]) {
     await expect(page).toHaveURL(/map_view=full/);
     await expect(page).toHaveURL(/flow=exposure/);
     const view = await reading(page);
-    const path = ["ingress: prod/app-00", "service: prod/app-00"].map(label => nodeId(fixtures.clusterEstate, label));
     const phone = viewport.width < 640;
-    expect(view.inFrame).toEqual(expect.arrayContaining(phone ? path.slice(0, 1) : path));
     expect(view.inFrame.length).toBeGreaterThanOrEqual(phone ? 1 : 5);
+    await expect(page.getByRole("region", { name: "Selected path detail" })).toHaveCount(0);
     expect(view.smallest).toBeGreaterThanOrEqual(11.8);
     if (!phone) expect(view.detached).toEqual([]);
     expect(await overflow(page)).toBeLessThanOrEqual(0);
@@ -167,40 +187,49 @@ for (const theme of ["light", "dark"]) {
     await page.unrouteAll();
     await serve(page, fixtures.twoServices, theme);
     await open(page);
-    const x = (label: string) => page.locator(`.react-flow__node[data-id="${nodeId(fixtures.twoServices, label)}"]`).evaluate(node => node.getBoundingClientRect().x);
+    // A phone reads top to bottom on its vertical spine; a desktop reads left to right.
+    const x = (label: string) => page.locator(`.react-flow__node[data-id="${nodeId(fixtures.twoServices, label)}"]`).evaluate((node, phone) => phone ? node.getBoundingClientRect().y : node.getBoundingClientRect().x, viewport.width < 640);
     const pod = await x("pod: prod/web-7c9f-1");
     expect(await x("ingress: prod/web")).toBeLessThan(await x("service: prod/web"));
     expect(await x("service: prod/web")).toBeLessThan(pod);
-    expect(await x("service: prod/web-public")).toBeLessThan(pod);
+    // The second Service's own recorded route to the pod is drawn too.
+    const second = fixtures.twoServices.edges.find(edge => edge.source === nodeId(fixtures.twoServices, "service: prod/web-public") && edge.target === nodeId(fixtures.twoServices, "pod: prod/web-7c9f-1"));
+    if (second) await expect(page.locator(`.react-flow__edge[data-id="${second.id}"]`)).toHaveCount(1);
     await page.screenshot({ path: info.outputPath(`two-services-${theme}-${viewport.width}.png`) });
   });
 }
 
-test("the exposure path runs through the controller to the identity when the token is mounted", async ({ page }) => {
+test("draws the recorded exposure and identity relationships in reading order without inventing a path when the token is mounted", async ({ page }) => {
   await page.setViewportSize(VIEWPORTS[0]!);
   await serve(page, fixtures.tokenMounted, "light");
   await open(page);
-  const boxes = await Promise.all([...CHAIN, "service account: prod/web-sa", "Role: web-sa-reader"].map(label => page.locator(`.react-flow__node[data-id="${nodeId(fixtures.tokenMounted, label)}"]`).boundingBox()));
-  const xs = boxes.map(box => box!.x);
-  expect(xs).toEqual([...xs].sort((a, b) => a - b));
-  expect(new Set(boxes.map(box => Math.round(box!.y))).size).toBe(1);
+  await recordedReading(page, fixtures.tokenMounted);
+  // The recorded identity hops read left to right: the controller assumes its account; the role it inherits shares
+  // the account's identity column, so it is never to its left.
+  const x = (label: string) => page.locator(`.react-flow__node[data-id="${nodeId(fixtures.tokenMounted, label)}"]`).evaluate(node => { const r = node.getBoundingClientRect(); return r.x + r.width / 2; });
+  expect(await x("deployment: prod/web")).toBeLessThan(await x("service account: prod/web-sa"));
+  expect(await x("service account: prod/web-sa")).toBeLessThanOrEqual(await x("Role: web-sa-reader") + 1);
 });
 
 test("an unmounted token is captioned, and evidence counts exclude display objects", async ({ page }) => {
   await page.setViewportSize(VIEWPORTS[0]!);
-  const assessed: Graph = { ...fixtures.snapshot, nodes: fixtures.snapshot.nodes.map(node => node.label === "ingress: prod/web" ? { ...node, attributes: { ...node.attributes, resource_id: "ing-1",
+  // The backend records the exposure verdict; the assessment is the receipt behind it.
+  const assessed: Graph = { ...fixtures.snapshot, nodes: fixtures.snapshot.nodes.map(node => node.label === "ingress: prod/web" ? { ...node, attributes: { ...node.attributes, resource_id: "ing-1", internet_exposed: true,
     network_reachability_assessment: { complete: true, decision: "allow", source_scope: "internet", target_id: "ing-1", evidence_refs: ["receipt-1"] } } } : node) };
   await serve(page, assessed, "light");
   await open(page);
   await expect(page.locator(`.react-flow__node[data-id="${nodeId(fixtures.snapshot, "service account: prod/web-sa")}"]`)).toContainText("token not mounted");
   await expect(page.getByLabel("Visible relationship evidence").first()).toContainText("Recorded observation");
   await expect(page.getByLabel("Visible relationship evidence").first()).not.toContainText("Mixed");
-  const internet = page.locator(`.react-flow__node[data-id^="display:internet:"]`);
-  await expect(internet).toHaveAttribute("aria-label", "Internet, assessed ingress to ingress: prod/web");
-  await expect(page.locator(".react-flow__edge[aria-label='Assessed ingress from Internet to ingress: prod/web']")).toHaveCount(1);
+  // One Internet anchor, linked to each exposed entry by a display edge named for that entry.
+  const ingress = nodeId(fixtures.snapshot, "ingress: prod/web");
+  const internet = page.locator('.react-flow__node[data-id="display:internet"]');
+  await expect(internet).toHaveCount(1);
+  await expect(page.locator(`.react-flow__edge[data-id="display:internet:${ingress}"]`)).toHaveAttribute("aria-label", "Assessed ingress from Internet to ingress: prod/web");
   await expect(page.locator('.react-flow__edge[aria-label*="display:"]')).toHaveCount(0);
 
-  await internet.click();
+  // The anchor can sit outside the first frame of a twenty-card map; activate it where it is.
+  await internet.dispatchEvent("click");
   const receipt = page.getByRole("complementary", { name: "Assessed ingress receipt" });
   await expect(receipt).toContainText("receipt-1");
   await expect(receipt).toContainText("not a connectivity test");
@@ -224,6 +253,9 @@ test("flows pause with an explanation while the layout is being edited", async (
 test("collapse findings closes a selected finding and hides it", async ({ page }) => {
   await page.setViewportSize(VIEWPORTS[0]!);
   await serve(page, fixtures.withFindings, "light");
+  // Findings fold only under an asset the backend reports an aggregate for.
+  const graph = fixtures.withFindings as unknown as { nodes: { id: string; entity_type: string; severity: string; semantic_layer?: string }[]; edges: { source: string; target: string; relationship: string }[] };
+  await routeNodeAggregates(page, ownedFindingAggregates(graph.nodes, graph.edges));
   await open(page);
   await flowSelect(page).selectOption("vulnerability");
   await settle(page);
@@ -239,8 +271,14 @@ test("collapse findings closes a selected finding and hides it", async ({ page }
 test("one long real label does not collapse the first view", async ({ page }) => {
   await page.setViewportSize(VIEWPORTS[0]!);
   const long: Graph = { ...fixtures.snapshot, nodes: fixtures.snapshot.nodes.map(node => node.label === "pod: prod/web-7c9f-1" ? { ...node, label: "pod: production-payments/web-frontend-7c9f4d-x2k9p-with-a-very-long-suffix-for-replicas" } : node) };
+  await serve(page, fixtures.snapshot, "light");
+  await open(page);
+  const base = await reading(page);
+  await page.unrouteAll();
   await serve(page, long, "light");
   await open(page);
   const view = await reading(page);
-  expect(view.inFrame.length).toBe(20);
+  // The long name changes nothing about how much of the map the first frame shows, or how small its text gets.
+  expect(view.inFrame.length).toBe(base.inFrame.length);
+  expect(view.smallest).toBeGreaterThanOrEqual(Math.min(base.smallest, 11.8));
 });

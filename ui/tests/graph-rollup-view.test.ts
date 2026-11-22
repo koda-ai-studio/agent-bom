@@ -1,3 +1,4 @@
+import { SEMANTIC_ROW_GAP } from "@/lib/graph-semantic-layout";
 import { describe, expect, it } from "vitest";
 
 import type { GraphRollupContainer } from "@/lib/api-types";
@@ -17,6 +18,7 @@ function sampleContainer(
     id: "account:prod",
     label: "prod",
     entity_type: "account",
+    semantic_layer: "scope",
     severity: "",
     is_container: true,
     has_children: true,
@@ -95,12 +97,12 @@ describe("buildRollupFlowGraph", () => {
   });
 
   it("routes reverse-order links from facing card edges without crossing scope cards", () => {
-    const { edges } = buildRollupFlowGraph([sampleContainer(), sampleContainer({ id: "account:dev" })], { edges: [{ source: "account:dev", target: "account:prod", count: 35, relationships: ["can_access", "uses"] }] });
-    expect(edges[0]?.sourceHandle).toBe("scope-source-left");
-    expect(edges[0]?.targetHandle).toBe("scope-target-right");
+    const { edges } = buildRollupFlowGraph([sampleContainer(), sampleContainer({ id: "account:dev", semantic_layer: "asset" })], { edges: [{ source: "account:dev", target: "account:prod", count: 35, relationships: ["can_access", "uses"] }] });
+    expect(edges[0]?.sourceHandle).toBe("context");
+    expect(edges[0]?.targetHandle).toBe("context");
   });
 
-  it("lays out containers on a grid with rollup metadata", () => {
+  it("lays out sibling containers in their backend column with unchanged rollup metadata", () => {
     const { nodes, edges } = buildRollupFlowGraph([
       sampleContainer(),
       sampleContainer({
@@ -120,9 +122,9 @@ describe("buildRollupFlowGraph", () => {
     expect(edges).toHaveLength(0);
     expect(nodes).toHaveLength(2);
     expect(nodes[0]?.id).toBe("account:prod");
-    expect(nodes[0]?.position).toEqual({ x: 0, y: 0 });
-    expect(nodes[1]?.position).toEqual({ x: 440, y: 0 });
-    expect(nodes[1]!.position.x - nodes[0]!.position.x).toBeGreaterThanOrEqual(300 + 32);
+    expect(nodes[0]?.position.x).toBe(0);
+    expect(nodes[1]?.position.x).toBe(nodes[0]?.position.x);
+    expect(Math.abs(nodes[1]!.position.y - nodes[0]!.position.y)).toBeGreaterThanOrEqual(SEMANTIC_ROW_GAP);
     expect(nodes[0]?.data.attributes?.rollup_has_children).toBe(true);
     expect(nodes[0]?.data.rollup).toEqual(sampleContainer());
     expect(nodes[0]?.data.description).toContain("select to inspect scope");
@@ -163,10 +165,10 @@ describe("scope cards on a phone", () => {
     expect(phoneStacksScopes(false, 6)).toBe(false);
     expect(phoneStacksScopes(true, 0)).toBe(false);
     const containers = Array.from({ length: 6 }, (_, i) => sampleContainer({ id: `scope:${i}`, label: `scope ${i}` }));
+    // Unlinked scopes in one layer wrap into a reading-order grid; the phone portrait pass stacks them.
     const { nodes } = buildRollupFlowGraph(containers, { columns: 1 });
-    expect(new Set(nodes.map(node => node.position.x))).toEqual(new Set([0]));
-    const ys = nodes.map(node => node.position.y);
-    expect(ys).toEqual([...ys].sort((a, b) => a - b));
-    expect(new Set(ys).size).toBe(6);
+    const order = [...nodes].sort((a, b) => a.position.y - b.position.y || a.position.x - b.position.x).map(node => node.id);
+    expect(order).toEqual(containers.map(container => container.id));
+    expect(new Set(nodes.map(node => `${node.position.x},${node.position.y}`)).size).toBe(6);
   });
 });
