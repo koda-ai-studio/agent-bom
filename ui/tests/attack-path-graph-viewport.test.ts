@@ -46,17 +46,17 @@ describe("attack path viewport", () => {
     }
   });
 
-  it("keeps the phone path left to right on a scrollable canvas at readable zoom", () => {
+  it("keeps the phone path vertical without a sideways canvas at readable zoom", () => {
     const { graph, selected } = demoFixture("headline");
     const model = buildAttackPathGraphModel(graph, selected);
     const layout = layoutAttackPathGraph(model, "TB");
-    expect(layout.direction).toBe("LR");
-    expect(layout.positions).toEqual(layoutAttackPathGraph(model, "LR").positions);
+    expect(layout.direction).toBe("TB");
+    expect(new Set(model.pathNodeIds.map(id => layout.positions.get(id)!.x)).size).toBe(1);
     for (const frameWidth of [342, 520]) {
       const width = attackPathCanvasWidth(layout, true, frameWidth);
       const pane = { width, height: attackPathCanvasHeight(layout, true, width) };
       const viewport = attackPathViewport(layout, model.pathNodeIds, pane, NARROW_MIN_ZOOM);
-      expect(width).toBeGreaterThan(frameWidth);
+      expect(width).toBe(frameWidth);
       expect(viewport.zoom).toBeGreaterThanOrEqual(NARROW_MIN_ZOOM);
       expect(viewport.hiddenNodeIds).toEqual([]);
       for (const box of screenBoxes(layout, viewport)) {

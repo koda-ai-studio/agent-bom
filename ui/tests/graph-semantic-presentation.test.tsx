@@ -58,11 +58,11 @@ it("shows a supplied risk score without claiming an undocumented assessment", ()
   expect(graphSemanticRiskLabel(undefined, undefined)).toBe("Not assessed");
 });
 
-it("shows the supplied risk score on the semantic node with its assessment qualification", () => {
+it("keeps unassessed risk qualification available without repeating a canvas badge", () => {
   const Renderer = lineageNodeTypes.containerNode;
   const { container } = render(<ReactFlowProvider><Renderer data={{ label: "Workload", nodeType: "container", semanticLayout: true, riskScore: 72 }} /></ReactFlowProvider>);
-  expect(container.querySelector("[data-semantic-risk]")).toHaveTextContent("72.0");
-  expect(container.querySelector("[data-semantic-risk]")).toHaveTextContent(/not recorded/i);
+  expect(container.querySelector("[data-semantic-risk]")).toBeNull();
+  expect(graphSemanticRiskLabel(72, undefined)).toMatch(/72.0.*not recorded/i);
 });
 
 it("lists only drawn relationship kinds even when only one kind is present", () => {

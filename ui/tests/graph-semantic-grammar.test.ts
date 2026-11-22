@@ -77,12 +77,13 @@ import { semanticGraphLayout } from "@/lib/graph-semantic-layout";
 import { hopColumnLayout } from "@/lib/graph-hop-columns";
 import { layoutAttackPathGraph } from "@/lib/attack-path-graph-layout";
 
-it("keeps the selected path left-to-right on mobile with symmetric sibling lanes", () => {
+it("keeps a vertical mobile spine and symmetric desktop sibling lanes", () => {
   const { graph, selected } = branchingFixture();
   const model = buildAttackPathGraphModel(graph, selected);
   const desktop = layoutAttackPathGraph(model, "LR"), mobile = layoutAttackPathGraph(model, "TB");
-  expect(mobile.direction).toBe("LR");
-  expect(mobile.positions).toEqual(desktop.positions);
+  expect(desktop.direction).toBe("LR");
+  expect(mobile.direction).toBe("TB");
+  expect(new Set(model.pathNodeIds.map(id => mobile.positions.get(id)!.x)).size).toBe(1);
   const branches = ["a", "b"].map(id => ({ ...model.nodes[0]!, id, role: "branch" as const, semanticLayer: "mcp_server" }));
   const paired = layoutAttackPathGraph({ ...model, nodes: [...model.nodes.filter(n => model.pathNodeIds.includes(n.id)), ...branches], edges: [] }, "LR");
   expect(paired.lanes.get("a")).toBe(-paired.lanes.get("b")!);
