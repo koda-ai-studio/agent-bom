@@ -28,7 +28,7 @@ function contextOwners(nodes: Node<LineageNodeData>[], edges: Edge[], primary: R
 }
 
 /** Display nodes drawn beside another node's rank rather than in a backend column. */
-function attachedRanks(visible: Node<LineageNodeData>[], edges: Edge[]) {
+function attachedRanks(visible: Node<LineageNodeData>[], edges: Edge[], columns: Map<string, number>) {
   const ids = new Set(visible.map(node => node.id));
   const attached = new Map<string, { to: string; offset: number }>();
   const exposed = edges.filter(edge => edge.source === INTERNET_ANCHOR_ID && ids.has(edge.target)).map(edge => edge.target);
@@ -37,7 +37,46 @@ function attachedRanks(visible: Node<LineageNodeData>[], edges: Edge[]) {
     const owner = node.data.displayTargetId;
     if (node.type === "findingGroupNode" && node.data.displayOnly && owner && ids.has(owner)) attached.set(node.id, { to: owner, offset: 0.5 });
   }
+  for (const [id, owners] of ownerAdjacent(visible, edges, columns)) if (!attached.has(id)) attached.set(id, { to: owners.join("\n"), offset: 0.5 });
   return attached;
+}
+
+const OWNED_BY_TARGET = new Set(["contains", "depends_on", "hosts", "runs", "uses_framework"]);
+const FINDING_LINKS = new Set(["vulnerable_to", "exhibits_drift"]);
+
+/** A package sits one rank right of its nearest recorded owner or dependent, and a
+ * finding one rank right of its package, instead of across the canvas in their
+ * backend column: their links stay short. The backend layer itself is unchanged. */
+function ownerAdjacent(visible: Node<LineageNodeData>[], edges: Edge[], columns: Map<string, number>) {
+  const layer = new Map(visible.map(node => [node.id, semanticLayer(node)]));
+  const owners = new Map<string, string[]>();
+  const add = (child: string, owner: string) => owners.set(child, [...(owners.get(child) ?? []), owner]);
+  for (const edge of edges) {
+    if (!layer.has(edge.source) || !layer.has(edge.target) || edge.source === edge.target) continue;
+    const kind = String(edge.data?.relationship ?? "");
+    if (layer.get(edge.target) === "package" && OWNED_BY_TARGET.has(kind) && layer.get(edge.source) !== "package") add(edge.target, edge.source);
+    if (layer.get(edge.target) === "finding" && FINDING_LINKS.has(kind) && layer.get(edge.source) === "package") add(edge.target, edge.source);
+    if (layer.get(edge.source) === "finding" && kind === "affects" && layer.get(edge.target) === "package") add(edge.source, edge.target);
+  }
+  const out = new Map<string, string[]>();
+  for (const [id, list] of owners) {
+    const nearest = Math.max(...list.map(owner => columns.get(owner) ?? 0));
+    if (layer.get(id) === "package" && (columns.get(id) ?? 0) - nearest > 1) out.set(id, list);
+  }
+  // A leaf with one owner far to its left joins that owner's fan instead of trailing a long link across the canvas.
+  const degree = new Map<string, Set<string>>();
+  for (const edge of edges) if (layer.has(edge.source) && layer.has(edge.target) && edge.source !== edge.target) {
+    degree.set(edge.source, (degree.get(edge.source) ?? new Set()).add(edge.target));
+    degree.set(edge.target, (degree.get(edge.target) ?? new Set()).add(edge.source));
+  }
+  for (const [id, linked] of degree) {
+    const [owner] = linked;
+    if (linked.size !== 1 || out.has(id) || owners.has(id) || layer.get(id) === null || (degree.get(owner!)?.size ?? 0) < 2) continue;
+    if ((columns.get(id) ?? 0) - (columns.get(owner!) ?? 0) > 1) out.set(id, [owner!]);
+  }
+  // A finding follows its package only when that package moved.
+  for (const [id, list] of owners) if (layer.get(id) === "finding" && list.some(owner => out.has(owner))) out.set(id, list);
+  return out;
 }
 
 /** One left-to-right grammar for every canvas. The backend's selected path
@@ -57,7 +96,7 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
   const images = workloadImageContext(visible, edges);
   for (const [id, owner] of images.owners) if (!onPath.has(id)) owners.set(id, owner);
   const { positions, lanes } = compactLayout({ ids: visible.map(node => node.id), links: drawn, column: id => columns.get(id) ?? 0,
-    spine: primary, attached: attachedRanks(visible, drawn) });
+    spine: primary, attached: attachedRanks(visible, drawn, columns) });
   const pathPairs = new Set(primary.slice(1).map((id, index) => `${primary[index]}\u0000${id}`));
   return {
     nodes: nodes.map(node => ({ ...node, position: positions.get(node.id) ?? node.position,

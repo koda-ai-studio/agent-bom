@@ -49,8 +49,8 @@ export function AttackPathGraphEdge(props: EdgeProps<AttackPathFlowEdge>) {
   const [path, labelX, labelY] = curve ? [curve.path, curve.mid.x, curve.mid.y] : relationshipPath(props, nodes.filter(node => !node.hidden).map(node => ({ id: node.id, ...node.position,
     width: node.measured?.width ?? node.width ?? 152, height: node.measured?.height ?? node.height ?? 136 })), lane);
   const label = { x: labelX, y: labelY };
-  // A selected-path hop names its relationship on the line at all times: above it on a row (lines that turn
-  // into branch rows leave below it) and beside it on a phone column. A branch names its own on hover or focus.
+  // On a row a selected-path hop names its relationship on the line at all times (lines that turn into branch
+  // rows leave below it). A phone column has no room beside the line, so there every link names itself on hover or focus.
   const transform = direction === "TB"
     ? `translate(10px, -50%) translate(${label.x}px, ${label.y}px)`
     : `translate(-50%, -100%) translate(${label.x}px, ${label.y - 4}px)`;
@@ -64,7 +64,7 @@ export function AttackPathGraphEdge(props: EdgeProps<AttackPathFlowEdge>) {
       }} />
     {trace && <path key={trace.key} data-path-trace={trace.index} d={path} pathLength={1} aria-hidden="true"
       className="attack-path-trace" style={{ animationDuration: `${trace.duration}ms`, animationDelay: `${trace.delay}ms` }} />}
-    {(active || edge.onPath) && <EdgeName active={active} transform={transform}
+    {(active || (edge.onPath && direction !== "TB")) && <EdgeName active={active} transform={transform}
       text={`${edge.relationshipLabel}${active && edge.bidirectional ? " · two-way" : ""}`}
       room={direction === "TB" || active ? 0 : Math.abs(props.targetX - props.sourceX) - 12} />}
   </>;

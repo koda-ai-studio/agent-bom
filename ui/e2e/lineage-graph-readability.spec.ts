@@ -1112,6 +1112,7 @@ for (const theme of ["light", "dark"] as const) {
     await settledViewportZoom(page);
     await expect(page.locator(".graph-relationship-label")).toHaveCount(0);
     expect(await graphGrammarViolations(page)).toEqual({});
+    await page.screenshot({ path: testInfo.outputPath(`expanded-reference-rest-${theme}.png`), fullPage: true });
     const runtimeEdge = graph.edges.find((edge: { relationship: string }) => edge.relationship === "invoked");
     expect(runtimeEdge).toBeDefined();
     await page.locator(`.react-flow__edge[data-id="${runtimeEdge.id}"]`).focus();

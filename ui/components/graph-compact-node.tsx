@@ -25,11 +25,14 @@ const GLYPH = "calc(var(--graph-node-glyph-size, 56px) * 0.7)";
 const ICON = "calc(var(--graph-node-icon-size, 28px) * 0.7)";
 const META = { fontSize: "var(--graph-node-meta-size, 12px)" };
 
-/** Long identifiers keep their distinguishing tail; CSS elides the middle only when it does not fit. */
-export function nameParts(name: string): [string, string] {
-  if (name.length <= 16) return [name, ""];
-  const tail = Math.min(8, Math.floor(name.length / 3));
-  return [name.slice(0, -tail), name.slice(-tail)];
+const NAME_LIMIT = 28;
+
+/** Canvas name: an image digest reads as its short tail, and only names past
+ * 28 characters lose their middle. The full name stays in the title and drawer. */
+export function canvasName(name: string): string {
+  const digest = name.match(/^(.*)@sha256:([0-9a-f]{8,})$/i);
+  const base = digest ? digest[1]! : name, suffix = digest ? ` @ ${digest[2]!.slice(-8)}` : "";
+  return (base.length <= NAME_LIMIT ? base : `${base.slice(0, 18).trimEnd()}…${base.slice(-9).trimStart()}`) + suffix;
 }
 
 function typeLine(data: LineageNodeData, title: string): string {
@@ -104,7 +107,6 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
   const severity = findingSeverity(data);
   const { badges, ring } = nodeBadges(data);
   const title = typeof data.attributes?.display_title === "string" && data.attributes.display_title.trim() ? data.attributes.display_title : data.label;
-  const [head, tail] = nameParts(title);
   const held = data.heldConnections ? `${data.heldConnections} more ${data.heldConnections === 1 ? "connection" : "connections"} not drawn` : undefined;
   const tooltip = [graphNodeTooltip(data), data.evidenceFlowContext, ring?.description, held,
     ...(data.readingConnections ?? []).map(summary => `${summary.relationship === "hosts" ? "Hosts" : "Contains"} ${summary.label} in this view`)].filter(Boolean).join(" · ");
@@ -122,8 +124,8 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
       <FindingDisclosure data={data} />
       {held && <span data-testid="graph-held-connections" className="sr-only">{held}</span>}
     </div>
-    <p data-semantic-name title={title} className="mt-[0.3em] flex min-w-0 max-w-full whitespace-nowrap font-semibold leading-[1.15] text-foreground" style={{ fontSize: "var(--graph-node-label-size, 14px)" }}>
-      <span className="min-w-0 truncate whitespace-pre">{head}</span>{tail && <span className="shrink-0 whitespace-pre">{tail}</span>}
+    <p data-semantic-name title={title} className="mt-[0.3em] line-clamp-2 max-w-full font-semibold leading-[1.15] text-foreground [overflow-wrap:anywhere]" style={{ fontSize: "var(--graph-node-label-size, 14px)" }}>
+      <span>{canvasName(title)}</span>
     </p>
     <span data-graph-caption data-entity-role className="block max-w-full truncate leading-[1.15] text-ink-secondary" style={META}>
       {typeLine(data, title)}

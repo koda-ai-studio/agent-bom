@@ -57,6 +57,15 @@ describe("compact attack-path layout", () => {
     expect(new Set(ys).size).toBe(3);
   });
 
+  it("puts a package one rank right of its far-left owner and its finding one rank further", () => {
+    const nodes = [node("api", "container"), node("tool", "tool"), node("pkg", "package"), node("cve", "vulnerability"), node("agent", "agent")];
+    const result = semanticGraphLayout(nodes, [edge("api", "pkg", "contains"), edge("pkg", "cve", "vulnerable_to"), edge("api", "agent", "runs"), edge("agent", "tool")]);
+    expect(at(result, "pkg").x).toBeGreaterThan(at(result, "api").x);
+    expect(at(result, "pkg").x).toBeLessThan(at(result, "agent").x);
+    expect(at(result, "cve").x).toBeGreaterThan(at(result, "pkg").x);
+    expect(at(result, "cve").x).toBeLessThan(at(result, "tool").x);
+  });
+
   it("never stacks two nodes of one rank closer than the row gap", () => {
     const servers = Array.from({ length: 5 }, (_, i) => node(`s${i}`, "server"));
     const agents = [node("a1", "agent"), node("a2", "agent")];
@@ -85,6 +94,18 @@ describe("compact attack-path layout", () => {
     expect(drawn.type).toBe("compact");
     expect(drawn.sourceHandle).toBe("context");
     expect(drawn.targetHandle).toBe("context");
+  });
+
+  it("lays out a large map quickly and still keeps every rank's rows apart", () => {
+    const kinds = ["user", "container", "cloudResource", "agent", "server", "tool", "package", "vulnerability"];
+    const nodes = Array.from({ length: 600 }, (_, i) => node(`n${i}`, kinds[i % kinds.length]!));
+    const edges = Array.from({ length: 1800 }, (_, i) => edge(`n${(i * 7) % 600}`, `n${(i * 13 + 5) % 600}`));
+    const started = performance.now();
+    const result = semanticGraphLayout(nodes, edges.filter(e => e.source !== e.target));
+    expect(performance.now() - started).toBeLessThan(3000);
+    const ranks = new Map<number, number[]>();
+    for (const n of result.nodes) ranks.set(n.position.x, [...(ranks.get(n.position.x) ?? []), n.position.y]);
+    for (const ys of ranks.values()) ys.sort((a, b) => a - b).slice(1).forEach((y, i) => expect(y - ys[i]!).toBeGreaterThanOrEqual(COMPACT_ROW_GAP - 1));
   });
 
   it("lays out a disconnected single-rank roll-up as a grid rather than a tower", () => {
