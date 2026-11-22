@@ -56,10 +56,11 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
       if (await inspector.isVisible()) await inspector.getByRole("button", {name: "Close", exact: true}).click();
       await page.getByRole("group", {name: "Investigation view"}).getByRole("button", {name: "Graph", exact: true}).click();
     } else {
-      // Repeated verbs from the root show once with their count; each keeps its evidence qualifier.
-      await expect(page.locator(".graph-relationship-label")).toHaveCount(2);
-      await expect(page.locator(".graph-relationship-label").filter({hasText: /configured/})).toHaveCount(2);
-      await expect(page.locator(".graph-relationship-label").filter({hasText: /×2/})).toHaveCount(1);
+      // The compact canvas names a relationship only when it is inspected.
+      await expect(page.locator(".graph-relationship-label")).toHaveCount(0);
+      await page.locator('.react-flow__edge:not([data-id^="display:"])').first().focus();
+      await expect(page.locator(".graph-relationship-label")).toHaveCount(1);
+      await page.locator('.react-flow__edge:not([data-id^="display:"])').first().blur();
     }
     if (width === 390 && await inspector.isVisible()) await inspector.getByRole("button", {name: "Close", exact: true}).click();
     await page.getByRole("button", {name: "Show more connections", exact: true}).click();

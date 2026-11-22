@@ -35,12 +35,12 @@ export function compactEdgeCurve(props: Pick<EdgeProps, "sourceX" | "sourceY" | 
   return { path: `M ${source.x},${source.y} C ${c1.x},${c1.y} ${c2.x},${c2.y} ${target.x},${target.y}`, mid };
 }
 
-/** An inspected link names its relationship and evidence in full. */
+/** An inspected link names its relationship and evidence in full, just above the line: names hang below glyphs. */
 function InspectLabel({ id, at, relationship, text }: { id: string; at: Point; relationship: string; text: React.ReactNode }) {
   const zoom = useStore(state => state.transform[2]);
   return <EdgeLabelRenderer>
     <div data-edge-id={id} data-inspecting="true" className="nodrag nopan graph-relationship-label"
-      style={{ position: "absolute", transform: `translate(-50%, -50%) translate(${at.x}px, ${at.y}px)`, fontSize: 12.5 / Math.max(zoom, 0.16), pointerEvents: "none", whiteSpace: "nowrap" }}>
+      style={{ position: "absolute", transform: `translate(-50%, -100%) translate(${at.x}px, ${at.y - 28 / Math.max(zoom, 0.16)}px)`, fontSize: 12.5 / Math.max(zoom, 0.16), pointerEvents: "none", whiteSpace: "nowrap" }}>
       <RelationshipBadge relationship={relationship}>{text}</RelationshipBadge>
     </div>
   </EdgeLabelRenderer>;
