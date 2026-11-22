@@ -212,7 +212,8 @@ export function compactLayout(input: CompactInput): { positions: Map<string, Poi
       // A lane slot sits between both of its ends, and is ordered by the end it is heading to,
       // so a long link stays inside their span instead of looping around nodes on the way.
       const lane = dummies.get(id);
-      if (!lane) { desired.set(id, mean(lead) ?? mean(trail) ?? y.get(id)!); key.set(id, desired.get(id)!); continue; }
+      // A card linked only to peers of its own rank sits among them, so those links stay between neighbours.
+      if (!lane) { desired.set(id, mean(lead) ?? mean(trail) ?? mean(all.filter(n => rank.get(n) === r)) ?? y.get(id)!); key.set(id, desired.get(id)!); continue; }
       const [lo, hi] = [y.get(lane.ends[0])!, y.get(lane.ends[1])!].sort((a, b) => a - b);
       const within = (value: number) => Math.min(hi!, Math.max(lo!, value));
       desired.set(id, within(mean(all) ?? y.get(id)!));
@@ -259,7 +260,7 @@ export function compactLayout(input: CompactInput): { positions: Map<string, Poi
   // A link no curve can clear would be drawn through a glyph, which reads as a false route: move the card in its way
   // off the curve (never a spine hop or one of the link's ends) and draw again.
   for (let pass = 0; pass < 3 && behind.size && ids.length <= REFINE_CARDS; pass++) {
-    const moved = clearGlyphs(links.filter(link => link.id && behind.has(link.id)), ids, links, positions, tall, onSpine);
+    const moved = clearGlyphs(links.filter(link => link.id && behind.has(link.id)), ids, links, positions, tall, onSpine, input.caption, zoom);
     if (!moved) break;
     ({ arcs, behind } = linkArcs(links, positions, input.caption, COMPACT_NODE_WIDTH, zoom));
   }
@@ -294,6 +295,17 @@ function segmentsCross(a: Point, b: Point, c: Point, d: Point): boolean {
   return side(a, b, c) * side(a, b, d) < 0 && side(c, d, a) * side(c, d, b) < 0;
 }
 
+/** Links inside one column with a card between their ends: no curve stays within their span, so they loop round it. */
+function boxedPeerLinks(drawn: readonly Link[], positions: ReadonlyMap<string, Point>): number {
+  const all = [...positions.values()];
+  return drawn.filter(link => {
+    const a = positions.get(link.source), b = positions.get(link.target);
+    if (!a || !b || a.x !== b.x) return false;
+    const [lo, hi] = a.y < b.y ? [a.y, b.y] : [b.y, a.y];
+    return all.some(p => p.x === a.x && p.y > lo && p.y < hi);
+  }).length;
+}
+
 /** Placement cost: a link that cannot be drawn as a plain curve clear of every caption costs most,
  * then crossings between links, then how far links climb or fall. */
 function placementCost(links: readonly Link[], positions: ReadonlyMap<string, Point>, caption: (id: string) => CaptionText, zoom: number): number {
@@ -307,7 +319,7 @@ function placementCost(links: readonly Link[], positions: ReadonlyMap<string, Po
       if (segmentsCross(a, b, positions.get(other.source)!, positions.get(other.target)!)) crossings++;
     }
   });
-  return blockedLinkCount(drawn, positions, caption, COMPACT_NODE_WIDTH, zoom) * 1000 + crossings * 40 + climb * 4;
+  return (blockedLinkCount(drawn, positions, caption, COMPACT_NODE_WIDTH, zoom) + boxedPeerLinks(drawn, positions)) * 1000 + crossings * 40 + climb * 4;
 }
 
 /** A card with the run of single-link cards leading into it from the left (an entry chain such as
@@ -535,17 +547,37 @@ function clearLevelLinks(ids: readonly string[], links: readonly Link[], positio
 /** Moves each non-spine card whose glyph sits on a blocked link's curve to the nearest free row of its rank
  * that stands on no level link. Returns whether anything moved. */
 function clearGlyphs(blocked: readonly Link[], ids: readonly string[], links: readonly Link[], positions: Map<string, Point>,
-  tall: (id: string) => number | undefined, spine: ReadonlySet<string>): boolean {
+  tall: (id: string) => number | undefined, spine: ReadonlySet<string>, caption?: (id: string) => CaptionText, zoom?: number): boolean {
   let moved = false;
-  for (const link of blocked) for (const id of glyphsOnCurve(link, positions)) {
-    if (spine.has(id)) continue;
+  // A move may not put a card between two linked peers of its column: that link would then loop round it.
+  const shift = (id: string, clear: (trial: Map<string, Point>) => boolean) => {
     const here = positions.get(id)!;
-    const peers = ids.filter(other => other !== id && positions.get(other)!.x === here.x).map(other => ({ y: positions.get(other)!.y, room: Math.max(COMPACT_ROW_GAP, tall(other) ?? 0) }));
-    const room = Math.max(COMPACT_ROW_GAP, tall(id) ?? 0);
+    const under = (card: string) => Math.max(COMPACT_ROW_GAP, tall(card) ?? 0);
+    const peers = ids.filter(other => other !== id && positions.get(other)!.x === here.x).map(other => ({ y: positions.get(other)!.y, room: under(other) }));
+    const room = under(id), boxed = boxedPeerLinks(links, positions);
     for (let step = 1; step < 20; step++) {
-      const y = [here.y - step * COMPACT_ROW_GAP, here.y + step * COMPACT_ROW_GAP].find(candidate => peers.every(peer => peer.y < candidate ? candidate - peer.y >= peer.room : peer.y - candidate >= room)
-        && glyphsOnCurve(link, new Map([...positions, [id, { x: here.x, y: candidate }]])).every(other => other !== id));
-      if (y !== undefined) { positions.set(id, { x: here.x, y }); moved = true; break; }
+      for (const y of [here.y - step * COMPACT_ROW_GAP, here.y + step * COMPACT_ROW_GAP]) {
+        if (!peers.every(peer => peer.y < y ? y - peer.y >= peer.room : peer.y - y >= room)) continue;
+        const trial = new Map([...positions, [id, { x: here.x, y }]]);
+        if (clear(trial) && boxedPeerLinks(links, trial) <= boxed) { positions.set(id, { x: here.x, y }); return true; }
+      }
+    }
+    return false;
+  };
+  for (const link of blocked) {
+    let cleared = false;
+    for (const id of glyphsOnCurve(link, positions)) {
+      if (spine.has(id)) continue;
+      if (shift(id, trial => glyphsOnCurve(link, trial).every(other => other !== id))) cleared = moved = true;
+    }
+    if (cleared) continue;
+    // No card in the way can move: move one end of the link instead.
+    // Like the search, it may not grow the layout past the zoom captions were judged at, and must leave fewer links blocked.
+    if (!caption || zoom === undefined) continue;
+    const blockedNow = blockedLinkCount(links, positions, caption, COMPACT_NODE_WIDTH, zoom);
+    for (const end of [link.target, link.source]) {
+      if (spine.has(end) || !positions.has(end)) continue;
+      if (shift(end, trial => fitZoom(trial, COMPACT_NODE_WIDTH) >= zoom && blockedLinkCount(links, trial, caption, COMPACT_NODE_WIDTH, zoom) < blockedNow)) { moved = true; break; }
     }
   }
   return moved;

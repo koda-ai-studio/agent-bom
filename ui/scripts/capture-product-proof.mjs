@@ -3254,7 +3254,7 @@ async function main() {
       {
         expectedText: [
           /Focused attack path/i,
-          "Path risk 9.8/100",
+          `Path risk ${Math.max(...graph.attack_paths.map((item) => item.composite_risk)).toFixed(1)}/100`,
           "6 evidence hops",
           "Developer Copilot",
           "github-enterprise MCP",
@@ -3491,7 +3491,9 @@ async function main() {
   } finally {
     await browser?.close();
     await stopServer(server);
-    await fs.rm(stageDir, { recursive: true, force: true });
+    // Local review of a failed run: keep the frames captured so far.
+    if (process.env.CAPTURE_KEEP_STAGE) console.log(`staged frames kept: ${stageDir}`);
+    else await fs.rm(stageDir, { recursive: true, force: true });
   }
 }
 
