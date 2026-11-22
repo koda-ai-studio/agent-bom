@@ -205,7 +205,7 @@ describe("the reading of each flow", () => {
     const owner = result.edges.find(edge => edge.source === controller.id && edge.target === pod.id)!;
     expect(owner).toBeDefined();
     expect(owner.sourceHandle).toBeNull();
-    expect(owner.targetHandle).toBeNull();
+    expect(owner.targetHandle).toBe("context");
   });
 
   it("treats drift incidents like other findings when one asset owns them", () => {
