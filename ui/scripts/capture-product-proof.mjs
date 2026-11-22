@@ -3022,6 +3022,8 @@ async function main() {
       // The frame follows the graph's geometry; a wide six-card mesh opens in a shorter frame. It must never clip.
       maxGraphBottomGapPx: 400,
       minGraphBadgeFontPx: 11,
+      // The storefront image ends below the line legend, so the small neighborhood fills a landscape image.
+      fitContentHeight: { selector: 'main .react-flow, main [data-testid="graph-flow-edge-legend"]', min: 640, pad: 32 },
     });
     await page.setViewportSize({ width: 1440, height: 980 });
     await capture(page, `/security-graph?lens=attack-path&scan=${SCAN_ID}&capture=1`, "security-graph-live.png", async (securityGraphPage) => {
