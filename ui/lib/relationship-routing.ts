@@ -111,13 +111,13 @@ function smoothWaypoints(points: Point[], obstacles: Obstacle[]): Cubic[] | null
 }
 
 /** Reserve endpoint labels and badges while leaving a tunnel through the glyph. */
-function endpointGuards(edge: Endpoints, boxes: Obstacle[], lane?: RelationshipLane): Obstacle[] {
+function endpointGuards(edge: Endpoints, boxes: Obstacle[]): Obstacle[] {
   return (["source", "target"] as const).flatMap(side => {
     const box = boxes.find(item => item.id === edge[side]);
     if (!box) return [];
     const position = side === "source" ? edge.sourcePosition : edge.targetPosition;
     const x = side === "source" ? edge.sourceX : edge.targetX;
-    const y = (side === "source" ? edge.sourceY : edge.targetY) + (lane?.[side] ?? 0);
+    const y = side === "source" ? edge.sourceY : edge.targetY;
     const horizontal = position === "left" || position === "right";
     const behind = position === "right" ? { ...box, width: x - box.x - 17 }
       : position === "left" ? { ...box, x: x + 17, width: box.x + box.width - x - 17 }
@@ -136,16 +136,19 @@ function endpointGuards(edge: Endpoints, boxes: Obstacle[], lane?: RelationshipL
 /** Every source-target pair owns a cubic curve and distinct endpoint offsets.
  * No shared horizontal/vertical trunk can imply a relationship to another source. */
 export function relationshipPath(edge: Endpoints, obstacles: Obstacle[], lane?: RelationshipLane, clearance = 16): [string, number, number] {
-  const [path, x, y] = getBezierPath({ ...edge,
-    sourceY: edge.sourceY + (lane?.source ?? 0), targetY: edge.targetY + (lane?.target ?? 0),
+  let [path, x, y] = getBezierPath({ ...edge,
     curvature: 0.25 + Math.abs(lane?.channel ?? 0) * 0.025,
   });
-  const blockers = [...obstacles.filter(box => box.id !== edge.source && box.id !== edge.target), ...endpointGuards(edge, obstacles, lane)]
+  const numbers = path.match(/-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi)!.map(Number);
+  const original = Array.from({ length: 4 }, (_, index) => [numbers[index * 2]!, numbers[index * 2 + 1]!] as Point) as Cubic;
+  original[1][1] += lane?.source ?? 0;
+  original[2][1] += lane?.target ?? 0;
+  path = `M${original[0].join(",")} C${original.slice(1).map(point => point.join(",")).join(" ")}`;
+  [x, y] = cubicPoint(original, 0.5);
+  const blockers = [...obstacles.filter(box => box.id !== edge.source && box.id !== edge.target), ...endpointGuards(edge, obstacles)]
     .map(box => ({ ...box, x: box.x + 16 - clearance, y: box.y + 16 - clearance, width: box.width - 2 * (16 - clearance), height: box.height - 2 * (16 - clearance) }))
     .filter(box => box.width > 0 && box.height > 0);
   if (!blockers.length || obstacles.length > ROUTED_NODE_LIMIT) return [path, x, y];
-  const numbers = path.match(/-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi)!.map(Number);
-  const original = Array.from({ length: 4 }, (_, index) => [numbers[index * 2]!, numbers[index * 2 + 1]!] as Point) as Cubic;
   const curve = clearCurve(original, blockers, edge);
   if (!curve) {
     let curves = corridorCurve(original[0], original[3], blockers, lane?.channel ?? 0);

@@ -55,3 +55,13 @@ describe("relationship lanes", () => {
     }
   });
 });
+
+it("separates pair curves while keeping their ends at the measured glyph ports", () => {
+  const edge = { source: "a", target: "b", sourceX: 72, sourceY: 36, targetX: 672, targetY: 220,
+    sourcePosition: Position.Right, targetPosition: Position.Left };
+  const [first] = relationshipPath(edge, [], { source: 12, target: -12 });
+  const [second] = relationshipPath(edge, [], { source: -12, target: 12 });
+  expect(first).toMatch(/^M72,36 /);
+  expect(first).toMatch(/672,220$/);
+  expect(first).not.toBe(second);
+});
