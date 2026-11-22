@@ -1,10 +1,6 @@
 import { GRAPH_SEMANTIC_LAYER_META, type GraphSemanticLayerKey } from "@/lib/graph-schema.generated";
 
-/** Column positions come from the backend schema; explicit path hops may widen a layer. */
-export const SEMANTIC_LAYER_COLUMNS = Object.fromEntries(
-  Object.entries(GRAPH_SEMANTIC_LAYER_META).map(([layer, meta]) => [layer, meta.column]),
-) as Record<GraphSemanticLayerKey, number>;
-const UNKNOWN_COLUMN = Math.max(...Object.values(SEMANTIC_LAYER_COLUMNS)) + 1;
+const UNKNOWN_COLUMN = Math.max(...Object.values(GRAPH_SEMANTIC_LAYER_META).map(meta => meta.column)) + 1;
 
 export type SemanticNode = {
   id: string;
@@ -14,7 +10,7 @@ export type SemanticEdge = { source: string; target: string; data?: Record<strin
 
 export function semanticLayer(node: SemanticNode): GraphSemanticLayerKey | null {
   const layer = node.data.semanticLayer;
-  if (!layer || !Object.hasOwn(SEMANTIC_LAYER_COLUMNS, layer)) {
+  if (!layer || !Object.hasOwn(GRAPH_SEMANTIC_LAYER_META, layer)) {
     return null;
   }
   return layer as GraphSemanticLayerKey;
@@ -24,7 +20,7 @@ export function semanticLayer(node: SemanticNode): GraphSemanticLayerKey | null 
 export function semanticColumns(nodes: SemanticNode[], _edges: SemanticEdge[], primary: readonly string[] = []): Map<string, number> {
   const layers = new Map(nodes.map(node => {
     const layer = semanticLayer(node);
-    return [node.id, layer === null ? UNKNOWN_COLUMN : SEMANTIC_LAYER_COLUMNS[layer]];
+    return [node.id, layer === null ? UNKNOWN_COLUMN : GRAPH_SEMANTIC_LAYER_META[layer].column];
   }));
   // Multiple explicit hops in one backend layer need separate slots on the
   // straight spine. Widen that layer without changing its semantic order.

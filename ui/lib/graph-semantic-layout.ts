@@ -25,6 +25,21 @@ function contextOwners(nodes: Node<LineageNodeData>[], edges: Edge[], primary: R
   return owners;
 }
 
+/** Containment orders peers inside a backend column without changing their layer. */
+function containmentOrder(members: Node<LineageNodeData>[], edges: Edge[]) {
+  const remaining = new Map(members.map(node => [node.id, node]));
+  const links = edges.filter(edge => edge.data?.relationship === "contains" && remaining.has(edge.source) && remaining.has(edge.target));
+  const ordered: Node<LineageNodeData>[] = [];
+  while (remaining.size) {
+    const ready = [...remaining.values()].filter(node => !links.some(edge => edge.target === node.id && remaining.has(edge.source)))
+      .sort((a, b) => a.id.localeCompare(b.id));
+    // Cyclic input cannot have a parent-first order; retain every node deterministically.
+    if (!ready.length) { ordered.push(...[...remaining.values()].sort((a, b) => a.id.localeCompare(b.id))); break; }
+    for (const node of ready) { ordered.push(node); remaining.delete(node.id); }
+  }
+  return ordered;
+}
+
 /** One left-to-right grammar for every canvas. The backend's selected path
  * owns row zero. Context remains attached to its recorded owner. */
 export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[], selectedPath?: readonly string[]) {
@@ -78,7 +93,7 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
       return parent ? [parent.y] : [];
     }));
     const center = parentRows.length ? parentRows.reduce((sum, y) => sum + y, 0) / parentRows.length : 0;
-    members.forEach((node, index) => {
+    containmentOrder(members, edges).forEach((node, index) => {
       place(node.id, primary.length ? SEMANTIC_ROW_GAP * (index + 1)
         : center + SEMANTIC_ROW_GAP * (index - (members.length - 1) / 2));
       placeOwned(node.id);
