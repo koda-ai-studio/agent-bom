@@ -135,3 +135,20 @@ describe("reference correlation with the side navigation open", () => {
     } finally { setLayoutFrame(0, 0); }
   });
 });
+
+describe("the /graph route with the side navigation open", () => {
+  it("leaves room under a name that breaks onto two lines at its hyphens, so no card is pushed out of its row", async () => {
+    const { setLayoutFrame } = await import("@/lib/graph-compact-arcs");
+    const nav = JSON.parse(readFileSync("tests/fixtures/reference-nav-layout-input.json", "utf8")) as { nodes: Node<LineageNodeData>[]; edges: Edge[]; selectedPath: string[] };
+    setLayoutFrame(1134, 551);
+    try {
+      const result = semanticGraphLayout(nav.nodes, nav.edges, nav.selectedPath);
+      const at = (id: string) => result.nodes.find(node => node.id === id)!.position;
+      // "reference-evidence-workload" wraps after a hyphen at this zoom: the card under it needs a tall card's room.
+      const sa = at("identity:model:reference-workload"), tool = at("tool:runtime:render-untrusted-image");
+      if (Math.abs(sa.x - tool.x) < 1 && tool.y > sa.y) expect(tool.y - sa.y).toBeGreaterThanOrEqual(236);
+      const [s, t, p] = [sa.y, tool.y, at("package:mcp:pillow").y];
+      expect((s < t && t < p) || (s > t && t > p)).toBe(true);
+    } finally { setLayoutFrame(0, 0); }
+  });
+});
