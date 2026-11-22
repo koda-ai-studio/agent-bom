@@ -18,7 +18,6 @@ import {
   readReachBreakdown,
   readReachScore,
   reachEdgeWidth,
-  reachStrokeColor,
 } from "@/lib/effective-reach";
 import {
   legendItemsForVisibleNodes,
@@ -29,7 +28,6 @@ import {
 import { displayContextDescription } from "@/lib/context-graph";
 import { FLOW_NODE_TYPES, lineageNodeTypeForEntity } from "@/lib/graph-entity-mapping";
 import { assignCollisionScopes, assignOccurrenceRoles } from "@/lib/graph-occurrence-role";
-import { CONSEQUENTIAL_RELATIONSHIPS, isObservedAccess } from "@/lib/graph-access-evidence";
 import { assignScopeContext } from "@/lib/graph-scope-context";
 import {
   EntityType,
@@ -116,24 +114,6 @@ const FINDING_NODE_TYPES = new Set<LineageNodeType>([
   "vulnerability",
   "misconfiguration",
 ]);
-const RUNTIME_RELATIONSHIPS = new Set<string>([
-  RelationshipType.INVOKED,
-  RelationshipType.CALLED,
-  RelationshipType.ACCESSED,
-  RelationshipType.USED_CREDENTIAL,
-  RelationshipType.DELEGATED_TO,
-]);
-const DASHED_RELATIONSHIPS = new Set<string>([
-  RelationshipType.EXPOSES_CRED,
-  RelationshipType.REACHES_TOOL,
-  RelationshipType.EXPLOITABLE_VIA,
-  RelationshipType.SHARES_SERVER,
-  RelationshipType.SHARES_CRED,
-  RelationshipType.LATERAL_PATH,
-  RelationshipType.EXPOSED_TO,
-  RelationshipType.HAS_PERMISSION,
-  ...RUNTIME_RELATIONSHIPS,
-]);
 
 export function buildUnifiedFlowGraph(
   graph: UnifiedGraphData,
@@ -165,7 +145,8 @@ export function buildUnifiedFlowGraph(
       id: node.id,
       type: flowRendererTypeForEntity(node.entity_type) ?? FLOW_NODE_TYPES[nodeType],
       position: { x: 0, y: 0 },
-      data: toLineageData(node, nodeType, outgoing, incoming, nodeById),
+      data: { ...toLineageData(node, nodeType, outgoing, incoming, nodeById),
+        ...(graph.attack_paths[0]?.hops.includes(node.id) ? { semanticPathIndex: graph.attack_paths[0].hops.indexOf(node.id) } : {}) },
       ...(isCriticalNode(node) ? { className: "node-critical-pulse" } : {}),
     });
   }
@@ -317,6 +298,7 @@ function toLineageData(
     lastSeen: node.last_seen,
     dataSources: node.data_sources ?? [],
     dimensions: node.dimensions,
+    semanticLayer: node.semantic_layer,
     complianceTags: node.compliance_tags ?? [],
     attributes,
     isCritical: isCriticalNode(node),
@@ -574,14 +556,11 @@ function toFlowEdge(edge: UnifiedEdge, nodeById: Map<string, UnifiedNode>): Edge
   const color = RELATIONSHIP_COLOR_MAP[relationship] ?? "#52525b";
   const legend = relationshipLegendItem(relationship);
   const reachScore = readReachScore(edge.evidence?.effective_reach_score);
-  const reachColor = reachStrokeColor(reachScore);
-  const strokeColor = reachColor ?? color;
+  const strokeColor = color;
   const evidenceMode = graphEdgeEvidenceMode(edge);
   const evidenceBlocked = graphEdgeEvidence(edge.evidence ?? {}).blocked;
-  // Access-shaped links dash unless runtime evidence shows the access was used.
-  const dashed = CONSEQUENTIAL_RELATIONSHIPS.has(relationship)
-    ? !isObservedAccess(relationship, { evidenceMode, evidenceBlocked })
-    : DASHED_RELATIONSHIPS.has(relationship);
+  // A verb or reach score never upgrades the producer's evidence tier.
+  const dashed = evidenceBlocked || !["runtime", "recorded"].includes(evidenceMode);
   // Motion denotes a recorded runtime receipt; severity alone is not activity.
   const animated = evidenceMode === "runtime" && !evidenceBlocked;
   const marker = { type: MarkerType.ArrowClosed, color: strokeColor, width: 20, height: 16 };
@@ -593,6 +572,7 @@ function toFlowEdge(edge: UnifiedEdge, nodeById: Map<string, UnifiedNode>): Edge
     type: "smoothstep",
     data: {
       relationship,
+      evidence: edge.evidence,
       sourceEntityType: nodeById.get(edge.source)?.entity_type,
       targetEntityType: nodeById.get(edge.target)?.entity_type,
       relationshipLabel: contextLabel ?? relationshipEdgeLabelText(relationship, { evidenceMode, evidenceBlocked }),

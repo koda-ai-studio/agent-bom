@@ -1,14 +1,8 @@
+import { semanticGraphLayout } from "@/lib/graph-semantic-layout";
 import type { Edge, Node } from "@xyflow/react";
-import { cloudHierarchyLayout } from "@/lib/graph-cloud-hierarchy";
-import { mixedEvidenceFlow } from "@/lib/graph-mixed-flow";
-import { peerPreviewLayout } from "@/lib/graph-peer-preview-layout";
-import { mcpEvidenceFlow } from "@/lib/graph-mcp-flow";
 import type { LineageNodeData } from "@/components/lineage-nodes";
-import { graphRepositoryContext } from "@/lib/graph-repository-context";
-import { applyDagreLayout, countStraightCrossings, reduceRankCrossings, type LayoutOptions } from "@/lib/dagre-layout";
-import { GRAPH_EDGE_KIND_META, type GraphEdgeKindKey } from "@/lib/graph-schema.generated";
+import { countStraightCrossings, reduceRankCrossings, type LayoutOptions } from "@/lib/dagre-layout";
 
-const FINDINGS = new Set(["vulnerability", "misconfiguration", "driftIncident"]);
 
 /** Coordinate adjacent layers, so branches that converge stay together.
  * Individual rank swaps can get stuck when both a directory and its file
@@ -50,156 +44,8 @@ export function orderHierarchyBranches(nodes: Node[], edges: Edge[]): Node[] {
   return best;
 }
 
-/** Keep single-parent chains level and leave room for long links between them. */
-function alignHierarchyBranches(nodes: Node[], edges: Edge[], minGap: number): Node[] {
-  const positions = new Map(nodes.map(node => [node.id, node.position]));
-  const ranks = new Map<number, Node[]>();
-  for (const node of nodes) ranks.set(node.position.x, [...(ranks.get(node.position.x) ?? []), node]);
-  for (const x of [...ranks.keys()].sort((a, b) => a - b)) {
-    const rank = ranks.get(x)!.sort((a, b) => a.position.y - b.position.y);
-    const desired = rank.map(node => {
-      const parents = edges.filter(edge => edge.target === node.id).flatMap(edge => {
-        const parent = positions.get(edge.source);
-        return parent && parent.x < x ? [parent.y] : [];
-      }).sort((a, b) => a - b);
-      return parents.length ? parents[Math.floor(parents.length / 2)]! : node.position.y;
-    });
-    const ys: number[] = [];
-    desired.forEach((y, i) => ys.push(i ? Math.max(y, ys[i - 1]! + minGap) : y));
-    // Centre siblings around a shared parent rather than pushing the whole
-    // branch down; already-separated chains keep their exact parent row.
-    const shift = desired.reduce((sum, y, i) => sum + y - ys[i]!, 0) / rank.length;
-    rank.forEach((node, i) => positions.set(node.id, { x, y: ys[i]! + shift }));
-  }
-  return nodes.map(node => ({ ...node, position: positions.get(node.id)! }));
-}
-
-/** Source-rooted levels keep repository sibling directories in the same rank.
- * Cycles retain Dagre's cycle-aware ordering instead of inventing a root. */
-function sourceRanks(nodes: Node[], edges: Edge[]): Map<string, number> | null {
-  const incoming = new Map(nodes.map(node => [node.id, 0]));
-  const outgoing = new Map<string, string[]>();
-  for (const edge of edges) {
-    if (!incoming.has(edge.source) || !incoming.has(edge.target)) continue;
-    incoming.set(edge.target, incoming.get(edge.target)! + 1);
-    outgoing.set(edge.source, [...(outgoing.get(edge.source) ?? []), edge.target]);
-  }
-  const queue = nodes.filter(node => incoming.get(node.id) === 0).map(node => node.id).sort();
-  const ranks = new Map(queue.map(id => [id, 0]));
-  let visited = 0;
-  for (let index = 0; index < queue.length; index++) {
-    const id = queue[index]!;
-    visited++;
-    for (const target of outgoing.get(id) ?? []) {
-      ranks.set(target, Math.max(ranks.get(target) ?? 0, ranks.get(id)! + 1));
-      incoming.set(target, incoming.get(target)! - 1);
-      if (incoming.get(target) === 0) queue.push(target);
-    }
-  }
-  return visited === nodes.length ? ranks : null;
-}
-
-/** Rank by recorded relationships; finding arrows retain their original direction. */
-export function graphHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge[], options: LayoutOptions = {}): { nodes: Node[]; edges: Edge[] } {
-  const peers = peerPreviewLayout(nodes, edges);
-  if (peers) return peers;
-  const mixed = mixedEvidenceFlow(nodes, edges);
-  if (mixed) return mixed;
-  const mcp = mcpEvidenceFlow(nodes, edges);
-  if (mcp) return mcp;
-  const cloud = cloudHierarchyLayout(nodes, edges);
-  if (cloud) return cloud;
-  const byId = new Map(nodes.map(node => [node.id, node]));
-  const contextEdges = new Set(edges.filter(edge => {
-    if (["hosted_on", "part_of", "belongs_to"].includes(String(edge.data?.relationship))) return true;
-    const source = byId.get(edge.source), target = byId.get(edge.target);
-    return source && target && !source.data.rollup && !target.data.rollup
-      && source.type !== "clusterPillNode" && target.type !== "clusterPillNode"
-      && edge.data?.relationship === "affects" && FINDINGS.has(source.data.nodeType) && !FINDINGS.has(target.data.nodeType);
-  }).map(edge => edge.id));
-  // Correlation records association, never an ancestor or traversal rank.
-  const rankedEdges = edges.filter(edge => {
-    const kind = GRAPH_EDGE_KIND_META[String(edge.data?.relationship) as GraphEdgeKindKey]?.traversal_class;
-    return kind !== "correlation" && kind !== "derived";
-  }).map(edge => contextEdges.has(edge.id) ? { ...edge, source: edge.target, target: edge.source } : edge)
-    .sort((a,b) => a.id.localeCompare(b.id));
-  // At overview zoom the native glyph and text grow independently of the
-  // camera. Reserve their full three-line caption plus finding footer so
-  // stacked findings cannot run into the next entity's glyph.
-  // Host context, an occurrence chip or identity line adds scaled metadata rows.
-  const extraCaption = nodes.some(node => node.data.nodeType === "agent" || node.data.occurrenceRole || node.data.identityContext);
-  const nodeHeight = Math.max(extraCaption ? 360 : 300, options.nodeHeight ?? 0);
-  const repository = nodes.some(node => graphRepositoryContext(node.data));
-  const fanIn = new Map<string, number>(), fanOut = new Map<string, number>();
-  for (const edge of rankedEdges) {
-    fanIn.set(edge.target, (fanIn.get(edge.target) ?? 0) + 1);
-    fanOut.set(edge.source, (fanOut.get(edge.source) ?? 0) + 1);
-  }
-  // Compact correlations can still be wide fan-ins/fan-outs. Keep their
-  // aspect-aware wrapping so a small evidence set does not become a tall
-  // column that the adaptive camera can only show one node at a time.
-  const boundedOverview = nodes.length <= 16 && edges.length <= 16;
-  const captionRanks = nodes.length <= 24 ? sourceRanks(nodes, rankedEdges) : null;
-  const rankSizes = new Map<number, number>();
-  for (const rank of captionRanks?.values() ?? []) rankSizes.set(rank, (rankSizes.get(rank) ?? 0) + 1);
-  // Small converging graphs need centred ranks too. Keep wider fan-outs on
-  // the wrapped layout so balancing never creates an unreadable tall column.
-  const balanced = boundedOverview && captionRanks !== null && Math.max(0, ...rankSizes.values()) <= 4;
-  const compact = nodes.length <= 24 && (balanced || repository || Math.max(0, ...fanIn.values(), ...fanOut.values()) <= 2);
-  const stackedFinding = nodes.length <= 24 && nodes.some(node => FINDINGS.has(node.data.nodeType) &&
-    (!captionRanks || nodes.some(peer => peer.id !== node.id && captionRanks.get(peer.id) === captionRanks.get(node.id))));
-  const tallCaptions = stackedFinding || nodes.some(node => node.data.occurrenceRole || node.data.description ||
-    node.data.serverName || node.data.agentType || node.data.identityContext || (node.data.label?.length ?? 0) > 32);
-  const layout = applyDagreLayout([...nodes].sort((a,b) => a.id.localeCompare(b.id)), rankedEdges, {
-    direction: "LR", nodeWidth: 240, nodeHeight: 224, nodeSep: 40, ...options,
-    ...(nodes.length <= 24 && tallCaptions ? { nodeHeight,
-      minSeparation: { width: 240, gap: 24, ...options.minSeparation, height: nodeHeight } } : {}),
-    ...(compact ? { nodeHeight, rankSep: Math.min(options.rankSep ?? 96, 96), fitAspect: undefined,
-      minSeparation: { width: 240, gap: 24, ...options.minSeparation, height: nodeHeight } } : {}),
-  });
-  // Dagre's dummy edge ranks can leave empty vertical slots. Pack each real
-  // rank in its existing order, keeping the evidence-derived horizontal
-  // levels and enough room for captions rather than shrinking the canvas.
-  const ranks = new Map<number, typeof layout.nodes>();
-  const levels = compact ? sourceRanks(layout.nodes, rankedEdges) : null;
-  const rankStep = (options.nodeWidth ?? 240) + Math.min(options.rankSep ?? 96, 96);
-  const rankedNodes = levels ? layout.nodes.map(node => ({ ...node, position: { ...node.position, x: levels.get(node.id)! * rankStep } })) : layout.nodes;
-  for (const node of rankedNodes) {
-    const x = Math.round(node.position.x);
-    ranks.set(x, [...(ranks.get(x) ?? []), node]);
-  }
-  const rowStep = nodeHeight + Math.max(24, options.minSeparation?.gap ?? 0, options.nodeSep ?? 32);
-  const rows = Math.max(0, ...[...ranks.values()].map(rank => rank.length));
-  const packed = [...ranks.values()].flatMap(rank => rank.sort((a,b) => a.position.y - b.position.y).map((node, index) => ({
-    ...node, style: { ...node.style, minHeight: nodeHeight },
-    position: { x: node.position.x, y: ((rows - rank.length) / 2 + index) * rowStep },
-  })));
-  const span = Math.max(0, ...packed.map(node => node.position.x));
-  const height = Math.max(0, rows - 1) * rowStep + nodeHeight;
-  const stretch = span > 0 ? Math.max(1, Math.min(2, ((options.fitAspect ?? 2.2) * height - (options.nodeWidth ?? 240)) / span)) : 1;
-  const spaced = packed.map(node => ({ ...node, position: { ...node.position, x: node.position.x * stretch } }));
-  // Large contexts retain the established wrapped-rank layout. Packing all
-  // siblings into one column would recreate the tall fan-out problem.
-  const ordered = compact ? orderHierarchyBranches(spaced, rankedEdges)
-    : nodes.length <= 24 && tallCaptions
-      ? layout.nodes.map(node => ({ ...node, style: { ...node.style, minHeight: nodeHeight } }))
-      : layout.nodes;
-  const positioned = new Map((compact && repository ? alignHierarchyBranches(ordered, rankedEdges, rowStep) : ordered).map(node => [node.id, node]));
-  const columns = [...new Set([...positioned.values()].map(node => node.position.x))].sort((a, b) => a - b);
-  const roomyOverview = boundedOverview && columns.length > 1 && columns.slice(1).every((x, index) => x - columns[index]! >= 364);
-  // One parent and its collapsed peer groups need their real caption bounds.
-  // Reserving a full stacked-row cell here shifts the visible diagram upward
-  // when the camera centres the otherwise empty lower half of that cell.
-  const compactBundle = nodes.length <= 3 && nodes.some(node => node.type === "clusterPillNode");
-  return {
-    nodes: nodes.map(node => {
-      const placed = positioned.get(node.id)!;
-      return compactBundle ? { ...placed, style: { ...placed.style, minHeight: 0 } } : placed;
-    }),
-    edges: edges.map((edge): Edge => ({ ...edge,
-      ...(contextEdges.has(edge.id) ? { sourceHandle: "context", targetHandle: "context" } : {}),
-      data: { ...edge.data, quietLabel: !edge.data?.isClusterEdge,
-        boundedOverview, roomyOverview, directionEmphasis: boundedOverview || edge.data?.directionEmphasis === true },
-    })),
-  };
+/** Semantic layers and the server-selected path share one layout in every view. */
+export function graphHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge[], _options: LayoutOptions = {}): { nodes: Node[]; edges: Edge[] } {
+  void _options;
+  return semanticGraphLayout(nodes, edges);
 }

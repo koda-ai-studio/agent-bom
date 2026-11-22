@@ -52,7 +52,7 @@ describe("GraphPathList", () => {
     expect(within(chains[0]!).getByText("Has finding")).toBeInTheDocument();
     fireEvent.click(within(chains[0]!).getByRole("button", { name: /cve-1/ }));
     expect(onSelect).toHaveBeenCalledWith("cve-1");
-    expect(screen.getByTestId("graph-path-list")).toHaveTextContent("7 nodes · 3 paths");
+    expect(screen.getByTestId("graph-path-list")).toHaveTextContent("7 nodes · 3 connection chains");
   });
 
   it("clamps a long digest-style name to two lines and keeps the full name on hover and for assistive tech", () => {

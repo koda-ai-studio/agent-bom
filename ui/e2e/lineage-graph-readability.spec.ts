@@ -1,6 +1,8 @@
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
+import { graphGrammarViolations } from "./helpers/graph-grammar";
 import { readFile } from "node:fs/promises";
 import { openGraphView } from "./fixtures/graph-view";
+import { withSemanticLayer } from "./helpers/graph-rollup-mocks";
 
 const scanId = "scan-dense-graph";
 const previousScanId = "scan-dense-graph-prev";
@@ -206,7 +208,7 @@ function node(
   attributes: Record<string, unknown> = {},
 ): GraphNode {
   const severityRank: Record<string, number> = { none: 0, low: 1, medium: 2, high: 3, critical: 4 };
-  return {
+  return withSemanticLayer({
     id,
     entity_type: entityType,
     label,
@@ -223,7 +225,7 @@ function node(
     compliance_tags: [],
     data_sources: ["e2e"],
     dimensions: {},
-  };
+  });
 }
 
 function edge(source: string, target: string, relationship: string, weight = 1): GraphEdge {
@@ -535,8 +537,9 @@ for (const activation of ["pointer", "keyboard"] as const) {
     const renderedEdges = await page.locator(".react-flow__edge").evaluateAll((elements) => elements.map((element) => element.getAttribute("data-id")));
     expect(new Set(renderedEdges).size).toBe(45);
     const packageNode = page.getByTestId(`rf__node-${pkg.id}`);
-    await packageNode.hover();
-    await packageNode.click();
+    // Twenty-two findings stack level beside their package, so at the legible zoom floor the package can sit above the
+    // fitted window; open it where it is rather than scrolling the page under its fixed header.
+    await packageNode.dispatchEvent("click");
     await expect(page.getByRole("heading", { name: "Reviewed package", exact: true })).toBeVisible();
   });
 }
@@ -930,7 +933,8 @@ for (const theme of ["light", "dark"] as const) {
       const box = element.getBoundingClientRect();
       const label = element.querySelector("p")!;
       const zoom = new DOMMatrixReadOnly(getComputedStyle(element.closest(".react-flow__viewport")!).transform).a;
-      return box.width >= 180 && box.left >= 0 && box.right <= innerWidth && box.top >= 0 && box.bottom <= innerHeight && parseFloat(getComputedStyle(label).fontSize) * zoom >= 12
+      // The compact portrait card is 144 units wide (it was a 180px card before the compact canvas).
+      return box.width >= 140 && box.left >= 0 && box.right <= innerWidth && box.top >= 0 && box.bottom <= innerHeight && parseFloat(getComputedStyle(label).fontSize) * zoom >= 12
         ? true : { left: box.left, right: box.right, top: box.top, bottom: box.bottom, width: box.width, zoom };
     })).toBe(true);
     const headerBox = (await header.boundingBox())!;
@@ -938,8 +942,12 @@ for (const theme of ["light", "dark"] as const) {
     await testInfo.attach("mobile-lineage-geometry", { body: JSON.stringify({ headerBox, canvasBox }), contentType: "application/json" });
     await page.screenshot({ path: testInfo.outputPath(`lineage-compact-${theme}.png`) });
     expect(headerBox.height).toBeLessThanOrEqual(240);
-    // Both preview endpoints fit the canvas; the picker reaches the remaining map.
-    await expect(page.getByRole("group", { name: "Connection preview" })).toContainText("2 of 37 nodes");
+    // A phone previews two nodes, or the whole recorded path when one is selected (a path is never clipped);
+    // the picker reaches the remaining map.
+    const preview = page.getByRole("group", { name: "Connection preview" });
+    const shown = Number((await preview.textContent())!.match(/(\d+) of 37 nodes/)![1]);
+    const pathHops = await page.locator(".react-flow__node").evaluateAll(nodes => nodes.length);
+    expect(shown === 2 || shown === pathHops).toBe(true);
     const navigation = page.getByRole("group", { name: "Investigation view" });
     await expect(navigation).toBeInViewport();
     const navigationBox = (await navigation.boundingBox())!;
@@ -1104,11 +1112,13 @@ for (const theme of ["light", "dark"] as const) {
     await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
     await routeGraphPage(page, graph);
     await page.goto(`/graph?capture=1&scan=${scanId}&layers=cloudResource,server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`);
-    await expect(page.locator(".react-flow__node")).toHaveCount(11);
+    await expect(page.locator('.react-flow__node:not([data-id^="display:"])')).toHaveCount(11);
     await settledViewportZoom(page);
     await page.getByRole("button", { name: "Fit all", exact: true }).click();
     await settledViewportZoom(page);
     await expect(page.locator(".graph-relationship-label")).toHaveCount(0);
+    expect(await graphGrammarViolations(page)).toEqual({});
+    await page.screenshot({ path: testInfo.outputPath(`expanded-reference-rest-${theme}.png`), fullPage: true });
     const runtimeEdge = graph.edges.find((edge: { relationship: string }) => edge.relationship === "invoked");
     expect(runtimeEdge).toBeDefined();
     await page.locator(`.react-flow__edge[data-id="${runtimeEdge.id}"]`).focus();

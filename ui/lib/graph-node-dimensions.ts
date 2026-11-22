@@ -15,7 +15,7 @@ const DRAWN = { glyph: 52, icon: 28, label: 14, meta: 12 } as const;
 export const SMALL_GRAPH_NODES = 12;
 const SMALL_DRAWN = { glyph: 66, icon: 32 } as const;
 /** Layout-unit ceilings; past these a fully fitted overview keeps its cards inside their layout boxes. */
-const CEILING = { glyph: 128, icon: 56, label: 30, roomyLabel: 36, meta: 30, roomyMeta: 32 } as const;
+const CEILING = { glyph: 128, icon: 56, label: 36, roomyLabel: 36, meta: 32, roomyMeta: 32 } as const;
 
 /** Bounded investigations reserve more metadata space when Fit all lowers zoom. */
 export function readableGraphNodeStyle(zoom: number, boundedContext = false, roomyCaptions = boundedContext, nodeCount = Number.POSITIVE_INFINITY): CSSProperties {
@@ -27,6 +27,8 @@ export function readableGraphNodeStyle(zoom: number, boundedContext = false, roo
     "--graph-node-label-size": units(DRAWN.label, roomyCaptions ? CEILING.roomyLabel : CEILING.label),
     "--graph-node-glyph-size": units(shape.glyph, CEILING.glyph),
     "--graph-node-icon-size": units(shape.icon, CEILING.icon),
+    "--graph-context-glyph-size": units(48, 120),
+    "--graph-context-icon-size": units(24, 60),
     "--graph-node-meta-size": units(DRAWN.meta, roomyCaptions ? CEILING.roomyMeta : CEILING.meta),
     "--graph-group-label-size": `${Math.min(75, Math.max(18, 12 / scale))}px`,
   } as CSSProperties;

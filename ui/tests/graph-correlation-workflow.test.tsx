@@ -53,7 +53,7 @@ function run(
     ],
     result_manifest: status === "complete" ? {
       correlation_merge: { conflict_count: 1 },
-      output: { scan_id: "corr-1", node_count: 11, edge_count: 12, attack_path_count: 2 },
+      output: { scan_id: "corr-1", node_count: 11, edge_count: 12, attack_paths: { retained_count: 2, assessed_count: 7, basis: "retained_after_ranking" } },
       analysis_bounds: {
         correlation_merge: { status: "complete", truncated: false },
         attack_path_fusion: { status: "complete", truncated: false },
@@ -104,7 +104,7 @@ describe("GraphCorrelationWorkflow", () => {
       "/remediation?scan=corr-1&cve=CVE-2023-4863&package=pillow%409.0.0",
     );
     expect(screen.queryByText("Connect")).not.toBeVisible();
-    expect(screen.getByText("2 retained paths across 2 sources")).toBeInTheDocument();
+    expect(screen.getByText("2 retained paths · 7 assessed across 2 sources")).toBeInTheDocument();
     expect(screen.queryByLabelText("Correlation name")).not.toBeVisible();
     expect(apiMock.createGraphCorrelation).not.toHaveBeenCalled();
     expect(screen.getByText("Fresh evidence")).toBeInTheDocument();
@@ -172,7 +172,7 @@ describe("GraphCorrelationWorkflow", () => {
       max_age_hours: 168,
       allow_stale: false,
     }));
-    expect(await screen.findByText("2 retained paths across 2 sources")).toBeInTheDocument();
+    expect(await screen.findByText("2 retained paths · 7 assessed across 2 sources")).toBeInTheDocument();
     expect(screen.queryByText(/evidence-complete path/i)).not.toBeInTheDocument();
     expect(screen.getByText("1 conflict")).toBeInTheDocument();
     expect(screen.getByText("Inspect source receipts · 2 sources · 1 conflict")).toBeInTheDocument();
@@ -230,7 +230,7 @@ describe("GraphCorrelationWorkflow", () => {
     const zeroPathRun = run("complete", {
       result_manifest: {
         correlation_merge: { conflict_count: 0 },
-        output: { scan_id: "corr-1", node_count: 11, edge_count: 12, attack_path_count: 0 },
+        output: { scan_id: "corr-1", node_count: 11, edge_count: 12, attack_paths: { retained_count: 0, assessed_count: 7, basis: "retained_after_ranking" } },
         analysis_bounds: {
           correlation_merge: { status: "complete", truncated: false },
           attack_path_fusion: { status: "complete", truncated: false },
@@ -251,7 +251,7 @@ describe("GraphCorrelationWorkflow", () => {
     const limitedZeroPathRun = run("complete", {
       result_manifest: {
         correlation_merge: { conflict_count: 0 },
-        output: { scan_id: "corr-1", node_count: 11, edge_count: 12, attack_path_count: 0 },
+        output: { scan_id: "corr-1", node_count: 11, edge_count: 12, attack_paths: { retained_count: 0, assessed_count: 7, basis: "retained_after_ranking" } },
         analysis_bounds: {
           correlation_merge: { status: "complete", truncated: false },
           attack_path_fusion: { status: "limited", truncated: true },
@@ -289,7 +289,7 @@ describe("GraphCorrelationWorkflow", () => {
     const boundedRun = run("complete", {
       result_manifest: {
         correlation_merge: { conflict_count: 0 },
-        output: { scan_id: "corr-1", node_count: 11, edge_count: 12, attack_path_count: 2 },
+        output: { scan_id: "corr-1", node_count: 11, edge_count: 12, attack_paths: { retained_count: 2, assessed_count: 7, basis: "retained_after_ranking" } },
         analysis_bounds: {
           correlation_merge: { status: "complete", truncated: false },
           ...analysisBounds,
@@ -313,7 +313,7 @@ describe("GraphCorrelationWorkflow", () => {
     const missingBounds = run("complete", {
       result_manifest: {
         correlation_merge: { conflict_count: 0 },
-        output: { scan_id: "corr-1", node_count: 11, edge_count: 12, attack_path_count: 2 },
+        output: { scan_id: "corr-1", node_count: 11, edge_count: 12, attack_paths: { retained_count: 2, assessed_count: 7, basis: "retained_after_ranking" } },
       },
     });
     render(<GraphCorrelationWorkflow snapshots={snapshots} initialRun={missingBounds} outcome={outcome} onOpenSnapshot={vi.fn()} />);

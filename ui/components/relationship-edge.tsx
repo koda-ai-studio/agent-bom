@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { BaseEdge, EdgeLabelRenderer, useStore, useStoreApi, type EdgeProps } from "@xyflow/react";
 import {
   ArrowRightLeft, Box, Bug, CirclePlay, Database, Eye, Fingerprint,
@@ -8,13 +8,12 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { CompactRelationshipEdge } from "@/components/graph-compact-edge";
 import { accessEvidenceQualifier } from "@/lib/graph-access-evidence";
 import { scheduleRelationshipLabelLayout, scheduleRelationshipLabelLayoutAfterMove } from "@/lib/relationship-label-layout";
-import { minimapNodeColor, relationshipEdgeLabelText } from "@/lib/graph-utils";
+import { relationshipEdgeLabelText } from "@/lib/graph-utils";
 import { relationshipLaneFor } from "@/lib/relationship-lanes";
 import { anchoredLabelPoint, relationshipPath, ROUTED_NODE_LIMIT } from "@/lib/relationship-routing";
-import { mcpBranchPath } from "@/lib/graph-mcp-routing";
-import { columnEdgePath } from "@/lib/path-card-column";
 
 // Icons supplement the recorded verb; they never replace its meaning or imply
 // that a recorded permission has actually been exercised.
@@ -88,7 +87,6 @@ export function qualifiedLabel(relationship: string, label: React.ReactNode, dat
 }
 
 export function RelationshipEdge(props: EdgeProps) {
-  const gradientId = `mcp-edge-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const edgeRef = useRef<SVGGElement>(null);
@@ -125,21 +123,12 @@ export function RelationshipEdge(props: EdgeProps) {
         : props.label ?? (inspectLabel && relationship ? relationshipEdgeLabelText(relationship, props.data) : null);
   const zoom = useStore(state => state.transform[2]);
   const labelRef = useRef<HTMLDivElement>(null);
-  const columnSource = props.data?.columnFlow === true ? nodes.find(node => node.id === props.source) : undefined;
-  const mcpSource = props.data?.mcpEvidenceFlow ? nodes.find(node => node.id === props.source) : undefined;
-  const mcpTarget = mcpSource ? nodes.find(node => node.id === props.target) : undefined;
-  const mcpPath = mcpSource && mcpTarget ? mcpBranchPath(props,
-    { ...mcpSource.position, width: mcpSource.measured?.width ?? 260, height: mcpSource.measured?.height ?? 188 },
-    { ...mcpTarget.position, width: mcpTarget.measured?.width ?? 260, height: mcpTarget.measured?.height ?? 188 },
-    nodes.filter(node => !node.hidden && node.id !== props.source && node.id !== props.target).map(node => ({
-      ...node.position, width: node.measured?.width ?? 260, height: node.measured?.height ?? 188,
-    }))) : null;
-  const [path, routeX, routeY] = mcpPath ?? (columnSource
-    ? columnEdgePath(props, columnSource.position.y + (columnSource.measured?.height ?? 0) + 6)
-    : relationshipPath(props, nodes.length <= ROUTED_NODE_LIMIT ? nodes.filter(node => !node.hidden).map(node => ({
-      id: node.id, x: node.position.x, y: node.position.y,
-      width: node.measured?.width ?? 220, height: node.measured?.height ?? 224,
-    })) : [], portLane));
+  const obstacles = useMemo(() => nodes.filter(node => !node.hidden).map(node => ({
+    id: node.id, ...node.position,
+    width: node.measured?.width ?? node.width ?? 240,
+    height: node.measured?.height ?? node.height ?? 180,
+  })), [nodes]);
+  const [path, routeX, routeY] = relationshipPath(props, obstacles, props.data?.phoneLayout ? undefined : portLane);
   const anchor = props.data?.labelAnchor === "source" || props.data?.labelAnchor === "target" ? anchoredLabelPoint(props, props.data.labelAnchor) : null;
   const x = anchor?.x ?? routeX, y = anchor?.y ?? routeY;
   useLayoutEffect(() => { scheduleRelationshipLabelLayout(labelRef.current); }, [path, zoom, label, x, y, visibility, inspecting]);
@@ -155,13 +144,7 @@ export function RelationshipEdge(props: EdgeProps) {
   }, [store]);
   return <g ref={edgeRef} data-relationship={relationship || undefined} data-label-disclosure={packageFinding ? "on-demand" : undefined} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
     {typeof props.data?.hoverDescription === "string" && <title>{props.data.hoverDescription}</title>}
-    {mcpSource && mcpTarget && <defs><linearGradient id={gradientId} gradientUnits="userSpaceOnUse"
-      x1={props.sourceX} y1={props.sourceY} x2={props.targetX} y2={props.targetY}>
-      <stop offset="0%" stopColor={minimapNodeColor(mcpSource)} />
-      <stop offset="100%" stopColor={minimapNodeColor(mcpTarget)} />
-    </linearGradient></defs>}
-    <BaseEdge id={props.id} path={path} style={mcpPath && !inspecting && !props.data?.pathEmphasis
-      ? { ...props.style, stroke: `url(#${gradientId})` } : props.style}
+    <BaseEdge id={props.id} path={path} style={props.style}
       {...(emphasized && props.markerStart ? { markerStart: props.markerStart } : {})}
       {...(emphasized && props.markerEnd ? { markerEnd: props.markerEnd } : {})}
       {...(props.interactionWidth !== undefined ? { interactionWidth: props.interactionWidth } : {})} />
@@ -180,4 +163,4 @@ export function RelationshipEdge(props: EdgeProps) {
   </g>;
 }
 
-export const relationshipEdgeTypes = { smoothstep: RelationshipEdge };
+export const relationshipEdgeTypes = { relationship: RelationshipEdge, smoothstep: RelationshipEdge, compact: CompactRelationshipEdge };

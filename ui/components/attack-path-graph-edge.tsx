@@ -1,15 +1,18 @@
 "use client";
 
-import { BaseEdge, EdgeLabelRenderer, useStore, type Edge, type EdgeProps } from "@xyflow/react";
+import { BaseEdge, EdgeLabelRenderer, Position, useStore, type Edge, type EdgeProps } from "@xyflow/react";
 
 import type { AttackPathDirection } from "@/lib/attack-path-graph-layout";
+import { compactEdgeCurve } from "@/components/graph-compact-edge";
 import type { EdgeEvidenceStyle, PathGraphEdge } from "@/lib/attack-path-graph-model";
-import { routeLabelPoint, routePath, type Point } from "@/lib/attack-path-graph-routes";
+import { relationshipLaneFor } from "@/lib/relationship-lanes";
+import { relationshipPath } from "@/lib/relationship-routing";
+import { RELATIONSHIP_COLOR_MAP } from "@/lib/graph-schema";
 import type { HopTrace } from "@/lib/attack-path-trace";
 
 /** One hop of the single entry-to-target trace drawn when a path is selected; absent under reduced motion. */
 export type EdgeTrace = HopTrace & { index: number; key: string };
-export type AttackPathEdgeData = { edge: PathGraphEdge; active: boolean; markerPrefix: string; direction: AttackPathDirection; route: Point[]; trace?: EdgeTrace | null };
+export type AttackPathEdgeData = { edge: PathGraphEdge; active: boolean; markerPrefix: string; direction: AttackPathDirection; trace?: EdgeTrace | null };
 export type AttackPathFlowEdge = Edge<AttackPathEdgeData, "attackPathEdge">;
 
 export const LINE_STYLE: Record<EdgeEvidenceStyle, { name: "solid" | "dashed" | "dotted"; dash?: string }> = {
@@ -26,9 +29,19 @@ export function edgeStroke(onPath: boolean): string {
   return (onPath ? PATH_STROKE.selected : PATH_STROKE.connected).color;
 }
 
-export function AttackPathGraphEdge({ id, data }: EdgeProps<AttackPathFlowEdge>) {
+/** Two cards of one column on a row layout: one C-curve from the lower card's right rim to the other's, bowing right
+ * of both glyphs and the names under them. */
+export function sideArcPath(source: { x: number; y: number }, target: { x: number; y: number }): string {
+  const reach = Math.max(80, Math.abs(target.y - source.y) * 0.35);
+  return `M${source.x},${source.y} C${source.x + reach},${source.y} ${target.x + reach},${target.y} ${target.x},${target.y}`;
+}
+
+export function AttackPathGraphEdge(props: EdgeProps<AttackPathFlowEdge>) {
+  const { id, data } = props;
+  const edges = useStore(state => state.edges);
+  const nodes = useStore(state => state.nodes);
   if (!data) return null;
-  const { edge, active, markerPrefix, direction, route, trace } = data;
+  const { edge, active, markerPrefix, direction, trace } = data;
   const style = LINE_STYLE[edge.evidence];
   const stroke = edge.onPath ? PATH_STROKE.selected : PATH_STROKE.connected;
   const kind = edge.onPath ? "path" : "branch";
@@ -36,25 +49,34 @@ export function AttackPathGraphEdge({ id, data }: EdgeProps<AttackPathFlowEdge>)
   const ends = edge.bidirectional
     ? { markerStart: `url(#${markerPrefix}-dot-${kind})`, markerEnd: `url(#${markerPrefix}-dot-${kind})` }
     : { markerEnd: `url(#${markerPrefix}-${kind})` };
-  const label = routeLabelPoint(route);
-  // A selected-path hop names its relationship on the line at all times: above it on a row (lines that turn
-  // into branch rows leave below it) and beside it on a phone column. A branch names its own on hover or focus.
+  const lane = relationshipLaneFor(id, edges, nodeId => nodes.find(node => node.id === nodeId)?.position.y,
+    nodeId => nodes.find(node => node.id === nodeId)?.position.x);
+  // A phone column draws one smooth curve between the two handles; routing around obstacles there looped past the column.
+  const sideArc = direction === "LR" && props.sourcePosition === Position.Right && props.targetPosition === Position.Right && Math.abs(props.sourceX - props.targetX) < 1;
+  const curve = direction === "TB" ? compactEdgeCurve(props)
+    : sideArc ? { path: sideArcPath({ x: props.sourceX, y: props.sourceY }, { x: props.targetX, y: props.targetY }),
+      mid: { x: props.sourceX + 0.75 * Math.max(80, Math.abs(props.targetY - props.sourceY) * 0.35), y: (props.sourceY + props.targetY) / 2 } } : null;
+  const [path, labelX, labelY] = curve ? [curve.path, curve.mid.x, curve.mid.y] : relationshipPath(props, nodes.filter(node => !node.hidden).map(node => ({ id: node.id, ...node.position,
+    width: node.measured?.width ?? node.width ?? 152, height: node.measured?.height ?? node.height ?? 136 })), lane);
+  const label = { x: labelX, y: labelY };
+  // On a row a selected-path hop names its relationship on the line at all times (lines that turn into branch
+  // rows leave below it). A phone column has no room beside the line, so there every link names itself on hover or focus.
   const transform = direction === "TB"
     ? `translate(10px, -50%) translate(${label.x}px, ${label.y}px)`
     : `translate(-50%, -100%) translate(${label.x}px, ${label.y - 4}px)`;
   return <>
-    <BaseEdge id={id} path={routePath(route)} interactionWidth={18} data-line-style={style.name} data-two-way={edge.bidirectional || undefined} {...ends}
+    <BaseEdge id={id} path={path} interactionWidth={18} data-line-style={style.name} data-two-way={edge.bidirectional || undefined} {...ends}
       style={{
-        stroke: stroke.color,
+        stroke: RELATIONSHIP_COLOR_MAP[edge.relationship] ?? "var(--text-secondary)",
         strokeWidth: stroke.width + (active ? 0.75 : 0),
         strokeDasharray: style.dash,
         strokeLinecap: style.name === "dotted" ? "round" : undefined,
       }} />
-    {trace && <path key={trace.key} data-path-trace={trace.index} d={routePath(route)} pathLength={1} aria-hidden="true"
+    {trace && <path key={trace.key} data-path-trace={trace.index} d={path} pathLength={1} aria-hidden="true"
       className="attack-path-trace" style={{ animationDuration: `${trace.duration}ms`, animationDelay: `${trace.delay}ms` }} />}
-    {(active || edge.onPath) && <EdgeName active={active} transform={transform}
+    {(active || (edge.onPath && direction !== "TB")) && <EdgeName active={active} transform={transform}
       text={`${edge.relationshipLabel}${active && edge.bidirectional ? " · two-way" : ""}`}
-      room={direction === "TB" || active ? 0 : Math.abs(route.at(-1)!.x - route[0]!.x) - 12} />}
+      room={direction === "TB" || active ? 0 : Math.abs(props.targetX - props.sourceX) - 12} />}
   </>;
 }
 
@@ -78,10 +100,10 @@ export function AttackPathArrowDefs({ prefix }: { prefix: string }) {
         {(["path", "branch"] as const).map(kind => (
           <g key={kind}>
             <marker id={`${prefix}-${kind}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-              <path d="M0,0 L10,5 L0,10 z" style={{ fill: edgeStroke(kind === "path") }} />
+              <path d="M0,0 L10,5 L0,10 z" style={{ fill: "context-stroke" }} />
             </marker>
             <marker id={`${prefix}-dot-${kind}`} viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5">
-              <circle cx="5" cy="5" r="4" style={{ fill: edgeStroke(kind === "path") }} />
+              <circle cx="5" cy="5" r="4" style={{ fill: "context-stroke" }} />
             </marker>
           </g>
         ))}

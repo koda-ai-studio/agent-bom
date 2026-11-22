@@ -5,33 +5,35 @@ import { formatInventoryAgentLabel } from "@/lib/agent-topology-graph";
 import { branchingFixture, demoFixture, edge, fanOutFixture, node, path } from "./fixtures/attack-path-graph-fixture";
 
 describe("attack path graph model", () => {
-  it("ends the path at the asset at risk and folds its findings into a badge", () => {
+  it("retains an explicit terminal finding hop and folds only off-path findings", () => {
     const { graph, selected } = branchingFixture();
     const model = buildAttackPathGraphModel(graph, selected);
     const ids = model.nodes.map(item => item.id);
-    expect(ids).not.toContain("cve:next");
+    expect(ids).toContain("cve:next");
     expect(ids).not.toContain("cve:next-2");
     const pkg = model.nodes.find(item => item.id === "pkg:next")!;
-    expect(pkg.role).toBe("target");
-    // Both recorded findings on the package, not only the one the path names.
-    expect(pkg.findings.map(finding => finding.id)).toEqual(["cve:next", "cve:next-2"]);
-    expect(pkg.findings[0]!.severity).toBe("critical");
+    expect(pkg.role).toBe("path");
+    expect(model.nodes.find(item => item.id === "cve:next")!.role).toBe("target");
+    // The explicit terminal finding remains a hop, rather than becoming a badge.
+    expect(pkg.findings.map(finding => finding.id)).toEqual(["cve:next-2"]);
+    expect(pkg.findings[0]!.severity).toBe("medium");
     expect(model.nodes.find(item => item.id === "user:contractor")!.role).toBe("entry");
-    expect(model.pathNodeIds).toEqual(["user:contractor", "sa:jit", "role:admin", "agent:copilot", "server:github", "pkg:next"]);
+    expect(model.pathNodeIds).toEqual(["user:contractor", "sa:jit", "role:admin", "agent:copilot", "server:github", "pkg:next", "cve:next"]);
   });
 
-  it("badge counts equal the distinct finding nodes recorded on each asset", () => {
+  it("keeps loaded off-path findings separate from authoritative badge counts", () => {
     const { graph, selected } = branchingFixture();
     const model = buildAttackPathGraphModel(graph, selected);
     for (const item of model.nodes) {
       const recorded = new Set(graph.edges.flatMap(link => {
         const other = link.source === item.id ? link.target : link.target === item.id ? link.source : null;
         const otherNode = graph.nodes.find(candidate => candidate.id === other);
-        return otherNode?.entity_type === "vulnerability" ? [otherNode.id] : [];
+        return otherNode?.entity_type === "vulnerability" && !selected.hops.includes(otherNode.id) ? [otherNode.id] : [];
       }));
       expect(item.findings).toHaveLength(item.kind === "group" ? item.findings.length : recorded.size);
     }
     expect(model.nodes.find(item => item.id === "pkg:urllib3")!.findings).toHaveLength(1);
+    expect(model.nodes.every(item => item.aggregate === undefined)).toBe(true);
   });
 
   it("branches off a shared node only along recorded edges to other paths in the snapshot", () => {
@@ -121,6 +123,8 @@ describe("attack path graph model", () => {
 
   it("derives context markers only from recorded attributes", () => {
     const { graph, selected } = branchingFixture();
+    graph.nodes.find(node => node.id === "role:admin")!.attributes.admin_equivalent = true;
+    graph.nodes.find(node => node.id === "dataset:finance")!.attributes.data_classification = "restricted";
     const model = buildAttackPathGraphModel(graph, selected);
     const markers = (id: string) => model.nodes.find(item => item.id === id)!.markers.map(marker => marker.kind);
     expect(markers("server:github")).toEqual(["internet"]);

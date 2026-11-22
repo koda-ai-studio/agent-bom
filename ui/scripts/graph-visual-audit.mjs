@@ -1,3 +1,14 @@
+import { captionGeometry } from "../lib/graph-caption-geometry.ts";
+
+/** The caption model's own obstacle test, injected into the page as source: the gate judges rendered captions
+ * and glyphs with the same function the layout's spacing and curve routing use. */
+export const CAPTION_GEOMETRY_SOURCE = captionGeometry.toString();
+
+/** A page expression that runs the grammar audit with the shared caption geometry. */
+export function graphGrammarExpression(options = {}) {
+  return `(${auditGraphGrammar.toString()})(${JSON.stringify(options)}, (${CAPTION_GEOMETRY_SOURCE}))`;
+}
+
 /** Runs inside Playwright's page context against actual rendered SVG curves. */
 export function auditRenderedGraph({ edges }) {
   const byId = new Map(edges.map(edge => [edge.id, edge]));
@@ -111,4 +122,122 @@ export function renderedRelationshipCurves() {
     });
     return [{ id: element.getAttribute("data-id"), relationship, points }];
   });
+}
+
+/**
+ * Runs inside Playwright's page context: the agreed graph grammar, measured on the first frame.
+ * Returns only violations; an empty object means the frame passes.
+ */
+export function auditGraphGrammar({ margin = 48, minGlyph = 32, minFill = 0.6, maxDetour = 1.6, maxLength = 2.5 } = {}, geometry = undefined) {
+  if (typeof geometry !== "function") throw new Error("auditGraphGrammar needs the shared caption geometry: run it through graphGrammarExpression()");
+  const canvas = document.querySelector(".react-flow")?.getBoundingClientRect();
+  if (!canvas) return {};
+  const nodes = [...document.querySelectorAll(".react-flow__node")].filter(node => getComputedStyle(node).visibility !== "hidden")
+    .map(node => ({ id: node.getAttribute("data-id"), box: node.getBoundingClientRect(), glyph: node.querySelector(".graph-entity-glyph")?.getBoundingClientRect() }));
+  const inside = (box, p, pad = 0) => p.x >= box.left - pad && p.x <= box.right + pad && p.y >= box.top - pad && p.y <= box.bottom + pad;
+  const overlaps = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+  const nearest = p => nodes.reduce((best, node) => {
+    const dx = Math.max(node.box.left - p.x, 0, p.x - node.box.right), dy = Math.max(node.box.top - p.y, 0, p.y - node.box.bottom);
+    const d = Math.hypot(dx, dy);
+    return d < best.d ? { node, d } : best;
+  }, { node: null, d: Infinity }).node;
+  const violations = {};
+  const add = (key, item) => (violations[key] ??= []).push(item);
+  // Rendered caption text (names and type lines), measured line by line: a line must never cross label text.
+  const captions = [...document.querySelectorAll(".react-flow__node")].filter(node => getComputedStyle(node).visibility !== "hidden").flatMap(node =>
+    [...node.querySelectorAll("[data-semantic-name], [data-entity-role]")].flatMap(element => {
+      // Each text run, cut to what its overflow-clipping ancestors (an ellipsis box) actually paint.
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+      const out = [];
+      for (let text = walker.nextNode(); text; text = walker.nextNode()) {
+        if (text.parentElement?.closest(".sr-only")) continue;
+        const range = document.createRange();
+        range.selectNodeContents(text);
+        const clips = [];
+        for (let el = text.parentElement; el && el !== node; el = el.parentElement) if (getComputedStyle(el).overflow !== "visible") clips.push(el.getBoundingClientRect());
+        for (const raw of range.getClientRects()) {
+          const rect = clips.reduce((r, c) => ({ left: Math.max(r.left, c.left), right: Math.min(r.right, c.right), top: Math.max(r.top, c.top), bottom: Math.min(r.bottom, c.bottom) }),
+            { left: raw.left, right: raw.right, top: raw.top, bottom: raw.bottom });
+          if (rect.right - rect.left > 1 && rect.bottom - rect.top > 1) out.push({ id: node.getAttribute("data-id"), rect });
+        }
+      }
+      return out;
+    }));
+  // A caption the frame shows only part of reads as a different name ("e Runbook Agent"): text is either whole in frame or wholly outside it.
+  const clipped = [...new Set(captions.filter(({ rect }) => rect.right > canvas.left && rect.left < canvas.right && rect.bottom > canvas.top && rect.top < canvas.bottom
+    && (rect.left < canvas.left - 0.5 || rect.right > canvas.right + 0.5 || rect.top < canvas.top - 0.5 || rect.bottom > canvas.bottom + 0.5)).map(caption => caption.id))];
+  // The zoom controls sit over the canvas: a caption under them is as hidden as one off the edge.
+  const controls = [...document.querySelectorAll(".react-flow__controls")].map(element => element.getBoundingClientRect()).filter(rect => rect.width && rect.height);
+  const covered = captions.filter(({ rect }) => controls.some(c => rect.left < c.right && rect.right > c.left && rect.top < c.bottom && rect.bottom > c.top)).map(caption => caption.id);
+  const hidden = [...new Set([...clipped, ...covered])];
+  if (hidden.length) add("clippedCaptions", hidden);
+  // A finding id is the key fact on its card: it is never cut short with an ellipsis.
+  const truncatedIds = [...document.querySelectorAll(".react-flow__node")].filter(node => getComputedStyle(node).visibility !== "hidden").flatMap(node =>
+    [...node.querySelectorAll("[data-semantic-name]")].filter(name => /\b(CVE|GHSA)-/i.test(name.textContent ?? "")
+      && (name.scrollHeight > name.clientHeight + 1 || [name, ...name.querySelectorAll("*")].some(el => el.scrollWidth > el.clientWidth + 1 && /\b(CVE|GHSA)-/i.test(el.textContent ?? ""))))
+      .map(() => node.getAttribute("data-id")));
+  if (truncatedIds.length) add("truncatedIds", truncatedIds);
+  // Every other name is whole too: a clamped line or a cut piece ends in an ellipsis and reads as a different name.
+  const clampedNames = [...document.querySelectorAll(".react-flow__node")].filter(node => getComputedStyle(node).visibility !== "hidden").flatMap(node =>
+    [...node.querySelectorAll("[data-semantic-name]")].filter(name => !/\b(CVE|GHSA)-/i.test(name.textContent ?? "")
+      && (name.scrollHeight > name.clientHeight + 1 || [...name.querySelectorAll("*")].some(el => el.scrollWidth > el.clientWidth + 1)))
+      .map(name => `${node.getAttribute("data-id")}: ${name.textContent}`));
+  if (clampedNames.length) add("clampedNames", clampedNames);
+  // Each card's rendered caption lines and glyph, judged by the shared obstacle test.
+  const captionsById = new Map();
+  for (const { id, rect } of captions) captionsById.set(id, [...(captionsById.get(id) ?? []), rect]);
+  const captionObstacles = [...captionsById].map(([id, rects]) => ({ id, shape: geometry({ measured: rects, inset: 1 }) }));
+  const glyphShapes = new Map(nodes.filter(node => node.glyph).map(node => [node, geometry({ measured: [], glyph: node.glyph, inset: 4 })]));
+  const diagnosticChips = [...document.querySelectorAll(".react-flow__node *")].filter(el => el.children.length === 0 && /semantic layer unavailable/i.test(el.textContent ?? ""));
+  if (diagnosticChips.length) add("diagnosticChips", diagnosticChips.length);
+  for (const element of document.querySelectorAll(".react-flow__edge")) {
+    const path = element.querySelector(".react-flow__edge-path");
+    const matrix = path?.getScreenCTM();
+    if (!path || !matrix) continue;
+    const length = path.getTotalLength();
+    const points = Array.from({ length: 49 }, (_, i) => {
+      const q = path.getPointAtLength(length * i / 48);
+      return { x: matrix.a * q.x + matrix.c * q.y + matrix.e, y: matrix.b * q.x + matrix.d * q.y + matrix.f };
+    });
+    const id = element.getAttribute("data-id");
+    const source = nearest(points[0]), target = nearest(points.at(-1));
+    if (!source || !target) continue;
+    const span = { left: Math.min(source.box.left, target.box.left), right: Math.max(source.box.right, target.box.right),
+      top: Math.min(source.box.top, target.box.top), bottom: Math.max(source.box.bottom, target.box.bottom) };
+    if (points.some(p => !inside(span, p, margin))) add("loops", id);
+    const through = nodes.filter(node => node !== source && node !== target && node.glyph
+      && points.some(p => glyphShapes.get(node).hits(p.x, p.y, "glyph")));
+    if (through.length) add("throughNodes", `${id} through ${through.map(node => node.id).join(",")}`);
+    const steps = Math.max(2, Math.ceil(length / 3));
+    const fine = Array.from({ length: steps + 1 }, (_, i) => {
+      const q = path.getPointAtLength(length * i / steps);
+      return { x: matrix.a * q.x + matrix.c * q.y + matrix.e, y: matrix.b * q.x + matrix.d * q.y + matrix.f };
+    });
+    const crossed = captionObstacles.filter(({ shape }) => fine.some(p => shape.hits(p.x, p.y, "caption"))).map(({ id }) => id);
+    if (crossed.length) add("throughCaptions", `${id} through ${crossed.join(",")}`);
+    if (points.some(p => inside(canvas, p)) && ![source, target].every(node => overlaps(node.box, canvas))) add("offscreenEndpoints", id);
+    // Drawn length against the straight distance between the endpoints: a detour or loop-back inflates it.
+    const drawn = points.slice(1).reduce((sum, p, i) => sum + Math.hypot(p.x - points[i].x, p.y - points[i].y), 0);
+    const chord = Math.hypot(points.at(-1).x - points[0].x, points.at(-1).y - points[0].y);
+    if (chord > 24 && drawn / chord > maxDetour) add("detours", `${id}:${(drawn / chord).toFixed(2)}`);
+    // A link is one smooth curve: never routed through lanes or gutters that multiply its length.
+    if (chord > 0 && drawn / chord > maxLength) add("longLinks", `${id}:${(drawn / chord).toFixed(2)}`);
+    // Across columns a line leaves the left node's right side and enters the right node's left side.
+    const [left, right] = (source.box.left + source.box.right) / 2 <= (target.box.left + target.box.right) / 2 ? [source, target] : [target, source];
+    const leftEnd = left === source ? points[0] : points.at(-1), rightEnd = left === source ? points.at(-1) : points[0];
+    const separated = right.box.left - left.box.right > 24;
+    if (separated && (leftEnd.x < (left.box.left + left.box.right) / 2 || rightEnd.x > (right.box.left + right.box.right) / 2)) add("wrongSide", id);
+  }
+  const visible = nodes.filter(node => overlaps(node.box, canvas));
+  const small = visible.filter(node => node.glyph && Math.min(node.glyph.width, node.glyph.height) < minGlyph - 0.5);
+  if (small.length) add("smallGlyphs", small.map(node => `${node.id}:${Math.round(Math.min(node.glyph.width, node.glyph.height))}px`));
+  if (visible.length >= 3) {
+    const left = Math.min(...visible.map(n => n.box.left)), right = Math.max(...visible.map(n => n.box.right));
+    const top = Math.min(...visible.map(n => n.box.top)), bottom = Math.max(...visible.map(n => n.box.bottom));
+    if ((right - left) / canvas.width < minFill && (bottom - top) / canvas.height < minFill) add("underfilled", `${Math.round((right - left) / canvas.width * 100)}% x ${Math.round((bottom - top) / canvas.height * 100)}%`);
+    const centers = visible.map(n => (n.box.left + n.box.right) / 2);
+    if (Math.max(...centers) - Math.min(...centers) < 8 && canvas.width > 640) add("singleColumn", visible.length);
+  }
+  if (nodes.length > visible.length && visible.length <= 1) add("loneNode", `${visible.length} of ${nodes.length}`);
+  return violations;
 }

@@ -1,9 +1,10 @@
 import { test, expect, type Page } from "@playwright/test";
+import { ownedFindingAggregates, routeNodeAggregates, withSemanticLayer } from "./helpers/graph-rollup-mocks";
 
 const stamp = "2026-11-05T00:00:00Z";
-const node = (id: string, entity_type: string, attributes = {}) => ({ id, entity_type, label: id, attributes, status: "active", severity: "none", risk_score: 0, dimensions: {}, data_sources: ["synthetic-fixture"], compliance_tags: [] });
+const node = (id: string, entity_type: string, attributes = {}) => withSemanticLayer({ id, entity_type, label: id, attributes, status: "active", severity: "none", risk_score: 0, dimensions: {}, data_sources: ["synthetic-fixture"], compliance_tags: [] });
 const nodes = [node("account", "account"), node("cluster", "cluster"), node("deployment", "container", { kubernetes_kind: "Deployment", container_kind: "workload" }),
-  node("pod", "container", { kubernetes_kind: "Pod", container_kind: "pod" }), node("endpoint", "api_gateway", { resource_id: "api-1", network_reachability_assessment: { complete: true, source_scope: "internet", decision: "allow", target_id: "api-1", evidence_refs: ["fixture-receipt"] } }),
+  node("pod", "container", { kubernetes_kind: "Pod", container_kind: "pod" }), node("endpoint", "api_gateway", { resource_id: "api-1", internet_exposed: true, network_reachability_assessment: { complete: true, source_scope: "internet", decision: "allow", target_id: "api-1", evidence_refs: ["fixture-receipt"] } }),
   node("role", "role"), node("bucket", "data_store"), { ...node("CVE-2099-0001", "vulnerability"), severity: "high" }];
 const edge = (source: string, target: string, relationship: string) => ({ id: `${source}:${relationship}:${target}`, source, target, relationship, traversable: false, direction: "directed", weight: 1, evidence: { tier: "static_scan", source: "synthetic-fixture" }, first_seen: stamp, last_seen: stamp });
 const edges = [edge("account", "cluster", "contains"), edge("cluster", "deployment", "contains"), edge("deployment", "pod", "contains"), edge("endpoint", "pod", "exposed_to"), edge("pod", "role", "assumes"), edge("role", "bucket", "has_permission"), edge("pod", "CVE-2099-0001", "vulnerable_to")];
@@ -45,11 +46,15 @@ for (const theme of ["light", "dark"]) test(`distinct flows, finding drilldown a
     if (path === "/v1/graph/rollup") return r.fulfill({ json: { ...graph, mode: "rollup", top_level: [], children: [], summary: { total_nodes: nodes.length }, completeness: { complete: true }, pagination: { offset: 0, limit: 100, total: 0, returned: 0, has_more: false } } });
     return r.fulfill({ status: 404, json: { detail: "Outside fixture" } });
   });
+  // The finding group comes from the backend's per-asset aggregates.
+  await routeNodeAggregates(page, ownedFindingAggregates(nodes, edges));
   await page.goto("/security-graph?scan=snapshot&lens=estate&rollup=0&layers=account,cluster,apiGateway,container,role,dataStore,vulnerability");
   const flow = page.getByRole("combobox", { name: "Investigation flow" });
   await expect(flow).toBeVisible();
   await flow.selectOption("exposure");
-  await expect(page.locator('.react-flow__node[data-id="display:internet:endpoint"]')).toBeVisible();
+  // One Internet anchor; its display edge to the exposed endpoint is named for the endpoint.
+  await expect(page.locator('.react-flow__node[data-id="display:internet"]')).toBeVisible();
+  await expect(page.locator('.react-flow__edge[data-id="display:internet:endpoint"]')).toHaveCount(1);
   await expect(page.locator('.react-flow__node[data-id="deployment"]')).toBeVisible();
   await expect(page.locator('[data-graph-entity="finding-group"]')).toBeVisible();
   await expect(page.locator("[data-graph-adaptive-frame]")).toHaveAttribute("data-graph-camera-settled", "true");
@@ -66,7 +71,9 @@ for (const theme of ["light", "dark"]) test(`distinct flows, finding drilldown a
   await page.screenshot({ path: testInfo.outputPath(`finding-${theme}.png`), fullPage: false });
   for (const scenario of ["identity", "vulnerability", "inventory"]) {
     await flow.selectOption(scenario);
-    await expect(page.locator('.react-flow__node[data-id="display:internet:endpoint"]')).toHaveCount(0);
+    // One shared Internet anchor at most; never a per-entry anchor node.
+    await expect(page.locator('.react-flow__node[data-id^="display:internet:"]')).toHaveCount(0);
+    await expect(page.locator('.react-flow__node[data-id="display:internet"]')).toHaveCount(await page.locator('.react-flow__node[data-id="endpoint"]').count() ? 1 : 0);
     await expect(page.locator("[data-graph-adaptive-frame]")).toHaveAttribute("data-graph-camera-settled", "true");
     const entry = scenario === "identity" ? "role" : scenario === "vulnerability" ? "pod" : "account";
     await expect(async () => {

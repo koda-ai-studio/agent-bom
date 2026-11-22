@@ -11,10 +11,11 @@ const data = (toggle = vi.fn(), count = 2, severity?: string): LineageNodeData =
 const view = (nodeData: LineageNodeData) => render(<ReactFlowProvider><GraphFindingGroupNode data={nodeData} /></ReactFlowProvider>);
 
 describe("GraphFindingGroupNode", () => {
-  it("names the group by what it belongs to and counts what it holds", () => {
+  it("names the group by its owner and displays the supplied finding count", () => {
     view(data());
     expect(screen.getByRole("button", { name: "Expand 2 findings for pod: prod/web" })).toBeTruthy();
-    expect(screen.getByText("Click to expand · 2 loaded")).toBeTruthy();
+    expect(screen.getByText("Findings (2)")).toBeTruthy();
+    expect(screen.getByText("Click to explore")).toBeTruthy();
   });
 
   it("uses the singular for one finding", () => {

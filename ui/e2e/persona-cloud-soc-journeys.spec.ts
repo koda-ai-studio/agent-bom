@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { withSemanticLayer } from "./helpers/graph-rollup-mocks";
 
 // Cloud and SOC persona journeys over a recorded fixture: a Snowflake → AWS
 // storage chain reached from the path queue, and a new path opened from the
@@ -7,11 +8,11 @@ const scanId = "scan-persona-fixture";
 const createdAt = "2026-10-20T00:00:00Z";
 
 function node(id: string, entityType: string, label: string, attributes: Record<string, unknown> = {}) {
-  return {
+  return withSemanticLayer({
     id, entity_type: entityType, label, category_uid: 0, class_uid: 0, type_uid: 0, status: "active", risk_score: 0,
     severity: "none", severity_id: 0, first_seen: createdAt, last_seen: createdAt, attributes, compliance_tags: [],
     data_sources: ["scan"], dimensions: { cloud_provider: String(attributes.cloud_provider ?? "") },
-  };
+  });
 }
 
 function edge(source: string, target: string, relationship: string) {

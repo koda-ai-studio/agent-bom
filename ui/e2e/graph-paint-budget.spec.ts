@@ -2,9 +2,10 @@ import { expect, test, type Page } from "@playwright/test";
 import os from "node:os";
 import { installGraphPaintMeasurement } from "./helpers/graph-paint-measurement";
 import { readFileSync, writeFileSync } from "node:fs";
+import { withSemanticLayer } from "./helpers/graph-rollup-mocks";
 
 const stamp = "2026-10-15T00:00:00Z";
-const node = (id:string, entity_type:string) => ({id,label:id,entity_type,severity:"none",status:"active",risk_score:0,
+const node = (id:string, entity_type:string) => withSemanticLayer({id,label:id,entity_type,severity:"none",status:"active",risk_score:0,
   attributes:{},dimensions:{},data_sources:["synthetic-paint-budget"],compliance_tags:[]});
 
 async function fixture(page:Page, agents:number) {
@@ -52,7 +53,8 @@ for(const agents of [12,120]) test(`first useful graph paint below two seconds a
       await expect(page.locator(".react-flow__node")).toHaveCount(5);
       await expect(page.locator(".react-flow__node-serverNode")).toHaveCount(3);
       await expect(page.locator(".react-flow__edge")).toHaveCount(4);
-      await expect(page.locator(".graph-relationship-label")).toHaveCount(0);
+      // At rest only a folded link's count ("×N") is printed on the canvas; relationship names wait for hover or focus.
+      expect((await page.locator(".graph-relationship-label").allTextContents()).every(text => /^×\d+$/.test(text.trim()))).toBe(true);
       expect(await page.locator(".react-flow__node").evaluateAll(nodes => nodes.every(node => {
         const box = node.getBoundingClientRect();
         const frame = node.closest(".react-flow")!.getBoundingClientRect();

@@ -48,10 +48,10 @@ export function GraphPathList({ nodes, edges, onSelect }: {
   const { chains: inOrder, truncated } = graphChains(nodes, edges);
   const chains = inOrder.map(chain => ({ chain, rank: chainRank(chain.ids, byId) })).sort((a, b) => a.rank - b.rank).map(item => item.chain);
   return (
-    <section aria-label="Graph paths" data-testid="graph-path-list" className="mt-2 space-y-3">
+    <section aria-label="Graph connection chains" data-testid="graph-path-list" className="mt-2 space-y-3">
       <p className="text-xs text-ink-secondary">
-        {nodes.length.toLocaleString()} nodes · {chains.length.toLocaleString()} {chains.length === 1 ? "path" : "paths"}
-        {truncated ? " · first paths shown; open Graph for the rest" : ""}
+        {nodes.length.toLocaleString()} {nodes.length === 1 ? "node" : "nodes"} · {chains.length.toLocaleString()} connection {chains.length === 1 ? "chain" : "chains"}
+        {truncated ? " · first connections shown; open Graph for the rest" : ""}
       </p>
       <ol className="space-y-3">
         {chains.map(chain => (

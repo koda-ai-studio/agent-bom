@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Panel, getViewportForBounds, useNodesInitialized, useReactFlow, useStore, type Node, type FitViewOptions, type Rect } from "@xyflow/react";
-import { GRAPH_FIT_MAX_ZOOM, GRAPH_LEGIBLE_FIT_ZOOM, GRAPH_PHONE_FOCUS_MIN_ZOOM, graphAdaptiveFrame, legibleFitZoom } from "@/lib/graph-adaptive-frame";
+import { CONTROLS_RESERVE, GRAPH_FIT_MAX_ZOOM, PHONE_CONTROLS_PX, recordFittedZoom, GRAPH_LEGIBLE_FIT_ZOOM, GRAPH_PHONE_FOCUS_MIN_ZOOM, graphAdaptiveFrame, legibleFitZoom } from "@/lib/graph-adaptive-frame";
 import { graphInspectorTargets } from "@/lib/graph-inspector-framing";
 import { readableNodeId } from "@/lib/node-id-tail";
 
@@ -81,9 +81,10 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     // Never choose a phone camera for a desktop-sized mounted canvas.
     if (canvas && canvas.clientWidth > 0 && Math.abs(width - canvas.clientWidth) > 2) return;
     const nodes = getNodes().filter(node => !node.hidden);
-    const anchor = nodes.find(node => node.id === anchorId) ?? nodes[0];
+    const portrait = width < 640 && nodes.length > 0 && nodes.every(node => node.data.phoneLayout === true);
+    const anchor = nodes.find(node => node.id === anchorId) ?? nodes.find(node => !node.id.startsWith("display:")) ?? nodes[0];
     const frameSize = graphAdaptiveFrame({
-      bounds: getNodesBounds(nodes), width, inspector, nodeCount: nodes.length, boundedPreview,
+      bounds: getNodesBounds(nodes), width, inspector, nodeCount: nodes.length, boundedPreview: boundedPreview || portrait || nodes.length <= 12 && nodes.every(node => node.data.semanticLayout === true),
       availableHeight: windowHeight - spaceAbove - 24 - (width < 640 ? PHONE_NAVIGATOR_HEIGHT : 0),
       focusHeight: focusCardHeight(anchor), focusPadding: padding,
     });
@@ -112,12 +113,12 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     // anchor at full-card zoom, since summary pills below zoom 1 are unreadable there.
     const phone = width < 640;
     const legiblePath = !phone && primaryPathKey ? legiblePrefix(primaryPathKey.split("\n"), nodes, getNodesBounds, width, height, primaryZoom ?? GRAPH_LEGIBLE_FIT_ZOOM) : null;
-    const focus = !frameSize.fitAll && anchor ? (phone ? [{ id: anchor.id }] : legiblePath ?? neighbourhood(anchor.id, nodes.map(node => node.id), getEdges())) : null;
+    const focus = !portrait && !frameSize.fitAll && anchor ? (phone ? [{ id: anchor.id }] : legiblePath ?? neighbourhood(anchor.id, nodes.map(node => node.id), getEdges())) : null;
     // The whole graph is framed only because it reads at the legible zoom with symmetric padding.
     // The controls' left inset narrows the fit slightly, so hold the camera at that zoom; the
     // symmetric margin still covers the difference, so no card leaves the frame.
-    const whole = { minZoom: legibleFitZoom(width), maxZoom: GRAPH_FIT_MAX_ZOOM };
-    let options: FitViewOptions = { padding: { top: padding, right: padding, bottom: padding, left: phone ? padding : "72px" }, duration: 0, ...whole,
+    const whole = { minZoom: portrait ? 48 / 56 : legibleFitZoom(width), maxZoom: GRAPH_FIT_MAX_ZOOM };
+    let options: FitViewOptions = { padding: phone || portrait ? { top: `${PHONE_CONTROLS_PX}px`, right: "8px", bottom: padding, left: "8px" } : { top: padding, right: padding, bottom: padding, left: CONTROLS_RESERVE }, duration: 0, ...whole,
       ...(focus ? phone ? { nodes: focus, minZoom: GRAPH_PHONE_FOCUS_MIN_ZOOM, maxZoom: 1.1 } : { nodes: focus, minZoom: legibleFitZoom(width), ...(legiblePath ? { maxZoom: PRIMARY_PATH_MAX_ZOOM } : {}), ...(legiblePath && primaryZoom ? { minZoom: primaryZoom, maxZoom: primaryZoom } : {}) } : {}) };
     let fitIds = focus ? new Set(focus.map(node => node.id)) : null;
     // Convergence must measure exactly the nodes passed to fitView.
@@ -155,6 +156,7 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
               void setViewport({ x, zoom: viewport.zoom, y: PRIMARY_PATH_TOP_MARGIN - after.y * viewport.zoom });
             }
             lastAutoFitKey.current = autoFitKey;
+            if (typeof getViewport === "function") recordFittedZoom(getViewport().zoom);
             frameElement.dataset.graphCameraSettled = "true";
           }
           else if (pass < 3) settle(pass + 1);

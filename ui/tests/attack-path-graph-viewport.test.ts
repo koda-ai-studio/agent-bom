@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildAttackPathGraphModel } from "@/lib/attack-path-graph-model";
-import { layoutAttackPathGraph } from "@/lib/attack-path-graph-layout";
+import { attackPathCanvasHeight, attackPathCanvasWidth, NARROW_MIN_ZOOM, layoutAttackPathGraph } from "@/lib/attack-path-graph-layout";
 import { ATTACK_PATH_FIT_PADDING, FINDING_BADGE_OVERHANG, attackPathViewport } from "@/lib/attack-path-graph-viewport";
 import { demoFixture, fanOutFixture } from "./fixtures/attack-path-graph-fixture";
 
@@ -46,28 +46,26 @@ describe("attack path viewport", () => {
     }
   });
 
-  it("moves a phone's path column toward the centre as far as keeping every branch visible allows", () => {
+  it("keeps the phone path vertical without a sideways canvas at readable zoom", () => {
     const { graph, selected } = demoFixture("headline");
     const model = buildAttackPathGraphModel(graph, selected);
     const layout = layoutAttackPathGraph(model, "TB");
-    const pad = ATTACK_PATH_FIT_PADDING;
-    const middle = (width: number) => pad.left + (width - pad.left - pad.right) / 2;
-    for (const width of [342, 520]) {
-      const pane = { width, height: 2200 };
-      const viewport = attackPathViewport(layout, model.pathNodeIds, pane, 0.7);
+    expect(layout.direction).toBe("TB");
+    expect(new Set(model.pathNodeIds.map(id => layout.positions.get(id)!.x)).size).toBe(1);
+    for (const frameWidth of [342, 520]) {
+      const width = attackPathCanvasWidth(layout, true, frameWidth);
+      const pane = { width, height: attackPathCanvasHeight(layout, true, width) };
+      const viewport = attackPathViewport(layout, model.pathNodeIds, pane, NARROW_MIN_ZOOM);
+      expect(width).toBe(frameWidth);
+      expect(viewport.zoom).toBeGreaterThanOrEqual(NARROW_MIN_ZOOM);
       expect(viewport.hiddenNodeIds).toEqual([]);
-      const spine = screenBoxes(layout, viewport).find(box => box.id === model.pathNodeIds[0])!;
-      const offset = (spine.left + spine.right) / 2 - middle(width);
-      const left = viewport.x, right = viewport.x + layout.width * viewport.zoom;
-      expect(left).toBeGreaterThanOrEqual(pad.left - 0.5);
-      expect(right).toBeLessThanOrEqual(width - pad.right + 0.5);
-      // Centred, or held off centre only because the branch side already touches its padded edge.
-      if (Math.abs(offset) >= 1) expect(offset > 0 ? Math.abs(left - pad.left) : Math.abs(right - (width - pad.right))).toBeLessThan(1);
+      for (const box of screenBoxes(layout, viewport)) {
+        expect(box.left).toBeGreaterThanOrEqual(0);
+        expect(box.right).toBeLessThanOrEqual(pane.width);
+        expect(box.top).toBeGreaterThanOrEqual(0);
+        expect(box.bottom).toBeLessThanOrEqual(pane.height);
+      }
     }
-    // With room to spare the column is exactly centred.
-    const wide = attackPathViewport(layout, model.pathNodeIds, { width: 900, height: 2200 }, 0.7);
-    const spine = screenBoxes(layout, wide).find(box => box.id === model.pathNodeIds[0])!;
-    expect(Math.abs((spine.left + spine.right) / 2 - middle(900))).toBeLessThan(1);
   });
 
   it("keeps the selected path whole and names what is off screen when the graph would fall below the floor", () => {
@@ -76,7 +74,7 @@ describe("attack path viewport", () => {
     const layout = layoutAttackPathGraph(model, "LR");
     const pane = { width: 760, height: 520 };
     const viewport = attackPathViewport(layout, model.pathNodeIds, pane, 0.6);
-    expect(viewport.zoom).toBe(0.6);
+    expect(viewport.zoom).toBeGreaterThanOrEqual(0.6);
     expect(viewport.fallback).toBe(true);
     const boxes = screenBoxes(layout, viewport);
     for (const id of model.pathNodeIds) {
@@ -107,4 +105,32 @@ describe("attack path viewport", () => {
     expect(viewport.hiddenNodeIds.length).toBeGreaterThan(0);
     for (const id of viewport.hiddenNodeIds) expect(model.pathNodeIds).not.toContain(id);
   });
+});
+
+it("reserves badge room before framing phone context to the left of the selected spine", () => {
+  const layout = {
+    direction: "LR" as const, nodeWidth: 152, nodeHeight: 136, width: 1152, height: 840,
+    positions: new Map([["left-context", { x: 0, y: 0 }], ["spine", { x: 600, y: 336 }], ["right-context", { x: 1000, y: 0 }]]),
+  };
+  const width = attackPathCanvasWidth(layout, true, 358);
+  const height = attackPathCanvasHeight(layout, true, width);
+  const viewport = attackPathViewport(layout, ["spine"], { width, height }, NARROW_MIN_ZOOM);
+  expect(viewport.hiddenNodeIds).toEqual([]);
+  expect(viewport.zoom).toBeGreaterThanOrEqual(NARROW_MIN_ZOOM);
+  const right = viewport.x + layout.width * viewport.zoom;
+  expect(right + FINDING_BADGE_OVERHANG * viewport.zoom).toBeLessThanOrEqual(width);
+});
+
+it("fits phone branches inside the nested 306px investigation panel without shrinking glyphs", () => {
+  const { graph, selected } = fanOutFixture(3);
+  const model = buildAttackPathGraphModel(graph, selected, { collapseThreshold: 100 });
+  const layout = layoutAttackPathGraph(model, "TB");
+  const width = 306, height = attackPathCanvasHeight(layout, true, width);
+  const viewport = attackPathViewport(layout, model.pathNodeIds, { width, height }, NARROW_MIN_ZOOM);
+  expect(viewport.hiddenNodeIds).toEqual([]);
+  expect(viewport.zoom * 56).toBeGreaterThanOrEqual(48);
+  const boxes = screenBoxes(layout, viewport);
+  for (const a of boxes) for (const b of boxes) if (a.id !== b.id) {
+    expect(a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top).toBe(true);
+  }
 });

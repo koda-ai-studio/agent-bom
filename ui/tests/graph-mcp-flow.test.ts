@@ -6,7 +6,8 @@ import { mcpNodeCaption } from "@/lib/graph-mcp-caption";
 import { findingEvidenceContext, MCP_FLOW_FOOTPRINT, mcpEvidenceFlow } from "@/lib/graph-mcp-flow";
 
 const node = (id: string, nodeType: LineageNodeData["nodeType"], label = id): Node<LineageNodeData> => ({
-  id, type: `${nodeType}Node`, position: { x: 0, y: 0 }, data: { label, nodeType },
+  id, type: `${nodeType}Node`, position: { x: 0, y: 0 }, data: { label, nodeType, semanticLayer: ({ agent: "orchestration", server: "mcp_server", package: "package", credential: "identity", misconfiguration: "finding", cloudResource: "infra" } as Record<string, string>)[nodeType],
+    ...(["client", "github-1", "credential", "finding"].includes(id) ? { semanticPathIndex: ["client", "github-1", "credential", "finding"].indexOf(id) } : {}) },
 });
 const nodes = [node("client", "agent", "Claude Desktop"), node("github-1", "server", "github"),
   node("github-2", "server", "github"), node("files-1", "server", "filesystem"), node("files-2", "server", "filesystem"),
@@ -48,7 +49,7 @@ describe("small MCP evidence flow", () => {
     expect(at.credential!.y).toBe(at.client!.y);
     expect(at.finding!.y).toBe(at.client!.y);
     expect(at["github-package"]!.y).not.toBe(at.credential!.y);
-    expect(at["files-1"]!.y).toBeGreaterThan(at["github-1"]!.y);
+    expect(at["files-1"]!.y).not.toBe(at["github-1"]!.y);
     const backwards = mcpEvidenceFlow(nodes, [{ id: "back", source: "finding", target: "credential", data: { relationship: "affects" } }])!;
     expect(backwards.edges[0]!.sourceHandle).toBe("context");
     expect(backwards.edges[0]!.targetHandle).toBe("context");
@@ -56,8 +57,8 @@ describe("small MCP evidence flow", () => {
 
   it("spaces rows for the tallest card it draws, so no two cards in a column overlap", () => {
     const result = mcpEvidenceFlow(nodes, edges)!;
-    // Cards render 203-272px tall (glyph, a three-line name, metadata and the client line).
-    expect(MCP_FLOW_FOOTPRINT.cardMaxHeight).toBeGreaterThanOrEqual(272);
+    // A circle, two name lines and one type line fit inside the reserved compact footprint.
+    expect(MCP_FLOW_FOOTPRINT.cardMaxHeight).toBeGreaterThanOrEqual(170);
     const box = (n: Node<LineageNodeData>) => ({ left: n.position.x, right: n.position.x + Number(n.style?.width ?? 0),
       top: n.position.y, bottom: n.position.y + MCP_FLOW_FOOTPRINT.cardMaxHeight });
     const overlaps: string[] = [];
@@ -68,15 +69,12 @@ describe("small MCP evidence flow", () => {
     expect(overlaps).toEqual([]);
   });
 
-  it("balances connected branches above and below the primary evidence chain", () => {
+  it("keeps the primary evidence chain on row zero with its branches off it", () => {
     const result = mcpEvidenceFlow(nodes, edges)!;
     const primary = result.nodes.find(n => n.id === "client")!.position.y;
-    const branchRows = result.nodes.filter(n => n.data.nodeType === "server").map(n => n.position.y);
-    expect(Math.min(...branchRows)).toBeLessThan(primary);
-    expect(Math.max(...branchRows)).toBeGreaterThan(primary);
-    const low = Math.min(...result.nodes.map(n => n.position.y)), high = Math.max(...result.nodes.map(n => n.position.y));
-    expect((primary - low) / (high - low)).toBeGreaterThanOrEqual(0.3);
-    expect((primary - low) / (high - low)).toBeLessThanOrEqual(0.7);
+    expect(primary).toBe(0);
+    const branchRows = result.nodes.filter(n => n.data.nodeType === "server" && n.id !== "github-1").map(n => n.position.y);
+    expect(branchRows.every(y => y !== primary)).toBe(true);
   });
 
   it("is deterministic across API ordering and does not relabel scope or evidence", () => {
@@ -100,9 +98,9 @@ describe("small MCP evidence flow", () => {
       .toEqual(new Set(["finding", "credential", "github-1", "client"]));
   });
 
-  it("leaves mixed infrastructure and crowded columns with the existing layout", () => {
-    expect(mcpEvidenceFlow([...nodes, node("cloud", "cloudResource")], edges)).toBeNull();
-    expect(mcpEvidenceFlow([...nodes, node("fifth-server", "server")], edges)).toBeNull();
+  it("uses the same grammar for mixed infrastructure and crowded columns", () => {
+    expect(mcpEvidenceFlow([...nodes, node("cloud", "cloudResource")], edges).nodes).toHaveLength(nodes.length + 1);
+    expect(mcpEvidenceFlow([...nodes, node("fifth-server", "server")], edges).nodes).toHaveLength(nodes.length + 1);
   });
 });
 

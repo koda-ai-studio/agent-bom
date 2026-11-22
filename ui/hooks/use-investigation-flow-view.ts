@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import type { Edge, Node, NodeChange } from "@xyflow/react";
+import { useStore, type Edge, type Node, type NodeChange } from "@xyflow/react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { automaticFlowLabel } from "@/components/graph-flow-control";
 import { useCloudFindingDisclosure } from "@/hooks/use-cloud-finding-disclosure";
@@ -10,6 +10,7 @@ import { flowAvailability, flowFromParam, flowUnavailableReason, investigationFl
 import type { graphConnectionPreview } from "@/lib/graph-connection-preview";
 import { GRAPH_CARD_ZOOM } from "@/lib/graph-adaptive-frame";
 import { hopColumnLayout } from "@/lib/graph-hop-columns";
+import { setLayoutFrame } from "@/lib/graph-compact-arcs";
 import { PREVIEW_LAYOUT } from "@/lib/graph-preview-layout";
 import { separateCards } from "@/lib/graph-card-separation";
 import { quietContextEdges, withHeldConnections } from "@/lib/graph-edge-quieting";
@@ -61,6 +62,9 @@ export function useInvestigationFlowView({ presentation, edges, loaded, narrowVi
   const [receiptId, setReceiptId] = useState<string | null>(null);
 
   const previewRootId = connectionPreview?.root.id;
+  // Placement is computed for the canvas actually on screen, re-placed when its size bucket changes.
+  const canvasWidth = useStore(state => state.width), canvasHeight = useStore(state => state.height);
+  const frame = useMemo(() => setLayoutFrame(canvasWidth, canvasHeight), [canvasWidth, canvasHeight]);
   const flow: FlowResult = useMemo(() => {
     if (!active) return { nodes: presentation.nodes, edges, scenario: "inventory", applied: false, primaryPath: [] };
     if (previewActive) {
@@ -69,10 +73,11 @@ export function useInvestigationFlowView({ presentation, edges, loaded, narrowVi
       const placed = new Map(hopColumnLayout(shown, edges, previewRootId ?? "", { ...PREVIEW_LAYOUT, vertical: narrowViewport }).map(node => [node.id, node.position]));
       return { nodes: presentation.nodes.map(node => placed.has(node.id) ? { ...node, position: placed.get(node.id)! } : node), edges, scenario: "inventory", applied: false, primaryPath: [] };
     }
-    return investigationFlow(presentation.nodes, edges, kind, narrowViewport);
-  }, [active, previewActive, previewRootId, presentation.nodes, edges, kind, narrowViewport]);
+    return investigationFlow(presentation.nodes, edges, kind, narrowViewport, frame);
+  }, [active, previewActive, previewRootId, presentation.nodes, edges, kind, narrowViewport, frame]);
   const disclosed = useCloudFindingDisclosure(flow.nodes, flow.edges, selectedNodeId, `${presentation.storageKey}:${kind}`,
-    active || presentation.editing || presentation.hasSavedState || presentation.restoredSavedState);
+    // The flow's own layout reflows around the groups; only preview and operator placements are kept.
+    previewActive || presentation.editing || presentation.hasSavedState || presentation.restoredSavedState);
   const [allEdgesShown, setAllEdgesShown] = useState(false);
   const annotated = useMemo(() => withHeldConnections(disclosed.nodes, disclosed.edges, allEdgesShown || presentation.editing), [disclosed.nodes, disclosed.edges, allEdgesShown, presentation.editing]);
   const measuredRaw = useDisplayNodeMeasurements(annotated, presentation.onNodesChange);

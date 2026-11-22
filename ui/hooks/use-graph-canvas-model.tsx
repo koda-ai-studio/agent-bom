@@ -1,5 +1,7 @@
 "use client";
 
+import { useGraphNodeAggregates, withGraphNodeAggregates } from "@/lib/graph-node-aggregates";
+
 import { decodeGraphInvestigationParams } from "@/lib/attack-paths";
 import { graphConnectionPreview } from "@/lib/graph-connection-preview";
 import { clusterMapEligible } from "@/lib/graph-cluster-map";
@@ -8,7 +10,7 @@ import { boundedGraphElements } from "@/lib/graph-neighbor-expansion";
 import { declutterRelationshipLabels, hideRedundantDerivedEdges } from "@/lib/graph-label-declutter";
 import { graphInvestigationContext, selectInvestigationContext, investigationRankEdges, restoreInvestigationEdges } from "@/lib/graph-investigation-context";
 import { completeDirectedHopCount, visibleGraphFocus, pathRelationshipIds } from "@/lib/security-graph-focus";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useStore, type FitViewOptions, type Node } from "@xyflow/react";
 import { CONTROLS_OVERLAY, fitPaddingAroundOverlay } from "@/lib/graph-viewport-fit";
 import { withFindingContext } from "@/lib/finding-investigation-href";
@@ -19,14 +21,14 @@ import { findingEvidenceContext } from "@/lib/graph-mcp-flow";
 import { COMPACT_GRAPH_MIN_ZOOM, compactInvestigationLayout, readableLineageDagreLr } from "@/lib/graph-node-dimensions";
 import { effectiveLodBandForGraph, useLodBand } from "@/lib/lod-renderer";
 import { flowFromParam, flowPinnedIds } from "@/lib/graph-investigation-flow";
-import { GRAPH_CARD_ZOOM, legibleFit, legibleFitZoom } from "@/lib/graph-adaptive-frame";
+import { currentFittedZoom, evidenceFlowKeepsDetail, GRAPH_CARD_ZOOM, legibleFit, legibleFitZoom, recordFittedZoom, subscribeFittedZoom } from "@/lib/graph-adaptive-frame";
 import { aggregateSiblings, EXPANDED_AGGREGATION_THRESHOLD, FOCUSED_AGGREGATION_THRESHOLD, isClusterPillNode } from "@/lib/sibling-aggregator";
 import { type UnifiedNode } from "@/lib/graph-schema";
 import { resolveSnapshotAttackPathCount } from "@/lib/graph-snapshot-metrics";
 import { lineageNodeTypeForEntity } from "@/lib/graph-entity-mapping";
 import { buildDriftIndex, diffChangeCounts, driftAttributeSummaries, countVisiblePathHops, graphNodeDisplayLabels, legendItemsForVisibleGraph, readableGraphEdges } from "@/lib/graph-utils";
 import { graphFitViewOptions, graphInitialFitViewOptions, graphReadableFitViewOptions, shouldShowGraphMiniMap } from "@/lib/graph-viewport";
-import { buildRollupFlowGraph, phoneStacksScopes } from "@/lib/graph-rollup-view";
+import { buildRollupFlowGraph } from "@/lib/graph-rollup-view";
 import { buildUnifiedFlowGraph } from "@/lib/unified-graph-flow";
 import { decideGraphRenderer } from "@/lib/graph-renderer-switch";
 import { applyFilters, encodeFiltersToParams } from "@/lib/filter-algebra";
@@ -44,7 +46,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
   const {
     reactFlow, graphViewport, narrowViewport, canvasLayoutAspect, session, authLoading, canvasPage, setCanvasPage,
     snapshots, selectedScanId, graphData, selectedScenarioId, scenarioExpanded, scenarioState, scenarioComparison,
-    attackPathQueue, attackPathQueueScanId, loadingSnapshots, error, selectedNodeDetail, graphDiff, driftLensActive,
+    attackPathQueueScanId, loadingSnapshots, error, selectedNodeDetail, graphDiff, driftLensActive,
     setDriftLensActive, driftFilter, setDriftFilter, evidenceLensActive, evidenceFilter, selectedNode, setSelectedNode,
     selectedNodeId, setSelectedNodeId, selectedRelationship, setSelectedRelationship, selectedAttackPathKey,
     requestedAttackPathKeyRef, investigationMode, reachabilitySummary, mobileGraphView, investigationDirection,
@@ -62,7 +64,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
         rollupView.mode === "drilldown"
           ? (rollupView.children ?? [])
           : (rollupView.top_level ?? []);
-      const rollupFlow = buildRollupFlowGraph(items, { edges: rollupDisplayEdges, ...(phoneStacksScopes(narrowViewport, items.length) ? { columns: 1 } : {}) });
+      const rollupFlow = buildRollupFlowGraph(items, { edges: rollupDisplayEdges });
       return {
         nodes: rollupFlow.nodes,
         edges: rollupFlow.edges,
@@ -139,13 +141,8 @@ export function useGraphCanvasModel(page: GraphPageData) {
     rollupCanvasFailed,
     rollupView,
     rollupDisplayEdges,
-    narrowViewport,
   ]);
-  const snapshotAttackPathCount = resolveSnapshotAttackPathCount({
-    pageTotal: attackPathQueue?.pagination.total,
-    statsTotal: graphData?.stats.attack_path_count,
-    returnedPaths: flow.summary?.attackPaths ?? 0,
-  });
+  const snapshotAttackPathCount = resolveSnapshotAttackPathCount(graphData?.stats.attack_paths);
 
   const queueSettled = attackPathQueueScanId === selectedScanId;
   const awaitingAutoFocus = !initializedFocus && !seededFromUrlRef.current && !investigationMode &&
@@ -404,7 +401,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
   const compactGroupedTopology = aggregated.clusters.size > 0 && aggregated.nodes.length <= 6;
   const compactMobileTopology = narrowViewport && !selectedAttackPath &&
     !rollupNavigationActive && compactGroupedTopology;
-  const graphLayoutKind = (compactMobileTopology && !investigationMode || previewActive && narrowViewport) ? "dagre" : selectedAttackPath || selectedScenarioId || rollupNavigationActive || investigationMode || previewActive ? "dagre-lr" : "asset-hierarchy";
+  const graphLayoutKind = "asset-hierarchy";
   // "Show more" reads against the root's recorded degree, when the detail read was complete.
   const rootConnections = useMemo(() => {
     const detail = selectedNodeDetail?.response;
@@ -506,8 +503,8 @@ export function useGraphCanvasModel(page: GraphPageData) {
     },
     layoutInput.layoutRequired && !rollupDecisionActive && !rollupCanvasPending && !rollupCanvasFailed,
   );
-  const layoutEdges = useMemo(() => restoreInvestigationEdges(layoutInput.edges, rankedLayoutEdges, graphLayoutKind === "dagre"),
-    [layoutInput.edges, rankedLayoutEdges, graphLayoutKind]);
+  const layoutEdges = useMemo(() => restoreInvestigationEdges(layoutInput.edges, rankedLayoutEdges, false),
+    [layoutInput.edges, rankedLayoutEdges]);
   const selectedEvidenceHopCount = selectedAttackPath
     ? Math.max(0, selectedAttackPath.hops.length - 1)
     : 0;
@@ -579,7 +576,8 @@ export function useGraphCanvasModel(page: GraphPageData) {
   // Levels of detail: the zoom band keeps dense graphs readable without moving nodes.
   const zoomBand = useLodBand();
   const lodBand = zoomBand === "summary" && graphViewport.zoom >= GRAPH_CARD_ZOOM ? "detail" : zoomBand;
-  const effectiveLodBand = canvasLayoutNodes.some(node => node.data.evidenceFlow) || compactInvestigationTopology || compactGroupedTopology || (scenarioContextIds && scenarioContextIds.size <= 8) ? "detail" : effectiveLodBandForGraph(lodBand, {
+  const fittedZoom = useSyncExternalStore(subscribeFittedZoom, currentFittedZoom, () => null);
+  const effectiveLodBand = (canvasLayoutNodes.some(node => node.data.evidenceFlow) && evidenceFlowKeepsDetail(graphViewport.zoom, fittedZoom)) || compactInvestigationTopology || compactGroupedTopology || (scenarioContextIds && scenarioContextIds.size <= 8) ? "detail" : effectiveLodBandForGraph(lodBand, {
     sourceNodeCount: flow.nodes.length,
     renderedNodeCount: aggregated.nodes.length,
     clusterCount: aggregated.clusters.size,
@@ -603,9 +601,12 @@ export function useGraphCanvasModel(page: GraphPageData) {
       setDriftFilter("all");
     }
   }, [lensDiff, setDriftFilter, setDriftLensActive]);
-  const displayNodes = useMemo(() => lensDisplayNodes({
+  const visibleContext = useMemo(() => lensDisplayNodes({
     nodes: baseDisplayNodes, driftEngaged: driftLensEngaged, driftIndex, driftFilter, evidenceActive: evidenceLensActive, evidenceFilter,
   }), [baseDisplayNodes, driftIndex, driftLensEngaged, driftFilter, evidenceLensActive, evidenceFilter]);
+  const contextAggregates = useGraphNodeAggregates(graphData?.scan_id,
+    selectedAttackPath ? [] : visibleContext.filter(node => !node.hidden && !node.data.rollup && !node.data.displayOnly).map(node => node.id), graphData?.snapshot_generation);
+  const displayNodes = useMemo(() => withGraphNodeAggregates(visibleContext, contextAggregates), [visibleContext, contextAggregates]);
   const drift = useMemo(() => driftTally(baseDisplayNodes, driftIndex), [baseDisplayNodes, driftIndex]);
   const evidenceCounts = useMemo(() => evidenceTally(baseDisplayNodes), [baseDisplayNodes]);
   const compressedGroupCount = aggregatedClusterNodes.length;
@@ -718,7 +719,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
     scope: presentationScope,
     // Keep the saved-layout identity stable across the responsive default.
     // Explicit personal positions and viewport remain authoritative on resize.
-    layout: displayNodes.some(node => node.data.evidenceFlow) ? "mcp-evidence-flow-v2" : graphLayoutKind === "asset-hierarchy" ? "evidence-flow-v1" : "dagre-lr",
+    layout: "backend-semantic-layers",
     enabled: !captureMode && !authLoading && Boolean(session),
     ownerActive: Boolean(session),
     localMode: session?.recommended_ui_mode === "no_auth",
@@ -729,12 +730,15 @@ export function useGraphCanvasModel(page: GraphPageData) {
     setManualCameraScope(cameraScope);
     const generation = ++fitGeneration.current;
     const whole = selectedScenarioId ? { ...initialViewportOptions, nodes: reactFlow.getNodes() } : { ...viewportOptions, padding: Math.max(investigationContext ? 0.25 : 0.2, viewportOptions.padding) };
-    // Fit all never shrinks cards below legible text; a topology larger than that is panned.
-    // A capture cannot be panned, so it keeps the whole graph in the image.
-    const options = captureMode ? whole : legibleFit(whole, legibleFitZoom(canvasWidth));
+    // Captures and interactive fits share the same readability floor.
+    const options = narrowViewport
+      ? graphReadableFitViewOptions(reactFlow.getNodes(), viewportOptions, selectedNodeId ?? investigationMode?.rootId)
+      : legibleFit(whole, legibleFitZoom(canvasWidth));
     const fit = () => {
       if (fitGeneration.current !== generation) return;
       void reactFlow.fitView({ ...options, duration: 240 }).then(() => {
+        // Fit all re-opens the frame: its zoom is again the one that shows full cards.
+        recordFittedZoom(reactFlow.getViewport().zoom);
         if (!investigationContext && !selectedScenarioId) return;
         // Caption sizes change with zoom. Include their final measured extent,
         // but abandon the settling pass after a scope change or user movement.
@@ -746,7 +750,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
     // Let React Flow apply manual-camera props before enqueueing the fit;
     // changing its fitView prop otherwise clears the pending imperative fit.
     requestAnimationFrame(() => requestAnimationFrame(fit));
-  }, [reactFlow, viewportOptions, investigationContext, cameraScope, selectedScenarioId, initialViewportOptions, canvasWidth, captureMode]);
+  }, [reactFlow, viewportOptions, investigationContext, cameraScope, selectedScenarioId, initialViewportOptions, canvasWidth, captureMode, narrowViewport, selectedNodeId, investigationMode?.rootId]);
   const fitSelection = useCallback(async () => {
     if (rollupNavigationActive) {
       await reactFlow.fitView({ ...viewportOptions, minZoom: 0.16, maxZoom: 1, padding: 0.04 });

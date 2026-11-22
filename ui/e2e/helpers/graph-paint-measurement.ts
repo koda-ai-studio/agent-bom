@@ -14,7 +14,8 @@ export function installGraphPaintMeasurement() {
     };
     let ready = frame?.dataset.graphCameraSettled === "true" && Boolean(canvas && glyph && visible(glyph))
       && nodes.length === 5 && canvas!.querySelectorAll(".react-flow__node-serverNode").length === 3
-      && edges.length === 4 && visible(edges[0]!) && canvas!.querySelectorAll(".graph-relationship-label").length === 0;
+      && edges.length === 4 && visible(edges[0]!) // At rest only a folded link's count ("×N") is printed on the canvas.
+      && [...canvas!.querySelectorAll(".graph-relationship-label")].every(label => /^×\d+$/.test(label.textContent?.trim() ?? ""));
     if (ready) {
       const bounds = canvas!.getBoundingClientRect(), boxes = nodes.map(node => node.getBoundingClientRect());
       ready = nodes.every(visible) && boxes.every(box => box.left >= bounds.left && box.right <= bounds.right

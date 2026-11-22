@@ -1,8 +1,9 @@
 import { expect, test } from "@playwright/test";
+import { withSemanticLayer } from "./helpers/graph-rollup-mocks";
 
 const first = "agent:first";
 const exact = "server:with spaces/+&?";
-const node = (id: string, label: string) => ({ id, label, entity_type: id.startsWith("agent:") ? "agent" : "server", attributes: {}, severity: "none", severity_id: 0, risk_score: 0, status: "active", data_sources: ["fixture"], dimensions: {}, compliance_tags: [] });
+const node = (id: string, label: string) => withSemanticLayer({ id, label, entity_type: id.startsWith("agent:") ? "agent" : "server", attributes: {}, severity: "none", severity_id: 0, risk_score: 0, status: "active", data_sources: ["fixture"], dimensions: {}, compliance_tags: [] });
 for (const theme of ["light", "dark"]) for (const width of [390, 1440]) {
   test(`canonical graph roots survive navigation ${theme} ${width}`, async ({ page }, testInfo) => {
     if (theme === "dark" && width === 1440) {
