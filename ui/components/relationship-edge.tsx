@@ -8,6 +8,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { CompactRelationshipEdge } from "@/components/graph-compact-edge";
 import { accessEvidenceQualifier } from "@/lib/graph-access-evidence";
 import { scheduleRelationshipLabelLayout, scheduleRelationshipLabelLayoutAfterMove } from "@/lib/relationship-label-layout";
 import { relationshipEdgeLabelText } from "@/lib/graph-utils";
@@ -162,4 +163,4 @@ export function RelationshipEdge(props: EdgeProps) {
   </g>;
 }
 
-export const relationshipEdgeTypes = { relationship: RelationshipEdge, smoothstep: RelationshipEdge };
+export const relationshipEdgeTypes = { relationship: RelationshipEdge, smoothstep: RelationshipEdge, compact: CompactRelationshipEdge };

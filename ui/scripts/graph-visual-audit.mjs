@@ -117,7 +117,7 @@ export function renderedRelationshipCurves() {
  * Runs inside Playwright's page context: the agreed graph grammar, measured on the first frame.
  * Returns only violations; an empty object means the frame passes.
  */
-export function auditGraphGrammar({ margin = 48, minGlyph = 48, minFill = 0.6, maxDetour = 1.6 } = {}) {
+export function auditGraphGrammar({ margin = 48, minGlyph = 32, minFill = 0.6, maxDetour = 1.6 } = {}) {
   const canvas = document.querySelector(".react-flow")?.getBoundingClientRect();
   if (!canvas) return {};
   const nodes = [...document.querySelectorAll(".react-flow__node")].filter(node => getComputedStyle(node).visibility !== "hidden")

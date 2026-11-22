@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { test, expect, type Page } from "@playwright/test";
-import { withSemanticLayer } from "./helpers/graph-rollup-mocks";
+import { routeNodeAggregates, withSemanticLayer } from "./helpers/graph-rollup-mocks";
+import { graphGrammarViolations } from "./helpers/graph-grammar";
 
 const stamp = "2026-10-15T00:00:00Z";
 // Nodes as the API serves them: each carries the backend legend layer for its kind.
@@ -183,18 +184,18 @@ for (const theme of (name === "agents sharing an MCP server" && width === 390) |
     expect(await edgesThroughNodes(page)).toEqual([]);
     expect(await labelCollisions(page)).toEqual([]);
     expect(await cardOverlaps(page)).toEqual([]);
+    expect(await graphGrammarViolations(page)).toEqual({});
     const texts = await visibleLabelTexts(page);
     const repeats = texts.filter((text, index) => texts.indexOf(text) !== index);
     expect(repeats, `repeated labels: ${texts.join(" | ")}`).toEqual([]);
     if (name === "agent fans out to six roles") {
-      const remainderLink = page.locator('.react-flow__edge[data-id^="cluster:"] .react-flow__edge-path');
-      await expect(remainderLink).toHaveCount(1);
-      expect(await remainderLink.evaluate(path => Number(getComputedStyle(path).opacity))).toBeGreaterThanOrEqual(0.8);
-      const groupLabelSize = await page.getByTestId("cluster-pill").locator("button span").first().evaluate(label => {
+      // Semantic-layer graphs are never folded into a remainder pill; every role is its own readable node.
+      await expect(page.locator('.react-flow__node[data-id^="role-"]')).toHaveCount(6);
+      const nameSize = await page.locator("[data-semantic-name]").first().evaluate(label => {
         const zoom = new DOMMatrixReadOnly(getComputedStyle(document.querySelector(".react-flow__viewport")!).transform).a;
         return parseFloat(getComputedStyle(label).fontSize) * zoom;
       });
-      expect(groupLabelSize, "remainder labels stay readable after Fit all").toBeGreaterThanOrEqual(11);
+      expect(nameSize, "names stay readable after Fit all").toBeGreaterThanOrEqual(11);
     }
     await page.screenshot({ path: info.outputPath(`${name.replace(/\s+/g, "-")}-${width}.png`), animations: "disabled" });
   });
@@ -212,6 +213,7 @@ for (const theme of ["light", "dark"] as const) test(`reference correlation read
   expect(await cardOverlaps(page)).toEqual([]);
   expect(await edgesThroughNodes(page)).toEqual([]);
   expect(await labelCollisions(page)).toEqual([]);
+  expect(await graphGrammarViolations(page)).toEqual({});
   await expect(page.locator('.react-flow__edge:not([data-id^="display:"]) .react-flow__edge-path[marker-end]')).toHaveCount(proof.capture_fixture.graph.edges.length);
   // The overview keeps all directional relationships without nine competing captions.
   expect(await visibleLabelTexts(page)).toEqual([]);
@@ -310,6 +312,7 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 1000]
   expect(await edgesThroughNodes(page)).toEqual([]);
   expect(await labelCollisions(page)).toEqual([]);
   expect(await edgesAroundColumns(page)).toEqual([]);
+  expect(await graphGrammarViolations(page)).toEqual({});
   const smallestName = await page.locator("[data-graph-entity] > p:first-of-type").evaluateAll(labels => {
     const zoom = new DOMMatrixReadOnly(getComputedStyle(document.querySelector(".react-flow__viewport")!).transform).a;
     return Math.min(...labels.map(label => parseFloat(getComputedStyle(label).fontSize) * zoom));
@@ -440,6 +443,23 @@ for (const theme of ["light", "dark"] as const) test(`provider marks read as par
   await page.screenshot({ path: info.outputPath(`provider-marks-${theme}.png`), animations: "disabled" });
 });
 
+/** What the API's node-aggregates read returns for this fixture: each asset's recorded findings, by worst severity. */
+function ownedFindingAggregates(nodes: FixtureNode[], links: FixtureEdge[]) {
+  const rank: Record<string, number> = { none: 0, info: 1, low: 2, medium: 3, high: 4, critical: 5 };
+  const findings = new Map(nodes.filter(n => ["vulnerability", "misconfiguration"].includes(n.entity_type)).map(n => [n.id, n]));
+  const owned = new Map<string, Set<string>>();
+  for (const link of links) {
+    const pair = findings.has(link.target) && !findings.has(link.source) ? [link.source, link.target]
+      : findings.has(link.source) && link.relationship === "affects" ? [link.target, link.source] : null;
+    if (pair) owned.set(pair[0]!, new Set([...(owned.get(pair[0]!) ?? []), pair[1]!]));
+  }
+  return Object.fromEntries([...owned].map(([id, ids]) => {
+    const worst = [...ids].map(f => findings.get(f)!.severity).sort((a, b) => (rank[b] ?? 0) - (rank[a] ?? 0))[0] ?? "none";
+    const layer = nodes.find(n => n.id === id)!.semantic_layer;
+    return [id, { semantic_layer: layer, aggregate: { issue_count: ids.size, worst_severity: worst, worst_severity_rank: rank[worst] ?? 0 } }];
+  }));
+}
+
 for (const theme of ["light", "dark"] as const) for (const width of [1440, 390]) {
   test(`cloud roles and finding ownership stay readable ${theme} ${width}`, async ({ page }, info) => {
     await page.addInitScript(t => localStorage.setItem("agent-bom-theme", t), theme);
@@ -456,17 +476,21 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     });
     const entries: FixtureNode[] = showcase.nodes, links: FixtureEdge[] = showcase.edges;
     await fixture(page, entries, links, false, { stats: showcase.stats, attack_paths: showcase.attack_paths });
+    await routeNodeAggregates(page, ownedFindingAggregates(entries, links));
     await page.goto("/graph?scan=snapshot&rollup=0&capture=1&layers=account,cluster,apiGateway,container,role,dataStore,vulnerability,misconfiguration");
     if (width < 640) await page.getByRole("group", { name: "Investigation view" }).getByRole("button", { name: "Graph", exact: true }).click();
-    await expect(page.locator('.react-flow__node:not([data-id^="display:"])')).toHaveCount(7);
-    await expect(page.locator('[data-graph-entity="finding-group"]')).toHaveCount(4);
-    if (width >= 640) await expect(page.getByLabel("Visible relationship evidence")).toContainText("Modeled 7");
+    // The selected path's terminal CVE stays on the spine; the other three findings group under their owners.
+    await expect(page.locator('.react-flow__node:not([data-id^="display:"])')).toHaveCount(8);
+    await expect(page.locator('[data-graph-entity="finding-group"]')).toHaveCount(3);
+    // Seven modeled links plus the spine's vulnerable_to link to the CVE it keeps visible.
+    if (width >= 640) await expect(page.getByLabel("Visible relationship evidence")).toContainText("Modeled 8");
     await settle(page);
+    expect(await graphGrammarViolations(page)).toEqual({});
     await page.screenshot({ path: info.outputPath(`cloud-branches-${theme}-${width}.png`), animations: "disabled" });
     if (width >= 640) {
-      const count = page.getByRole("button", { name: "Expand 1 finding for checkout-api", exact: true });
+      const count = page.getByRole("button", { name: "Expand 1 finding for checkout-runtime-role", exact: true });
       await count.hover();
-      await expect(page.getByRole("tooltip")).toContainText("highest severity: critical");
+      await expect(page.getByRole("tooltip")).toContainText("highest severity: high");
       expect(await page.getByRole("tooltip").evaluate(tip => {
         const a = tip.getBoundingClientRect();
         return [...document.querySelectorAll("[data-graph-entity] > p, [data-entity-role], .graph-entity-glyph")].filter(el => {
@@ -476,21 +500,21 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
       })).toEqual([]);
       await page.screenshot({ path: info.outputPath(`cloud-finding-tooltip-${theme}.png`), animations: "disabled" });
       await count.click();
-      await expect(page.locator('[data-id="cve:next"]')).toHaveCount(1);
-      await expect(page.locator('[data-id="container:checkout"] [data-finding-disclosure]')).toHaveCount(0);
-      await page.getByRole("button", { name: "Expand findings (3 grouped)", exact: true }).click();
+      await expect(page.locator('[data-id="finding:wildcard"]')).toHaveCount(1);
+      await expect(page.locator('[data-id="role:checkout"] [data-finding-disclosure]')).toHaveCount(0);
+      await page.getByRole("button", { name: "Expand findings (2 grouped)", exact: true }).click();
       await page.getByRole("button", { name: "Collapse findings", exact: true }).click();
       await page.getByRole("heading", { name: "Investigation", exact: true }).click();
     }
-    await page.getByRole("button", { name: "Expand findings (4 grouped)", exact: true }).click();
-    await expect(page.locator(".react-flow__node")).toHaveCount(entries.length);
+    await page.getByRole("button", { name: "Expand findings (3 grouped)", exact: true }).click();
+    // Every recorded node is drawn; the internet anchor is display context beside them.
+    await expect(page.locator('.react-flow__node:not([data-id^="display:"])')).toHaveCount(entries.length);
     if (width < 640) {
       await settle(page);
       const zoom = await page.locator(".react-flow__viewport").evaluate(el => new DOMMatrixReadOnly(getComputedStyle(el).transform).a);
       expect(zoom).toBeGreaterThanOrEqual(0.8);
-      await expect(page.getByRole("group", { name: "Navigate loaded graph nodes" })).toBeVisible();
-      await page.getByRole("button", { name: "Next graph node", exact: true }).click();
-      await settle(page);
+      // The portrait spine draws every node in one column, so no separate node navigator is offered.
+      await expect(page.getByRole("group", { name: "Navigate loaded graph nodes" })).toHaveCount(0);
       await page.screenshot({ path: info.outputPath(`cloud-roles-initial-${theme}-${width}.png`), animations: "disabled" });
     }
     await page.locator(".react-flow__controls-fitview").click();
@@ -501,13 +525,12 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     await expect(page.locator("[data-graph-category]")).toHaveCount(0);
     // Counts for children already visible are tooltip details, never extra pills.
     await expect(page.locator("[data-asset-connections]")).toHaveCount(0);
-    await expect(page.locator('[data-id="account:prod"] [data-graph-entity]')).toHaveAttribute("title", /Contains 2 resources in this view/);
-    await expect(page.locator('[data-id="cluster:payments"] [data-graph-entity]')).toHaveAttribute("title", /Hosts 2 applications in this view/);
     expect(await cardOverlaps(page)).toEqual([]);
     expect(await edgesThroughNodes(page)).toEqual([]);
     expect(await labelCollisions(page)).toEqual([]);
     // A containing account sits before what it contains, so no link loops around a column.
     expect(await edgesAroundColumns(page)).toEqual([]);
+    expect(await graphGrammarViolations(page)).toEqual({});
     // The provider plate must clear the name even at the expanded graph's fit zoom.
     expect(await page.locator("[data-graph-source-badge]").evaluateAll(badges => badges.flatMap(badge => {
       const a = badge.getBoundingClientRect();
@@ -517,7 +540,7 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
         return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
       }).map(span => span.textContent);
     }))).toEqual([]);
-    await expect(page.locator(".react-flow__edge-path[marker-end]")).toHaveCount(links.length);
+    await expect(page.locator('.react-flow__edge:not([data-id^="display:"]) .react-flow__edge-path[marker-end]')).toHaveCount(links.length);
     const labels = await visibleLabelTexts(page);
     if (width >= 640) {
       expect(labels).toEqual([]); // Captions appear on focus; the overview stays quiet.
@@ -544,8 +567,8 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
       await expect(page.getByTestId("graph-entity-drawer")).toContainText("Public API stage has no WAF association");
       await page.screenshot({ path: info.outputPath(`cloud-finding-inspector-${theme}.png`), animations: "disabled" });
       await page.getByRole("button", { name: "Collapse findings", exact: true }).click();
-      await expect(page.locator('.react-flow__node:not([data-id^="display:"])')).toHaveCount(7);
-      await expect(page.locator('[data-graph-entity="finding-group"]')).toHaveCount(4);
+      await expect(page.locator('.react-flow__node:not([data-id^="display:"])')).toHaveCount(8);
+      await expect(page.locator('[data-graph-entity="finding-group"]')).toHaveCount(3);
       await expect(page.getByTestId("graph-entity-drawer")).toHaveCount(0);
     }
   });

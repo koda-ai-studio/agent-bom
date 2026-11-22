@@ -4,6 +4,7 @@ import { GraphAttributeBadges } from "@/components/graph-attribute-badges";
 import { SegmentedLabel } from "@/components/graph-segmented-label";
 import { canvasCaption } from "@/lib/graph-canvas-caption";
 import { GraphFindingGroupNode } from "@/components/graph-finding-group-node";
+import { CompactGraphNode } from "@/components/graph-compact-node";
 import { agentExecutionCaption, type AgentContext } from "@/lib/graph-agent-context";
 import { topologyAgentTypeLabel } from "@/lib/agent-topology-graph";
 
@@ -202,7 +203,9 @@ function ContextHandles() {
   </>;
 }
 
-function NodeCard({
+function NodeCard(props: CardProps) { return props.data.semanticLayout ? <CompactGraphNode {...props} /> : <DetailNodeCard {...props} />; }
+
+function DetailNodeCard({
   data,
   borderClass,
   bgClass,

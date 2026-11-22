@@ -1,7 +1,6 @@
 import type { Edge, Node } from "@xyflow/react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { mixedEvidenceFlow } from "@/lib/graph-mixed-flow";
-import { cloudHierarchyLayout } from "@/lib/graph-cloud-hierarchy";
 import type { GraphRollupContainer } from "@/lib/api-contracts/graph-views";
 
 export function withFindingDrilldowns(nodes: Node<LineageNodeData>[], open: (item: GraphRollupContainer) => void) {
@@ -14,7 +13,7 @@ export function withFindingDrilldowns(nodes: Node<LineageNodeData>[], open: (ite
   });
 }
 
-const GROUP_ROW_GAP = 240;
+const GROUP_COLUMN_GAP = 240;
 
 /** Display-only disclosure: canonical IDs, direction and evidence stay intact. */
 export function cloudFindingDisclosure(nodes: Node<LineageNodeData>[], edges: Edge[], expanded: ReadonlySet<string>, toggle: (id: string) => void, preservePositions = false) {
@@ -35,28 +34,24 @@ export function cloudFindingDisclosure(nodes: Node<LineageNodeData>[], edges: Ed
   });
   const hidden = new Set(mapped.filter(n => n.hidden).map(n => n.id));
   const mappedEdges = edges.map(e => ({ ...e, hidden: e.hidden || hidden.has(e.source) || hidden.has(e.target) }));
-  const layout = preservePositions ? null : mixedEvidenceFlow(mapped, mappedEdges) ?? cloudHierarchyLayout(mapped, mappedEdges);
-  // Preserve operator positions in general views; only the bounded cloud layout reflows.
-  const positioned = layout?.nodes ?? mapped;
   const groupNodes: Node<LineageNodeData>[] = [];
   const groupEdges: Edge[] = [];
   for (const owner of groups.keys()) {
     if (expanded.has(owner)) continue;
-    const asset = positioned.find(n => n.id === owner)!;
+    const asset = mapped.find(n => n.id === owner)!;
     let id = `display:findings:${owner}`;
     while (nodes.some(n => n.id === id) || groupNodes.some(n => n.id === id)) id += ":group";
-    const position = { x: asset.position.x, y: asset.position.y + GROUP_ROW_GAP };
-    while (positioned.some(node => !node.hidden && node.position.x === position.x && Math.abs(node.position.y - position.y) < GROUP_ROW_GAP)) position.y += GROUP_ROW_GAP;
     const count = (asset.data.findingAggregate ?? asset.data.rollup!.aggregate).issue_count!;
     const grouped = `${count} finding${count === 1 ? "" : "s"}`;
-    groupNodes.push({ id, initialWidth: 240, initialHeight: 180, draggable: false, type: "findingGroupNode", position, ariaLabel: `Findings for ${asset.data.label}: ${count}`,
+    groupNodes.push({ id, initialWidth: 200, initialHeight: 120, draggable: false, type: "findingGroupNode", position: { x: asset.position.x + GROUP_COLUMN_GAP, y: asset.position.y }, ariaLabel: `Findings for ${asset.data.label}: ${count}`,
       data: { label: "Findings", nodeType: "misconfiguration", displayOnly: true, displayTargetId: owner,
         rollup: asset.data.rollup, findingAggregate: asset.data.findingAggregate, semanticLayout: true, semanticLayer: "finding", semanticOwner: owner,
         description: asset.data.label, readingFindings: { ...asset.data.readingFindings, count, expanded: false, toggle: () => toggle(owner) } } });
-    // A group left of its owner is entered from its far side; otherwise the edge crosses its own glyph.
-    groupEdges.push({ id: `${id}:summary`, source: owner, target: id, type: "smoothstep", label: "Has findings", ariaLabel: `${asset.data.label} has ${grouped}`,
-      ...(position.x < asset.position.x ? { sourceHandle: "context", targetHandle: "context" } : {}),
+    groupEdges.push({ id: `${id}:summary`, source: owner, target: id, type: asset.data.semanticLayout ? "compact" : "smoothstep", label: "Has findings", ariaLabel: `${asset.data.label} has ${grouped}`,
       data: { displayOnly: true, relationship: "finding_group", traversable: false, quietLabel: true } });
   }
-  return { nodes: [...positioned, ...groupNodes], edges: [...mappedEdges, ...groupEdges] };
+  // The bounded layout places each group one step right of its owner; operator positions are kept otherwise.
+  if (preservePositions) return { nodes: [...mapped, ...groupNodes], edges: [...mappedEdges, ...groupEdges] };
+  const layout = mixedEvidenceFlow([...mapped, ...groupNodes], [...mappedEdges, ...groupEdges]);
+  return { nodes: layout.nodes, edges: layout.edges };
 }

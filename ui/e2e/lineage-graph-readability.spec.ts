@@ -1,4 +1,5 @@
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
+import { graphGrammarViolations } from "./helpers/graph-grammar";
 import { readFile } from "node:fs/promises";
 import { openGraphView } from "./fixtures/graph-view";
 import { withSemanticLayer } from "./helpers/graph-rollup-mocks";
@@ -1110,6 +1111,7 @@ for (const theme of ["light", "dark"] as const) {
     await page.getByRole("button", { name: "Fit all", exact: true }).click();
     await settledViewportZoom(page);
     await expect(page.locator(".graph-relationship-label")).toHaveCount(0);
+    expect(await graphGrammarViolations(page)).toEqual({});
     const runtimeEdge = graph.edges.find((edge: { relationship: string }) => edge.relationship === "invoked");
     expect(runtimeEdge).toBeDefined();
     await page.locator(`.react-flow__edge[data-id="${runtimeEdge.id}"]`).focus();

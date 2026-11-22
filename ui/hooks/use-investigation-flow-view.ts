@@ -72,7 +72,8 @@ export function useInvestigationFlowView({ presentation, edges, loaded, narrowVi
     return investigationFlow(presentation.nodes, edges, kind, narrowViewport);
   }, [active, previewActive, previewRootId, presentation.nodes, edges, kind, narrowViewport]);
   const disclosed = useCloudFindingDisclosure(flow.nodes, flow.edges, selectedNodeId, `${presentation.storageKey}:${kind}`,
-    active || presentation.editing || presentation.hasSavedState || presentation.restoredSavedState);
+    // The flow's own layout reflows around the groups; only preview and operator placements are kept.
+    previewActive || presentation.editing || presentation.hasSavedState || presentation.restoredSavedState);
   const [allEdgesShown, setAllEdgesShown] = useState(false);
   const annotated = useMemo(() => withHeldConnections(disclosed.nodes, disclosed.edges, allEdgesShown || presentation.editing), [disclosed.nodes, disclosed.edges, allEdgesShown, presentation.editing]);
   const measuredRaw = useDisplayNodeMeasurements(annotated, presentation.onNodesChange);

@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { graphGrammarViolations } from "./helpers/graph-grammar";
 import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
 import { routeNodeAggregates, withSemanticLayer } from "./helpers/graph-rollup-mocks";
 import nodeAggregateCases from "../tests/fixtures/node-aggregate-cases.json";
@@ -1992,6 +1993,7 @@ for (const estateSize of [10, 1_000, 10_000]) {
         expect(requests).toEqual([100]);
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
         expect(errors).toEqual([]);
+        if (estateSize === 10) expect(await graphGrammarViolations(page)).toEqual({});
         await page.screenshot({ path: testInfo.outputPath(`bounded-${estateSize}-${theme}-${width}.png`), fullPage: true });
       });
     }
@@ -2143,6 +2145,7 @@ for (const width of [1440, 1920]) for (const theme of ["light", "dark"]) {
     await page.screenshot({ path: testInfo.outputPath("reference-captions.png"), fullPage: true });
     const collisions = await visibleGraphLabelCollisions(page);
     expect(collisions).toEqual([]);
+    expect(await graphGrammarViolations(page)).toEqual({});
   });
 }
 
