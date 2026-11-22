@@ -162,6 +162,8 @@ export function useGraphPageData() {
   const [rollupError, setRollupError] = useState<string | null>(null);
   const [rollupUnavailable, setRollupUnavailable] = useState(false);
   const [rollupMapExpanded, setRollupMapExpanded] = useState(false);
+  // The scope map could not be framed whole at a legible zoom on this canvas: it opens on the ranked overview instead.
+  const [rollupMapIllegible, setRollupMapIllegible] = useState(false);
   const [rollupSummaryRequested, setRollupSummaryRequested] = useState(false);
   const restoreSummaryOnFilterReset = useRef(false);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
@@ -763,11 +765,12 @@ export function useGraphPageData() {
     [rollupView],
   );
   const rollupDecisionAvailable =
-    rollupNavigationActive && (rollupItems.length > ROLLUP_DECISION_THRESHOLD || rollupSummaryRequested);
+    rollupNavigationActive && (rollupItems.length > ROLLUP_DECISION_THRESHOLD || rollupSummaryRequested || rollupMapIllegible);
   const rollupDecisionActive = rollupDecisionAvailable && !rollupMapExpanded;
 
   useEffect(() => {
     setRollupMapExpanded(false);
+    setRollupMapIllegible(false);
   }, [rollupView?.mode, rollupView?.node?.id]);
 
   const rollupChildPageKey = `${selectedScanId ?? ""}\u0000${rollupStack.at(-1)?.id ?? ""}\u0000${filters.severity ?? ""}`;
@@ -913,7 +916,7 @@ export function useGraphPageData() {
     setBlastRadius, loadingBlast, setLoadingBlast, blastError, setBlastError, rollupView, setRollupView, rollupStack,
     setRollupStack, rollupAutoDescendRef, rollupDismissed, setRollupDismissed, loadingRollup, setLoadingRollup,
     rollupChildPage, setRollupChildPage, rollupError, setRollupError, rollupUnavailable, setRollupUnavailable,
-    rollupMapExpanded, setRollupMapExpanded, rollupSummaryRequested, setRollupSummaryRequested,
+    rollupMapExpanded, setRollupMapExpanded, rollupMapIllegible, setRollupMapIllegible, rollupSummaryRequested, setRollupSummaryRequested,
     restoreSummaryOnFilterReset, hoveredNodeId, setHoveredNodeId, pinnedFocusId, setPinnedFocusId, expandedClusterIds,
     setExpandedClusterIds, pathname, searchParams, filters, setFilters, initializedFocus, setInitializedFocus,
     seededFromUrlRef, requestedScanIdRef, requestedInvestigationRef, rollupPreferenceRef, explicitCanvasLens,

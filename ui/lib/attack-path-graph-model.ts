@@ -255,6 +255,14 @@ export function buildAttackPathGraphModel(
   // A branch is drawn only when recorded edges connect it back to the selected path.
   for (const id of [...draft.nodes]) if (!selectedHops.has(id) && !parents.has(id)) draft.nodes.delete(id);
   for (const [id, edge] of draft.edges) if (!draft.nodes.has(edge.source) || !draft.nodes.has(edge.target)) draft.edges.delete(id);
+  // A shared-server correlation adds nothing when both agents' use of that recorded server is drawn: the server
+  // already shows it, and the derived line would loop between peers. Off-path only; a selected hop is never hidden.
+  const drawnUse = new Set([...draft.edges.values()].filter(edge => edge.relationship === "uses").map(edge => pairKey(edge.source, edge.target)));
+  for (const [id, edge] of draft.edges) {
+    const server = edge.evidence?.server;
+    if (edge.relationship !== "shares_server" || draft.onPath.has(id) || typeof server !== "string" || !draft.nodes.has(server)) continue;
+    if (drawnUse.has(pairKey(edge.source, server)) && drawnUse.has(pairKey(edge.target, server))) draft.edges.delete(id);
+  }
   const groups = new Map<string, string[]>();
   for (const [child, parent] of parents) {
     const key = `group:${parent}:${nodes.get(child)!.entity_type}`;

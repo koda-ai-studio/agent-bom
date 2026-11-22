@@ -4,7 +4,9 @@ const LINK = "text-foreground underline underline-offset-4";
 const count = (value: number, one: string, many: string) => `${value.toLocaleString()} ${value === 1 ? one : many}`;
 
 /** Counts for what is on the canvas. Display-only objects are not nodes and are never counted as such. */
-export function GraphViewportScope({ collapsedFindings, canonicalVisibleNodes, totalNodes, totalEdges, scopeLabel, aggregate, unconnected, scenarioToggle, minimap, onFitAll, findingsToggle, connections, onMoreConnections }: {
+export function GraphViewportScope({ collapsedFindings, canonicalVisibleNodes, totalNodes, totalEdges, scopeLabel, partialView, aggregate, unconnected, scenarioToggle, minimap, onFitAll, findingsToggle, connections, onMoreConnections }: {
+  /** Says the canvas opened on part of the map, so a partial view never reads as the whole. */
+  partialView?: string | undefined;
   collapsedFindings: number;
   canonicalVisibleNodes: number;
   totalNodes: number;
@@ -26,6 +28,7 @@ export function GraphViewportScope({ collapsedFindings, canonicalVisibleNodes, t
       {scopeLabel} · {totalNodes.toLocaleString()} {aggregate ? "entities" : "nodes"} · {aggregate ? count(totalEdges, "aggregate link", "aggregate links") : count(totalEdges, "relationship", "relationships")}
       {unconnected > 0 && ` · ${unconnected} unconnected items`}
     </span>}
+    {partialView && <span role="status" data-testid="graph-partial-view" className="text-ink-secondary">{partialView}</span>}
     {scenarioToggle && <button type="button" onClick={scenarioToggle.onToggle} className={LINK}>{scenarioToggle.expanded ? "Focus changes" : "Show full graph"}</button>}
     {minimap && <button type="button" aria-pressed={minimap.expanded} onClick={minimap.onToggle} className={LINK}>{minimap.expanded ? "Hide minimap" : "Show minimap"}</button>}
     <button type="button" onClick={onFitAll} className={LINK}>Fit all</button>

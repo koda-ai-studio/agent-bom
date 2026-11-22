@@ -17,7 +17,9 @@ const PHONE_NAVIGATOR_HEIGHT = 60;
 
 /** Fit measured compact contexts after a docked inspector changes canvas width.
  * Only geometry changes trigger a fit; hover and evidence updates do not. */
-export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, preserveViewport, onLayoutAspect, navigationIds, navigationMount, padding = 0.08, boundedPreview = false, primaryIds, primaryZoom }: {
+export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, preserveViewport, onLayoutAspect, onWholeFit, navigationIds, navigationMount, padding = 0.08, boundedPreview = false, primaryIds, primaryZoom }: {
+  /** Whether the whole graph frames at a legible zoom on this canvas; a caller may then choose another entry view. */
+  onWholeFit?: ((fits: boolean) => void) | undefined;
   /** Opens the path at this exact zoom, for maps read by full cards rather than a short path. */
   primaryZoom?: number | undefined;
   boundedPreview?: boolean;
@@ -89,6 +91,7 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
       focusHeight: focusCardHeight(anchor), focusPadding: padding,
     });
     onLayoutAspect(frameSize.layoutAspect);
+    onWholeFit?.(frameSize.fitAll);
     frameElement.style.setProperty("--graph-adaptive-height", `${frameSize.height}px`);
     if (preserveViewport) {
       frameElement.dataset.graphCameraSettled = "true";
@@ -165,7 +168,7 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     };
     frames.push(requestAnimationFrame(() => settle(0)));
     return () => { cancelled = true; frames.forEach(cancelAnimationFrame); };
-  }, [primaryZoom, boundedPreview, padding, enabled, initialized, width, height, layoutKey, anchorId, inspector, preserveViewport, windowHeight, spaceAbove, canvas, fitView, getNodes, getNodesBounds, getEdges, getViewport, setViewport, onLayoutAspect, primaryPathKey]);
+  }, [primaryZoom, boundedPreview, padding, enabled, initialized, width, height, layoutKey, anchorId, inspector, preserveViewport, windowHeight, spaceAbove, canvas, fitView, getNodes, getNodesBounds, getEdges, getViewport, setViewport, onLayoutAspect, onWholeFit, primaryPathKey]);
   // Small screens focus one readable node. Always provide a way to reach the
   // other loaded nodes, including inventory views without an ordered path.
   if (boundedPreview || !initialized || width >= 640 || width <= 0) return null;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { graphPortraitLayout } from "@/lib/graph-portrait-layout";
 import { withFindingDrilldowns } from "@/lib/graph-finding-disclosure";
 import { Background, MiniMap, ReactFlow } from "@xyflow/react";
@@ -26,7 +26,11 @@ export function GraphFlowCanvas({ page, flowView }: { page: GraphPageModel; flow
     onNodeClick, onNodeMouseEnter, onNodeMouseLeave, fitGeneration, setSelectedRelationship, setSelectedNode, setSelectedNodeId, setHoveredNodeId, setPinnedFocusId,
     setReachabilitySummary, setReachabilityError, setBlastRadius, setBlastError, connectionPreview, previewExpanded, graphNavigationMount, selectedNodeId, layoutPending,
     compactLayoutKey, investigationMode, selectedNode, selectedRelationship, setCanvasLayoutAspect, fitVisible, minimapExpanded, showMiniMap, canvasLens,
+    rollupMapExpanded, setRollupMapIllegible,
   } = page;
+  // A scope map that cannot be read whole on this desktop canvas opens on the ranked overview; once the reader
+  // chooses the map, it stays the map.
+  const reportScopeMapFit = useCallback((fits: boolean) => { if (!fits) setRollupMapIllegible(true); }, [setRollupMapIllegible]);
   const { disclosed, measured: measuredDisplay, quieted } = flowView;
   const roomyOverview = displayEdges.some(edge => edge.data?.roomyOverview === true);
   // Layout changes glide once (never while dragging or capturing); the camera frames the final positions.
@@ -116,6 +120,7 @@ export function GraphFlowCanvas({ page, flowView }: { page: GraphPageModel; flow
                 inspector={Boolean(selectedNode || selectedRelationship) && !narrowViewport}
                 preserveViewport={manualCamera || flowView.kind === "auto" && presentation.restoredSavedState}
                 onLayoutAspect={setCanvasLayoutAspect}
+                onWholeFit={rollupNavigationActive && !narrowViewport && !rollupMapExpanded ? reportScopeMapFit : undefined}
               />
               <Background color={BACKGROUND_COLOR} gap={BACKGROUND_GAP} />
               <LegibleFitControls floor={narrowViewport ? GRAPH_PHONE_LEGIBLE_FIT_ZOOM : GRAPH_LEGIBLE_FIT_ZOOM} onFit={fitVisible} orientation={selectedScenarioId || narrowViewport ? "horizontal" : "vertical"} position={narrowViewport ? "top-right" : "bottom-left"} className={CONTROLS_CLASS} />

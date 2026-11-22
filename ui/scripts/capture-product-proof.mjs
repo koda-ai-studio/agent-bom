@@ -3144,17 +3144,19 @@ async function main() {
           state: "visible",
           timeout: 30_000,
         });
-        // Fifteen top-level scopes open as the grouped map (the ranked list takes over above 24).
-        await canvasPage.locator(".react-flow__node:visible").first().waitFor({ state: "visible", timeout: 30_000 });
+        // Fifteen scopes do not frame whole at a legible zoom on a 1512x811 laptop, so the estate opens on the
+        // ranked overview: the riskiest scope's recorded connections, with every scope one click away.
+        await canvasPage.locator('[data-testid="graph-scope-overview"]').waitFor({ state: "visible", timeout: 30_000 });
+        await canvasPage.locator('[data-testid="graph-scope-overview"] .react-flow__node').first().waitFor({ state: "visible", timeout: 30_000 });
         await canvasPage.waitForTimeout(500);
       },
       {
         awaitResponses: [
           (response) => new URL(response.url()).pathname === "/v1/graph/rollup" && response.ok(),
         ],
-        expectedText: ["Investigation", "Scope overview", "aggregate links"],
+        expectedText: ["Investigation", "Recorded connections", "Browse all 15 nodes and scopes"],
         expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/rollup", "/v1/graph/scenarios"],
-        readySelector: ".react-flow__node",
+        readySelector: '[data-testid="graph-scope-overview"]',
         assertNoHorizontalOverflow: true,
       },
     );

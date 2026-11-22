@@ -45,7 +45,8 @@ export function GraphScopeOverview(props: Props) {
       </div>
       {edgeDetail && <p role="status" className="px-4 pt-3 text-sm text-ink-secondary">{edgeDetail}</p>}
       <ReactFlowProvider key={`${preview.root.id}:${narrow}`}>
-        <div style={{ height: narrow ? preview.nodes.length * 230 : 560 }} data-testid="graph-scope-connections">
+        {/* On a laptop the preview ends above the fold: the frame takes the room left in the window, between 320 and 560px. */}
+        <div style={{ height: narrow ? preview.nodes.length * 230 : "clamp(320px, calc(100dvh - 380px), 560px)" }} data-testid="graph-scope-connections">
           <ReactFlow nodes={narrow ? preview.nodes.map((node, index) => ({ ...node, position: { x: 0, y: index * 230 } })) : preview.nodes}
             style={{ "--graph-node-meta-size": "14px" } as CSSProperties}
             edges={narrow ? preview.edges.map(edge => ({ ...edge, sourceHandle: null, targetHandle: "context" })) : preview.edges} nodeTypes={lineageNodeTypes} edgeTypes={relationshipEdgeTypes}
