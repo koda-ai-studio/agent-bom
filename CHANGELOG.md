@@ -9,6 +9,44 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.115.6] - 2026-11-22
+
+### Added
+- `GET /v1/graph/node-aggregates` returns the roll-up aggregate (issue count, worst severity, exposure count) and semantic layer for up to 25 named nodes, such as a selected attack path's hops; each value equals that node's own roll-up entry.
+
+### Changed
+- Roll-up entries, the drill-down node and attack-path view nodes carry `semantic_layer`.
+- The estate scope map opens on the ranked overview (the riskiest scope's recorded connections, with every scope one click away) when the whole map cannot be read at a legible zoom on the current screen; a Scope map control returns to the map, and a status line says when the map opens on part of the estate (#6386).
+- A focused attack path reads as one left-to-right row in hop order (#6385).
+- Organizations, accounts, providers, environments and fleets take a new `scope` semantic layer instead of `identity` or `infra`, and `/v1/graph/schema` publishes each layer's left-to-right canvas `column`, so the graph places an estate's containers before what they contain from the backend contract alone.
+
+### Fixed
+- Link a workload to the image whose digest it pins with one evidenced `runs` edge, so an IaC deployment and an SBOM/image scan of the same digest correlate; packages stay under the image and the image is no longer a second attack-path entry for the same CVE occurrence.
+- Every node a graph route serializes now carries `semantic_layer` (recorded layer, else the kind's legend layer), and the summary view keeps `attributes.internet_exposed`, folding in the risk-context verdict, so the graph can group and badge nodes from the API alone.
+- The reference evidence lab no longer copies the SBOM image's packages onto the IaC deployment; correlation joins them over the digest-proven `runs` hop, whose receipt now names both observing scans so the workload's CVE path stays likely.
+- Graph rollups count a resource as internet-exposed when its risk-context verdict says so, so a raw provider flag such as `publicly_accessible` reaches `exposed_count` the same way it reaches the node.
+- One attack-path count: `/v1/graph` `stats.attack_paths` and the correlation receipt's `result_manifest.output.attack_paths` both report `{retained_count, assessed_count, basis}`, and correlation snapshots are now saved with their path index, so the receipt, the graph header and the attack-path queue agree; `attack_path_count` equals `retained_count`.
+- The estate scope map keeps a cluster ahead of the containers it hosts and keeps agents that share credentials or a server next to each other, so their links no longer loop round other cards (#6385).
+- Links that meet one side of a card no longer share a line where a back link enters and a forward link leaves (#6385).
+- The attack-path card hides a shared-server correlation when both agents' use of that server is already drawn (#6386).
+- Node finding counts make one request per settled path instead of starting and cancelling one (#6385).
+- Remediation labels its 0–10 package score Impact and shows the scale, so it is not read as the 0–100 path risk (#6386).
+- The reference evidence lab records its public Kubernetes Service as the Kubernetes builder does: a cloud resource exposing the deployment's container, not an MCP server exposing the agent, so the graph no longer labels the internet entry an MCP server and the lab passes the strict relationship contract.
+- Graph views use backend semantic layers, separate relationship curves, and the shared retained attack-path count. Node badges use recorded backend attributes and finding roll-ups.
+
+### Docs
+- Product screenshots seed a consistent demo estate: attack-path risk sits on the 0–100 scale and follows from each path's advisory and recorded exposure, severity counts and blast-radius entries come from the nodes and advisories, the what-if scenario models the `next` 15.2.3 upgrade that removes a real path hop, and `next` runs on an internet-exposed web workload instead of an MCP server.
+- The reference evidence lab links the document-review MCP server, which provides the image-rendering tool, to the Pillow package it loads, so the fix-first finding for CVE-2023-4863 names the tool it affects.
+- The overview framework and findings-queue screenshots are renamed to `dashboard-frameworks-live.png` and `findings-queue-live.png` to match what they show.
+
+### CI
+- Split demo-estate lifecycle contracts into independent scheduling modules while retaining fresh per-test seeds and the three-worker memory cap.
+- Check recorded demo-graph timestamps during the two clock-comparison builds instead of constructing an additional graph.
+- Balance measured Python test shards by their worker capacity, preserving the three-worker memory cap for demo-estate rebuilds and keeping every test in the queue.
+- Isolate correlation tests from completed jobs left in shared test stores so startup does not add unrelated current-estate path derivations.
+- Keep SDK-isolation checks from replacing the test session home and state directories, preserving lazy CLI command defaults across test orderings.
+
+
 ## [0.115.5] - 2026-11-20
 
 ### Upgrade notes
@@ -5132,7 +5170,8 @@ Two new product surfaces (inter-agent firewall + per-run discovery envelope) plu
 
 ---
 
-[Unreleased]: https://github.com/koda-ai-studio/agent-bom/compare/v0.115.5...HEAD
+[Unreleased]: https://github.com/koda-ai-studio/agent-bom/compare/v0.115.6...HEAD
+[0.115.6]: https://github.com/koda-ai-studio/agent-bom/compare/v0.115.5...v0.115.6
 [0.115.5]: https://github.com/koda-ai-studio/agent-bom/compare/v0.115.4...v0.115.5
 [0.115.4]: https://github.com/koda-ai-studio/agent-bom/compare/v0.115.3...v0.115.4
 [0.115.3]: https://github.com/koda-ai-studio/agent-bom/compare/v0.114.0...v0.115.3

@@ -1,6 +1,6 @@
 {
-  "generated_on": "2026-11-21",
-  "version": "0.115.5",
+  "generated_on": "2026-11-22",
+  "version": "0.115.6",
   "metrics": [
     {
       "name": "MCP default tools",
@@ -34,7 +34,7 @@
     },
     {
       "name": "API route modules",
-      "value": 100,
+      "value": 101,
       "source": "src/agent_bom/api/routes",
       "notes": "Counts Python files in the routes package, including __init__.py."
     },
@@ -46,7 +46,7 @@
     },
     {
       "name": "Python modules",
-      "value": 2375,
+      "value": 2383,
       "source": "src/agent_bom",
       "notes": "Counts all Python files recursively."
     },

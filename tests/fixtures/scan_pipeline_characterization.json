@@ -293,7 +293,7 @@
     },
     "tools": []
    },
-   "ai_bom_version": "0.115.5",
+   "ai_bom_version": "0.115.6",
    "ai_inventory": {
     "ast_analysis": {
      "analysis_coverage": {
@@ -2139,7 +2139,7 @@
     },
     "tools": []
    },
-   "ai_bom_version": "0.115.5",
+   "ai_bom_version": "0.115.6",
    "ai_inventory": {
     "secrets": {
      "by_category": {},
@@ -4860,7 +4860,7 @@
     },
     "tools": []
    },
-   "ai_bom_version": "0.115.5",
+   "ai_bom_version": "0.115.6",
    "ai_inventory": {
     "secrets": {
      "by_category": {},
@@ -7519,7 +7519,7 @@
     },
     "tools": []
    },
-   "ai_bom_version": "0.115.5",
+   "ai_bom_version": "0.115.6",
    "ai_inventory": {
     "secrets": {
      "by_category": {},
@@ -9464,7 +9464,7 @@
     },
     "tools": []
    },
-   "ai_bom_version": "0.115.5",
+   "ai_bom_version": "0.115.6",
    "ai_inventory": {
     "secrets": {
      "by_category": {},
@@ -11594,7 +11594,7 @@
     },
     "tools": []
    },
-   "ai_bom_version": "0.115.5",
+   "ai_bom_version": "0.115.6",
    "ai_inventory": {
     "secrets": {
      "by_category": {},
@@ -14181,7 +14181,7 @@
     },
     "tools": []
    },
-   "ai_bom_version": "0.115.5",
+   "ai_bom_version": "0.115.6",
    "ai_inventory": {
     "secrets": {
      "by_category": {},
@@ -16759,7 +16759,7 @@
     },
     "tools": []
    },
-   "ai_bom_version": "0.115.5",
+   "ai_bom_version": "0.115.6",
    "ai_inventory": {
     "secrets": {
      "by_category": {},
@@ -18732,7 +18732,7 @@
     },
     "tools": []
    },
-   "ai_bom_version": "0.115.5",
+   "ai_bom_version": "0.115.6",
    "ai_inventory": {
     "secrets": {
      "by_category": {},
