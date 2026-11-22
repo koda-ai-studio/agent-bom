@@ -102,11 +102,11 @@ function portraitPathLayout(model: AttackPathGraphModel): AttackPathLayout {
   for (const id of spine.length ? spine : [""]) {
     if (id) { positions.set(id, { x: 8, y }); lanes.set(id, 0); }
     const context = groups.get(id) ?? [];
-    context.forEach((child, index) => { positions.set(child, { x: 172, y: y + index * 168 }); lanes.set(child, 1); });
-    y += Math.max(1, context.length) * 168;
+    context.forEach((child, index) => { positions.set(child, { x: 120, y: y + (index + 1) * 168 }); lanes.set(child, 1); });
+    y += (1 + context.length) * 168;
   }
   return { direction: "TB", positions, columns, lanes, minLane: 0, maxLane: groups.size ? 1 : 0,
-    rankGap: 32, laneGap: 12, margin: 8, width: groups.size ? 332 : 168,
+    rankGap: 32, laneGap: 12, margin: 8, width: groups.size ? 280 : 168,
     height: Math.max(136, y - 32), nodeWidth: PATH_NODE.width, nodeHeight: PATH_NODE.height };
 }
 

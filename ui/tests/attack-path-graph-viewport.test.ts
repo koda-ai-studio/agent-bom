@@ -120,3 +120,17 @@ it("reserves badge room before framing phone context to the left of the selected
   const right = viewport.x + layout.width * viewport.zoom;
   expect(right + FINDING_BADGE_OVERHANG * viewport.zoom).toBeLessThanOrEqual(width);
 });
+
+it("fits phone branches inside the nested 306px investigation panel without shrinking glyphs", () => {
+  const { graph, selected } = fanOutFixture(3);
+  const model = buildAttackPathGraphModel(graph, selected, { collapseThreshold: 100 });
+  const layout = layoutAttackPathGraph(model, "TB");
+  const width = 306, height = attackPathCanvasHeight(layout, true, width);
+  const viewport = attackPathViewport(layout, model.pathNodeIds, { width, height }, NARROW_MIN_ZOOM);
+  expect(viewport.hiddenNodeIds).toEqual([]);
+  expect(viewport.zoom * 56).toBeGreaterThanOrEqual(48);
+  const boxes = screenBoxes(layout, viewport);
+  for (const a of boxes) for (const b of boxes) if (a.id !== b.id) {
+    expect(a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top).toBe(true);
+  }
+});
