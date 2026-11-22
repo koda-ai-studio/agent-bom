@@ -84,7 +84,7 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     const portrait = width < 640 && nodes.length > 0 && nodes.every(node => node.data.phoneLayout === true);
     const anchor = nodes.find(node => node.id === anchorId) ?? nodes.find(node => !node.id.startsWith("display:")) ?? nodes[0];
     const frameSize = graphAdaptiveFrame({
-      bounds: getNodesBounds(nodes), width, inspector, nodeCount: nodes.length, boundedPreview: boundedPreview || portrait,
+      bounds: getNodesBounds(nodes), width, inspector, nodeCount: nodes.length, boundedPreview: boundedPreview || portrait || nodes.length <= 12 && nodes.every(node => node.data.semanticLayout === true),
       availableHeight: windowHeight - spaceAbove - 24 - (width < 640 ? PHONE_NAVIGATOR_HEIGHT : 0),
       focusHeight: focusCardHeight(anchor), focusPadding: padding,
     });

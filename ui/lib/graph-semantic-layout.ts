@@ -55,10 +55,17 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
     const height = rowHeight(id), gap = height + 24;
     const choices = [desired];
     for (let step = 1; step <= nodes.length; step++) choices.push(desired + step * gap, desired - step * gap);
-    const y = choices.find(value => used.every(other => value >= other.y + other.height + 24 || value + height + 24 <= other.y)) ?? desired;
+    const y = choices.find(value => (!primary.length || value >= 0) && used.every(other => value >= other.y + other.height + 24 || value + height + 24 <= other.y)) ?? desired;
     occupied.set(column, [...used, { y, height }]); positions.set(id, { x: column * SEMANTIC_COLUMN_GAP, y });
   };
-  for (const id of primary) if (columns.has(id)) place(id, 0);
+  const placeOwned = (id: string) => {
+    for (const child of [...owners.keys()].sort()) {
+      if (owners.get(child) !== id || positions.has(child)) continue;
+      place(child, positions.get(id)!.y + rowHeight(id) + 24);
+      placeOwned(child);
+    }
+  };
+  for (const id of primary) if (columns.has(id)) { place(id, 0); placeOwned(id); }
   const pending = visible.filter(node => !onPath.has(node.id)).sort((a, b) => columns.get(a.id)! - columns.get(b.id)! || a.id.localeCompare(b.id));
   const siblings = new Map<number, Node<LineageNodeData>[]>();
   for (const node of pending) if (!owners.has(node.id)) {
@@ -71,9 +78,11 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
       return parent ? [parent.y] : [];
     }));
     const center = parentRows.length ? parentRows.reduce((sum, y) => sum + y, 0) / parentRows.length : 0;
-    members.forEach((node, index) => place(node.id, primary.length
-      ? SEMANTIC_ROW_GAP * (index + 1)
-      : center + SEMANTIC_ROW_GAP * (index - (members.length - 1) / 2)));
+    members.forEach((node, index) => {
+      place(node.id, primary.length ? SEMANTIC_ROW_GAP * (index + 1)
+        : center + SEMANTIC_ROW_GAP * (index - (members.length - 1) / 2));
+      placeOwned(node.id);
+    });
   }
   const owned = pending.filter(node => owners.has(node.id));
   for (let pass = 0; pass < owned.length; pass++) for (const node of owned) {
@@ -85,7 +94,7 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
   const pathPairs = new Set(primary.slice(1).map((id, index) => `${primary[index]}\u0000${id}`));
   return {
     nodes: nodes.map(node => ({ ...node, position: positions.get(node.id) ?? node.position,
-      style: { ...node.style, width: 240, minHeight: rowHeight(node.id), "--graph-node-card-width": "240px" },
+      style: { ...node.style, width: 300, minHeight: rowHeight(node.id), "--graph-node-card-width": "300px" },
       data: { ...node.data, evidenceFlow: true, semanticLayout: true,
         ...(onPath.has(node.id) ? { semanticPathIndex: primary.indexOf(node.id) } : {}), renderBand: "detail" as const,
         readingLabel: node.data.readingLabel ?? assetServiceLabel({ nodeType: node.data.nodeType, entityType: node.data.entityType, attributes: node.data.attributes, provider: node.data.dimensions?.cloud_provider }) ?? assetKindLabel({ nodeType: node.data.nodeType, entityType: node.data.entityType, attributes: node.data.attributes }),
@@ -101,8 +110,8 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
     edges: edges.map((edge): Edge => {
       const from = positions.get(edge.source), to = positions.get(edge.target);
       const reverse = from && to && from.x > to.x;
-      const ownedSubrow = owners.get(edge.target) === edge.source;
-      return { ...edge, type: "relationship", sourceHandle: reverse ? "context" : null, targetHandle: reverse || ownedSubrow ? "context" : null,
+      const sameColumn = from && to && from.x === to.x;
+      return { ...edge, type: "relationship", sourceHandle: reverse ? "context" : null, targetHandle: reverse || sameColumn ? "context" : null,
         data: { ...edge.data, semanticLayout: true, individualLabel: true, directionEmphasis: true, quietLabel: edge.data?.isClusterEdge !== true,
           pathEmphasis: pathPairs.has(`${edge.source}\u0000${edge.target}`) || edge.data?.pathEmphasis === true } };
     }),

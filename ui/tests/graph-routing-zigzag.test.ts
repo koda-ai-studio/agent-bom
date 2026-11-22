@@ -52,3 +52,42 @@ it("uses the measured 24px gap between caption boxes without crossing a peer", (
     expect(boxes.slice(1, 3).some(box => x! > box.x && x! < box.x + box.width && y! > box.y && y! < box.y + box.height)).toBe(false);
   }
 });
+
+it("keeps a long portrait link close to its glyph side instead of bowing off canvas", () => {
+  const boxes = [0, 180, 360, 540].map((y, index) => ({ id: String(index), x: 24, y, width: 240, height: 156 }));
+  const [path] = relationshipPath({ source: "0", target: "3", sourceX: 24, sourceY: 28, targetX: 24, targetY: 568,
+    sourcePosition: Position.Left, targetPosition: Position.Left }, boxes);
+  const values = path.match(/-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi)!.map(Number);
+  for (let index = 0; index < values.length - 2; index += 6) for (let step = 0; step <= 200; step++) {
+    const t = step / 200, u = 1 - t;
+    const [x, y] = [0, 1].map(axis => u ** 3 * values[index + axis]! + 3 * u ** 2 * t * values[index + axis + 2]!
+      + 3 * u * t ** 2 * values[index + axis + 4]! + t ** 3 * values[index + axis + 6]!);
+    expect(x).toBeGreaterThanOrEqual(-24);
+    expect(boxes.slice(1, 3).some(box => x! > box.x - 16 && x! < box.x + box.width + 16 && y! > box.y - 16 && y! < box.y + box.height + 16)).toBe(false);
+  }
+});
+
+it("uses a local side corridor for a workload and its image below tall captions", () => {
+  const boxes = [
+    { id: "agent:model:reference-workload", x: 760, y: 0, width: 300, height: 312 },
+    { id: "data-store:reference-customer-records", x: 1900, y: 0, width: 300, height: 355 },
+    { id: "identity:model:reference-workload", x: 1520, y: 0, width: 300, height: 312 },
+    { id: "service:reference-api", x: 1140, y: 0, width: 300, height: 355 },
+    { id: "workload", x: 380, y: 240, width: 300, height: 391 },
+    { id: "image", x: 380, y: 655, width: 300, height: 352 },
+    { id: "package:mcp:pillow", x: 1900, y: 379, width: 300, height: 317 },
+    { id: "server:mcp:document-review", x: 1140, y: 379, width: 300, height: 312 },
+    { id: "source:pinned-package", x: 380, y: 1031, width: 300, height: 276 },
+    { id: "tool:runtime:render-untrusted-image", x: 1520, y: 336, width: 300, height: 312 },
+    { id: "display:internet", x: 0, y: 0, width: 300, height: 228 },
+    { id: "display:findings:package:mcp:pillow", x: 1900, y: 720, width: 300, height: 237 },
+  ];
+  const [path] = relationshipPath({ source: "workload", target: "image", sourceX: 601.67, sourceY: 311.17, targetX: 582.25, targetY: 706.75,
+    sourcePosition: Position.Right, targetPosition: Position.Right }, boxes, { source: 7, target: -7 });
+  const values = path.match(/-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi)!.map(Number);
+  for (let index = 0; index < values.length - 2; index += 6) for (let step = 0; step <= 200; step++) {
+    const t = step / 200, u = 1 - t;
+    const x = u ** 3 * values[index]! + 3 * u ** 2 * t * values[index + 2]! + 3 * u * t ** 2 * values[index + 4]! + t ** 3 * values[index + 6]!;
+    expect(x).toBeLessThanOrEqual(728);
+  }
+});

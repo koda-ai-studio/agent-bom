@@ -50,20 +50,35 @@ function portExit(point: Point, position: string): Point {
     point[1] + (position === "bottom" ? 32 : position === "top" ? -32 : 0)];
 }
 
+/** Do not choose a distant single bend when the endpoints have a local corridor. */
+function staysLocal(curve: Cubic, boxes: Obstacle[]): boolean {
+  if (!boxes.length) return true;
+  const left = Math.min(...boxes.map(box => box.x)) - 48;
+  const right = Math.max(...boxes.map(box => box.x + box.width)) + 48;
+  const top = Math.min(...boxes.map(box => box.y)) - 48;
+  const bottom = Math.max(...boxes.map(box => box.y + box.height)) + 48;
+  for (let step = 1; step < 96; step++) {
+    const [x, y] = cubicPoint(curve, step / 96);
+    if (x < left || x > right || y < top || y > bottom) return false;
+  }
+  return true;
+}
+
 /** Search nearby obstacle boundaries, not the envelope of the whole canvas. */
-function clearCurve(curve: Cubic, obstacles: Obstacle[], edge: Endpoints): Cubic | null {
+function clearCurve(curve: Cubic, obstacles: Obstacle[], edge: Endpoints, endpointBoxes: Obstacle[]): Cubic | null {
   if (!curveHits(curve, obstacles)) return curve;
   const candidates: { curve: Cubic; cost: number }[] = [];
   const budget = Math.max(160, Math.hypot(curve[3][0] - curve[0][0], curve[3][1] - curve[0][1]) * 2);
   for (const axis of [1, 0] as const) {
     const middle = (curve[0][axis] + curve[3][axis]) / 2;
-    const boundaries = obstacles.flatMap(box => axis ? [box.y - 96, box.y + box.height + 96] : [box.x - 96, box.x + box.width + 96]);
+    const boundaries = obstacles.flatMap(box => [32, 48, 64, 96].flatMap(gap => axis
+      ? [box.y - gap, box.y + box.height + gap] : [box.x - gap, box.x + box.width + gap]));
     for (const control of new Set(boundaries)) {
       if (Math.abs(control - middle) > budget) continue;
       const first: Point = [...curve[1]], second: Point = [...curve[2]];
       first[axis] = control; second[axis] = control;
       const candidate: Cubic = [curve[0], first, second, curve[3]];
-      if (followsPorts(candidate, edge) && !curveHits(candidate, obstacles)) candidates.push({ curve: candidate, cost: Math.abs(control - middle) });
+      if (followsPorts(candidate, edge) && staysLocal(candidate, endpointBoxes) && !curveHits(candidate, obstacles)) candidates.push({ curve: candidate, cost: Math.abs(control - middle) });
     }
   }
   return candidates.sort((a, b) => a.cost - b.cost)[0]?.curve ?? null;
@@ -149,7 +164,7 @@ export function relationshipPath(edge: Endpoints, obstacles: Obstacle[], lane?: 
     .map(box => ({ ...box, x: box.x + 16 - clearance, y: box.y + 16 - clearance, width: box.width - 2 * (16 - clearance), height: box.height - 2 * (16 - clearance) }))
     .filter(box => box.width > 0 && box.height > 0);
   if (!blockers.length || obstacles.length > ROUTED_NODE_LIMIT) return [path, x, y];
-  const curve = clearCurve(original, blockers, edge);
+  const curve = clearCurve(original, blockers, edge, obstacles.filter(box => box.id === edge.source || box.id === edge.target));
   if (!curve) {
     let curves = corridorCurve(original[0], original[3], blockers, lane?.channel ?? 0);
     if (curves && !followsPorts([curves[0]![0], curves[0]![1], curves.at(-1)![2], curves.at(-1)![3]], edge)) curves = null;

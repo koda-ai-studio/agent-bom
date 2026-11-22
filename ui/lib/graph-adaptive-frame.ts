@@ -47,9 +47,10 @@ export function graphAdaptiveFrame({ bounds, width, availableHeight, inspector, 
   const ceiling = Math.max(240, availableHeight);
   const floor = Math.min(ceiling, inspector ? 432 : 320);
   const readableScale = Math.min(GRAPH_FIT_MAX_ZOOM, width / Math.max(1, bounds.width));
-  const height = Math.round(boundedPreview && width < 640
+  let height = Math.round(boundedPreview && width < 640
     ? Math.max(floor, bounds.height * readableScale + 64)
     : Math.min(ceiling, Math.max(floor, bounds.height * readableScale + 64)));
+  if (boundedPreview && width >= 640) height = Math.max(height, Math.ceil(bounds.height * GRAPH_LEGIBLE_FIT_ZOOM * (1 + focusPadding) + 80));
   const viewport = getViewportForBounds(bounds, width, height, 0.05, 2, 0.08);
   // A map too wide to fit would otherwise get a short frame sized to its fitted height, when it
   // is going to be read through this window and needs all of the room there is.
