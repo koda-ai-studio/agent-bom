@@ -89,10 +89,10 @@ describe("selected path relationship curves", () => {
       const model = buildAttackPathGraphModel(graph, selected);
       const { routes } = routesFor(model, "LR");
       for (const edge of model.edges) {
-        const { path, endpoints, lane } = routes.get(edge.id)!;
+        const { path, endpoints } = routes.get(edge.id)!;
         const points = samples(path);
-        expect(points[0], edge.id).toEqual({ x: endpoints.sourceX, y: endpoints.sourceY + lane.source });
-        expect(points.at(-1), edge.id).toEqual({ x: endpoints.targetX, y: endpoints.targetY + lane.target });
+        expect(points[0], edge.id).toEqual({ x: endpoints.sourceX, y: endpoints.sourceY });
+        expect(points.at(-1), edge.id).toEqual({ x: endpoints.targetX, y: endpoints.targetY });
         const sourceDirection = endpoints.sourcePosition === Position.Right ? 1 : -1;
         const targetDirection = endpoints.targetPosition === Position.Left ? 1 : -1;
         expect((points[1]!.x - points[0]!.x) * sourceDirection, edge.id).toBeGreaterThan(0);
