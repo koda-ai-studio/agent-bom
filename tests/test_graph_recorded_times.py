@@ -172,11 +172,17 @@ def test_demo_estate_graph_is_identical_across_builds() -> None:
     # current; hold it fixed so the comparison isolates what the graph code stamps.
     identities = build_demo_identity_store()
 
-    def build() -> UnifiedGraph:
-        return build_showcase_snapshot(profile="current", identity_records=identities)
+    builds = 0
 
-    assert build().created_at == SHOWCASE_CURRENT_CREATED_AT
+    def build() -> UnifiedGraph:
+        nonlocal builds
+        builds += 1
+        graph = build_showcase_snapshot(profile="current", identity_records=identities)
+        assert graph.created_at == SHOWCASE_CURRENT_CREATED_AT
+        return graph
+
     _assert_deterministic(build)
+    assert builds == 2
 
 
 def test_finding_rows_carry_their_recorded_observation_time(demo_report: dict[str, Any]) -> None:
