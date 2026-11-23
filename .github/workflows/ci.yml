@@ -1003,8 +1003,8 @@ jobs:
             exit 1
           }
 
-  # Browser E2E split across runners. Playwright --shard partitions the
-  # suite by test count, in file order (each shard serves its own standalone
+  # Browser E2E split across runners, balanced by recorded test duration
+  # (ui/scripts/e2e-shard-plan.mjs). Each shard serves its own standalone
   # build: a 70 s parallel build is cheaper in wall-clock than a serial build
   # job plus artifact transfer). Eight shards keep the slowest near four minutes.
   # ui-e2e below keeps the required "UI E2E and container smoke" name.
@@ -1063,9 +1063,17 @@ jobs:
         env:
           # Failure traces contain only the checked-in synthetic graph fixtures.
           GRAPH_SCAN_ARTIFACT: ""
+        # Shards are planned from recorded per-test durations (ui/e2e/shard-timings.json),
+        # not Playwright's count-based --shard, which grouped the slow graph specs into one
+        # shard that ran three times as long as another. Every listed test is in exactly one shard.
         run: |
           cd ui
-          npm run test:e2e -- --fully-parallel --shard=${{ matrix.shard }}/8
+          node scripts/e2e-shard-plan.mjs --check 8
+          node scripts/e2e-shard-plan.mjs --shard ${{ matrix.shard }}/8 > "$RUNNER_TEMP/e2e-shard.txt"
+          LOCATIONS=()
+          while IFS= read -r location; do LOCATIONS+=("$location"); done < "$RUNNER_TEMP/e2e-shard.txt"
+          test "${#LOCATIONS[@]}" -gt 0
+          npm run test:e2e -- --fully-parallel "${LOCATIONS[@]}"
 
       - name: Retain UI failure diagnostics
         if: ${{ failure() || cancelled() }}

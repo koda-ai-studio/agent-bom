@@ -71,15 +71,20 @@ SLA_POLICY_SOURCE = "severity-kev/v1"
 SLA_DUE_SOURCES = frozenset({SLA_POLICY_SOURCE, "explicit", "unknown", "unavailable"})
 
 
+def _kev_due_date(payload: Mapping[str, Any]) -> datetime | None:
+    """The row's CISA KEV due date, from the row or its evidence."""
+    kev = payload.get("kev_due_date")
+    evidence = payload.get("evidence")
+    if kev is None and isinstance(evidence, Mapping):
+        kev = evidence.get("kev_due_date")
+    return _parse_iso(kev)
+
+
 def finding_sla_fields(payload: Mapping[str, Any]) -> dict[str, Any]:
     """Resolve a deadline and its source; preserve opaque legacy assignments."""
     due = payload.get("sla_due_at")
     source = payload.get("sla_due_at_source")
-    evidence = payload.get("evidence")
-    kev = payload.get("kev_due_date")
-    if kev is None and isinstance(evidence, Mapping):
-        kev = evidence.get("kev_due_date")
-    parsed_kev = _parse_iso(kev)
+    parsed_kev = _kev_due_date(payload)
     kev = parsed_kev.isoformat() if parsed_kev is not None else None
     if due is not None and source != SLA_POLICY_SOURCE:
         return {"sla_due_at": due, "sla_due_at_source": "explicit" if source == "explicit" else "unknown", "kev_due_date": kev}
@@ -179,7 +184,8 @@ def merge_finding_sla(payload: Mapping[str, Any], previous: Mapping[str, Any], *
     merged = carry_finding_sla(payload, previous)
     # The built-in policy retains an earlier KEV target when a subsequent scan
     # omits the advisory enrichment. This is separate from a manual assignment.
-    kevs = [value for row in (payload, previous) if (value := _parse_iso(finding_sla_fields(row).get("kev_due_date"))) is not None]
+    # Only the KEV date is needed here; deriving each row's full deadline was wasted work per finding.
+    kevs = [value for row in (payload, previous) if (value := _kev_due_date(row)) is not None]
     if kevs:
         merged["kev_due_date"] = min(kevs).isoformat()
     merged["first_seen"] = first_seen

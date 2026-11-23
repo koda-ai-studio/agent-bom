@@ -1566,7 +1566,14 @@ def test_release_ui_context_aggregates_every_playwright_shard() -> None:
     assert shard["strategy"]["matrix"]["shard"] == list(range(1, UI_E2E_SHARDS + 1))
     assert shard["name"] == f"UI E2E shard (${{{{ matrix.shard }}}}/{UI_E2E_SHARDS})"
     e2e = next(step for step in shard["steps"] if step.get("name") == "UI E2E")
-    assert e2e["run"].strip().endswith(f"npm run test:e2e -- --fully-parallel --shard=${{{{ matrix.shard }}}}/{UI_E2E_SHARDS}")
+    # Duration-balanced shards: the plan is checked for exact coverage, an empty plan fails
+    # (Playwright runs the whole suite when given no locations), and only planned locations run.
+    run = e2e["run"]
+    assert f"node scripts/e2e-shard-plan.mjs --check {UI_E2E_SHARDS}" in run
+    assert f"node scripts/e2e-shard-plan.mjs --shard ${{{{ matrix.shard }}}}/{UI_E2E_SHARDS}" in run
+    assert 'test "${#LOCATIONS[@]}" -gt 0' in run
+    assert run.strip().endswith('npm run test:e2e -- --fully-parallel "${LOCATIONS[@]}"')
+    assert "--shard=" not in run
     names = [step.get("name") for step in shard["steps"]]
     assert names.index("UI production build") < names.index("UI E2E")
     assert "UI container smoke test" not in names
