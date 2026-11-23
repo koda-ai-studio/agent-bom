@@ -96,9 +96,12 @@ for (const theme of ["light", "dark"]) test(`correlation opens a coherent depend
   await expect(page.getByTestId("graph-entity-drawer")).toHaveCount(0);
   await expect(page.locator(".react-flow__node")).toHaveCount(1);
   await controls.getByRole("button", { name: "All relationships", exact: true }).click();
-  await expect(page.locator(".react-flow__node")).toHaveCount(6);
+  // The manifest only records the package, so the overview shows it as a "seen in" source on the package card.
+  await expect(page.locator(".react-flow__node")).toHaveCount(5);
+  await expect(page.locator('.react-flow__node[data-id="manifest"]')).toHaveCount(0);
+  await expect(page.locator('.react-flow__node[data-id="package"]')).toContainText(/seen in 1 source/i);
   await page.reload();
-  await expect(page.locator(".react-flow__node")).toHaveCount(6);
+  await expect(page.locator(".react-flow__node")).toHaveCount(5);
   await page.screenshot({ path: info.outputPath(`correlation-context-${theme}.png`), animations: "disabled" });
 });
 
@@ -156,7 +159,7 @@ for (const theme of ["light", "dark"]) test(`complete correlation captions remai
   await page.addInitScript(t => localStorage.setItem("agent-bom-theme", t), theme);
   await fixture(page, proof.capture_fixture.graph.nodes, proof.capture_fixture.graph.edges, true, { stats: proof.capture_fixture.graph.stats, attack_paths: proof.capture_fixture.graph.attack_paths });
   await page.goto("/graph?capture=1&scan=snapshot&layers=cloudResource,server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile");
-  await expect(page.locator('.react-flow__node:not([data-id^="display:"])')).toHaveCount(11);
+  await expect(page.locator('.react-flow__node:not([data-id^="display:"])')).toHaveCount(9);
   await page.locator(".react-flow__controls-fitview").click();
   await expect.poll(() => page.locator(".react-flow").evaluate(canvas => {
     const bounds = canvas.getBoundingClientRect();
