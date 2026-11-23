@@ -77,7 +77,8 @@ export function GraphPageView({ page }: { page: GraphPageModel }) {
   if (gate) return gate;
   const webgl = graphRenderer.kind === "webgl";
   const frameHeight = rollupDecisionActive ? "min-h-[28rem]"
-    : selectedAttackPath ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[clamp(24rem,50dvh,36rem)]"
+    // A focused path is one row of hops: the frame takes the row's fitted height, not a fixed share of the window.
+    : selectedAttackPath ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[var(--graph-adaptive-height,clamp(20rem,40dvh,36rem))]"
       : selectedScenarioId ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[max(28rem,calc(100dvh-21rem))]"
         : webgl ? "max-sm:h-auto sm:h-[max(30rem,calc(100dvh-15rem))]"
           : "h-[var(--graph-adaptive-height,clamp(22rem,60dvh,48rem))]";
@@ -345,7 +346,7 @@ export function GraphPageView({ page }: { page: GraphPageModel }) {
           <GraphSelectionPanels page={page} flowView={flowView} />
           </div>
           {/* Under the canvas, so a phone's graph can start near the top of the screen. */}
-          {graphRenderer.kind === "react-flow" && !mobileListActive && displayNodes.length > 0 && <GraphFlowEdgeLegend edges={flowView.quieted.edges} />}
+          {graphRenderer.kind === "react-flow" && !mobileListActive && !rollupDecisionActive && displayNodes.length > 0 && <GraphFlowEdgeLegend edges={flowView.quieted.edges} />}
           <div ref={setGraphNavigationMount} className={mobileListActive ? "hidden" : "mt-1"} />
           <GraphPhoneFooter page={page} flowView={flowView} />
           </>}

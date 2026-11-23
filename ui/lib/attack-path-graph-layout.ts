@@ -106,6 +106,23 @@ function assignLanes(model: AttackPathGraphModel, columns: Map<string, number>):
   return lanes;
 }
 
+/** A card owned by a branch card (a server's package) sits in the next drawn column right of its owner, level with it, when that
+ * cell is free and every link of the card is to its owner: the link is then one short forward line, not a loop round
+ * the owner's name down the side of its column. Cards owned by a hop of the selected path keep their place below it. */
+function besideBranchOwners(model: AttackPathGraphModel, columns: Map<string, number>, lanes: Map<string, number>) {
+  const existing = new Set(columns.values());
+  const path = new Set(model.pathNodeIds);
+  for (const node of model.nodes) {
+    const owner = node.semanticOwner;
+    if (!owner || path.has(node.id) || path.has(owner) || !columns.has(owner) || !lanes.has(owner)) continue;
+    const column = Math.min(...[...existing].filter(value => value > columns.get(owner)!)), lane = lanes.get(owner)!;
+    if (!Number.isFinite(column) || model.nodes.some(other => other.id !== node.id && columns.get(other.id) === column && lanes.get(other.id) === lane)) continue;
+    if (model.edges.some(edge => (edge.source === node.id || edge.target === node.id) && edge.source !== owner && edge.target !== owner)) continue;
+    columns.set(node.id, column);
+    lanes.set(node.id, lane);
+  }
+}
+
 /** A phone reads the supplied path vertically; context occupies one adjacent
  * column, with additional rows instead of an off-screen third column. */
 function portraitPathLayout(model: AttackPathGraphModel): AttackPathLayout {
@@ -142,6 +159,7 @@ export function layoutAttackPathGraph(model: AttackPathGraphModel, _requestedDir
   const spacing = SPACING[direction];
   const columns = rankColumns(model);
   const lanes = assignLanes(model, columns);
+  besideBranchOwners(model, columns, lanes);
   const occupiedColumns = [...new Set(columns.values())].sort((a, b) => a - b);
   const minLane = Math.min(0, ...lanes.values());
   const maxLane = Math.max(0, ...lanes.values());

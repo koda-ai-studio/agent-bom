@@ -10,12 +10,19 @@ import { useNarrowViewport } from "@/hooks/use-narrow-viewport";
 import { CONTROLS_CLASS } from "@/lib/graph-utils";
 import { legibleZoomForText } from "@/lib/graph-adaptive-frame";
 import { LegibleFitControls } from "@/components/graph-legible-controls";
+import { GraphFlowEdgeLegend } from "@/components/graph-flow-edge-legend";
+import { SCOPE_PREVIEW_ROW } from "@/lib/graph-scope-preview";
 
 type Props = ComponentProps<typeof GraphRollupDecisionSurface>;
 
 /** Start with readable recorded connections; keep the complete returned directory one click away. */
 /** Cards here draw 14px metadata at layout size, so a fit stops where it is still 11px on screen. */
 const SCOPE_FIT = { padding: 0.12, minZoom: legibleZoomForText(14), maxZoom: 1 };
+
+/** The drawn scope's height at zoom 1: its rows of cards, a card's glyph and two-line name, and the fit padding. */
+function scopeFrameHeight(cards: number): number {
+  return Math.round((Math.max(1, cards - 1) * SCOPE_PREVIEW_ROW + 150) * (1 + 2 * SCOPE_FIT.padding));
+}
 
 export function GraphScopeOverview(props: Props) {
   const [showList, setShowList] = useState(false);
@@ -45,8 +52,9 @@ export function GraphScopeOverview(props: Props) {
       </div>
       {edgeDetail && <p role="status" className="px-4 pt-3 text-sm text-ink-secondary">{edgeDetail}</p>}
       <ReactFlowProvider key={`${preview.root.id}:${narrow}`}>
-        {/* On a laptop the preview ends above the fold: the frame takes the room left in the window, between 320 and 560px. */}
-        <div style={{ height: narrow ? preview.nodes.length * 230 : "clamp(320px, calc(100dvh - 380px), 560px)" }} data-testid="graph-scope-connections">
+        {/* The frame is as tall as the drawn scope at full size, within the room left in the window, so a short scope
+            does not sit in an empty canvas. */}
+        <div style={{ height: narrow ? preview.nodes.length * 230 : `clamp(280px, min(calc(100dvh - 380px), ${scopeFrameHeight(preview.nodes.length)}px), 560px)` }} data-testid="graph-scope-connections">
           <ReactFlow nodes={narrow ? preview.nodes.map((node, index) => ({ ...node, position: { x: 0, y: index * 230 } })) : preview.nodes}
             style={{ "--graph-node-meta-size": "14px" } as CSSProperties}
             edges={narrow ? preview.edges.map(edge => ({ ...edge, sourceHandle: null, targetHandle: "context" })) : preview.edges} nodeTypes={lineageNodeTypes} edgeTypes={relationshipEdgeTypes}
@@ -59,6 +67,7 @@ export function GraphScopeOverview(props: Props) {
           </ReactFlow>
         </div>
       </ReactFlowProvider>
+      <GraphFlowEdgeLegend edges={preview.edges} />
     </>}
   </section>;
 }

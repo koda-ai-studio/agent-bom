@@ -107,11 +107,14 @@ export function CompactRelationshipEdge(props: EdgeProps) {
   const count = !inspecting && props.data?.isClusterEdge && typeof full === "string" ? full.match(/×\d+/)?.[0] ?? null : null;
   // A link standing for a single relationship carries no summary worth reading at rest; it names itself on inspection.
   const restingSummary = aggregate && (folded === null || folded > 1);
-  const text = (inspecting || restingSummary) && props.data?.labelVisibility !== "hide" ? count ?? full : null;
+  // A focused attack path names each hop's relationship at rest, as the path card does.
+  const text = (inspecting || restingSummary || props.data?.pathLabel === true) && props.data?.labelVisibility !== "hide" ? count ?? full : null;
   const style = { stroke: edgeFamilyColor(family), strokeWidth: spine ? 2.4 : inspecting ? 2 : 1.4, opacity: spine || inspecting ? 1 : stubbed || props.data?.passesBehind ? 0.4 : 0.85,
     strokeDasharray: edgeIsDashed(family, props.data) ? "6 4" : undefined, fill: "none" };
   return <g ref={ref} data-relationship={relationship || undefined} data-edge-family={family} data-edge-stub={stubbed || undefined} data-label-disclosure={relationship === "vulnerable_to" ? "on-demand" : undefined} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
     {typeof props.data?.hoverDescription === "string" && <title>{props.data.hoverDescription}</title>}
+    {/* A canvas-coloured underlay: where two links cross, the later one cuts a gap through the other, so each reads as one line. */}
+    {!stubbed && <path d={path} aria-hidden="true" data-edge-underlay="" style={{ stroke: "var(--graph-canvas)", strokeWidth: style.strokeWidth + 5, fill: "none", pointerEvents: "none" }} />}
     <BaseEdge id={props.id} path={path} style={style}
       {...(props.markerStart ? { markerStart: props.markerStart } : {})}
       {...(props.markerEnd && !(stubbed && offscreen & 2) ? { markerEnd: props.markerEnd } : {})}

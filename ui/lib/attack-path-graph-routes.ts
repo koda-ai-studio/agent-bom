@@ -11,6 +11,11 @@ export function glyphInsetX(nodeWidth: number): number {
   return (nodeWidth - GLYPH.size) / 2 - 2;
 }
 
+/** A link changing row meets the upper card low on its glyph's rim: this far below the glyph centre, and this far in
+ * from the rim's widest point (a small glyph, 40px, has its own). */
+export const BRANCH_DROP = (small = false) => small ? 12 : 16;
+export const BRANCH_INSET = (small = false) => { const r = small ? 20 : GLYPH.size / 2, dy = BRANCH_DROP(small); return Math.round(r - Math.sqrt(r * r - dy * dy)); };
+
 type Geometry = Pick<AttackPathLayout, "direction" | "positions" | "columns" | "lanes" | "minLane" | "maxLane" | "rankGap" | "laneGap" | "margin" | "nodeWidth" | "nodeHeight">;
 
 function frame(layout: Geometry) {

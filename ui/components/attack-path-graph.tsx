@@ -1,6 +1,6 @@
 "use client";
 
-import { Background, ControlButton, Controls, Panel, ReactFlow, ReactFlowProvider, useReactFlow, useStore, Position } from "@xyflow/react";
+import { Background, ControlButton, Controls, Panel, ReactFlow, ReactFlowProvider, useReactFlow, useStore } from "@xyflow/react";
 import { Maximize } from "lucide-react";
 import "@xyflow/react/dist/style.css";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
@@ -13,8 +13,7 @@ import { useElementWidth } from "@/hooks/use-element-width";
 import { activateGraphNodeFromKeyboard } from "@/lib/graph-keyboard-selection";
 import { useWheelZoomGate, WheelZoomHint } from "@/hooks/use-wheel-zoom-gate";
 import { NARROW_MIN_ZOOM, PATH_DESKTOP_MIN_ZOOM, attackPathCanvasHeight, attackPathCanvasWidth, layoutAttackPathGraph, type AttackPathLayout } from "@/lib/attack-path-graph-layout";
-import { GLYPH_CENTER_Y, glyphInsetX } from "@/lib/attack-path-graph-routes";
-import { pathEdgeHandles } from "@/lib/attack-path-graph-handles";
+import { declaredHandles, pathEdgeHandles } from "@/lib/attack-path-graph-handles";
 import { attackPathViewport } from "@/lib/attack-path-graph-viewport";
 import { pathTraceTiming } from "@/lib/attack-path-trace";
 import { prefersReducedMotion } from "@/lib/reduced-motion";
@@ -94,19 +93,7 @@ function useFlowElements(model: AttackPathGraphModel, narrow: boolean, activeEdg
   const layout = useMemo(() => layoutAttackPathGraph(model, narrow ? "TB" : "LR"), [model, narrow]);
   const nodes = useMemo<AttackPathFlowNode[]>(() => model.nodes.map(node => {
     const vertical = layout.direction === "TB";
-    const inset = glyphInsetX(layout.nodeWidth);
-    const handles = vertical
-      ? [{ type: "target" as const, position: Position.Top, x: layout.nodeWidth / 2, y: 0, width: 1, height: 1, id: null },
-        { type: "source" as const, position: Position.Bottom, x: layout.nodeWidth / 2, y: layout.nodeHeight, width: 1, height: 1, id: null },
-        { type: "source" as const, position: Position.Top, x: layout.nodeWidth / 2, y: 0, width: 1, height: 1, id: "reverse" },
-        { type: "target" as const, position: Position.Bottom, x: layout.nodeWidth / 2, y: layout.nodeHeight, width: 1, height: 1, id: "reverse" },
-        ...([Position.Left, Position.Right] as const).flatMap(position => (["source", "target"] as const).map(type => ({ type, position,
-          x: position === Position.Left ? inset : layout.nodeWidth - inset, y: GLYPH_CENTER_Y, width: 1, height: 1, id: `context-${position}` })))]
-      : [{ type: "target" as const, position: Position.Left, x: inset, y: GLYPH_CENTER_Y, width: 1, height: 1, id: null },
-        { type: "source" as const, position: Position.Right, x: layout.nodeWidth - inset, y: GLYPH_CENTER_Y, width: 1, height: 1, id: null },
-        { type: "source" as const, position: Position.Left, x: inset, y: GLYPH_CENTER_Y, width: 1, height: 1, id: "context" },
-        { type: "target" as const, position: Position.Right, x: layout.nodeWidth - inset, y: GLYPH_CENTER_Y, width: 1, height: 1, id: "context" },
-        { type: "source" as const, position: Position.Right, x: layout.nodeWidth - inset, y: GLYPH_CENTER_Y, width: 1, height: 1, id: "side" }];
+    const handles = declaredHandles(layout);
     return {
       id: node.id, type: "attackPathNode", position: layout.positions.get(node.id)!,
       width: layout.nodeWidth, height: layout.nodeHeight, handles,

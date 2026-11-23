@@ -13,6 +13,24 @@ import { attackPathViewport } from "@/lib/attack-path-graph-viewport";
 import { branchingFixture, demoFixture, fanOutFixture } from "./fixtures/attack-path-graph-fixture";
 
 describe("attack path graph layout", () => {
+  it("puts a branch server's package beside the server, not in a loop below it; a path hop's package stays below the hop", () => {
+    const node = (id: string, semanticLayer: string, semanticOwner?: string) => ({ id, entityType: semanticLayer, semanticLayer, ...(semanticOwner ? { semanticOwner } : {}) });
+    const link = (source: string, target: string, relationship: string) => ({ id: `${source}->${target}`, source, target, relationship });
+    const model = {
+      pathNodeIds: ["agent", "gateway", "pkg", "cve"],
+      nodes: [node("agent", "orchestration"), node("gateway", "mcp_server"), node("pkg", "package"), node("cve", "finding"),
+        node("server", "mcp_server"), node("helper", "package", "server"), node("lib", "package", "gateway")],
+      edges: [link("agent", "gateway", "uses"), link("gateway", "pkg", "depends_on"), link("pkg", "cve", "vulnerable_to"),
+        link("agent", "server", "uses"), link("server", "helper", "depends_on"), link("gateway", "lib", "depends_on")],
+    } as unknown as Parameters<typeof layoutAttackPathGraph>[0];
+    const layout = layoutAttackPathGraph(model, "LR");
+    const at = (id: string) => layout.positions.get(id)!;
+    expect(at("helper").y).toBe(at("server").y);
+    expect(at("helper").x).toBeGreaterThan(at("server").x);
+    expect(at("lib").x).toBe(at("gateway").x);
+    expect(at("lib").y).toBeGreaterThan(at("gateway").y);
+  });
+
   it("reads the selected path left to right in hop order even when it visits identity before an agent", () => {
     const { graph, selected } = branchingFixture();
     const model = buildAttackPathGraphModel(graph, selected);
