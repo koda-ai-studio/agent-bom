@@ -1,5 +1,6 @@
 import type { Edge, Node } from "@xyflow/react";
 import type { LineageNodeData, LineageNodeType } from "@/components/lineage-nodes";
+import { foldPackageEvidence } from "@/lib/graph-evidence-fold";
 
 const IDENTITIES = new Set<LineageNodeType>([
   "role", "user", "group", "policy", "serviceAccount", "servicePrincipal",
@@ -68,8 +69,15 @@ export function graphInvestigationContext(
 export function selectInvestigationContext(
   context: NonNullable<ReturnType<typeof graphInvestigationContext>>,
   groupId: string,
+  options: { foldEvidence?: boolean } = {},
 ) {
   const group = context.groups.find(item => item.id === groupId);
+  // A correlation's whole canvas folds manifests and image inventories into the package they record; the dependency
+  // evidence view, and a phone's list of connection chains, still show each of them.
+  if (!group && !context.anchorId && options.foldEvidence) {
+    const folded = foldPackageEvidence(context.nodes, context.edges);
+    return { nodes: folded.nodes, edges: folded.edges, omittedNodes: 0, crossContextEdges: 0 };
+  }
   if (!group) return { nodes: context.nodes, edges: context.edges, omittedNodes: 0, crossContextEdges: 0 };
   const visible = new Set(group.nodeIds);
   if (context.anchorId) visible.add(context.anchorId);

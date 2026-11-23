@@ -6,10 +6,21 @@ const FINDINGS = new Set(["misconfiguration", "vulnerability", "finding", "iac_f
 
 /** Vertical distance between the scope's neighbour cards. */
 export const SCOPE_PREVIEW_ROW = 150;
-/** Neighbours drawn around a scope: a laptop frame shows them all at full size. */
-const SCOPE_PREVIEW_NEIGHBOURS = 3;
-/** How far right of the scope its neighbours sit: wide enough that the drawn scope spans a laptop canvas. */
-const SCOPE_PREVIEW_REACH = 640;
+/** Neighbours drawn on each side of a scope: a laptop frame shows both sides at full size. */
+const SCOPE_PREVIEW_PER_SIDE = 3;
+/** How far a side of neighbours sits from the scope: wide enough that the drawn scope spans a laptop canvas,
+ * narrower when both sides are drawn so its glyphs stay at full size. */
+const SCOPE_PREVIEW_REACH = { one: 640, both: 500 } as const;
+
+/** Which side of the scope a neighbour reads on: what points into the scope on the left, what it points to on the
+ * right, the way the investigation canvas reads; a two-way or undirected link may take either side. */
+function sideOf(root: string, neighbour: string, links: readonly GraphRollupEdge[]): "left" | "right" | "either" {
+  const oneWay = (edge: GraphRollupEdge) => !(edge.directions ?? []).some(direction => direction !== "directed");
+  const between = links.filter(edge => (edge.source === neighbour && edge.target === root) || (edge.source === root && edge.target === neighbour));
+  if (between.length && between.every(edge => oneWay(edge) && edge.source === neighbour)) return "left";
+  if (between.length && between.every(edge => oneWay(edge) && edge.source === root)) return "right";
+  return "either";
+}
 
 /** A bounded selection of recorded links, never a synthesized attack path. */
 export function buildScopePreview(items: GraphRollupContainer[], edges: GraphRollupEdge[], rootId?: string) {
@@ -33,21 +44,41 @@ export function buildScopePreview(items: GraphRollupContainer[], edges: GraphRol
     if (labels.has(key)) return false;
     labels.add(key); return true;
   });
-  const chosen = [...diverse, ...neighbors.filter(item => !diverse.includes(item))].slice(0, SCOPE_PREVIEW_NEIGHBOURS);
+  const sides = { left: [] as GraphRollupContainer[], right: [] as GraphRollupContainer[] };
+  for (const item of [...diverse, ...neighbors.filter(item => !diverse.includes(item))]) {
+    const side = sideOf(root.id, item.id, links);
+    const target = side === "either" ? (sides.right.length <= sides.left.length ? "right" : "left") : side;
+    const fallback = target === "left" ? "right" : "left";
+    if (sides[target].length < SCOPE_PREVIEW_PER_SIDE) sides[target].push(item);
+    else if (side === "either" && sides[fallback].length < SCOPE_PREVIEW_PER_SIDE) sides[fallback].push(item);
+  }
+  const chosen = [...sides.left, ...sides.right];
   const ids = new Set(chosen.map(item => item.id));
   const selectedLinks = links.filter(edge => ids.has(edge.source === root.id ? edge.target : edge.source));
   const flow = buildRollupFlowGraph([root, ...chosen], { edges: selectedLinks });
-  const nodes = flow.nodes.map((node, i) => ({ ...node,
-    position: { x: i === 0 ? 0 : SCOPE_PREVIEW_REACH, y: i === 0 ? (chosen.length - 1) * SCOPE_PREVIEW_ROW / 2 : (i - 1) * SCOPE_PREVIEW_ROW },
+  const rows = Math.max(sides.left.length, sides.right.length);
+  const reach = sides.left.length && sides.right.length ? SCOPE_PREVIEW_REACH.both : SCOPE_PREVIEW_REACH.one;
+  const rootX = sides.left.length ? reach : 0;
+  const left = new Set(sides.left.map(item => item.id));
+  // Each side is centred on the scope's row.
+  const place = (id: string) => {
+    if (id === root.id) return { x: rootX, y: (rows - 1) * SCOPE_PREVIEW_ROW / 2 };
+    const side = left.has(id) ? sides.left : sides.right;
+    return { x: left.has(id) ? 0 : rootX + reach, y: (side.findIndex(item => item.id === id) + (rows - side.length) / 2) * SCOPE_PREVIEW_ROW };
+  };
+  const nodes = flow.nodes.map(node => ({ ...node,
+    position: place(node.id),
     data: { ...node.data, rollup: undefined, rollupCompact: false, highlighted: false,
       attributes: { ...node.data.attributes, rollup_is_container: false },
     },
   }));
-  return { root, roots, nodes,
+  return { root, roots, nodes, rows,
     edges: flow.edges.map(edge => ({ ...edge,
-      // Context handles face left/right without reversing stored relationship direction.
-      sourceHandle: edge.source === root.id ? null : "context",
-      targetHandle: edge.target === root.id ? "context" : null,
+      // Each link joins the facing sides of its two cards; context handles face the other way without reversing the
+      // stored relationship direction.
+      ...(left.has(edge.source) || left.has(edge.target)
+        ? { sourceHandle: edge.source === root.id ? "context" : null, targetHandle: edge.target === root.id ? null : "context" }
+        : { sourceHandle: edge.source === root.id ? null : "context", targetHandle: edge.target === root.id ? "context" : null }),
       data: { ...edge.data, quietLabel: true, boundedOverview: true },
     })),
     availableRelationships: links.reduce((sum, edge) => sum + edge.count, 0),

@@ -1,5 +1,6 @@
 "use client";
 
+import { seenInSummary } from "@/lib/graph-evidence-fold";
 import { nameBreaks } from "@/lib/graph-name-breaks";
 import { NAME_LINES, PHONE_NAME_LINES } from "@/lib/graph-caption-geometry";
 import { stacksOnPhone } from "@/lib/graph-portrait-layout";
@@ -84,6 +85,7 @@ function typeLine(data: LineageNodeData, title: string): string {
   if (data.nodeType === "agent" && data.agentType) return topologyAgentTypeLabel(data.agentType);
   // Two visible containers with one name: the recorded role (image inventory or deployment) tells them apart.
   if (data.occurrenceRole) return data.occurrenceRole;
+  if (data.seenIn?.length) return `${data.readingLabel ?? "Package"} · seen in ${data.seenIn.length} source${data.seenIn.length === 1 ? "" : "s"}`;
   return caption?.meta ?? data.readingLabel ?? (repository ? "Repository" : data.nodeType === "agent"
     ? (data.agentType ? topologyAgentTypeLabel(data.agentType) : "Agent")
     : assetKindLabel({ entityType: data.entityType, nodeType: data.nodeType, attributes: data.attributes, provider: data.dimensions?.cloud_provider }));
@@ -156,7 +158,7 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
   const preview = ["misconfiguration", "vulnerability"].includes(data.nodeType) ? prosePreview(fullTitle) : fullTitle;
   const scope = data.rollup ? compactScopeCaption(data.rollup) : null;
   const held = data.heldConnections ? `${data.heldConnections} more ${data.heldConnections === 1 ? "connection" : "connections"} not drawn` : undefined;
-  const tooltip = [graphNodeTooltip(data), data.evidenceFlowContext, ring?.description, held,
+  const tooltip = [graphNodeTooltip(data), data.evidenceFlowContext, ring?.description, held, data.seenIn?.length ? seenInSummary(data.seenIn) : undefined,
     ...(data.readingConnections ?? []).map(summary => `${summary.relationship === "hosts" ? "Hosts" : "Contains"} ${summary.label} in this view`)].filter(Boolean).join(" · ");
   return <div title={tooltip} data-graph-entity="true" data-compact-node data-evidence-flow={data.evidenceFlow || undefined} data-finding-owner={data.readingOwner}
     data-rollup-container={data.attributes?.rollup_is_container === true ? "true" : undefined}
@@ -181,6 +183,7 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
       {scope ? scope.visible : typeLine(data, fullTitle)}
     </span>
     {scope && <span className="sr-only">{scope.spoken}</span>}
+    {data.seenIn?.length ? <span className="sr-only" data-seen-in>{seenInSummary(data.seenIn)}</span> : null}
     </CaptionBox>
   </div>;
 }
