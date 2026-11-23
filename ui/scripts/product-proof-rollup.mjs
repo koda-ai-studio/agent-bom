@@ -6,6 +6,11 @@ export function rollupResponse() {
   return structuredClone(fixture.rollup);
 }
 
+/** The node ids the precomputed aggregate table covers. */
+export function nodeAggregatesFixtureIds() {
+  return fixture.node_aggregates;
+}
+
 export function nodeAggregatesResponse(url, snapshotGeneration = null) {
   const ids = [...new Set(url.searchParams.getAll("node_id").map((id) => id.trim()).filter(Boolean))];
   const known = ids.filter((id) => id in fixture.node_aggregates);
