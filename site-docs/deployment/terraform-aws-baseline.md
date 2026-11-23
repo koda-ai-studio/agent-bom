@@ -82,7 +82,7 @@ a one-step installer.
 5. Install the chart:
 
 ```bash
-helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.115.5 \
+helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.115.6 \
   --namespace agent-bom --create-namespace \
   -f deploy/helm/agent-bom/examples/eks-production-values.yaml \
   -f baseline-workload-values.yaml

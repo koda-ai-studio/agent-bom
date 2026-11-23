@@ -8,7 +8,7 @@ version: 0.115.6
 license: Apache-2.0
 compatibility: >-
   Requires Python 3.11+. Install via pipx or pip. No credentials required.
-  Registry data (1356 MCP servers) is bundled in-package with zero network calls.
+  Registry data (1430 MCP servers) is bundled in-package with zero network calls.
 metadata:
   author: msaad00
   homepage: https://github.com/koda-ai-studio/agent-bom
@@ -19,7 +19,7 @@ metadata:
   install:
     pipx: agent-bom
     pip: agent-bom
-    docker: ghcr.io/koda-ai-studio/agent-bom:0.115.5
+    docker: ghcr.io/koda-ai-studio/agent-bom:0.115.6
   openclaw:
     requires:
       bins: []
@@ -100,7 +100,7 @@ metadata:
 
 Discovers AI agents, MCP servers, and their configurations across 22+ AI tools
 on this machine. Shows what's installed, configured, and registered in the
-bundled 1356-entry MCP server registry.
+bundled 1430-entry MCP server registry.
 
 ## Install
 

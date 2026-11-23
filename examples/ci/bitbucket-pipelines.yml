@@ -7,7 +7,7 @@ definitions:
     - step: &agent-bom
         name: agent-bom scan
         script:
-          - pip install --quiet agent-bom==0.115.5
+          - pip install --quiet agent-bom==0.115.6
           - agent-bom scan . -f sarif -o agent-bom-results.sarif --fail-on-severity high
         artifacts:
           - agent-bom-results.sarif

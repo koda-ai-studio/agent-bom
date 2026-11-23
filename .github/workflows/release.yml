@@ -1461,10 +1461,16 @@ jobs:
       contents: write
       pull-requests: write
     steps:
+      # The pin sync rewrites the reusable workflow's own `uses:` pin, and the
+      # built-in token may not push a change to a workflow file. A fine-grained
+      # RELEASE_PINS_TOKEN (contents, workflows and pull requests: write) can, and
+      # a PR it opens runs CI; without it the job pushes with the built-in token
+      # as before and a maintainer redoes the pins locally.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: main
           fetch-depth: 0
+          token: ${{ secrets.RELEASE_PINS_TOKEN || github.token }}
 
       - uses: ./.github/actions/setup-python
 
@@ -1497,7 +1503,7 @@ jobs:
         id: signing
         if: steps.pin.outputs.changed == 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.RELEASE_PINS_TOKEN || github.token }}
           AUTOMATION_SSH_SIGNING_KEY: ${{ secrets.AUTOMATION_SSH_SIGNING_KEY }}
           TAG: ${{ github.ref_name }}
         run: |
@@ -1543,7 +1549,7 @@ jobs:
       - name: Push the pin branch and open the pin-update PR
         if: steps.pin.outputs.changed == 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.RELEASE_PINS_TOKEN || github.token }}
           TAG: ${{ github.ref_name }}
           TAGGED_SHA: ${{ github.sha }}
           PYTHON: ${{ github.workspace }}/.venv/bin/python

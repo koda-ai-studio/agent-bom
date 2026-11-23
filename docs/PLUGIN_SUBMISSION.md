@@ -1,6 +1,6 @@
 # Submitting the agent-bom plugins
 
-The plugins pin agent-bom 0.115.5. Started from their lock files, the default and audit
+The plugins pin agent-bom 0.115.6. Started from their lock files, the default and audit
 servers offer 8 and 10 tools, and neither offers `agent_activity`, the chat-history tool
 that the Claude directory policy forbids.
 
