@@ -19,7 +19,9 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    # A failed Release run still published its artifacts when only post-publish
+    # jobs failed; the resolver reads the run's jobs and decides.
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(fromJSON('["success", "failure"]'), github.event.workflow_run.conclusion) }}
     outputs:
       publish_current: ${{ steps.release.outputs.publish_current }}
       release_sha: ${{ steps.release.outputs.release_sha }}

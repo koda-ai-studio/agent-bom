@@ -25,6 +25,26 @@ def _command(args: list[str]) -> str:
     return result.stdout.strip()
 
 
+# Release jobs that run after every artifact is published and that nothing
+# downstream needs. Their failure marks the whole Release run failed, which must
+# not leave the MCP image and registry entry behind the release they belong to.
+POST_PUBLISH_JOBS = ("Docs build (deploy on main)", "Sync post-release pins")
+PASSING_JOB_CONCLUSIONS = {"success", "skipped", "neutral"}
+
+
+def blocking_failures(repository: str, run_id: int, run: Callable[[list[str]], str] = _command) -> list[str]:
+    """Names of failed Release jobs that are not post-publish; fails closed when the list is incomplete."""
+    payload = json.loads(run(["gh", "api", f"repos/{repository}/actions/runs/{run_id}/jobs?filter=latest&per_page=100"]))
+    jobs = payload["jobs"]
+    if payload["total_count"] != len(jobs):
+        raise ValueError("Release job list is incomplete")
+
+    def post_publish(name: str) -> bool:
+        return any(name == job or name.startswith(f"{job} / ") for job in POST_PUBLISH_JOBS)
+
+    return sorted(job["name"] for job in jobs if job["conclusion"] not in PASSING_JOB_CONCLUSIONS and not post_publish(job["name"]))
+
+
 def resolve_release(repository: str, event_name: str, event: dict, run: Callable[[list[str]], str] = _command) -> dict[str, str]:
     """Reject mismatched source evidence; skip delayed events for older releases."""
     if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository):
@@ -35,12 +55,15 @@ def resolve_release(repository: str, event_name: str, event: dict, run: Callable
         raise ValueError("Unsupported release event")
     workflow = event.get("workflow_run", {})
     if event_name == "workflow_run":
-        if workflow["repository"]["full_name"] != repository or workflow["event"] != "push" or workflow["conclusion"] != "success":
-            raise ValueError("Release workflow was not a successful same-repository push")
+        completed = workflow["conclusion"] in {"success", "failure"}
+        if workflow["repository"]["full_name"] != repository or workflow["event"] != "push" or not completed:
+            raise ValueError("Release workflow was not a completed same-repository push")
         if not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", workflow["head_branch"]):
             raise ValueError("Release workflow did not identify a version tag")
         if not re.fullmatch(r"[0-9a-f]{40}", workflow["head_sha"]):
             raise ValueError("Release workflow did not identify a commit")
+        if workflow["conclusion"] == "failure" and blocking_failures(repository, int(workflow["id"]), run):
+            return {"publish_current": "false", "reason": "release-failed"}
     release = json.loads(run(["gh", "api", f"repos/{repository}/releases/latest"]))
     tag = release["tag_name"]
     if release["draft"] is not False or release["prerelease"] is not False or not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", tag):
@@ -71,11 +94,16 @@ def main() -> int:
         event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text())
         outputs = resolve_release(os.environ["GITHUB_REPOSITORY"], os.environ["GITHUB_EVENT_NAME"], event)
         with Path(os.environ["GITHUB_OUTPUT"]).open("a") as stream:
-            stream.write("".join(f"{key}={value}\n" for key, value in outputs.items()))
+            stream.write("".join(f"{key}={value}\n" for key, value in outputs.items() if key != "reason"))
     except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError):
         print("::error::Could not verify the published release source; no image will be published.", file=sys.stderr)
         return 1
-    print("Published release source verified." if outputs["publish_current"] == "true" else "Skipping a superseded release event.")
+    if outputs["publish_current"] == "true":
+        print("Published release source verified.")
+    elif outputs.get("reason") == "release-failed":
+        print("::notice title=MCP publish skipped::The Release run failed before its artifacts were published.")
+    else:
+        print("Skipping a superseded release event.")
     return 0
 
 

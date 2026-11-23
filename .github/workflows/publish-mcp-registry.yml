@@ -22,9 +22,27 @@ jobs:
     permissions:
       contents: read
       id-token: write  # Required for GitHub OIDC token exchange
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(fromJSON('["success", "failure"]'), github.event.workflow_run.conclusion) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # A failed Release run still published its artifacts when only post-publish
+      # jobs failed (docs, pins); any other failure, or a superseded tag, skips.
+      - name: Verify the release published its artifacts
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/resolve_published_mcp_release.py
+
+      # Publish the entry the release shipped, not whatever main holds now.
+      - name: Use the released server.json
+        if: steps.release.outputs.publish_current == 'true'
+        env:
+          RELEASE_SHA: ${{ steps.release.outputs.release_sha }}
+        run: git checkout "$RELEASE_SHA" -- integrations/mcp-registry/server.json
 
       - name: Validate server.json
         run: |
@@ -50,8 +68,12 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           WORKFLOW_DISPATCH_PUBLISH: ${{ inputs.publish || false }}
           RELEASE_PUBLISH_ENABLED: ${{ vars.MCP_REGISTRY_PUBLISH_ENABLED || 'false' }}
+          RELEASE_CURRENT: ${{ steps.release.outputs.publish_current || 'false' }}
         run: |
-          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$WORKFLOW_DISPATCH_PUBLISH" = "true" ]; then
+          if [ "$RELEASE_CURRENT" != "true" ]; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "No current published release to register; validation-only run."
+          elif [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$WORKFLOW_DISPATCH_PUBLISH" = "true" ]; then
             echo "publish=true" >> "$GITHUB_OUTPUT"
             echo "Manual MCP Registry publish requested."
           elif [ "$EVENT_NAME" = "workflow_run" ] && [ "$RELEASE_PUBLISH_ENABLED" = "true" ]; then
