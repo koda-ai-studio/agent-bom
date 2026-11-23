@@ -1,5 +1,5 @@
 ### Added
-- `agent-bom auth mint-admin-key` mints the first admin API key of a self-hosted control plane. It ships in the package, so it runs inside the published image; the hosted runbooks used a repository script the image does not contain.
+- `agent-bom auth mint-admin-key` mints the first admin API key of a self-hosted control plane. It ships in the package, so it runs inside the published image; the hosted runbooks used a repository script the image does not contain. On a fresh Postgres it creates the tenant and its first key together under row-level security, as tenant invitations do; the old script failed there because the tenant did not exist yet.
 
 ### Fixed
 - The authenticated hosted guide's first scan now goes through a cloud connection created with the tenant's admin key (or the dashboard's Connections page), so findings land in that tenant's dashboard; the old `docker compose exec ... agent-bom agents` step wrote only the CLI's local report.

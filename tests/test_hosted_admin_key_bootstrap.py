@@ -133,3 +133,45 @@ def test_packaged_command_fails_closed_without_a_persistent_store(tmp_path: Path
     assert result.exit_code == 1
     assert "check server logs and bootstrap configuration" in result.stderr
     assert not (tmp_path / "k").exists()
+
+
+class _TenantScopedStore:
+    """Mimics the Postgres store: writes need the tenant bound, and a fresh tenant must be provisioned."""
+
+    def __init__(self, provisioned: set[str]) -> None:
+        self.provisioned = provisioned
+        self.calls: list[tuple[str, str, str]] = []
+
+    def _bound(self) -> str:
+        from agent_bom.api.postgres_common import _current_tenant
+
+        return _current_tenant.get()
+
+    def add(self, key) -> None:
+        from agent_bom.api.api_key_record import TenantNotProvisionedError
+
+        self.calls.append(("add", key.tenant_id, self._bound()))
+        if key.tenant_id not in self.provisioned:
+            raise TenantNotProvisionedError("Tenant is not provisioned")
+
+    def provision_tenant_key(self, key, *, team_name: str) -> None:
+        self.calls.append(("provision", key.tenant_id, self._bound()))
+        self.provisioned.add(key.tenant_id)
+
+
+@pytest.mark.parametrize("provisioned", [set(), {"customer-0"}])
+def test_bootstrap_binds_the_tenant_and_provisions_a_fresh_one(monkeypatch: pytest.MonkeyPatch, provisioned: set[str]) -> None:
+    """A fresh Postgres has no tenant row and enforces RLS on the bound tenant; both must be handled."""
+    from agent_bom.api import admin_key_bootstrap
+    from agent_bom.api.postgres_common import _current_tenant
+
+    store = _TenantScopedStore(set(provisioned))
+    monkeypatch.setattr(admin_key_bootstrap, "get_key_store", lambda: store)
+    before = _current_tenant.get()
+
+    admin_key_bootstrap.mint_admin_key(tenant_id="customer-0", name="admin", allow_inmemory=True)
+
+    assert all(bound == "customer-0" for _, _, bound in store.calls)
+    expected = [("add", "customer-0", "customer-0")] + ([] if provisioned else [("provision", "customer-0", "customer-0")])
+    assert store.calls == expected
+    assert _current_tenant.get() == before

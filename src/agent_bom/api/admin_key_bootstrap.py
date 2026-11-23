@@ -13,7 +13,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from agent_bom.api.api_key_record import TenantNotProvisionedError
 from agent_bom.api.auth import Role, create_api_key, get_key_store
+from agent_bom.api.postgres_common import reset_current_tenant, set_current_tenant
 
 RAW_KEY_FILE_EXISTS = "raw key file already exists:"
 
@@ -45,7 +47,18 @@ def mint_admin_key(
         scopes=scopes or ["*"],
         tenant_id=tenant_id,
     )
-    get_key_store().add(record)
+    store = get_key_store()
+    # Tenant-scoped stores authorize the write against the bound tenant (row-level
+    # security), and a fresh database has no row for it yet: create the tenant and
+    # its first key together, as tenant invitations do.
+    token = set_current_tenant(tenant_id)
+    try:
+        try:
+            store.add(record)
+        except TenantNotProvisionedError:
+            store.provision_tenant_key(record, team_name=tenant_id)
+    finally:
+        reset_current_tenant(token)
     return MintedAdminKey(
         raw_key=raw_key,
         metadata={
