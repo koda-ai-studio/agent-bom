@@ -127,7 +127,8 @@ def test_delayed_event_cannot_move_latest_backwards(resolver, release_case):
     "field,value",
     [
         ("event", "pull_request"),
-        ("conclusion", "failure"),
+        ("conclusion", "cancelled"),
+        ("conclusion", "timed_out"),
         ("head_branch", "main"),
         ("head_sha", "bad"),
         ("repository", {"full_name": "other/scanner"}),
@@ -190,3 +191,78 @@ def test_failed_resolution_writes_no_publish_outputs_or_raw_error(resolver, tmp_
     assert resolver.main() == 1
     assert not output.exists()
     assert "private diagnostic content" not in capsys.readouterr().err
+
+
+def _with_jobs(run, jobs, total=None):
+    def wrapped(args):
+        if args[:2] == ["gh", "api"] and "/actions/runs/" in args[2]:
+            return json.dumps({"total_count": len(jobs) if total is None else total, "jobs": jobs})
+        return run(args)
+
+    return wrapped
+
+
+def _job(name, conclusion):
+    return {"name": name, "conclusion": conclusion}
+
+
+def test_release_failed_only_after_publishing_still_publishes(resolver, release_case):
+    """0.115.6: docs build and the pins job failed after every artifact shipped; MCP publishing was skipped."""
+    repo, event, _, calls, run = release_case
+    event["workflow_run"].update(conclusion="failure", id=45096236085)
+    jobs = [
+        _job("Publish to PyPI", "success"),
+        _job("Create GitHub Release", "success"),
+        _job("Docs build (deploy on main) / build", "failure"),
+        _job("Sync post-release pins", "failure"),
+        _job("Deploy MCP SSE / deploy", "skipped"),
+    ]
+    result = resolver.resolve_release(repo, "workflow_run", event, _with_jobs(run, jobs))
+    assert result["publish_current"] == "true" and result["release_tag"] == "v9.8.7"
+
+
+def test_release_that_failed_to_publish_is_skipped_not_published(resolver, release_case):
+    repo, event, _, calls, run = release_case
+    event["workflow_run"].update(conclusion="failure", id=7)
+    jobs = [_job("Publish to PyPI", "failure"), _job("Sync post-release pins", "failure")]
+    assert resolver.resolve_release(repo, "workflow_run", event, _with_jobs(run, jobs)) == {
+        "publish_current": "false",
+        "reason": "release-failed",
+    }
+    assert not any(call[0] == "git" for call in calls)
+
+
+def test_incomplete_job_list_fails_closed(resolver, release_case):
+    repo, event, _, _, run = release_case
+    event["workflow_run"].update(conclusion="failure", id=7)
+    with pytest.raises(ValueError):
+        resolver.resolve_release(repo, "workflow_run", event, _with_jobs(run, [_job("Sync post-release pins", "failure")], total=150))
+
+
+def test_post_publish_jobs_exist_and_nothing_waits_on_them(resolver):
+    """Only jobs that run after publishing, and that no other job needs, may fail without holding MCP back."""
+    jobs = yaml.safe_load((ROOT / ".github/workflows/release.yml").read_text())["jobs"]
+    by_name = {job.get("name", key): key for key, job in jobs.items()}
+    for name in resolver.POST_PUBLISH_JOBS:
+        assert name in by_name, f"{name!r} is no longer a Release job name"
+        key = by_name[name]
+        for other, job in jobs.items():
+            needs = job.get("needs", [])
+            assert key not in ([needs] if isinstance(needs, str) else needs), f"{other} needs post-publish job {key}"
+
+
+def test_registry_publishes_the_released_entry_only_for_a_current_release():
+    workflow = yaml.safe_load((ROOT / ".github/workflows/publish-mcp-registry.yml").read_text())
+    job = workflow["jobs"]["publish"]
+    assert "'failure'" in job["if"].replace('"', "'")
+    steps = job["steps"]
+    names = [step.get("name", "") for step in steps]
+    resolve = next(step for step in steps if step.get("id") == "release")
+    assert "if" not in resolve, "the resolver must run for manual dispatches too"
+    assert "scripts/resolve_published_mcp_release.py" in resolve["run"]
+    assert names.index("Use the released server.json") < names.index("Validate server.json")
+    released = steps[names.index("Use the released server.json")]
+    assert '"$RELEASE_SHA" -- integrations/mcp-registry/server.json' in released["run"]
+    mode = next(step for step in steps if step.get("id") == "mode")
+    assert mode["env"]["RELEASE_CURRENT"] == "${{ steps.release.outputs.publish_current || 'false' }}"
+    assert mode["run"].index('"$RELEASE_CURRENT" != "true"') < mode["run"].index("publish=true")
