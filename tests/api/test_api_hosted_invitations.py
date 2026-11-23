@@ -320,3 +320,31 @@ def test_live_postgres_invitation_audit_and_key_persistence(monkeypatch):
     finally:
         postgres_common.reset_pool()
         postgres_common.reset_current_tenant(token)
+
+
+@pytest.mark.skipif(not __import__("os").environ.get("AGENT_BOM_POSTGRES_URL"), reason="requires isolated live Postgres")
+def test_live_postgres_bootstrap_on_a_fresh_tenant(tmp_path) -> None:
+    from uuid import uuid4
+
+    from agent_bom.api import postgres_common
+    from agent_bom.api.admin_key_bootstrap import bootstrap_admin_key
+    from agent_bom.api.postgres_access import PostgresKeyStore
+
+    tenant = "bootstrap-" + uuid4().hex
+    postgres_common.reset_pool()
+    original = get_key_store()
+    set_key_store(PostgresKeyStore())
+    try:
+        payload = bootstrap_admin_key(tenant_id=tenant, name="admin", raw_key_file=tmp_path / "k")
+        second = bootstrap_admin_key(tenant_id=tenant, name="admin-2", raw_key_file=tmp_path / "k2")
+        token = postgres_common.set_current_tenant(tenant)
+        try:
+            raw = (tmp_path / "k").read_text(encoding="utf-8").strip()
+            verified = get_key_store().verify(raw)
+        finally:
+            postgres_common.reset_current_tenant(token)
+        assert verified is not None and verified.tenant_id == tenant and verified.role.value == "admin"
+        assert payload["key_id"] != second["key_id"]
+    finally:
+        set_key_store(original)
+        postgres_common.reset_pool()

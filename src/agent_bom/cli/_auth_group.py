@@ -275,7 +275,8 @@ def auth_group() -> None:
 
     \b
     Subcommands:
-      setup-oidc   Guided "Sign in with Google" / OIDC browser-SSO setup
+      setup-oidc       Guided "Sign in with Google" / OIDC browser-SSO setup
+      mint-admin-key   First admin API key of a self-hosted control plane
     """
 
 
@@ -437,3 +438,12 @@ def setup_oidc_cmd(
 
 
 auth_group.add_command(setup_oidc_cmd, "setup-oidc")
+
+
+def _register_mint_admin_key() -> None:
+    from agent_bom.cli._auth_mint import mint_admin_key_cmd
+
+    auth_group.add_command(mint_admin_key_cmd, "mint-admin-key")
+
+
+_register_mint_admin_key()
