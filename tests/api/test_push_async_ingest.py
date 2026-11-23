@@ -328,7 +328,9 @@ def test_lasting_store_read_failure_leaves_the_push_pending_and_a_retry_complete
 def pipeline_has_local_dispatch(job_id: str) -> bool:
     from agent_bom.api import scan_queue
 
-    return job_id in scan_queue._local_dispatches
+    # Claims are keyed by (tenant_id, job_id); a bare job id never matches, which
+    # let the wait return while the first worker was still running.
+    return any(key[1] == job_id for key in scan_queue._local_dispatches)
 
 
 def test_sqlite_sync_push_interrupted_before_restart_fails_and_the_same_key_recovers(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
