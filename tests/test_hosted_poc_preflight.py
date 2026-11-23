@@ -209,3 +209,24 @@ def test_secret_generation_repairs_permissions_without_rotating(tmp_path):
     _write_secret_files(tmp_path, force=False)
     assert path.read_bytes() == before
     assert path.stat().st_mode & 0o777 == 0o640
+
+
+def test_preflight_rejects_oidc_exported_only_in_the_shell(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Compose passes OIDC to the API through deploy/secrets/oidc.env only; a shell export is silently dropped."""
+    _seed_secret_files(tmp_path)
+    monkeypatch.setenv("AGENT_BOM_OIDC_ISSUER", "https://login.example.com/")
+    monkeypatch.setenv("AGENT_BOM_OIDC_AUDIENCE", "agent-bom")
+
+    errors = run_preflight(tmp_path, skip_compose=True, write_secret=False, force=False)
+
+    assert any("AGENT_BOM_OIDC_AUDIENCE, AGENT_BOM_OIDC_ISSUER set in the shell" in error for error in errors)
+
+
+def test_preflight_accepts_oidc_written_to_the_compose_env_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    _seed_secret_files(tmp_path)
+    (tmp_path / "deploy" / "secrets" / "oidc.env").write_text(
+        "# generated\nAGENT_BOM_OIDC_ISSUER=https://login.example.com/\nAGENT_BOM_OIDC_AUDIENCE=agent-bom\n", encoding="utf-8"
+    )
+    monkeypatch.setenv("AGENT_BOM_OIDC_ISSUER", "https://login.example.com/")
+
+    assert run_preflight(tmp_path, skip_compose=True, write_secret=False, force=False) == []

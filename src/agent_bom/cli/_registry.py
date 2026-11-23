@@ -19,6 +19,14 @@ def schedule():
     """Manage recurring scan schedules."""
 
 
+def _schedule_store():
+    """The schedule store the API reads: SQLite when ``AGENT_BOM_DB`` is set, else process memory."""
+    from agent_bom.api.schedule_store import InMemoryScheduleStore, SQLiteScheduleStore
+
+    db_path = env_raw("AGENT_BOM_DB")
+    return SQLiteScheduleStore(db_path) if db_path else InMemoryScheduleStore()
+
+
 @schedule.command("add")
 @click.option("--name", "-n", required=True, help="Schedule name")
 @click.option("--cron", "-c", required=True, help="Cron expression (e.g. '0 */6 * * *')")
@@ -27,7 +35,7 @@ def schedule_add(name: str, cron: str, config: Optional[str]):
     """Add a recurring scan schedule."""
     import uuid as _uuid
 
-    from agent_bom.api.schedule_store import InMemoryScheduleStore, ScanSchedule, SQLiteScheduleStore
+    from agent_bom.api.schedule_store import ScanSchedule
     from agent_bom.api.scheduler import parse_cron_next, validate_cron_expression
 
     console = Console()
@@ -43,8 +51,7 @@ def schedule_add(name: str, cron: str, config: Optional[str]):
         raise click.ClickException("Invalid cron expression")
     next_run = parse_cron_next(cron, now)
 
-    db_path = env_raw("AGENT_BOM_DB")
-    store = SQLiteScheduleStore(db_path) if db_path else InMemoryScheduleStore()
+    store = _schedule_store()
 
     sched = ScanSchedule(
         schedule_id=str(_uuid.uuid4()),
@@ -67,12 +74,8 @@ def schedule_add(name: str, cron: str, config: Optional[str]):
 @schedule.command("list")
 def schedule_list():
     """List all scan schedules."""
-
-    from agent_bom.api.schedule_store import InMemoryScheduleStore, SQLiteScheduleStore
-
     console = Console()
-    db_path = env_raw("AGENT_BOM_DB")
-    store = SQLiteScheduleStore(db_path) if db_path else InMemoryScheduleStore()
+    store = _schedule_store()
 
     schedules = store.list_all(tenant_id="default")
     if not schedules:
@@ -88,12 +91,8 @@ def schedule_list():
 @click.argument("schedule_id")
 def schedule_remove(schedule_id: str):
     """Remove a scan schedule by ID."""
-
-    from agent_bom.api.schedule_store import InMemoryScheduleStore, SQLiteScheduleStore
-
     console = Console()
-    db_path = env_raw("AGENT_BOM_DB")
-    store = SQLiteScheduleStore(db_path) if db_path else InMemoryScheduleStore()
+    store = _schedule_store()
 
     if store.delete(schedule_id, tenant_id="default"):
         console.print(f"[green]Deleted schedule {schedule_id}[/green]")

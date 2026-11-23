@@ -28,7 +28,7 @@ admin-authenticated at runtime and return metadata only
   passwords, TLS private keys, cloud credentials
 - Live `*_LAST_ROTATED` values for production or hosted POC deployments
 - Bootstrap output (for example `/tmp/agent-bom-customer0-admin.key` from
-  `scripts/deploy/mint_hosted_admin_key.py`)
+  `agent-bom auth mint-admin-key`)
 - Customer names, contracts, pricing, named buyer references
 - Internal rotation calendars tied to real infrastructure (“rotate SCIM token
   every N days on cluster X”)

@@ -222,7 +222,7 @@ def _hosted_invite_url(tenant_id: str) -> str | None:
 def create_invitation(request: Request, req: InvitationRequest) -> dict:
     """Provision a NEW tenant and mint its first scoped API key (platform operator only).
 
-    The hosted self-serve replacement for ``scripts/deploy/mint_hosted_admin_key.py``:
+    The hosted self-serve replacement for ``agent-bom auth mint-admin-key``:
     it creates a brand-new tenant (server-generated id — an invite can never
     target an existing tenant), mints one scoped API key for it through the
     same key-minting path every other route uses (no new crypto), and returns
