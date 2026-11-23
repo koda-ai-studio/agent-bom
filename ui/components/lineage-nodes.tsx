@@ -91,6 +91,8 @@ export type LineageNodeData = {
   semanticLayerIssue?: string | undefined;
   imageSubrow?: boolean | undefined;
   evidenceSources?: string[] | undefined;
+  /** Manifests and image inventories that record this package, folded into its card on a correlation overview. */
+  seenIn?: import("@/lib/graph-evidence-fold").SeenIn[] | undefined;
   onExploreFindings?: (() => void) | undefined;
   complianceTags?: string[] | undefined;
   attributes?: Record<string, unknown> | undefined;

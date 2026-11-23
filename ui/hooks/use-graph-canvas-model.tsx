@@ -442,11 +442,11 @@ export function useGraphCanvasModel(page: GraphPageData) {
     : requestedContextGroup === "all" || investigationContext?.anchorId || initialContextViewRef.current === "all" ? "all" : "dependency";
   const contextElements = useMemo(() => {
     const selected = investigationContext
-      ? { ...scenarioElements, ...selectInvestigationContext(investigationContext, selectedContextGroup) }
+      ? { ...scenarioElements, ...selectInvestigationContext(investigationContext, selectedContextGroup, { foldEvidence: !narrowViewport }) }
       : { ...scenarioElements, omittedNodes: 0, crossContextEdges: 0 };
     // A derived shares_* link restates a shared resource the investigation already draws.
     return investigationMode ? { ...selected, edges: hideRedundantDerivedEdges(selected.edges, selected.nodes, mergedGraphData?.edges) } : selected;
-  }, [scenarioElements, investigationContext, selectedContextGroup, investigationMode, mergedGraphData?.edges]);
+  }, [scenarioElements, investigationContext, selectedContextGroup, investigationMode, mergedGraphData?.edges, narrowViewport]);
   const selectContextGroup = useCallback((id: string) => {
     setCanvasPage(0);
     if (investigationContext && selectedNodeId && !selectInvestigationContext(investigationContext, id).nodes.some(node => node.id === selectedNodeId)) {

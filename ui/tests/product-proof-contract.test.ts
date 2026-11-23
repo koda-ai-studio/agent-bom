@@ -176,7 +176,9 @@ describe("product proof capture contract", () => {
     expect(source).toContain('getByTestId("selected-exposure-path")');
     expect(source).toContain('readySelector: \'[data-testid="security-graph-investigation"]\'');
     expect(source).toContain('rejectedText: ["Exploitable Via"]');
-    expect(source).toContain("maxGraphNodes: referenceGraph.nodes.length");
+    // The overview's counts come from the same fold the canvas applies, never a hand-kept number.
+    expect(source).toContain("const referenceOverview = foldPackageEvidence(");
+    expect(source).toContain("maxGraphNodes: referenceOverview.nodes.length");
     expect(source).toContain("minFontPx: 12");
   });
 

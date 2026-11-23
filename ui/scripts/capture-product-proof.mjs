@@ -19,6 +19,7 @@ import {
   demoScanAgent, graphScenario, graphScenarioComparison, node, severityId, vuln,
 } from "./product-proof-graph.mjs";
 import { runGraphQualityCapture } from "./graph-quality-capture.mjs";
+import { foldPackageEvidence } from "../lib/graph-evidence-fold.ts";
 import { AGENT_ARCHITECTURE_SCREENSHOTS, captureAgentArchitecture, installAgentArchitectureRoutes } from "./product-proof-agent-architecture.mjs";
 import { captureSourceProvenance } from "./product-proof-provenance.mjs";
 import {
@@ -96,6 +97,12 @@ if (
 const REFERENCE_CORRELATION_ID = REFERENCE_LAB.correlation.correlation_id;
 const REFERENCE_RELATIONSHIP_LAYERS = "sourceFile,container,package,vulnerability";
 const referenceGraph = REFERENCE_LAB.capture_fixture.graph;
+// The correlation's whole view folds manifests and image inventories into the package they record: what it draws.
+const CANVAS_NODE_TYPE = { source_file: "sourceFile", config_file: "configFile" };
+const referenceOverview = foldPackageEvidence(
+  referenceGraph.nodes.map(node => ({ id: node.id, position: { x: 0, y: 0 }, data: { label: node.label, nodeType: CANVAS_NODE_TYPE[node.entity_type] ?? node.entity_type } })),
+  referenceGraph.edges.map(edge => ({ id: `${edge.source}->${edge.target}:${edge.relationship}`, source: edge.source, target: edge.target, data: { relationship: edge.relationship } })),
+);
 const referenceSnapshots = [
   {
     scan_id: REFERENCE_CORRELATION_ID,
@@ -2764,8 +2771,8 @@ async function main() {
     const prepareCorrelationPath = async (proofPage) => {
       await proofPage.locator(".react-flow__node").first().waitFor({ state: "visible" });
       await fitReactFlow(proofPage);
-      // Every recorded relationship is drawn with its direction; the Internet anchor's display link is extra context.
-      await expect(proofPage.locator('.react-flow__edge:not([data-id^="display:"]) .react-flow__edge-path[marker-end]')).toHaveCount(referenceGraph.edges.length);
+      // Every relationship the overview draws has its direction; the Internet anchor's display link is extra context.
+      await expect(proofPage.locator('.react-flow__edge:not([data-id^="display:"]) .react-flow__edge-path[marker-end]')).toHaveCount(referenceOverview.edges.length);
       await expect(proofPage.locator(".graph-relationship-label")).toHaveCount(0);
       await scrollTo(proofPage, 0);
     };
@@ -2785,14 +2792,14 @@ async function main() {
       await scrollTo(proofPage, 0);
     };
     const correlationPathAssertions = {
-      expectedText: ["CVE-2023-4863", "Modeled customer records"],
+      expectedText: ["CVE-2023-4863", "Modeled customer records", ...(referenceOverview.folded ? [/seen in \d+ sources?/i] : [])],
       rejectedText: ["Exploitable Via"],
       expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph"],
       readySelector: ".react-flow__node",
-      minGraphNodes: referenceGraph.nodes.length,
-      maxGraphNodes: referenceGraph.nodes.length,
-      minGraphEdges: referenceGraph.edges.length,
-      maxGraphEdges: referenceGraph.edges.length,
+      minGraphNodes: referenceOverview.nodes.length,
+      maxGraphNodes: referenceOverview.nodes.length,
+      minGraphEdges: referenceOverview.edges.length,
+      maxGraphEdges: referenceOverview.edges.length,
       // The README shows this capture at full width; entity names stay at the legibility floor.
       minGraphNodeFontPx: 12,
       minGraphEdgeLabelFontPx: 12,

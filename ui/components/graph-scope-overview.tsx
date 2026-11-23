@@ -19,9 +19,9 @@ type Props = ComponentProps<typeof GraphRollupDecisionSurface>;
 /** Cards here draw 14px metadata at layout size, so a fit stops where it is still 11px on screen. */
 const SCOPE_FIT = { padding: 0.12, minZoom: legibleZoomForText(14), maxZoom: 1 };
 
-/** The drawn scope's height at zoom 1: its rows of cards, a card's glyph and two-line name, and the fit padding. */
-function scopeFrameHeight(cards: number): number {
-  return Math.round((Math.max(1, cards - 1) * SCOPE_PREVIEW_ROW + 150) * (1 + 2 * SCOPE_FIT.padding));
+/** The drawn scope's height at zoom 1: its tallest side's rows of cards, a card's glyph and two-line name, and the fit padding. */
+function scopeFrameHeight(rows: number): number {
+  return Math.round((Math.max(0, rows - 1) * SCOPE_PREVIEW_ROW + 150) * (1 + 2 * SCOPE_FIT.padding));
 }
 
 export function GraphScopeOverview(props: Props) {
@@ -54,7 +54,7 @@ export function GraphScopeOverview(props: Props) {
       <ReactFlowProvider key={`${preview.root.id}:${narrow}`}>
         {/* The frame is as tall as the drawn scope at full size, within the room left in the window, so a short scope
             does not sit in an empty canvas. */}
-        <div style={{ height: narrow ? preview.nodes.length * 230 : `clamp(280px, min(calc(100dvh - 380px), ${scopeFrameHeight(preview.nodes.length)}px), 560px)` }} data-testid="graph-scope-connections">
+        <div style={{ height: narrow ? preview.nodes.length * 230 : `clamp(280px, min(calc(100dvh - 380px), ${scopeFrameHeight(preview.rows)}px), 560px)` }} data-testid="graph-scope-connections">
           <ReactFlow nodes={narrow ? preview.nodes.map((node, index) => ({ ...node, position: { x: 0, y: index * 230 } })) : preview.nodes}
             style={{ "--graph-node-meta-size": "14px" } as CSSProperties}
             edges={narrow ? preview.edges.map(edge => ({ ...edge, sourceHandle: null, targetHandle: "context" })) : preview.edges} nodeTypes={lineageNodeTypes} edgeTypes={relationshipEdgeTypes}
