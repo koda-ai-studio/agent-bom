@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_bom.api.api_key_record import TenantNotProvisionedError
-from agent_bom.api.auth import Role, create_api_key, get_key_store
+from agent_bom.api.auth import Role, create_api_key, get_key_store, key_store_is_durable
 from agent_bom.api.postgres_common import reset_current_tenant, set_current_tenant
 
 RAW_KEY_FILE_EXISTS = "raw key file already exists:"
@@ -38,8 +38,12 @@ def mint_admin_key(
 ) -> MintedAdminKey:
     """Create and persist one admin key for an invite-only hosted instance."""
 
-    if not os.environ.get("AGENT_BOM_POSTGRES_URL") and not allow_inmemory:
-        raise RuntimeError("AGENT_BOM_POSTGRES_URL must be set for hosted admin bootstrap; use --allow-inmemory only for local tests.")
+    store = get_key_store()
+    if not key_store_is_durable(store) and not allow_inmemory:
+        raise RuntimeError(
+            "A persistent key store (AGENT_BOM_POSTGRES_URL or AGENT_BOM_DB) is required for hosted admin bootstrap; "
+            "use --allow-inmemory only for local tests."
+        )
     raw_key, record = create_api_key(
         name=name,
         role=Role.ADMIN,
@@ -47,7 +51,6 @@ def mint_admin_key(
         scopes=scopes or ["*"],
         tenant_id=tenant_id,
     )
-    store = get_key_store()
     # Tenant-scoped stores authorize the write against the bound tenant (row-level
     # security), and a fresh database has no row for it yet: create the tenant and
     # its first key together, as tenant invitations do.
