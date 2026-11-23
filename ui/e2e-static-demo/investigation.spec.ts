@@ -56,14 +56,14 @@ test("the selected path and its branches fit the canvas, refitted on resize", as
   await page.setViewportSize({ width: 1440, height: 900 });
   await openInvestigation(page);
   expect(await nodesOutsideCanvas(page)).toEqual([]);
-  // The finding is a badge on the package, not the last hop.
-  await expect(page.locator('.react-flow__node[data-id="cve:next"]')).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /^1 finding on next@15\.2\.2, worst critical/ })).toBeVisible();
+  // The CVE is the path's last hop, its target; the package it was found on carries the finding badge.
+  await expect(page.getByTestId("attack-path-node-cve:next")).toHaveAttribute("data-role", "target");
+  await expect(page.getByLabel("Findings (1) on next@15.2.2, worst critical", { exact: true })).toBeVisible();
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.waitForTimeout(800);
   // Narrower, the selected path still fits at the readable floor; branches beyond it are panned to and counted, never shrunk to fit.
   const outside = await nodesOutsideCanvas(page);
-  for (const hop of ["contractor-reviewer", "jit-prod-reviewer", "prod-ai-admin", "Developer Copilot", "github-enterprise", "next@15.2.2"]) {
+  for (const hop of ["contractor-reviewer", "jit-prod-reviewer", "prod-ai-admin", "Developer Copilot", "copilot-portal", "next@15.2.2", "CVE-2025-29927"]) {
     expect(outside.some((label) => label?.includes(hop)), hop).toBe(false);
   }
   if (outside.length) await expect(page.getByRole("status").filter({ hasText: "off screen" })).toHaveText(`${outside.length} more ${outside.length === 1 ? "node" : "nodes"} off screen · drag to pan`);
