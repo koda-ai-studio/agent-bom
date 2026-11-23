@@ -4,6 +4,13 @@ import { severityRank } from "@/lib/severity";
 
 const FINDINGS = new Set(["misconfiguration", "vulnerability", "finding", "iac_finding"]);
 
+/** Vertical distance between the scope's neighbour cards. */
+export const SCOPE_PREVIEW_ROW = 150;
+/** Neighbours drawn around a scope: a laptop frame shows them all at full size. */
+const SCOPE_PREVIEW_NEIGHBOURS = 3;
+/** How far right of the scope its neighbours sit: wide enough that the drawn scope spans a laptop canvas. */
+const SCOPE_PREVIEW_REACH = 640;
+
 /** A bounded selection of recorded links, never a synthesized attack path. */
 export function buildScopePreview(items: GraphRollupContainer[], edges: GraphRollupEdge[], rootId?: string) {
   const byId = new Map(items.map(item => [item.id, item]));
@@ -26,12 +33,12 @@ export function buildScopePreview(items: GraphRollupContainer[], edges: GraphRol
     if (labels.has(key)) return false;
     labels.add(key); return true;
   });
-  const chosen = [...diverse, ...neighbors.filter(item => !diverse.includes(item))].slice(0, 3);
+  const chosen = [...diverse, ...neighbors.filter(item => !diverse.includes(item))].slice(0, SCOPE_PREVIEW_NEIGHBOURS);
   const ids = new Set(chosen.map(item => item.id));
   const selectedLinks = links.filter(edge => ids.has(edge.source === root.id ? edge.target : edge.source));
   const flow = buildRollupFlowGraph([root, ...chosen], { edges: selectedLinks });
   const nodes = flow.nodes.map((node, i) => ({ ...node,
-    position: { x: i === 0 ? 0 : 460, y: i === 0 ? (chosen.length - 1) * 75 : (i - 1) * 150 },
+    position: { x: i === 0 ? 0 : SCOPE_PREVIEW_REACH, y: i === 0 ? (chosen.length - 1) * SCOPE_PREVIEW_ROW / 2 : (i - 1) * SCOPE_PREVIEW_ROW },
     data: { ...node.data, rollup: undefined, rollupCompact: false, highlighted: false,
       attributes: { ...node.data.attributes, rollup_is_container: false },
     },

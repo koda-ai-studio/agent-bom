@@ -10,7 +10,7 @@ import { NODE_COLOR_MAP } from "@/lib/graph-utils";
 import type { PathGraphNode } from "@/lib/attack-path-graph-model";
 import { MARKER_META, type NodeContextMarker } from "@/lib/attack-path-graph-markers";
 import { PATH_NODE } from "@/lib/attack-path-graph-layout";
-import { GLYPH_CENTER_Y, glyphInsetX } from "@/lib/attack-path-graph-routes";
+import { BRANCH_DROP, BRANCH_INSET, GLYPH_CENTER_Y, glyphInsetX } from "@/lib/attack-path-graph-routes";
 import { labelSegments } from "@/lib/graph-label-breaks";
 
 export type AttackPathNodeData = {
@@ -97,6 +97,9 @@ function Handles({ vertical, small = false }: { vertical: boolean; small?: boole
     <Handle id="context" type="source" position={Position.Left} className={hidden} style={{ top: GLYPH_CENTER_Y, left: inset }} />
     <Handle id="context" type="target" position={Position.Right} className={hidden} style={{ top: GLYPH_CENTER_Y, right: inset }} />
     <Handle id="side" type="source" position={Position.Right} className={hidden} style={{ top: GLYPH_CENTER_Y, right: inset }} />
+    {/* A link changing row meets the upper card low on its glyph's rim, below the path line and the hop name over it. */}
+    <Handle id="branch" type="source" position={Position.Right} className={hidden} style={{ top: GLYPH_CENTER_Y + BRANCH_DROP(small), right: inset + BRANCH_INSET(small) }} />
+    <Handle id="branch" type="target" position={Position.Left} className={hidden} style={{ top: GLYPH_CENTER_Y + BRANCH_DROP(small), left: inset + BRANCH_INSET(small) }} />
   </>;
 }
 

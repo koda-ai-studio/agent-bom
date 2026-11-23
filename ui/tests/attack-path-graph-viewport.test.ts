@@ -72,7 +72,7 @@ describe("attack path viewport", () => {
     const { graph, selected } = demoFixture("runbook");
     const model = buildAttackPathGraphModel(graph, selected);
     const layout = layoutAttackPathGraph(model, "LR");
-    const pane = { width: 760, height: 520 };
+    const pane = { width: 760, height: 460 }; // the runbook branch is two rows tall: shorter than this pane fits it whole
     const viewport = attackPathViewport(layout, model.pathNodeIds, pane, 0.6);
     expect(viewport.zoom).toBeGreaterThanOrEqual(0.6);
     expect(viewport.fallback).toBe(true);

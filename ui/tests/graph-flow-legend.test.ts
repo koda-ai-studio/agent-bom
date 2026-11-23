@@ -31,10 +31,23 @@ describe("flowEdgeLegend", () => {
     expect(legend.more).toBe(0);
   });
 
-  it("keeps relationship meanings visible even when colours match", () => {
-    const legend = flowEdgeLegend([edge("a", "uses", "var(--line)"), edge("b", "depends_on", "var(--line)")]);
-    expect(legend.relationships.map(item => item.relationship)).toEqual(["depends_on", "uses"]);
+  it("names every relationship drawn in one colour on that colour's entry", () => {
+    const legend = flowEdgeLegend([edge("a", "uses", "var(--line)"), edge("b", "depends_on", "var(--line)"), edge("c", "uses", "var(--line)")]);
+    expect(legend.relationships).toEqual([{ relationship: "depends_on", label: "uses, depends on", stroke: "var(--line)", count: 3 }]);
     expect(legend.more).toBe(0);
+  });
+
+  it("reports a compact link's family colour and dash, which is what the canvas draws, not its stored style", () => {
+    const compact = (id: string, relationship: string, data: Record<string, unknown> = {}): Edge => ({
+      id, source: `${id}-s`, target: `${id}-t`, type: "compact", style: { stroke: "var(--edge-per-relationship)" },
+      data: { relationship, relationshipLabel: `${relationship.replace("_", " ")} · modeled`, ...data },
+    });
+    const legend = flowEdgeLegend([compact("a", "acted_as"), compact("b", "authenticates_as"), compact("c", "depends_on", { evidenceMode: "recorded" })]);
+    expect(legend.styles).toEqual(["solid", "dashed"]);
+    expect(legend.relationships).toEqual([
+      { relationship: "acted_as", label: "acted as, authenticates as", stroke: "var(--graph-edge-access)", count: 2 },
+      { relationship: "depends_on", label: "depends on", stroke: "var(--graph-edge-structure)", count: 1 },
+    ]);
   });
 
   it("is empty for a canvas without drawn relationships", () => {

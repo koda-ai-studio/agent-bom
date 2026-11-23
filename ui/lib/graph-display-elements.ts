@@ -159,7 +159,7 @@ export function emphasizedDisplayEdges({ edges, nodes, neighborhood, pathEdgeIds
       labelBgBorderRadius: 6,
       labelBgStyle: { fill: "var(--surface)", fillOpacity: 1 },
       labelStyle: { fill: "var(--foreground)", fontSize: Math.max(12, Math.min(20, 13 / Math.max(zoom, 0.2))), fontWeight: 650 },
-      data: { ...withoutOverviewRouting(edge.data), directionEmphasis: true, pathEmphasis: true },
+      data: { ...withoutOverviewRouting(edge.data), directionEmphasis: true, pathEmphasis: true, pathLabel: true },
       animated: !captureMode,
       style: { ...edge.style, opacity: 1, strokeWidth: widthAtLeast(edge, 2, 3.2), filter: undefined },
     }));
