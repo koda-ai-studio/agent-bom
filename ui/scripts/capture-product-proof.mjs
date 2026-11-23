@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { graphNodeAggregatesResponse, nodeAggregatesResponse, rollupResponse } from "./product-proof-rollup.mjs";
+import { graphNodeAggregatesResponse, nodeAggregatesFixtureIds, nodeAggregatesResponse, rollupResponse } from "./product-proof-rollup.mjs";
 import { auditRenderedGraph, graphGrammarExpression, renderedRelationshipCurves, sharedRelationshipRuns } from "./graph-visual-audit.mjs";
 import { chromium, expect } from "@playwright/test";
 import { spawn, spawnSync } from "node:child_process";
@@ -1476,6 +1476,14 @@ export async function installRoutes(page, fixtureGraph = graph) {
     const body = rollupResponse();
     assertCaptureSnapshotScope(route.request().url(), SCAN_ID, [body.scan_id]);
     return fulfill(route, body);
+  });
+  // With no node named, the read-only demo's default answer: every node's aggregate for both fixture scans. The demo
+  // client filters it by the node ids a page asks for, so a path that settles on a different hop list still has data.
+  await page.route("**/v1/graph/node-aggregates", (route) => {
+    const all = (ids) => new URL(`http://fixture/v1/graph/node-aggregates?${ids.map((id) => `node_id=${encodeURIComponent(id)}`).join("&")}`);
+    const fixtureRows = nodeAggregatesResponse(all(Object.keys(nodeAggregatesFixtureIds())));
+    const referenceRows = graphNodeAggregatesResponse(all(referenceGraph.nodes.map((node) => node.id)), referenceGraph);
+    return fulfill(route, { ...fixtureRows, aggregates: [...fixtureRows.aggregates, ...referenceRows.aggregates], missing_node_ids: [] });
   });
   await page.route("**/v1/graph/node-aggregates?**", (route) => {
     const url = new URL(route.request().url());
