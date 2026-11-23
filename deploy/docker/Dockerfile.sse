@@ -50,7 +50,7 @@ RUN uv sync --locked --no-dev --no-editable --extra mcp-server
 ## ── Runtime stage ────────────────────────────────────────────────────────────
 FROM python:3.12.16-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b
 
-ARG VERSION=0.115.5
+ARG VERSION=0.115.6
 ARG HTTP_PROXY
 ARG HTTPS_PROXY
 ARG NO_PROXY
