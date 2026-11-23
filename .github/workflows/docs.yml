@@ -12,6 +12,18 @@ on:
       - 'ui/**'
       - 'examples/reference-evidence-lab/generated/**'
       - '.github/actions/setup-ui/**'
+  # The read-only demo's browser checks run before merge too, so a UI change that breaks the published demo
+  # fails on its pull request and in the merge queue instead of turning main red after it lands.
+  pull_request:
+    paths:
+      - 'site-docs/**'
+      - 'mkdocs.yml'
+      - '.github/workflows/docs.yml'
+      - '.github/workflows/docs-build.yml'
+      - 'ui/**'
+      - 'examples/reference-evidence-lab/generated/**'
+      - '.github/actions/setup-ui/**'
+  merge_group:
   workflow_dispatch:
 
 permissions:
@@ -26,7 +38,8 @@ jobs:
     uses: ./.github/workflows/docs-build.yml
 
   deploy:
-    if: ${{ github.ref == 'refs/heads/main' }}
+    # Only a push to main publishes; pull requests and the merge queue build and test the site without deploying it.
+    if: ${{ github.event_name != 'pull_request' && github.event_name != 'merge_group' && github.ref == 'refs/heads/main' }}
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 20
