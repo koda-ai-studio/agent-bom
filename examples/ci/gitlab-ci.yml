@@ -6,7 +6,7 @@ agent-bom:
   variables:
     PIP_DISABLE_PIP_VERSION_CHECK: "1"
   script:
-    - pip install --quiet agent-bom==0.115.5
+    - pip install --quiet agent-bom==0.115.6
     - agent-bom scan . -f cyclonedx -o agent-bom-sbom.cdx.json -q
     - agent-bom scan . -f sarif -o agent-bom-results.sarif --fail-on-severity high
   artifacts:

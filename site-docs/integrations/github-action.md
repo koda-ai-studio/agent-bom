@@ -7,7 +7,7 @@ and reports them as SARIF, a job summary, line annotations and an optional
 pull request comment.
 
 `@v0` follows the latest 0.x release. Pin a release tag (for example
-`@v0.115.5`) or a commit SHA when you need the scanner version to stay fixed.
+`@v0.115.6`) or a commit SHA when you need the scanner version to stay fixed.
 
 ## Quick start
 

@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "agent-bom-lookup",
-  "version": "0.115.5",
+  "version": "0.115.6",
   "description": "Read-only package and advisory lookups from agent-bom on a public server with no sign-in: check one package version for known vulnerabilities and malicious-package advisories, or look up one CVE, GHSA or OSV advisory. Sends only the package name, ecosystem and version, or the advisory id.",
   "author": {
     "name": "koda-ai-studio",
