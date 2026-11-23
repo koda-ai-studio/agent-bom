@@ -190,3 +190,16 @@ def test_pr_creation_refusal_is_a_labelled_skip_with_the_manual_command() -> Non
     assert report, "a genuinely failed pin job must still leave a summary the run page shows despite continue-on-error"
     assert "$GITHUB_STEP_SUMMARY" in report[-1]["run"]
     assert "::error::" in report[-1]["run"]
+
+
+def test_pin_branch_pushes_with_a_token_that_may_update_workflow_files() -> None:
+    """The sync rewrites the reusable workflow's pin; the built-in token is refused on workflow files."""
+    workflow = yaml.safe_load(RELEASE_WORKFLOW.read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["docker-mcp-pin"]["steps"]
+    token = "${{ secrets.RELEASE_PINS_TOKEN || github.token }}"
+    checkout = next(step for step in steps if str(step.get("uses", "")).startswith("actions/checkout@"))
+    assert checkout["with"].get("token") == token, "the push uses the checkout's credential, so the checkout must take the pins token"
+    publish = next(step for step in steps if "gh pr create" in step.get("run", ""))
+    assert publish["env"]["GH_TOKEN"] == token, "a PR opened with the built-in token runs no CI"
+    preflight = next(step for step in steps if step.get("id") == "signing")
+    assert preflight["env"]["GH_TOKEN"] == token, "the PR-permission preflight must test the token that opens the PR"
