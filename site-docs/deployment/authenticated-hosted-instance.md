@@ -35,6 +35,8 @@ it does **not** enable anonymous API access.
 - DNS pointing at the host, for example `agent-bom.example.com`. Open inbound `443`
   only; restrict SSH to your IP.
 - A checkout of this repository on the host.
+- The `agent-bom` CLI on the host for the setup helpers (`pipx install agent-bom`).
+  Commands that touch the running stack run inside the API container instead.
 
 ## 1. Stand up the gated instance
 
@@ -68,11 +70,25 @@ The `api_key` secret file seeds a single **admin** key via
 
 ### 1b. Optional — wire OIDC / SAML SSO instead of (or alongside) API keys
 
+The API container reads OIDC settings from `deploy/secrets/oidc.env`; variables
+exported in your shell never reach it. Write that file with the setup helper:
+
 ```bash
-export AGENT_BOM_OIDC_ISSUER="https://login.example.com/"
-export AGENT_BOM_OIDC_AUDIENCE="agent-bom"
-# For multi-tenant IdP setups also set AGENT_BOM_OIDC_TENANT_PROVIDERS_JSON.
+agent-bom auth setup-oidc --provider generic \
+  --issuer "https://login.example.com/" \
+  --client-id agent-bom \
+  --base-url "https://agent-bom.example.com" \
+  --role-claim agent_bom_role \
+  --client-secret-file /run/agent-bom/oidc/client_secret \
+  --write --yes
 ```
+
+Put the IdP client secret in `deploy/secrets/oidc/client_secret`; Compose mounts
+that directory read-only at `/run/agent-bom/oidc`. Omit `--client-secret-file`
+for a PKCE public client. For multi-tenant IdP setups add
+`AGENT_BOM_OIDC_TENANT_PROVIDERS_JSON` to the same file. The preflight in step 1e
+fails if an `AGENT_BOM_OIDC_*` value is exported in the shell but missing from
+the file.
 
 The CLI refuses to expose the API on a non-loopback host unless **at least one**
 of API key, `AGENT_BOM_API_KEYS`, OIDC, or a SCIM bearer token is configured, so
@@ -127,14 +143,28 @@ docker compose \
   -f deploy/docker-compose.platform.yml \
   -f deploy/docker-compose.product.yml \
   exec api \
-  python scripts/deploy/mint_hosted_admin_key.py \
+  agent-bom auth mint-admin-key \
     --tenant-id customer-0 \
     --name customer-0-admin \
     --raw-key-file /tmp/customer0-admin.key
 ```
 
-The raw key is written once to the `0600` file passed with `--raw-key-file`.
-Store it in your password manager; never commit, screenshot, or paste it.
+The command prints key metadata only; the raw key is written once to the `0600`
+file inside the container. Copy it out, then remove it from the container:
+
+```bash
+COMPOSE="docker compose -f deploy/docker-compose.platform.yml -f deploy/docker-compose.product.yml"
+$COMPOSE cp api:/tmp/customer0-admin.key ./customer0-admin.key && chmod 600 ./customer0-admin.key
+$COMPOSE exec api rm /tmp/customer0-admin.key
+```
+
+Store it in your password manager, then delete the local copy; never commit,
+screenshot, or paste it.
+
+The key expires after 30 days by default (`AGENT_BOM_API_KEY_DEFAULT_TTL_SECONDS`;
+at most 90 days, `AGENT_BOM_API_KEY_MAX_TTL_SECONDS`); pass `--expires-at` for an
+earlier date, and issue the next admin key through `POST /v1/auth/keys` before it
+lapses.
 
 Issue scoped viewer/analyst keys for the account with the admin key against the
 RBAC endpoint (`POST /v1/auth/keys` requires the `admin` role):
@@ -186,38 +216,54 @@ GCP and Azure follow the same pattern with their own modules:
 Workload Identity Federation) and `deploy/terraform/connect-azure` (Reader +
 Security Reader, pinned federated identity credential).
 
-### 3b. Run the first authenticated scan against the tenant
+### 3b. Run the first scan into the tenant
 
-Authenticate via the standard provider chain (named profile, assumed role, or
-SSO — no secrets stored in `agent-bom`), opt in with the per-provider inventory
-flag, and scan from inside the API container so findings land in the customer-0
-tenant store:
+Dashboard findings come from the control plane's **Connections**: a connection
+belongs to the tenant of the key or SSO session that created it, and its scans
+persist to that tenant's stores. A CLI scan run with `docker compose exec`
+writes the CLI's own local report instead, and none of it reaches the dashboard.
 
-```bash
-docker compose \
-  -f deploy/docker-compose.platform.yml \
-  -f deploy/docker-compose.product.yml \
-  exec \
-    -e AGENT_BOM_AWS_INVENTORY=1 \
-    -e AWS_PROFILE=abom-readonly \
-    api \
-  agent-bom agents --preset enterprise --aws --aws-cis-benchmark
-```
-
-Azure and GCP equivalents:
+The API container assumes the customer role with its own AWS identity, so that
+identity must be listed in the role's trusted principals (`trusted_principal_arns`
+in step 3a). On EC2, attach an instance profile with that role and raise the
+instance metadata hop limit to 2 so containers can read it:
 
 ```bash
-# Azure — Reader / Security Reader via DefaultAzureCredential
-AGENT_BOM_AZURE_INVENTORY=1 agent-bom agents --preset enterprise --azure
-
-# GCP — read-only inventory, IAM review, and Cloud Asset roles via ADC
-AGENT_BOM_GCP_INVENTORY=1 agent-bom cloud gcp --project <PROJECT_ID> --cis
+aws ec2 modify-instance-metadata-options --instance-id <host-instance-id> \
+  --http-tokens required --http-put-response-hop-limit 2
 ```
 
-For org/tenant fan-out use `AGENT_BOM_AWS_ORG_INVENTORY=1`,
-`AGENT_BOM_AZURE_ALL_SUBSCRIPTIONS=1`, or `AGENT_BOM_GCP_ALL_PROJECTS=1`. See
-[`docs/CLOUD_CONNECT.md`](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/CLOUD_CONNECT.md)
-for the full per-provider matrix and scale caps.
+Then either sign in, open **Connections**, and add the AWS account with the role
+ARN and ExternalId, or make the same call with the admin key:
+
+```bash
+export ABOM_URL="https://agent-bom.example.com"
+export ABOM_KEY="$(cat ./customer0-admin.key)"
+
+curl -sS -X POST "$ABOM_URL/v1/cloud/connections" \
+  -H "Authorization: Bearer $ABOM_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"provider": "aws", "display_name": "Production",
+       "role_ref": "arn:aws:iam::<account-id>:role/<read-only-role>",
+       "external_id": "<external id>", "regions": ["us-east-1"]}'
+```
+
+The response carries the connection `id` and the first scan's job id in
+`last_scan_id`; the scan starts on creation. Check it, verify the broker, or
+re-scan:
+
+```bash
+curl -sS "$ABOM_URL/v1/scan/<last_scan_id>" -H "Authorization: Bearer $ABOM_KEY"
+curl -sS -X POST "$ABOM_URL/v1/cloud/connections/<id>/test" -H "Authorization: Bearer $ABOM_KEY"
+curl -sS -X POST "$ABOM_URL/v1/cloud/connections/<id>/scan" -H "Authorization: Bearer $ABOM_KEY"
+```
+
+Azure and GCP connections take the same call with `"provider": "azure"` or
+`"gcp"`; their `role_ref`, `auth_params`, and keyless workload-identity options
+are in
+[`docs/CLOUD_CONNECT.md`](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/CLOUD_CONNECT.md),
+together with organization fan-out (`"inventory_scope": "organization"`) and
+scale caps.
 
 ## 4. Log in and see real posture
 

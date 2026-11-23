@@ -175,6 +175,27 @@ def _validate_auth_and_bindings(errors: list[str]) -> None:
         _fail(errors, "AGENT_BOM_ALLOW_EPHEMERAL_AUDIT_HMAC must be unset or false")
 
 
+def _validate_oidc_reaches_api(root: Path, errors: list[str]) -> None:
+    """Shell exports never reach the API container; it reads OIDC only from deploy/secrets/oidc.env."""
+    exported = sorted(name for name in os.environ if name.startswith("AGENT_BOM_OIDC_") and os.environ[name].strip())
+    if not exported:
+        return
+    env_file = _secrets_dir(root) / "oidc.env"
+    written: set[str] = set()
+    if env_file.is_file():
+        for line in env_file.read_text(encoding="utf-8").splitlines():
+            key, sep, value = line.partition("=")
+            if sep and not key.lstrip().startswith("#") and value.strip():
+                written.add(key.strip())
+    missing = [name for name in exported if name not in written]
+    if missing:
+        _fail(
+            errors,
+            f"{', '.join(missing)} set in the shell but not in deploy/secrets/oidc.env; the API container reads OIDC only from that file "
+            "(write it with `agent-bom auth setup-oidc --write`)",
+        )
+
+
 def _fernet_key() -> str:
     # 32 random bytes → urlsafe base64 Fernet key (no cryptography dependency).
     return base64.urlsafe_b64encode(secrets.token_bytes(32)).decode("ascii")
@@ -317,6 +338,7 @@ def run_preflight(root: Path, *, skip_compose: bool, write_secret: bool, force: 
     public_url = _validate_public_url(errors)
     _validate_cors(errors, public_url)
     _validate_auth_and_bindings(errors)
+    _validate_oidc_reaches_api(root, errors)
 
     if write_secret and not errors:
         _write_secret_files(root, force=force)

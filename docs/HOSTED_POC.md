@@ -127,7 +127,7 @@ docker compose \
   agent-bom quickstart --run --offline --force
 ```
 
-The compose profile persists `/root/.agent-bom` in a named volume so the seeded
+The compose profile persists `/home/abom/.agent-bom` in a named volume so the seeded
 demo graph survives container replacement. Offline quickstart inventories and
 graphs the sample without package-CVE lookup; use the separate bundled demo
 scan for offline CVE proof:
@@ -161,15 +161,22 @@ docker compose \
   -f deploy/docker-compose.platform.yml \
   -f deploy/docker-compose.hosted-poc.yml \
   exec api \
-  python scripts/deploy/mint_hosted_admin_key.py \
+  agent-bom auth mint-admin-key \
     --tenant-id customer-0 \
     --name customer-0-admin \
     --raw-key-file /tmp/customer0-admin.key
 ```
 
 The JSON response includes key metadata only. The raw key is written once to the
-private `0600` file passed with `--raw-key-file`; store that value in your
-password manager, then delete or move the file into your secret store. Do not
+private `0600` file inside the container; copy it out and remove it there:
+
+```bash
+COMPOSE="docker compose -f deploy/docker-compose.platform.yml -f deploy/docker-compose.hosted-poc.yml"
+$COMPOSE cp api:/tmp/customer0-admin.key ./customer0-admin.key && chmod 600 ./customer0-admin.key
+$COMPOSE exec api rm /tmp/customer0-admin.key
+```
+
+Store that value in your password manager, then delete the local copy. Do not
 commit it or paste it into docs, screenshots, tickets, or chat transcripts.
 
 Run the hosted smoke before inviting anyone:
@@ -192,7 +199,7 @@ scripts/deploy/hosted_poc_smoke.sh
 
 ### Operator-managed invite endpoint
 
-`scripts/deploy/mint_hosted_admin_key.py` is the bootstrap path for the very
+`agent-bom auth mint-admin-key` is the bootstrap path for the very
 first admin key. Once an operator holds an admin key, the same tenant-and-key
 provisioning is available over the API without shelling into the container:
 

@@ -103,3 +103,33 @@ def test_write_raw_key_file_force_overwrites_private_file(tmp_path: Path) -> Non
 
     assert raw_key_file.read_text(encoding="utf-8") == "abom_new-key\n"
     assert stat.S_IMODE(raw_key_file.stat().st_mode) == 0o600
+
+
+def test_packaged_command_mints_through_the_installed_cli(isolated_key_store: KeyStore, tmp_path: Path) -> None:
+    """The runtime image ships the package, not scripts/; the bootstrap must be a CLI command."""
+    from click.testing import CliRunner
+
+    from agent_bom.cli import main as cli
+
+    raw_key_file = tmp_path / "admin.key"
+    result = CliRunner().invoke(
+        cli, ["auth", "mint-admin-key", "--tenant-id", "tenant-b", "--name", "ops", "--allow-inmemory", "--raw-key-file", str(raw_key_file)]
+    )
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    assert payload["tenant_id"] == "tenant-b" and payload["role"] == "admin"
+    raw_key = raw_key_file.read_text(encoding="utf-8").strip()
+    assert raw_key not in result.output
+    assert stat.S_IMODE(raw_key_file.stat().st_mode) == 0o600
+    assert isolated_key_store.verify(raw_key) is not None
+
+
+def test_packaged_command_fails_closed_without_a_persistent_store(tmp_path: Path) -> None:
+    from click.testing import CliRunner
+
+    from agent_bom.cli import main as cli
+
+    result = CliRunner().invoke(cli, ["auth", "mint-admin-key", "--raw-key-file", str(tmp_path / "k")])
+    assert result.exit_code == 1
+    assert "check server logs and bootstrap configuration" in result.stderr
+    assert not (tmp_path / "k").exists()
