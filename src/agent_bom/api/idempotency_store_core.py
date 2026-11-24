@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import sys
 import threading
 import time
 import uuid
@@ -17,6 +18,7 @@ from typing import Any, Callable, Iterator, Protocol, TypeVar
 
 _T = TypeVar("_T")
 _FINGERPRINT_BUFFER_BYTES = 2048
+_FINGERPRINT_SLICE_CHARS = 16 * 1024
 
 
 @dataclass
@@ -284,6 +286,60 @@ def _dumps_by_field_name(model_type: Any) -> bool:
     return not any(field.serialization_alias or field.alias for field in fields.values())
 
 
+class _NotPlainJsonError(Exception):
+    pass
+
+
+def _refuse_non_json(_value: Any) -> Any:
+    raise _NotPlainJsonError
+
+
+# The C encoder writes the same canonical bytes as the walk below for JSON-native
+# values with string keys; anything else raises instead of being stringified.
+_PLAIN_ENCODER = json.JSONEncoder(sort_keys=True, separators=(",", ":"), default=_refuse_non_json)
+# Before 3.12 the C encoder holds every token as its own string until the final join, about eleven times the
+# output, so a large section would be held many times over; those versions keep the token walk.
+_C_SECTIONS = sys.version_info >= (3, 12)
+_EXCLUDED_KEY = '"idempotency_key":'
+
+
+def _json_mode_chunks(value: Any, encoder: json.JSONEncoder) -> Iterator[str]:
+    """Canonical chunks of one ``model_dump(mode="json")`` value, whose dict keys are all strings.
+
+    A subtree without the excluded key is encoded in C; lists go one element at
+    a time so no single encode holds the GIL for the whole report.
+    """
+    if not _C_SECTIONS:
+        yield from _request_json_chunks(value, encoder)
+        return
+    if isinstance(value, list | tuple):
+        yield "["
+        for index, item in enumerate(value):
+            if index:
+                yield ","
+            yield from _json_mode_chunks(item, encoder)
+        yield "]"
+        return
+    try:
+        encoded = _PLAIN_ENCODER.encode(value)
+    except (_NotPlainJsonError, TypeError, ValueError, RecursionError):
+        encoded = None
+    if encoded is not None and _EXCLUDED_KEY not in encoded:
+        yield encoded
+    elif isinstance(value, dict):
+        yield "{"
+        kept = ((str(key), item) for key, item in sorted(value.items(), key=lambda pair: str(pair[0])) if str(key) != "idempotency_key")
+        for index, (key, item) in enumerate(kept):
+            if index:
+                yield ","
+            yield encoder.encode(key)
+            yield ":"
+            yield from _json_mode_chunks(item, encoder)
+        yield "}"
+    else:
+        yield from _request_json_chunks(value, encoder)
+
+
 def _request_json_chunks(value: Any, encoder: json.JSONEncoder) -> Iterator[str]:
     """Normalize one container at a time, retaining the existing canonical bytes."""
     if hasattr(value, "model_dump"):
@@ -294,10 +350,11 @@ def _request_json_chunks(value: Any, encoder: json.JSONEncoder) -> Iterator[str]
                     yield ","
                 yield encoder.encode(key)
                 yield ":"
-                yield from _request_json_chunks(item, encoder)
+                yield from _json_mode_chunks(item, encoder)
             yield "}"
             return
-        value = value.model_dump(mode="json")
+        yield from _json_mode_chunks(value.model_dump(mode="json"), encoder)
+        return
     if isinstance(value, dict):
         # Preserve string-key collision order and recursive key exclusion. Only
         # this container's references are copied; descendants stay untouched.
@@ -329,31 +386,32 @@ def idempotency_request_fingerprint(payload: Any) -> str:
             (or otherwise cyclic) to normalize. Callers surface this as 422.
     """
     try:
-        # The one-shot C encoder holds the GIL for the entire report, even
-        # when this function runs in a worker thread. Incremental encoding
-        # and normalization keep the same canonical bytes without an extra
-        # full tree of containers whose collection can stall other requests.
+        # A one-shot encode holds the GIL for the entire report, even in a
+        # worker thread. Sections are C-encoded one list element at a time
+        # (see _json_mode_chunks) and the rest is walked token by token; both
+        # keep the same canonical bytes without a full copy of the report.
         digest = hashlib.sha256()
         encoder = json.JSONEncoder(sort_keys=True, separators=(",", ":"), default=str)
         pending = bytearray()
         for chunk in _request_json_chunks(payload or {}, encoder):
-            encoded = chunk.encode("utf-8")
-            if len(encoded) >= _FINGERPRINT_BUFFER_BYTES:
+            if len(chunk) >= _FINGERPRINT_BUFFER_BYTES:
                 if pending:
                     digest.update(pending)
                     pending.clear()
-                digest.update(encoded)
+                # Slices, so a C-encoded section never also exists whole as bytes.
+                for start in range(0, len(chunk), _FINGERPRINT_SLICE_CHARS):
+                    digest.update(chunk[start : start + _FINGERPRINT_SLICE_CHARS].encode("utf-8"))
                 time.sleep(0)
-            else:
-                pending.extend(encoded)
-                if len(pending) >= _FINGERPRINT_BUFFER_BYTES:
-                    # hashlib releases the GIL above 2047 bytes. Tiny token
-                    # updates otherwise keep competing with the API loop.
-                    digest.update(pending)
-                    pending.clear()
-                    # Give runnable request threads a turn; repeated tiny
-                    # Python tokens can otherwise reclaim the GIL immediately.
-                    time.sleep(0)
+                continue
+            pending.extend(chunk.encode("utf-8"))
+            if len(pending) >= _FINGERPRINT_BUFFER_BYTES:
+                # hashlib releases the GIL above 2047 bytes. Tiny token
+                # updates otherwise keep competing with the API loop.
+                digest.update(pending)
+                pending.clear()
+                # Give runnable request threads a turn; repeated tiny
+                # Python tokens can otherwise reclaim the GIL immediately.
+                time.sleep(0)
         if pending:
             digest.update(pending)
     except (ValueError, TypeError, RecursionError) as exc:

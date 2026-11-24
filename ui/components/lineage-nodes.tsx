@@ -18,6 +18,7 @@ import { mcpNodeCaption } from "@/lib/graph-mcp-caption";
 import { GraphCountHint } from "@/components/graph-count-hint";
 import { GraphPackageGlyph } from "@/components/graph-package-glyph";
 import { GraphProviderMark } from "@/components/graph-provider-mark";
+import { GraphBoundaryFrame } from "@/components/graph-boundary-frame";
 import { entitySource } from "@/lib/agent-source";
 import { NodeBadgeRow } from "@/components/graph-node-badges";
 import { ASSET_KINDS, assetKindLabel } from "@/lib/asset-icon-registry";
@@ -48,6 +49,12 @@ export type RuntimeEvidenceTier = "static_scan" | "runtime_observed" | "runtime_
 
 export type LineageNodeData = {
   label: string;
+  /** On a boundary frame: the environment node it stands for. */
+  frameFor?: string | undefined;
+  /** Hidden by the layout because a boundary frame draws it. */
+  framed?: boolean | undefined;
+  /** On a boundary frame: the containment links its boundary stands for. */
+  frameLinks?: number | undefined;
   semanticPathIndex?: number | undefined;
   semanticLayout?: boolean | undefined;
   phoneLayout?: boolean | undefined;
@@ -955,6 +962,7 @@ export const lineageNodeTypesAdaptive = {
   driftIncidentNode: AdaptiveLineageNode,
   dataStoreNode: AdaptiveLineageNode,
   clusterPillNode: ClusterPillNode,
+  boundaryFrame: GraphBoundaryFrame,
 };
 
 /** Detail renderers used by bounded investigations, with evidence metadata. */
@@ -987,4 +995,5 @@ export const lineageNodeTypes = {
   driftIncidentNode: MisconfigNode,
   dataStoreNode: CloudResourceNode,
   clusterPillNode: ClusterPillNode,
+  boundaryFrame: GraphBoundaryFrame,
 };

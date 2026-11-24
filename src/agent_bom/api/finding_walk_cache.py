@@ -89,6 +89,11 @@ def _enabled() -> bool:
         return True
 
 
+def reuse_enabled() -> bool:
+    """Whether finding reads may reuse work across requests (``AGENT_BOM_FINDING_WALK_CACHE``)."""
+    return _enabled()
+
+
 def _revision(tenant_id: str, hub: Any, job_store: Any) -> tuple[str, str] | None:
     job_reader = getattr(job_store, "overview_evidence_revision", None)
     if not callable(job_reader):
@@ -213,4 +218,14 @@ def reuse_rows(
     return _build_once(full_key, load, lambda rows: _store(full_key, rows, horizon))
 
 
-__all__ = ["MAX_CACHED_ROWS", "MAX_WALKS", "WALK_TTL_SECONDS", "RowInputs", "cached_row_count", "clear", "reuse_rows", "walk_rows"]
+__all__ = [
+    "MAX_CACHED_ROWS",
+    "MAX_WALKS",
+    "WALK_TTL_SECONDS",
+    "RowInputs",
+    "cached_row_count",
+    "clear",
+    "reuse_enabled",
+    "reuse_rows",
+    "walk_rows",
+]

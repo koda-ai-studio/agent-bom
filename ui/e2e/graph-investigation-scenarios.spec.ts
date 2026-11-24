@@ -56,14 +56,16 @@ for (const theme of ["light", "dark"]) test(`distinct flows, finding drilldown a
   await expect(page.locator('.react-flow__node[data-id="display:internet"]')).toBeVisible();
   await expect(page.locator('.react-flow__edge[data-id="display:internet:endpoint"]')).toHaveCount(1);
   await expect(page.locator('.react-flow__node[data-id="deployment"]')).toBeVisible();
-  await expect(page.locator('[data-graph-entity="finding-group"]')).toBeVisible();
+  // With no pinned path the view follows the exposure chain to its finding, so the CVE ends the amber path.
+  await expect(page.locator('.react-flow__node[data-id="CVE-2099-0001"]')).toBeVisible();
+  await expect(page.locator('.react-flow__edge[data-id="display:internet:endpoint"] [data-edge-family]')).toHaveCount(1);
+  // The account holding the estate is drawn as its boundary.
+  await expect(page.locator('[data-boundary-frame="account"]')).toBeVisible();
   await expect(page.locator("[data-graph-adaptive-frame]")).toHaveAttribute("data-graph-camera-settled", "true");
   await settle(page);
   await expectFramed(page);
   await page.screenshot({ path: testInfo.outputPath(`exposure-${theme}.png`), fullPage: false });
-  await page.getByRole("button", { name: "Expand 1 finding for pod", exact: true }).last().click();
   const finding = page.locator('.react-flow__node[data-id="CVE-2099-0001"]');
-  await expect(finding).toBeVisible();
   await finding.click();
   await expect(page.getByText("CVE-2099-0001", { exact: true }).last()).toBeVisible();
   await expect(page.locator("[data-graph-adaptive-frame]")).toHaveAttribute("data-graph-camera-settled", "true");
@@ -78,7 +80,9 @@ for (const theme of ["light", "dark"]) test(`distinct flows, finding drilldown a
     const entry = scenario === "identity" ? "role" : scenario === "vulnerability" ? "pod" : "account";
     await expect(async () => {
       const frame = await page.locator(".react-flow").boundingBox();
-      const box = await page.locator(`.react-flow__node[data-id="${entry}"]`).boundingBox();
+      // An account framed as the estate's boundary is its frame, not a card.
+      const card = page.locator(`.react-flow__node[data-id="${entry}"]`);
+      const box = await (await card.count() ? card : page.locator(`.react-flow__node:has([data-boundary-frame="${entry}"])`)).boundingBox();
       expect(box).not.toBeNull();
       expect(box!.x).toBeGreaterThanOrEqual(frame!.x);
       expect(box!.x + box!.width).toBeLessThanOrEqual(frame!.x + frame!.width + 1);

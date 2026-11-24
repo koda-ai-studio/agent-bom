@@ -23,7 +23,7 @@ from agent_bom.api.storage.finding_history_adapters import PostgresFindingLifecy
 from agent_bom.api.storage.finding_history_schema import POSTGRES_FINDING_HISTORY_V1
 from agent_bom.api.storage.finding_lifecycle_schema import POSTGRES_FINDING_LIFECYCLE_V1, forget_job_evidence
 from agent_bom.api.storage.job_detail_reads import json_column, postgres_detail_projection, postgres_status_view
-from agent_bom.api.storage.job_payload_cache import JobPayloadCache, read_versioned_jobs
+from agent_bom.api.storage.job_payload_cache import JobPayloadCache, postgres_done_versions, postgres_versioned_jobs, read_versioned_jobs
 from agent_bom.api.storage.job_read_projections import postgres_demo_exists, postgres_pending_dispatch_count
 from agent_bom.api.storage.job_revisions import POSTGRES_JOB_REVISIONS_V1, read_postgres_job_revision
 from agent_bom.api.storage.jobs import put_job, require_job_tenant
@@ -61,6 +61,8 @@ class PostgresJobStore(PostgresFindingLifecycle):
     stranded_pushed_jobs = postgres_stranded_pushed_jobs
     fail_dispatch_job = postgres_fail_dispatch_job
     get_status_view = postgres_status_view
+    done_job_versions = postgres_done_versions
+    jobs_with_versions = postgres_versioned_jobs
     get_detail_projection = postgres_detail_projection
     retains_job_objects_in_memory = False
 

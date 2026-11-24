@@ -15,6 +15,7 @@ from typing import Any
 
 from agent_bom.api.storage.jobs import parse_job_payload
 from agent_bom.config import _int
+from agent_bom.core.tenancy import require_explicit_tenant_id
 
 DEFAULT_MAX_BYTES = _int("AGENT_BOM_POSTGRES_JOB_PAYLOAD_CACHE_MB", 256) * 1024 * 1024
 TOKEN_SEPARATOR = "\x1f"
@@ -70,16 +71,51 @@ def read_versioned_jobs(conn: Any, cache: JobPayloadCache, where: str, params: t
         f"FROM scan_jobs{where} {suffix}",
         (cache.tokens(tenant_id), *params),
     ).fetchall()
-    jobs = []
+    return [job for _, job in _parse_rows(conn, cache, rows)]
+
+
+def _parse_rows(conn: Any, cache: JobPayloadCache, rows: list[Any]) -> list[tuple[str, Any]]:
+    parsed = []
     for team_id, version, payload in rows:
         if payload is not None:
             cache.put(team_id, version, payload)
         elif (payload := cache.get(version)) is None:
             # Evicted after the token snapshot; read this row's current payload directly.
             team, job_id, _ = version.split(TOKEN_SEPARATOR, 2)
-            row = conn.execute("SELECT data::text FROM scan_jobs WHERE team_id = %s AND job_id = %s", (team, job_id)).fetchone()
+            row = conn.execute(
+                f"SELECT {_VERSION}, data::text FROM scan_jobs WHERE team_id = %s AND job_id = %s",  # nosec B608
+                (team, job_id),
+            ).fetchone()
             if row is None:
                 continue
-            payload = row[0]
-        jobs.append(parse_job_payload(payload))
-    return jobs
+            version, payload = row
+        parsed.append((version, parse_job_payload(payload)))
+    return parsed
+
+
+def postgres_done_versions(self: Any, tenant_id: str) -> list[tuple[str, str]]:
+    """``(job_id, row version)`` of every completed job, newest first, without transferring a payload.
+
+    A version changes with every committed write to the row.
+    """
+    tenant = require_explicit_tenant_id(tenant_id)
+    with self._scope_connection() as conn:
+        rows = conn.execute(
+            f"SELECT job_id, {_VERSION} FROM scan_jobs WHERE team_id = %s AND status = 'done' ORDER BY created_at DESC",  # nosec B608
+            (tenant,),
+        ).fetchall()
+    return [(str(job_id), str(version)) for job_id, version in rows]
+
+
+def postgres_versioned_jobs(self: Any, tenant_id: str, job_ids: list[str]) -> list[tuple[str, Any]]:
+    """``(version, job)`` for the named jobs as committed now, any status; a deleted job is absent."""
+    tenant = require_explicit_tenant_id(tenant_id)
+    if not job_ids:
+        return []
+    with self._scope_connection() as conn:
+        rows = conn.execute(
+            f"SELECT team_id, {_VERSION}, CASE WHEN {_VERSION} = ANY(%s::text[]) THEN NULL ELSE data::text END "  # nosec B608
+            "FROM scan_jobs WHERE team_id = %s AND job_id = ANY(%s::text[])",
+            (self._payloads.tokens(tenant), tenant, list(job_ids)),
+        ).fetchall()
+        return _parse_rows(conn, self._payloads, rows)

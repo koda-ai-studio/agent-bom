@@ -195,7 +195,11 @@ const BUDGETS = {
   // geometry and the phone spine) measures 4632.0 KiB against 4516.4 KiB on
   // main, with no new dependency. Keep 16 KiB of bounded headroom at 4648 KiB;
   // the largest-chunk and shared-runtime ceilings stay fixed.
-  totalClientJsBytes: 4_759_552,
+  // The exposure story (the Internet-to-finding spine, the environment boundary
+  // frame and resting link verbs) measures 4648.4 KiB with no new dependency.
+  // Keep ~16 KiB of bounded headroom at 4664 KiB; the largest-chunk and
+  // shared-runtime ceilings stay fixed.
+  totalClientJsBytes: 4_775_936,
   largestChunkBytes: 950_000,
   // The patched Next 16.4.2 runtime measures 442.1 KiB on macOS and Linux CI.
   // Keep 3.9 KiB of bounded headroom; total and largest-chunk ceilings stay fixed.
