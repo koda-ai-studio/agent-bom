@@ -4,7 +4,7 @@ import { COMPACT_GLYPH_SCALE } from "@/lib/graph-compact-glyph";
 import { useLayoutEffect, useRef, useState } from "react";
 import { BaseEdge, EdgeLabelRenderer, Position, useStore, type EdgeProps } from "@xyflow/react";
 import { RelationshipBadge } from "@/components/relationship-edge";
-import { edgeFamily, edgeFamilyColor, edgeIsDashed } from "@/lib/graph-edge-family";
+import { EDGE_STROKE, edgeFamily, edgeFamilyColor, edgeIsDashed } from "@/lib/graph-edge-family";
 import { ARC_REACH } from "@/lib/graph-compact-arcs";
 import { relationshipEdgeLabelText } from "@/lib/graph-utils";
 
@@ -113,7 +113,7 @@ export function CompactRelationshipEdge(props: EdgeProps) {
   const restingSummary = aggregate && (folded === null || folded > 1);
   // A focused attack path names each hop's relationship at rest, as the path card does.
   const text = (inspecting || restingSummary || props.data?.pathLabel === true) && props.data?.labelVisibility !== "hide" ? count ?? full : null;
-  const style = { stroke: edgeFamilyColor(family), strokeWidth: spine ? 3.2 : inspecting ? 2.8 : 2.2, opacity: spine || inspecting ? 1 : stubbed || props.data?.passesBehind ? 0.4 : 0.95,
+  const style = { stroke: edgeFamilyColor(family), strokeWidth: spine ? EDGE_STROKE.path : inspecting ? EDGE_STROKE.inspect : EDGE_STROKE.rest, opacity: spine || inspecting ? 1 : stubbed || props.data?.passesBehind ? 0.4 : 0.95,
     strokeDasharray: edgeIsDashed(family, props.data) ? "6 4" : undefined, fill: "none" };
   return <g ref={ref} data-relationship={relationship || undefined} data-edge-family={family} data-edge-stub={stubbed || undefined} data-label-disclosure={relationship === "vulnerable_to" ? "on-demand" : undefined} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
     {typeof props.data?.hoverDescription === "string" && <title>{props.data.hoverDescription}</title>}
