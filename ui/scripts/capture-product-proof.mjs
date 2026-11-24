@@ -22,6 +22,7 @@ import { runGraphQualityCapture } from "./graph-quality-capture.mjs";
 import { foldPackageEvidence } from "../lib/graph-evidence-fold.ts";
 import { AGENT_ARCHITECTURE_SCREENSHOTS, captureAgentArchitecture, installAgentArchitectureRoutes } from "./product-proof-agent-architecture.mjs";
 import { captureSourceProvenance } from "./product-proof-provenance.mjs";
+import { isApiRead, unresolvedAbortedReads } from "./capture-network.mjs";
 import {
   SCOPE_SHOWCASE_PRESETS,
   buildScopeShowcase as buildScopeShowcaseFixture,
@@ -1889,6 +1890,7 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
   const browserErrors = [];
   const networkErrors = [];
   const successfulApiPaths = new Set();
+  const abortedApiReads = [];
   const monitoredResourceTypes = new Set(["document", "script", "stylesheet", "font", "image", "xhr", "fetch"]);
   const fatalWarningPattern = /hydration|did not match|server-rendered html|chunkloaderror|loading chunk|next\.js.*error/i;
   const onConsole = (message) => {
@@ -1904,6 +1906,11 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
     // App Router may cancel a superseded React Server Component prefetch.
     // Every other failed document, asset, XHR, or fetch remains fatal.
     if (isBenignAppRouterCancellation(request, failure)) return;
+    // A superseded API read is judged once the frame settles: benign only if its endpoint then answered.
+    if (failure === "net::ERR_ABORTED" && ["fetch", "xhr"].includes(request.resourceType()) && isApiRead(request.url())) {
+      abortedApiReads.push(request.url());
+      return;
+    }
     networkErrors.push(`requestfailed ${request.resourceType()}: ${request.url()} (${failure})`);
   };
   const onResponse = (response) => {
@@ -1968,6 +1975,7 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
     if (browserErrors.length > 0) {
       throw new Error(`Browser errors on ${urlPath}: ${browserErrors.join(" | ")}`);
     }
+    for (const url of unresolvedAbortedReads(abortedApiReads, successfulApiPaths)) networkErrors.push(`requestfailed (aborted, never answered): ${url}`);
     if (networkErrors.length > 0) {
       throw new Error(`Network errors on ${urlPath}: ${networkErrors.join(" | ")}`);
     }
