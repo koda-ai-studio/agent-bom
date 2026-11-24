@@ -464,10 +464,11 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     await page.goto("/graph?scan=snapshot&rollup=0&capture=1&layers=account,cluster,apiGateway,container,role,dataStore,vulnerability,misconfiguration");
     if (width < 640) await page.getByRole("group", { name: "Investigation view" }).getByRole("button", { name: "Graph", exact: true }).click();
     // The selected path's terminal CVE stays on the spine; the other three findings group under their owners.
-    await expect(page.locator('.react-flow__node:not([data-id^="display:"])')).toHaveCount(8);
+    // Cards plus the account, drawn as the boundary around them (a phone stacks it as a card).
+    await expect.poll(async () => await page.locator('.react-flow__node:not([data-id^="display:"])').count() + await page.locator("[data-boundary-frame]").count()).toBe(8);
     await expect(page.locator('[data-graph-entity="finding-group"]')).toHaveCount(3);
-    // Seven modeled links plus the spine's vulnerable_to link to the CVE it keeps visible.
-    if (width >= 640) await expect(page.getByLabel("Visible relationship evidence")).toContainText("Modeled 8");
+    // Modeled links drawn as lines; the account's two containment links are drawn by its boundary instead.
+    if (width >= 640) await expect(page.getByLabel("Visible relationship evidence")).toContainText("Modeled 6");
     await settle(page);
     expect(await graphGrammarViolations(page)).toEqual({});
     await page.screenshot({ path: info.outputPath(`cloud-branches-${theme}-${width}.png`), animations: "disabled" });
@@ -491,8 +492,8 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
       await page.getByRole("heading", { name: "Investigation", exact: true }).click();
     }
     await page.getByRole("button", { name: "Expand findings (3 grouped)", exact: true }).click();
-    // Every recorded node is drawn; the internet anchor is display context beside them.
-    await expect(page.locator('.react-flow__node:not([data-id^="display:"])')).toHaveCount(entries.length);
+    // Every recorded node is drawn, the account as the boundary on desktop; the internet anchor is display context beside them.
+    await expect.poll(async () => await page.locator('.react-flow__node:not([data-id^="display:"])').count() + await page.locator("[data-boundary-frame]").count()).toBe(entries.length);
     if (width < 640) {
       await settle(page);
       const zoom = await page.locator(".react-flow__viewport").evaluate(el => new DOMMatrixReadOnly(getComputedStyle(el).transform).a);
@@ -525,7 +526,9 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
         return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
       }).map(span => span.textContent);
     }))).toEqual([]);
-    await expect(page.locator('.react-flow__edge:not([data-id^="display:"]) .react-flow__edge-path[marker-end]')).toHaveCount(links.length);
+    // Every link shows its direction; the account's containment links are drawn by its boundary on desktop.
+    await expect.poll(async () => await page.locator('.react-flow__edge:not([data-id^="display:"]) .react-flow__edge-path[marker-end]').count()
+      + (await page.locator("[data-boundary-frame]").evaluateAll(frames => frames.reduce((sum, frame) => sum + Number(frame.getAttribute("data-frame-links") || 0), 0)))).toBe(links.length);
     const labels = await visibleLabelTexts(page);
     if (width >= 640) {
       expect(labels).toEqual([]); // Captions appear on focus; the overview stays quiet.
@@ -552,7 +555,8 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
       await expect(page.getByTestId("graph-entity-drawer")).toContainText("Public API stage has no WAF association");
       await page.screenshot({ path: info.outputPath(`cloud-finding-inspector-${theme}.png`), animations: "disabled" });
       await page.getByRole("button", { name: "Collapse findings", exact: true }).click();
-      await expect(page.locator('.react-flow__node:not([data-id^="display:"])')).toHaveCount(8);
+      // Cards plus the account, drawn as the boundary around them (a phone stacks it as a card).
+    await expect.poll(async () => await page.locator('.react-flow__node:not([data-id^="display:"])').count() + await page.locator("[data-boundary-frame]").count()).toBe(8);
       await expect(page.locator('[data-graph-entity="finding-group"]')).toHaveCount(3);
       await expect(page.getByTestId("graph-entity-drawer")).toHaveCount(0);
     }
