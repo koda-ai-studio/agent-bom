@@ -48,17 +48,33 @@ FOLD_RESULT_KEYS = frozenset(
         "target_scope",
     }
 )
-#: Upper bound on projected plus retained-history rows held across all digests in a process.
+#: Row fields retained history reads: the occurrence key and the dates and deadline it carries forward.
+HISTORY_ROW_KEYS = frozenset(
+    {
+        "report_canonical_id",
+        "canonical_id",
+        "environment",
+        "first_seen",
+        "sla_due_at",
+        "sla_due_at_source",
+        "kev_due_date",
+        "effective_severity",
+        "severity",
+    }
+)
+#: Upper bound on retained-history plus projected rows held across all digests in a process.
 MAX_DIGEST_ROWS = 400_000
 
 
-@dataclass(frozen=True)
+@dataclass
 class _Digest:
+    """A completed scan as the fold reads it; ``rows`` is projected only once the fold selects the scan."""
+
     job: ScanJob
-    inputs: tuple[Any, ...]
-    horizon: float | None
-    rows: list[dict[str, Any]]
     size: int
+    rows: list[dict[str, Any]] | None = None
+    inputs: tuple[Any, ...] | None = None
+    horizon: float | None = None
 
 
 _LOCK = threading.Lock()
@@ -74,61 +90,104 @@ def clear() -> None:
         _held = 0
 
 
-def _fresh(digest: _Digest, inputs: tuple[Any, ...]) -> bool:
-    return digest.inputs == inputs and (digest.horizon is None or time.time() < digest.horizon)
+def _rows_fresh(digest: _Digest, inputs: tuple[Any, ...]) -> bool:
+    return digest.rows is not None and digest.inputs == inputs and (digest.horizon is None or time.time() < digest.horizon)
 
 
-def _keep(version: str, digest: _Digest) -> None:
+def _resize(version: str, digest: _Digest, size: int) -> None:
+    """Account ``digest`` at ``size`` rows and evict the least recently used past the bound."""
     global _held
-    if digest.size > MAX_DIGEST_ROWS:
-        return
     with _LOCK:
         previous = _DIGESTS.pop(version, None)
         if previous is not None:
             _held -= previous.size
+        if size > MAX_DIGEST_ROWS:
+            return
+        digest.size = size
         _DIGESTS[version] = digest
-        _held += digest.size
+        _held += size
         while _held > MAX_DIGEST_ROWS:
             _, evicted = _DIGESTS.popitem(last=False)
             _held -= evicted.size
 
 
-def _digest(job: ScanJob, inputs: tuple[Any, ...], horizon: float | None, project: Projection) -> _Digest:
-    rows = project(job)
+def _history_row(row: Any) -> Any:
+    """Only what retained history reads: identity, environment, first sighting, deadline and KEV date."""
+    if not isinstance(row, dict):
+        return row
+    kept = {key: row[key] for key in HISTORY_ROW_KEYS if key in row}
+    asset, evidence = row.get("asset"), row.get("evidence")
+    if isinstance(asset, dict) and "environment" in asset:
+        kept["asset"] = {"environment": asset["environment"]}
+    if isinstance(evidence, dict) and "kev_due_date" in evidence:
+        kept["evidence"] = {"kev_due_date": evidence["kev_due_date"]}
+    return kept
+
+
+def _slim(job: ScanJob) -> tuple[ScanJob, int]:
     result = job.result or {}
-    slim = job.model_copy(update={"result": {key: result[key] for key in FOLD_RESULT_KEYS if key in result}})
-    retained = result.get("findings")
-    size = len(rows) + (len(retained) if isinstance(retained, list) else 0)
-    return _Digest(slim, inputs, horizon, rows, size)
+    kept = {key: result[key] for key in FOLD_RESULT_KEYS if key in result}
+    findings = kept.get("findings")
+    if isinstance(findings, list):
+        kept["findings"] = [_history_row(row) for row in findings]
+    return job.model_copy(update={"result": kept}), len(findings) if isinstance(findings, list) else 0
 
 
 def fold_jobs(
     tenant_id: str, store: Any, inputs: tuple[tuple[Any, ...], float | None], project: Projection
 ) -> tuple[list[ScanJob], Projection] | None:
-    """Completed jobs for the fold, newest first, and their projected rows; ``None`` to decode in full."""
+    """Completed jobs for the fold, newest first, and their projected rows; ``None`` to decode in full.
+
+    Every completed scan is decoded once per row version into a slim digest. Rows
+    are projected only for the scans the fold asks for (the current snapshot per
+    scope), reusing a job decoded in this call or reloading just that one.
+    """
     list_versions = getattr(store, "done_job_versions", None)
     load = getattr(store, "jobs_with_versions", None)
     if not callable(list_versions) or not callable(load) or not reuse_enabled() or history_ledger_reads_enabled():
         return None
     fingerprint, horizon = inputs
     versions = list_versions(tenant_id)
-    held: dict[str, _Digest] = {}
+    held: dict[str, tuple[str, _Digest]] = {}
     with _LOCK:
         for job_id, version in versions:
-            digest = _DIGESTS.get(version)
-            if digest is not None and _fresh(digest, fingerprint):
+            if (digest := _DIGESTS.get(version)) is not None:
                 _DIGESTS.move_to_end(version)
-                held[job_id] = digest
+                held[job_id] = (version, digest)
+    decoded: dict[str, ScanJob] = {}
+
+    def keep(version: str, job: ScanJob) -> None:
+        if job.status != JobStatus.DONE or not job.result:
+            return
+        slim, history = _slim(job)
+        digest = _Digest(slim, history)
+        decoded[job.job_id] = job
+        held[job.job_id] = (version, digest)
+        _resize(version, digest, history)
+
     missing = [job_id for job_id, _ in versions if job_id not in held]
     for version, job in load(tenant_id, missing) if missing else ():
-        if job.status != JobStatus.DONE or not job.result:
-            continue
-        digest = _digest(job, fingerprint, horizon, project)
-        held[job.job_id] = digest
-        _keep(version, digest)
+        keep(version, job)
     ordered = [held[job_id] for job_id, _ in versions if job_id in held]
-    rows = {id(digest.job): digest.rows for digest in ordered}
-    return [digest.job for digest in ordered], lambda job: rows[id(job)]
+    by_slim = {id(digest.job): (version, digest) for version, digest in ordered}
+
+    def rows_for(slim: ScanJob) -> list[dict[str, Any]]:
+        version, digest = by_slim[id(slim)]
+        if _rows_fresh(digest, fingerprint):
+            return digest.rows or []
+        full = decoded.get(slim.job_id)
+        if full is None:
+            reloaded = [job for _, job in load(tenant_id, [slim.job_id]) if job.job_id == slim.job_id]
+            if not reloaded:  # deleted since it was listed
+                return []
+            full = reloaded[0]
+        history = digest.size - len(digest.rows or [])
+        rows = project(full)
+        digest.rows, digest.inputs, digest.horizon = rows, fingerprint, horizon
+        _resize(version, digest, history + len(rows))
+        return rows
+
+    return [digest.job for _, digest in ordered], rows_for
 
 
 __all__ = ["FOLD_RESULT_KEYS", "MAX_DIGEST_ROWS", "clear", "fold_jobs"]

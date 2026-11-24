@@ -187,3 +187,46 @@ def _overview_singleflight_timeout() -> float:
         return max(0.0, float(raw))
     except ValueError:
         return _OVERVIEW_SINGLEFLIGHT_TIMEOUT_SECONDS
+
+
+def scan_aggregate_key(store: Any, tenant_id: str, fallback: str, hub_revision: Any) -> str:
+    """Cache key of the scan aggregate: completed scans, hub evidence revision and the findings window."""
+    from agent_bom.api.time_window import default_window_days
+
+    return f"{tenant_id}|{scan_evidence_key(store, tenant_id, fallback)}|{hub_revision}|{default_window_days()}"
+
+
+def scan_evidence_key(store: Any, tenant_id: str, fallback: str) -> str:
+    """The completed scans the scan aggregate folds, by row version; ``fallback`` when the store has no versions.
+
+    Admitting a push or moving a job between pending and running writes its row
+    without changing any completed scan, so those writes no longer refold the
+    scan aggregate; the live job-status counters are read separately.
+    """
+    versions = getattr(store, "done_job_versions", None)
+    if not callable(versions):
+        return fallback
+    try:
+        listed = versions(tenant_id)
+    except Exception:  # noqa: BLE001  # broad-except: an unreadable version list only loses reuse
+        return fallback
+    return "done:" + hashlib.sha256(json.dumps(sorted(listed), separators=(",", ":")).encode()).hexdigest()
+
+
+def with_live_job_counts(store: Any, tenant_id: str, *estates: dict[str, Any]) -> tuple[dict[str, Any], ...]:
+    """``estates`` with failed and running counts read now: they follow every job write, the aggregate only completed scans."""
+    live = live_job_status_counts(store, tenant_id) or {}
+    return tuple({**estate, **live} for estate in estates)
+
+
+def live_job_status_counts(store: Any, tenant_id: str) -> dict[str, int] | None:
+    """Failed and running job counts read from job metadata, never from stored results."""
+    summary = getattr(store, "list_summary", None)
+    if not callable(summary):
+        return None
+    try:
+        rows = summary(tenant_id=tenant_id)
+    except Exception:  # noqa: BLE001  # broad-except: the cached counters stand when metadata is unreadable
+        return None
+    statuses = [str(row.get("status") or "").lower() for row in rows]
+    return {"failed_count": statuses.count("failed"), "running_count": statuses.count("running")}

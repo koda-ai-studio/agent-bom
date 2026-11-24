@@ -1,0 +1,3 @@
+### Performance
+- The findings view holds a compact copy of each retained scan (the fields retained history reads) and projects full rows only for the scans it shows, the current one per scope. With 49 retained 500-agent scans the per-scan cache overflowed and re-decoded scans on every read; findings p95 during a large ingest goes from 14.3 s to 2.7 s on that estate.
+- The overview's scan aggregate is keyed on the completed scans themselves, so admitting a push or a job changing status no longer refolds every retained report. The Ops failed and running counts are read live from job metadata. A scan completing still rebuilds the aggregate.
