@@ -50,6 +50,8 @@ from agent_bom.api.overview_cache import (
     _OverviewFlight,
     _scan_aggregate_get,
     _scan_aggregate_put,
+    scan_aggregate_key,
+    with_live_job_counts,
 )
 from agent_bom.api.overview_hub import (
     _current_coverage,
@@ -497,9 +499,7 @@ def _build_revisioned_overview(request: Request, tenant_id: str, store: Any, hub
             # the bounded revision check rather than stampeding payload reads.
             continue
         try:
-            from agent_bom.api.time_window import default_window_days
-
-            aggregate_key = f"{tenant_id}|{fingerprint}|{hub.revision}|{default_window_days()}"
+            aggregate_key = scan_aggregate_key(store, tenant_id, fingerprint, hub.revision)
             scan_inputs = _scan_aggregate_get(aggregate_key) if hub.revision is not None else None
             jobs = [] if scan_inputs is not None else store.list_all(tenant_id=tenant_id)
             if revision() != before:
@@ -586,8 +586,7 @@ def _compose_overview(
         }
         if scan_cache_key:
             _scan_aggregate_put(scan_cache_key, scan_inputs, jobs)
-    estate = scan_inputs["estate"]
-    exec_estate = scan_inputs["exec_estate"]
+    estate, exec_estate = with_live_job_counts(_get_store(), tenant_id, scan_inputs["estate"], scan_inputs["exec_estate"])
     if hub_coverage is None:
         from agent_bom.api.compliance_hub_store import get_compliance_hub_store
 

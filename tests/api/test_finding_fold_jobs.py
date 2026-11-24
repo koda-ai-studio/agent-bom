@@ -68,14 +68,19 @@ def test_changed_row_inputs_or_a_passed_horizon_reproject(versioned):
         calls.append(scan.job_id)
         return []
 
-    fold_jobs("history-tenant", versioned, (("a",), None), project)
-    fold_jobs("history-tenant", versioned, (("a",), None), project)
+    def fold(inputs):
+        jobs, rows_for = fold_jobs("history-tenant", versioned, inputs, project)
+        for scan in jobs:
+            rows_for(scan)
+
+    fold((("a",), None))
+    fold((("a",), None))
     assert calls == ["history-tenant-repo-a-8"]
-    fold_jobs("history-tenant", versioned, (("b",), None), project)
+    fold((("b",), None))
     assert len(calls) == 2
     expired = time.time() - 1
-    fold_jobs("history-tenant", versioned, (("c",), expired), project)
-    fold_jobs("history-tenant", versioned, (("c",), expired), project)
+    fold((("c",), expired))
+    fold((("c",), expired))
     assert len(calls) == 4
 
 
@@ -135,3 +140,33 @@ def test_every_result_key_the_fold_reads_survives_the_trim():
     read = set().union(*(_result_keys(ast.parse((_SRC / module).read_text())) for module in _FOLD_MODULES))
     assert {"scan_run", "findings", "pushed", "dry_run"} <= read
     assert read <= FOLD_RESULT_KEYS, sorted(read - FOLD_RESULT_KEYS)
+
+
+def test_only_the_scans_the_fold_selects_are_projected(versioned):
+    versioned.put(job(8))
+    versioned.put(job(9))
+    projected: list[str] = []
+    original = finding_fold_jobs.fold_jobs
+
+    def counting(tenant_id, store, inputs, project):
+        return original(tenant_id, store, inputs, lambda scan: projected.append(scan.job_id) or project(scan))
+
+    import agent_bom.api.scan_finding_read as scan_finding_read
+
+    scan_finding_read.fold_jobs = counting
+    try:
+        assert len(get_rows()) == 1
+    finally:
+        scan_finding_read.fold_jobs = original
+    # The newer scan of the same target replaces the older one; the older scan only lends its history.
+    assert projected == ["history-tenant-repo-a-9"]
+
+
+def test_retained_history_keeps_only_the_fields_it_reads(versioned):
+    scan = job(8)
+    scan.result["findings"][0]["description"] = "x" * 1000
+    versioned.put(scan)
+    jobs, _ = fold_jobs("history-tenant", versioned, (("a",), None), lambda _scan: [])
+    row = jobs[0].result["findings"][0]
+    assert "description" not in row
+    assert set(row) <= finding_fold_jobs.HISTORY_ROW_KEYS | {"asset", "evidence"}
