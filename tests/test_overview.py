@@ -1677,3 +1677,45 @@ def test_overview_cve_zero_is_unknown_when_hub_budget_is_exhausted(monkeypatch):
     assert vuln["count_exact"] is False
     assert vuln["evidence_status"] == "partial"
     assert vuln["status"] == "unknown"
+
+
+def test_job_writes_that_change_no_completed_scan_reuse_the_scan_aggregate(tmp_path, monkeypatch):
+    """Admitting a push or a job failing must not refold every retained report; the Ops counters still move."""
+    import hashlib
+
+    from agent_bom.api.server import ScanJob, ScanRequest
+    from agent_bom.api.store import SQLiteJobStore
+    from agent_bom.api.stores import set_job_store
+
+    class VersionedSQLiteJobStore(SQLiteJobStore):
+        def done_job_versions(self, tenant_id):
+            rows = self._conn.execute("SELECT job_id, data FROM jobs WHERE tenant_id = ? AND status = 'done'", (tenant_id,)).fetchall()
+            return [(str(job_id), hashlib.sha256(str(data).encode()).hexdigest()) for job_id, data in rows]
+
+    _clear_jobs()
+    _add_done_job([], result_extra={"findings": [{"id": "occurrence", "severity": "high", "source": "sca"}]})
+    persisted = VersionedSQLiteJobStore(str(tmp_path / "jobs.db"))
+    persisted.put(_get_store().list_all(tenant_id="default")[0])
+    set_job_store(persisted)
+    monkeypatch.setattr(overview_cache, "_overview_cache_ttl", lambda: 0)
+    client = TestClient(app)
+    first = client.get("/v1/overview", headers=_AUTH_HEADERS)
+    assert first.status_code == 200 and first.json()["domains"]["ops"]["detail"]["failed"] == 0
+
+    read_jobs = persisted.list_all
+    stamp = "2026-09-21T00:00:00Z"
+    persisted.put(ScanJob(job_id="admitted", tenant_id="default", created_at=stamp, request=ScanRequest(), status=JobStatus.PENDING))
+    persisted.put(ScanJob(job_id="broken", tenant_id="default", created_at=stamp, request=ScanRequest(), status=JobStatus.FAILED))
+    monkeypatch.setattr(persisted, "list_all", lambda **kwargs: pytest.fail("a write that changed no completed scan refolded the reports"))
+    second = client.get("/v1/overview", headers=_AUTH_HEADERS)
+    assert second.status_code == 200
+    assert second.json()["finding_counts"] == first.json()["finding_counts"]
+    assert second.json()["domains"]["ops"]["detail"]["failed"] == 1
+
+    monkeypatch.setattr(persisted, "list_all", read_jobs)
+    changed = next(job for job in read_jobs(tenant_id="default") if job.status == JobStatus.DONE)
+    changed.result["findings"][0]["severity"] = "low"
+    persisted.put(changed)
+    third = client.get("/v1/overview", headers=_AUTH_HEADERS)
+    assert third.json()["finding_counts"]["high"] == 0 and third.json()["finding_counts"]["low"] == 1
+    _clear_jobs()
