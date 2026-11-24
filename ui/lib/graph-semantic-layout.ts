@@ -226,7 +226,9 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
   // Without a boundary it takes the free slot one column before that asset, so its arrow stays short.
   // When other links already enter that asset from the left, it takes the slot a row above instead, clear of them.
   const entryId = drawn.find(edge => edge.source === INTERNET_ANCHOR_ID)?.target ?? "";
-  const crowdedEntry = drawn.some(edge => edge.target === entryId && edge.source !== INTERNET_ANCHOR_ID);
+  // Only links arriving from the left compete for that slot; one entering from the right leaves it free.
+  const crowdedEntry = drawn.some(edge => edge.target === entryId && edge.source !== INTERNET_ANCHOR_ID
+    && (positions.get(edge.source)?.x ?? Infinity) < (entryAt?.x ?? -Infinity));
   const slot = entryAt ? { x: entryAt.x - SEMANTIC_COLUMN_GAP, y: entryAt.y - (crowdedEntry ? SEMANTIC_ROW_GAP : 0) } : null;
   const besideEntry = !frame && anchorAt && slot && ![...positions].some(([id, at]) => id !== INTERNET_ANCHOR_ID
     && Math.abs(at.x - slot.x) < SEMANTIC_COLUMN_GAP / 2 && Math.abs(at.y - slot.y) < SEMANTIC_ROW_GAP / 2) ? slot : null;
