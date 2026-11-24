@@ -154,7 +154,7 @@ def _facet_exploit_bucket(row: Mapping[str, Any]) -> str:
 
 
 def _facet_has_fix(row: Mapping[str, Any]) -> bool:
-    from agent_bom.finding_signal_filters import row_has_fix
+    from agent_bom.domain.finding_signal_filters import row_has_fix
 
     return row_has_fix(row)
 

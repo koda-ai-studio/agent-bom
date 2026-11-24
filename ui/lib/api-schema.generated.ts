@@ -3236,8 +3236,7 @@ export interface paths {
          *
          *     Rows carry ``framework_tags`` and ``controls_count``; ``?include=controls`` restores full mappings.
          *
-         *     ``offset`` is a compatibility path capped at 10,000: past the ceiling the
-         *     endpoint returns ``400`` and steers callers to ``cursor``/``next_cursor``.
+         *     ``offset`` is capped at 10,000; past it the endpoint returns ``400`` and steers callers to ``cursor``.
          */
         get: operations["list_findings_v1_findings_get"];
         put?: never;
@@ -34540,6 +34539,7 @@ export interface operations {
                 reachability?: ("reachable" | "unreachable" | "unassessed") | null;
                 triage?: ("not_affected" | "affected" | "under_investigation" | "untriaged") | null;
                 path_context?: ("test" | "example" | "documentation" | "unclassified") | null;
+                fix?: ("available" | "none") | null;
                 include_facets?: boolean;
                 /** @description Comma-separated opt-ins; `controls` returns full per-finding control mappings */
                 include?: string | null;

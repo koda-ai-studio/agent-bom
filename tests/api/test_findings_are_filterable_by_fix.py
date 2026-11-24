@@ -12,9 +12,9 @@ from __future__ import annotations
 
 import pytest
 
+from agent_bom.domain.finding_signal_filters import row_has_fix
 from agent_bom.finding import Asset, Finding, FindingSource, FindingType
 from agent_bom.finding_scope import row_matches_scope
-from agent_bom.finding_signal_filters import row_has_fix
 from tests.api.test_scan_job_sla_history import get_rows, job
 from tests.api.test_scan_job_sla_history import scan_store as history_store  # noqa: F401
 
