@@ -360,6 +360,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/affected": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Affected
+         * @description Every current and past finding for the advisory or package, its exposure window and what the affected hosts reach.
+         *
+         *     Findings match exactly on advisory id or package name and version, across
+         *     every scan and ingest the findings queue merges. Reach is the latest graph
+         *     snapshot's recorded topology from the matched advisories, not proof of exploitation.
+         */
+        get: operations["get_affected_v1_affected_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/agent-bom/manifest": {
         parameters: {
             query?: never;
@@ -9109,6 +9133,117 @@ export interface components {
              */
             truncated: boolean;
         };
+        /** AffectedAsset */
+        AffectedAsset: {
+            /** Advisory */
+            advisory?: string | null;
+            /** Asset Type */
+            asset_type?: string | null;
+            /** Environment */
+            environment?: string | null;
+            /** Finding Id */
+            finding_id?: string | null;
+            /** First Seen */
+            first_seen?: string | null;
+            /** Fixed Version */
+            fixed_version?: string | null;
+            /** Last Seen */
+            last_seen?: string | null;
+            /** Name */
+            name: string;
+            /** Package */
+            package?: string | null;
+            /** Provider */
+            provider?: string | null;
+            /** Severity */
+            severity?: string | null;
+            /** Status */
+            status?: string | null;
+            /** Version */
+            version?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** AffectedExposure */
+        AffectedExposure: {
+            /** First Seen */
+            first_seen: string | null;
+            /** Last Resolved At */
+            last_resolved_at: string | null;
+            /** Last Seen */
+            last_seen: string | null;
+            /** Still Open */
+            still_open: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /** AffectedFindings */
+        AffectedFindings: {
+            /** Advisories */
+            advisories: string[];
+            /** Fix Available */
+            fix_available: number;
+            /** Internet Exposed */
+            internet_exposed: number;
+            /** Kev */
+            kev: boolean;
+            /** No Fix */
+            no_fix: number;
+            /** Open */
+            open: number;
+            /** Packages */
+            packages: string[];
+            /** Resolved */
+            resolved: number;
+            /** Severity */
+            severity: {
+                [key: string]: number;
+            };
+            /** Suppressed */
+            suppressed: number;
+            /** Total */
+            total: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * AffectedInventory
+         * @description The advisory matched against stored inventory ranges: catches assets no scan has turned into a finding yet.
+         */
+        AffectedInventory: {
+            /**
+             * Affected
+             * @default 0
+             */
+            affected: number;
+            /**
+             * Assets Examined
+             * @default 0
+             */
+            assets_examined: number;
+            /** Available */
+            available: boolean;
+            /** Complete */
+            complete?: boolean | null;
+            /** Href */
+            href?: string | null;
+            /**
+             * Not Affected
+             * @default 0
+             */
+            not_affected: number;
+            /** Note */
+            note?: string | null;
+            /**
+             * Possibly Affected
+             * @default 0
+             */
+            possibly_affected: number;
+            /** Source */
+            source?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
         /** AffectedProduct */
         AffectedProduct: {
             /**
@@ -9125,6 +9260,24 @@ export interface components {
             /** Versions */
             versions?: string[];
         };
+        /** AffectedQuery */
+        AffectedQuery: {
+            /** Advisory */
+            advisory?: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "advisory" | "package";
+            /** Package */
+            package?: string | null;
+            /** Raw */
+            raw: string;
+            /** Version */
+            version?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
         /** AffectedRange */
         AffectedRange: {
             /** Fixed */
@@ -9133,6 +9286,72 @@ export interface components {
             introduced?: string | null;
             /** Last Affected */
             last_affected?: string | null;
+        };
+        /** AffectedReach */
+        AffectedReach: {
+            /** Advisories Walked */
+            advisories_walked: string[];
+            /** Agents On Findings */
+            agents_on_findings: string[];
+            /**
+             * Basis
+             * @enum {string}
+             */
+            basis: "graph_snapshot" | "findings_only" | "unavailable";
+            /** By Kind */
+            by_kind: {
+                [key: string]: number;
+            };
+            /** Items */
+            items: {
+                [key: string]: components["schemas"]["AffectedReachItem"][];
+            };
+            /** Note */
+            note?: string | null;
+            /** Scan Id */
+            scan_id?: string | null;
+            /** Servers On Findings */
+            servers_on_findings: string[];
+        } & {
+            [key: string]: unknown;
+        };
+        /** AffectedReachItem */
+        AffectedReachItem: {
+            /** Entity Type */
+            entity_type: string;
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** AffectedResponse */
+        AffectedResponse: {
+            /** Assets */
+            assets: components["schemas"]["AffectedAsset"][];
+            /** Assets Truncated */
+            assets_truncated: boolean;
+            exposure: components["schemas"]["AffectedExposure"];
+            findings: components["schemas"]["AffectedFindings"];
+            /** Findings Href */
+            findings_href: string;
+            /** Findings Truncated */
+            findings_truncated: boolean;
+            inventory: components["schemas"]["AffectedInventory"];
+            query: components["schemas"]["AffectedQuery"];
+            reach: components["schemas"]["AffectedReach"];
+            /** Tenant Id */
+            tenant_id: string;
+            /**
+             * Verdict
+             * @enum {string}
+             */
+            verdict: "affected" | "possibly_affected" | "previously_affected" | "not_found";
+            /** Verdict Basis */
+            verdict_basis: ("findings" | "inventory_match")[];
+        } & {
+            [key: string]: unknown;
         };
         /** AgentBinding */
         AgentBinding: {
@@ -28033,6 +28252,47 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ActivityTimelineResponse"];
+                };
+            };
+            /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE) */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_affected_v1_affected_get: {
+        parameters: {
+            query: {
+                /** @description An advisory id (CVE-2024-3094, GHSA-...) or a package as name or name@version */
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AffectedResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */

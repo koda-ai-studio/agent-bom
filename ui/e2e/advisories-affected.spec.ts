@@ -4,6 +4,7 @@ import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 
 const php2shell = JSON.parse(readFileSync(path.join(__dirname, "..", "tests", "fixtures", "php2shell-affected.json"), "utf8"));
+const php2shellExposure = JSON.parse(readFileSync(path.join(__dirname, "..", "tests", "fixtures", "php2shell-exposure.json"), "utf8"));
 
 async function baseline(page: Page, theme: string) {
   await page.addInitScript((mode) => localStorage.setItem("agent-bom-theme", mode), theme);
@@ -16,6 +17,7 @@ async function baseline(page: Page, theme: string) {
     role_summary: { role: "admin", ui_role: "admin", display_name: "Admin", capabilities: ["policy.manage"] },
   } }));
   await page.route("**/v1/intel/advisories/*/affected?**", (route) => route.fulfill({ json: php2shell }));
+  await page.route("**/v1/affected?**", (route) => route.fulfill({ json: php2shellExposure }));
   await page.route("**/v1/intel/operator-advisories", (route) => route.request().method() === "POST"
     ? route.fulfill({ status: 422, json: { detail: [{ loc: ["body", "affected", 0], msg: "Value error, introduced must precede fixed", type: "value_error" }] } })
     : route.fulfill({ json: {
@@ -39,6 +41,11 @@ for (const theme of ["light", "dark"]) {
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     const table = page.getByRole("table", { name: "Affected assets" });
     await expect(table).toBeVisible();
+    // The incident answer leads: verdict, window, findings and what the affected hosts reach.
+    const exposure = page.getByTestId("exposure-panel");
+    await expect(exposure).toContainText("Affected");
+    await expect(exposure).toContainText("2026-11-02 → now");
+    await expect(page.getByTestId("exposure-reach")).toHaveText("2 credentials · 1 data stores");
     await expect(page.getByRole("list", { name: "Verdict summary" }).getByRole("listitem")).toHaveText([
       "1Affected", "1Possibly affected (distro)", "1Not affected", "1Clean scanned",
     ]);

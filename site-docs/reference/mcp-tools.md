@@ -16,14 +16,14 @@ admin role, the tool-specific write scope, and an audit reason; stdio cannot
 invoke them.
 
 `agent-bom mcp server` and the programmatic server default to eight focused
-scan tools. Use `--profile full` for the complete 100-tool catalog.
+scan tools. Use `--profile full` for the complete 101-tool catalog.
 
 <details>
-<summary>Explicit full-profile catalog (100 tools)</summary>
+<summary>Explicit full-profile catalog (101 tools)</summary>
 
 `scan`, `check`, `intel_lookup`, `affected_assets`, `intel_match`, `intel_sources`,
 `intel_daily_brief`, `youcom_search`, `blast_radius`, `executive_brief`, `exposure_paths`, `compromise_assessment`, `consequence_assessment`, `graph_correlate`,
-`graph_correlation_status`, `should_i_deploy`, `graph_reach`, `graph_diff`, `cross_vendor_paths`, `agent_architecture`, `findings_query`, `finding_detail`,
+`graph_correlation_status`, `should_i_deploy`, `graph_reach`, `graph_diff`, `cross_vendor_paths`, `agent_architecture`, `findings_query`, `finding_detail`, `am_i_affected`,
 `policy_check`, `registry_lookup`, `generate_sbom`, `compliance`, `remediate`,
 `skill_scan`, `skill_verify`, `skill_trust`, `verify`, `inventory_summary`,
 `inventory_list`, `inventory_asset`, `where`, `tool_risk_assessment`,
@@ -170,6 +170,13 @@ findings_query(severity="critical", kev=True, limit=25)
 One finding with the graph paths that carry it, its reachers, its exploit story (what it puts at risk and how, from recorded fields; same payload as `GET /v1/graph/exploit-story`), and its triage/VEX state.
 ```
 finding_detail(finding_id="<id from findings_query>")
+```
+
+### am_i_affected
+Am I affected by an advisory or a package? Every current and past finding for it across the estate, the exposure window (first and last seen), the affected assets, KEV and fix state, and what the affected hosts reach on the latest graph snapshot. Same payload as `GET /v1/affected`.
+```
+am_i_affected(q="CVE-2024-3094")
+am_i_affected(q="pillow@9.0.0")
 ```
 
 ### registry_lookup

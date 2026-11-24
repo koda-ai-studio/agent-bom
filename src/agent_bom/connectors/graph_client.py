@@ -22,6 +22,12 @@ class GraphClientMixin:
     ) -> JsonObject:
         raise NotImplementedError
 
+    def affected(self, query: str) -> JsonObject:
+        """Am I affected? Findings, exposure window, assets and reach for one advisory id or package (``name[@version]``)."""
+        if not query.strip():
+            raise ValueError("query is required")
+        return self._request("GET", "/v1/affected", params={"q": query.strip()})
+
     def graph_fix_priorities(self, *, scan_id: str) -> JsonObject:
         """Read server-ranked guidance for one exact snapshot; never apply changes."""
         if not scan_id.strip():

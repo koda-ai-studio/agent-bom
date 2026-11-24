@@ -166,6 +166,7 @@ def _minimal_args(name: str, workdir: Path) -> dict[str, Any]:
         "inventory_asset": {"asset_id": "asset-does-not-exist"},
         "graph_reach": {"node_id": "node-does-not-exist"},
         "finding_detail": {"finding_id": "finding-does-not-exist"},
+        "am_i_affected": {"q": "CVE-2024-3094"},
         "license_compliance_scan": {"scan_json": "{}"},
         "marketplace_check": {"package": "requests"},
         "model_file_scan": {"directory": p},

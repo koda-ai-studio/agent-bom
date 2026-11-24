@@ -20,6 +20,7 @@ from mcp_types.version import KNOWN_PROTOCOL_VERSIONS as SUPPORTED_PROTOCOL_VERS
 from starlette.testclient import TestClient
 
 from agent_bom.mcp_server import create_mcp_server
+from agent_bom.mcp_server_metadata import _SERVER_CARD_TOOLS
 
 REPO_ROOT = Path(__file__).parents[1]
 MANIFEST_PATH = REPO_ROOT / "src" / "agent_bom" / "data" / "mcp_protocol_compatibility.json"
@@ -38,6 +39,9 @@ EVIDENCE_KIND_BASIS = {
     "official_spec": "official_spec",
     "source": "static_code",
 }
+
+# The wire contract checks the transport carries every tool; the published count is pinned in test_mcp_profiles.
+_FULL_TOOL_COUNT = len(_SERVER_CARD_TOOLS)
 
 
 def _load(path: Path) -> dict:
@@ -228,7 +232,7 @@ def test_locked_sdk_streamable_http_wire_contract(monkeypatch, tmp_path, profile
         ready = client.post("/mcp", headers=session_headers, json={"jsonrpc": "2.0", "method": "notifications/initialized"})
         assert ready.status_code in {200, 202}
         for request_id, method, result_key, expected_count in (
-            (2, "tools/list", "tools", 8 if profile == "scan" else 100),
+            (2, "tools/list", "tools", 8 if profile == "scan" else _FULL_TOOL_COUNT),
             (3, "resources/list", "resources", 4 if profile == "scan" else 7),
             (4, "prompts/list", "prompts", 3 if profile == "scan" else 8),
         ):
@@ -269,7 +273,7 @@ def test_locked_sdk_stdio_wire_contract(tmp_path) -> None:
             async with ClientSession(read, write) as session:
                 initialized = await session.initialize()
                 assert initialized.protocol_version == LOCKED_PROTOCOL
-                assert len((await session.list_tools()).tools) == 100
+                assert len((await session.list_tools()).tools) == _FULL_TOOL_COUNT
                 assert len((await session.list_resources()).resources) == 7
                 assert len((await session.list_prompts()).prompts) == 8
 

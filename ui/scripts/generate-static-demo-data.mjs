@@ -66,6 +66,8 @@ function arg(name, fallback) {
 async function installAdvisoryRoutes(page) {
   const affected = JSON.parse(await fs.readFile(path.join(UI_ROOT, "tests/fixtures/php2shell-affected.json"), "utf8"));
   await page.route("**/v1/intel/advisories/*/affected**", (route) => route.fulfill({ json: affected }));
+  const exposure = JSON.parse(await fs.readFile(path.join(UI_ROOT, "tests/fixtures/php2shell-exposure.json"), "utf8"));
+  await page.route("**/v1/affected?**", (route) => route.fulfill({ json: exposure }));
   await page.route("**/v1/intel/operator-advisories", (route) => route.fulfill({ json: {
     advisories: [{
       id: PHP2SHELL_ID, aliases: ["CVE-2026-109619"], summary: affected.advisory.summary, severity: "critical",

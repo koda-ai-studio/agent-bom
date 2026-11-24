@@ -24,6 +24,7 @@ _COMMON_RESOURCES = frozenset({"profiles://catalog", "metrics://tools"})
 
 _GUIDED_TOOL_NAMES = frozenset(
     {
+        "am_i_affected",
         "audit_integrity",
         "check",
         "cis_benchmark",
@@ -80,6 +81,7 @@ PROFILES = {
                 "graph_diff",
                 "findings_query",
                 "finding_detail",
+                "am_i_affected",
                 "compromise_assessment",
                 "consequence_assessment",
                 "graph_correlate",
