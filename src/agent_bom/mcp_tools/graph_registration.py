@@ -346,6 +346,9 @@ def _register_findings_query(
         triage: Annotated[
             Literal["not_affected", "affected", "under_investigation", "untriaged"] | None, Field(description="Triage/VEX state filter.")
         ] = None,
+        fix: Annotated[
+            Literal["available", "none"] | None, Field(description="Fix availability: a recorded fixed version (available) or none.")
+        ] = None,
         sort: Annotated[str, Field(max_length=32, description="Sort key, as /v1/findings (default effective_reach).")] = "effective_reach",
         limit: Annotated[int, Field(ge=1, le=200, description="Findings per page.")] = 25,
         cursor: Annotated[str | None, Field(max_length=512, description="next_cursor from the previous page.")] = None,
@@ -369,6 +372,7 @@ def _register_findings_query(
             control=control,
             reachability=reachability,
             triage=triage,
+            fix=fix,
             sort=sort,
             limit=limit,
             cursor=cursor,

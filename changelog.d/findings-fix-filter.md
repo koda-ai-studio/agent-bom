@@ -1,0 +1,2 @@
+### Added
+- `GET /v1/findings?fix=available|none` narrows the queue to findings with a recorded fixed or remediation version, or to those without one: the "upgrade" and the "needs a compensating control" sets the fixability facet already counted. The same filter is on `agent-bom findings list --fix`, the `findings_query` MCP tool, the Python client, and the findings page (Advanced filters, `?fix=` links). It uses the facet's own definition through the predicate scan rows and ingested rows share, so the count and the filter agree.

@@ -154,9 +154,9 @@ def _facet_exploit_bucket(row: Mapping[str, Any]) -> str:
 
 
 def _facet_has_fix(row: Mapping[str, Any]) -> bool:
-    versions = row.get("remediation_versions")
-    has_remediation_version = isinstance(versions, (list, tuple)) and any(str(value).strip() for value in versions)
-    return bool(str(row.get("fixed_version") or "").strip()) or has_remediation_version
+    from agent_bom.domain.finding_signal_filters import row_has_fix
+
+    return row_has_fix(row)
 
 
 class _FacetCounts:

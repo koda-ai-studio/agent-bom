@@ -43272,9 +43272,8 @@ paths:
         restores full mappings.
 
 
-        ``offset`` is a compatibility path capped at 10,000: past the ceiling the
-
-        endpoint returns ``400`` and steers callers to ``cursor``/``next_cursor``.'
+        ``offset`` is capped at 10,000; past it the endpoint returns ``400`` and steers
+        callers to ``cursor``.'
       operationId: list_findings_v1_findings_get
       parameters:
       - in: query
@@ -43516,6 +43515,17 @@ paths:
             type: string
           - type: 'null'
           title: Path Context
+      - in: query
+        name: fix
+        required: false
+        schema:
+          anyOf:
+          - enum:
+            - available
+            - none
+            type: string
+          - type: 'null'
+          title: Fix
       - in: query
         name: include_facets
         required: false
