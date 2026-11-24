@@ -90,6 +90,7 @@
  "agent-bom export schedules create": "c349b2039dea5061",
  "agent-bom export schedules list": "e885875718f3c950",
  "agent-bom findings": "6a40d543b8522c73",
+ "agent-bom findings affected": "b9012832c91f89c2",
  "agent-bom findings list": "a895b55ae204d2eb",
  "agent-bom findings push": "b1556d4309e9ec12",
  "agent-bom findings triage": "760f92359c0ec77d",

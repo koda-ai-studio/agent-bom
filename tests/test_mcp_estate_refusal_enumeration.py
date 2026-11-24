@@ -26,6 +26,7 @@ ARGUMENTS: dict[str, dict] = {
     "should_i_deploy": {"candidate": NODE},
     "graph_reach": {"node_id": NODE},
     "finding_detail": {"finding_id": "finding-1"},
+    "am_i_affected": {"q": "CVE-2024-3094"},
     "graph_correlation_status": {"correlation_id": "corr-1"},
     "compromise_assessment": {"root_node_id": NODE, "scan_id": "shared-scan", "assume_control": True},
     "consequence_assessment": {

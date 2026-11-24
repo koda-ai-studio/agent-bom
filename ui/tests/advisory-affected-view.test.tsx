@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AdvisoryAffectedView } from "@/components/advisories/advisory-affected-view";
 import { countFindingsReferencing, getAdvisoryAffected, type AdvisoryAffectedResponse } from "@/lib/advisory-affected";
+import { getAffected, type AffectedAnswer } from "@/lib/incident-exposure";
 import { ApiConflictError, ApiNotFoundError, ApiServerError } from "@/lib/api-errors";
 import fixture from "./fixtures/php2shell-affected.json";
 
@@ -19,7 +20,21 @@ vi.mock("@/lib/advisory-affected", async () => {
   return { ...actual, getAdvisoryAffected: vi.fn(), countFindingsReferencing: vi.fn() };
 });
 
+vi.mock("@/lib/incident-exposure", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/incident-exposure")>("@/lib/incident-exposure");
+  return { ...actual, getAffected: vi.fn() };
+});
 const fetchAffected = vi.mocked(getAdvisoryAffected);
+const fetchExposure = vi.mocked(getAffected);
+const exposure = (verdict: AffectedAnswer["verdict"]): AffectedAnswer => ({
+  tenant_id: "t", query: { raw: "q", kind: "advisory", advisory: "CVE-2026-109618" }, verdict,
+  verdict_basis: verdict === "not_found" ? [] : ["findings"],
+  inventory: { available: true, affected: 1, possibly_affected: 0, not_affected: 0, assets_examined: 2 },
+  findings: { total: 2, open: 1, resolved: 1, suppressed: 0, severity: { high: 2 }, kev: true, fix_available: 1, no_fix: 1, internet_exposed: 0, advisories: ["CVE-2026-109618"], packages: ["pillow@9.0.0"] },
+  exposure: { first_seen: "2026-08-01T00:00:00Z", last_seen: "2026-09-01T00:00:00Z", still_open: true, last_resolved_at: null },
+  assets: [], assets_truncated: false, findings_truncated: false, findings_href: "/findings?q=CVE-2026-109618&status=all",
+  reach: { by_kind: { credentials: 2, data_stores: 1 }, items: {}, agents_on_findings: [], servers_on_findings: [], basis: "graph_snapshot", scan_id: "snap-1", advisories_walked: [] },
+} as AffectedAnswer);
 const countReferencing = vi.mocked(countFindingsReferencing);
 const php2shell = fixture as AdvisoryAffectedResponse;
 const clone = (patch: Partial<AdvisoryAffectedResponse> = {}): AdvisoryAffectedResponse => ({ ...structuredClone(php2shell), ...patch });
@@ -30,6 +45,8 @@ beforeEach(() => {
   fetchAffected.mockReset();
   countReferencing.mockReset();
   countReferencing.mockResolvedValue(0);
+  fetchExposure.mockReset();
+  fetchExposure.mockResolvedValue(exposure("affected"));
 });
 
 function rowFor(label: string) {
@@ -159,12 +176,41 @@ describe("advisory affected assets", () => {
     expect(screen.getByText(/no advisory feed record; answered from stored findings/i)).toBeInTheDocument();
   });
 
+  it("leads with the exposure answer: verdict, window, findings and reach", async () => {
+    navState.search = "id=CVE-2026-109618";
+    fetchAffected.mockResolvedValue(clone());
+    render(<AdvisoryAffectedView />);
+    const panel = await screen.findByTestId("exposure-panel");
+    expect(panel).toHaveTextContent("Affected");
+    expect(panel).toHaveTextContent("2026-08-01 → now");
+    expect(panel).toHaveTextContent("1 open · 1 resolved · KEV");
+    expect(screen.getByTestId("exposure-reach")).toHaveTextContent("2 credentials · 1 data stores");
+    expect(fetchExposure).toHaveBeenCalledWith("CVE-2026-109618", expect.anything());
+  });
+
+  it("answers a package with findings and reach alone, never an advisory lookup", async () => {
+    navState.search = "id=pillow%409.0.0";
+    render(<AdvisoryAffectedView />);
+    expect(await screen.findByTestId("exposure-panel")).toBeInTheDocument();
+    expect(fetchExposure).toHaveBeenCalledWith("pillow@9.0.0", expect.anything());
+    expect(fetchAffected).not.toHaveBeenCalled();
+  });
+
   it("asks for an advisory id when none is selected", async () => {
     navState.search = "";
     render(<AdvisoryAffectedView />);
-    fireEvent.change(screen.getByLabelText("Advisory ID"), { target: { value: "CVE-2026-109618" } });
+    fireEvent.change(screen.getByLabelText("Advisory ID or package"), { target: { value: "CVE-2026-109618" } });
     fireEvent.click(screen.getByRole("button", { name: "Show affected assets" }));
     expect(replaceMock).toHaveBeenLastCalledWith("/advisories?id=CVE-2026-109618", { scroll: false });
     expect(fetchAffected).not.toHaveBeenCalled();
+  });
+});
+
+describe("exposure panel resilience", () => {
+  it("reads an unexpected body as unavailable instead of breaking the page", async () => {
+    navState.search = "id=pillow";
+    fetchExposure.mockResolvedValue({ detail: "Not Found" } as unknown as AffectedAnswer);
+    render(<AdvisoryAffectedView />);
+    expect(await screen.findByText("Exposure for pillow is unavailable right now.")).toBeInTheDocument();
   });
 });

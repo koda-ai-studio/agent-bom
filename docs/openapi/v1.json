@@ -1041,6 +1041,354 @@
         "title": "AdvisoryRematchHealth",
         "type": "object"
       },
+      "AffectedAsset": {
+        "additionalProperties": true,
+        "properties": {
+          "advisory": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Advisory"
+          },
+          "asset_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Type"
+          },
+          "environment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Environment"
+          },
+          "finding_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finding Id"
+          },
+          "first_seen": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Seen"
+          },
+          "fixed_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fixed Version"
+          },
+          "last_seen": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "package": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Package"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "severity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "AffectedAsset",
+        "type": "object"
+      },
+      "AffectedExposure": {
+        "additionalProperties": true,
+        "properties": {
+          "first_seen": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Seen"
+          },
+          "last_resolved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Resolved At"
+          },
+          "last_seen": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen"
+          },
+          "still_open": {
+            "title": "Still Open",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "first_seen",
+          "last_seen",
+          "still_open",
+          "last_resolved_at"
+        ],
+        "title": "AffectedExposure",
+        "type": "object"
+      },
+      "AffectedFindings": {
+        "additionalProperties": true,
+        "properties": {
+          "advisories": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Advisories",
+            "type": "array"
+          },
+          "fix_available": {
+            "title": "Fix Available",
+            "type": "integer"
+          },
+          "internet_exposed": {
+            "title": "Internet Exposed",
+            "type": "integer"
+          },
+          "kev": {
+            "title": "Kev",
+            "type": "boolean"
+          },
+          "no_fix": {
+            "title": "No Fix",
+            "type": "integer"
+          },
+          "open": {
+            "title": "Open",
+            "type": "integer"
+          },
+          "packages": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Packages",
+            "type": "array"
+          },
+          "resolved": {
+            "title": "Resolved",
+            "type": "integer"
+          },
+          "severity": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Severity",
+            "type": "object"
+          },
+          "suppressed": {
+            "title": "Suppressed",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "open",
+          "resolved",
+          "suppressed",
+          "severity",
+          "kev",
+          "fix_available",
+          "no_fix",
+          "internet_exposed",
+          "advisories",
+          "packages"
+        ],
+        "title": "AffectedFindings",
+        "type": "object"
+      },
+      "AffectedInventory": {
+        "additionalProperties": true,
+        "description": "The advisory matched against stored inventory ranges: catches assets no scan has turned into a finding yet.",
+        "properties": {
+          "affected": {
+            "default": 0,
+            "title": "Affected",
+            "type": "integer"
+          },
+          "assets_examined": {
+            "default": 0,
+            "title": "Assets Examined",
+            "type": "integer"
+          },
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Complete"
+          },
+          "href": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Href"
+          },
+          "not_affected": {
+            "default": 0,
+            "title": "Not Affected",
+            "type": "integer"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "possibly_affected": {
+            "default": 0,
+            "title": "Possibly Affected",
+            "type": "integer"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          }
+        },
+        "required": [
+          "available"
+        ],
+        "title": "AffectedInventory",
+        "type": "object"
+      },
       "AffectedProduct": {
         "additionalProperties": false,
         "properties": {
@@ -1100,6 +1448,62 @@
         "title": "AffectedProduct",
         "type": "object"
       },
+      "AffectedQuery": {
+        "additionalProperties": true,
+        "properties": {
+          "advisory": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Advisory"
+          },
+          "kind": {
+            "enum": [
+              "advisory",
+              "package"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "package": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Package"
+          },
+          "raw": {
+            "title": "Raw",
+            "type": "string"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "required": [
+          "raw",
+          "kind"
+        ],
+        "title": "AffectedQuery",
+        "type": "object"
+      },
       "AffectedRange": {
         "additionalProperties": false,
         "properties": {
@@ -1138,6 +1542,194 @@
           }
         },
         "title": "AffectedRange",
+        "type": "object"
+      },
+      "AffectedReach": {
+        "additionalProperties": true,
+        "properties": {
+          "advisories_walked": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Advisories Walked",
+            "type": "array"
+          },
+          "agents_on_findings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Agents On Findings",
+            "type": "array"
+          },
+          "basis": {
+            "enum": [
+              "graph_snapshot",
+              "findings_only",
+              "unavailable"
+            ],
+            "title": "Basis",
+            "type": "string"
+          },
+          "by_kind": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By Kind",
+            "type": "object"
+          },
+          "items": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/AffectedReachItem"
+              },
+              "type": "array"
+            },
+            "title": "Items",
+            "type": "object"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "scan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Id"
+          },
+          "servers_on_findings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Servers On Findings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "by_kind",
+          "items",
+          "agents_on_findings",
+          "servers_on_findings",
+          "basis",
+          "advisories_walked"
+        ],
+        "title": "AffectedReach",
+        "type": "object"
+      },
+      "AffectedReachItem": {
+        "additionalProperties": true,
+        "properties": {
+          "entity_type": {
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "entity_type"
+        ],
+        "title": "AffectedReachItem",
+        "type": "object"
+      },
+      "AffectedResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "assets": {
+            "items": {
+              "$ref": "#/components/schemas/AffectedAsset"
+            },
+            "title": "Assets",
+            "type": "array"
+          },
+          "assets_truncated": {
+            "title": "Assets Truncated",
+            "type": "boolean"
+          },
+          "exposure": {
+            "$ref": "#/components/schemas/AffectedExposure"
+          },
+          "findings": {
+            "$ref": "#/components/schemas/AffectedFindings"
+          },
+          "findings_href": {
+            "title": "Findings Href",
+            "type": "string"
+          },
+          "findings_truncated": {
+            "title": "Findings Truncated",
+            "type": "boolean"
+          },
+          "inventory": {
+            "$ref": "#/components/schemas/AffectedInventory"
+          },
+          "query": {
+            "$ref": "#/components/schemas/AffectedQuery"
+          },
+          "reach": {
+            "$ref": "#/components/schemas/AffectedReach"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          },
+          "verdict": {
+            "enum": [
+              "affected",
+              "possibly_affected",
+              "previously_affected",
+              "not_found"
+            ],
+            "title": "Verdict",
+            "type": "string"
+          },
+          "verdict_basis": {
+            "items": {
+              "enum": [
+                "findings",
+                "inventory_match"
+              ],
+              "type": "string"
+            },
+            "title": "Verdict Basis",
+            "type": "array"
+          }
+        },
+        "required": [
+          "tenant_id",
+          "query",
+          "verdict",
+          "verdict_basis",
+          "inventory",
+          "findings",
+          "exposure",
+          "assets",
+          "assets_truncated",
+          "reach",
+          "findings_truncated",
+          "findings_href"
+        ],
+        "title": "AffectedResponse",
         "type": "object"
       },
       "AgentBinding": {
@@ -51978,6 +52570,63 @@
         "summary": "Activity Timeline",
         "tags": [
           "governance"
+        ]
+      }
+    },
+    "/v1/affected": {
+      "get": {
+        "description": "Every current and past finding for the advisory or package, its exposure window and what the affected hosts reach.\n\nFindings match exactly on advisory id or package name and version, across\nevery scan and ingest the findings queue merges. Reach is the latest graph\nsnapshot's recorded topology from the matched advisories, not proof of exploitation.",
+        "operationId": "get_affected_v1_affected_get",
+        "parameters": [
+          {
+            "description": "An advisory id (CVE-2024-3094, GHSA-...) or a package as name or name@version",
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "description": "An advisory id (CVE-2024-3094, GHSA-...) or a package as name or name@version",
+              "maxLength": 256,
+              "minLength": 2,
+              "title": "Q",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AffectedResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)"
+          }
+        },
+        "summary": "Get Affected",
+        "tags": [
+          "findings"
         ]
       }
     },

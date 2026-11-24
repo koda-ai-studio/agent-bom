@@ -1,11 +1,10 @@
 """agent-bom MCP Server — expose security scanning as MCP tools.
 Start with:
     agent-bom mcp server                          # stdio (for Claude Desktop, Cursor, etc.)
-    agent-bom mcp server --transport sse          # SSE transport (for remote clients)
-    agent-bom mcp server --transport streamable-http
+    agent-bom mcp server --transport sse          # or streamable-http, for remote clients
 
 Default: 8 focused tools; select a task profile with --profile.
-Full profile Tools (100):
+Full profile Tools (101):
     scan                — Full discovery → scan → output pipeline
     check               — Check a specific package for CVEs before installing
     intel_lookup        — Look up a CVE, GHSA, or OSV advisory from local threat intel
@@ -25,6 +24,7 @@ Full profile Tools (100):
     agent_architecture  — Multi-agent harness layers, declared flow and security overlay
     findings_query      — Query tenant findings exactly as /v1/findings, compact rows
     finding_detail      — One finding with its graph paths, reachers and triage state
+    am_i_affected       — Am I affected: findings, exposure window and reach for an advisory or package
     policy_check        — Evaluate a policy against scan results
     registry_lookup     — Query the MCP server security metadata registry
     generate_sbom       — Generate CycloneDX or SPDX SBOM

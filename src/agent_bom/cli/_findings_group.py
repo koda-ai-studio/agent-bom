@@ -317,6 +317,50 @@ def triage_group() -> None:
     """Manage finding triage decisions and OpenVEX export."""
 
 
+@findings_cmd.command("affected")
+@click.argument("query")
+@click.option("--format", "output_format", type=click.Choice(["table", "json"]), default="table", show_default=True)
+@_common_api_options
+def affected_cmd(
+    api_url: str | None, api_key: str | None, bearer_token: str | None, tenant_id: str | None, query: str, output_format: str
+) -> None:
+    """Am I affected? QUERY is an advisory id (CVE-2024-3094, GHSA-...) or a package as name or name@version."""
+
+    client = _make_client(api_url, api_key, bearer_token, tenant_id)
+    payload = _run_request(client, lambda api: api.affected(query))
+    if output_format == "json":
+        _emit_json(payload)
+        return
+    click.echo(_affected_summary(payload))
+
+
+def _obj(value: object) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _affected_summary(payload: JsonObject) -> str:
+    """Verdict first, then the window, the counts, the first assets and what they reach."""
+    body = _obj(payload)
+    findings, exposure, reach = (_obj(body.get(key)) for key in ("findings", "exposure", "reach"))
+    verdict = {"affected": "AFFECTED", "previously_affected": "Previously affected (all resolved)", "not_found": "Not affected"}
+    lines = [f"{verdict.get(str(body.get('verdict')), body.get('verdict'))}: {_obj(body.get('query')).get('raw')}"]
+    if body.get("verdict") == "not_found":
+        return "\n".join([*lines, "No current or past finding matches this advisory or package."])
+    lines.append(f"Exposure: first seen {exposure.get('first_seen') or 'unknown'}, last seen {exposure.get('last_seen') or 'unknown'}")
+    lines.append(
+        f"Findings: {findings.get('total')} ({findings.get('open')} open, {findings.get('resolved')} resolved) · "
+        f"KEV: {'yes' if findings.get('kev') else 'no'} · fix available: {findings.get('fix_available')} · no fix: {findings.get('no_fix')}"
+    )
+    raw_assets = body.get("assets")
+    assets: list[Any] = raw_assets if isinstance(raw_assets, list) else []
+    for asset in map(_obj, assets[:10]):
+        lines.append(f"  - {asset.get('name')} {asset.get('version') or ''} [{asset.get('status')}] {asset.get('advisory') or ''}".rstrip())
+    by_kind = _obj(reach.get("by_kind"))
+    if by_kind:
+        lines.append("Reaches: " + ", ".join(f"{count} {kind.replace('_', ' ')}" for kind, count in sorted(by_kind.items())))
+    return "\n".join(lines)
+
+
 @triage_group.command("list")
 @click.option("--queue-state", help="Filter by triage queue state.")
 @click.option("--decision", help="Filter by triage decision.")

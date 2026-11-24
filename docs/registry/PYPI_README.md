@@ -103,7 +103,7 @@ path does not prove execution or exploitation.
 - **Identity (NHI)** — non-human identity discovery (Okta/Entra), credential-expiry posture, and access-review campaigns
 - **LLM cost** — spend forecasting, budget runway, chargeback/allocation, and seasonal-aware spend-anomaly detection
 - **Secrets + runtime** — MCP proxy/gateway, inline firewall enforcement, A2A/MCP auth posture, Shield SDK, secrets, and redaction surfaces
-- **MCP server mode** — start with 8 scan-profile tools; use `agent-bom mcp server --profile full` for the complete catalog of 100 MCP tools, 7 resources, and 8 workflow prompts in Claude, Cursor, Windsurf, and Cortex CoCo / Cortex Code
+- **MCP server mode** — start with 8 scan-profile tools; use `agent-bom mcp server --profile full` for the complete catalog of 101 MCP tools, 7 resources, and 8 workflow prompts in Claude, Cursor, Windsurf, and Cortex CoCo / Cortex Code
 - **Outputs + evidence** — SARIF, CycloneDX, SPDX, OCSF, HTML, graph, JSON and ZIP evidence bundles for auditors
 
 Discovery and static/cloud scanning are read-only by default. Explicit disk

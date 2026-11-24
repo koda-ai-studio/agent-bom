@@ -24,6 +24,7 @@ _TOOL_CAPABILITY_CLASSES = {
     "agent_architecture": ["READ", "GRAPH", "ANALYZE"],
     "graph_diff": ["READ", "GRAPH", "HISTORY"],
     "findings_query": ["READ", "INVENTORY"],
+    "am_i_affected": ["READ", "INVENTORY"],
     "finding_detail": ["READ", "GRAPH", "ANALYZE"],
     "policy_check": ["READ", "POLICY"],
     "registry_lookup": ["READ", "REGISTRY"],

@@ -1,7 +1,7 @@
 # MCP Server — Connect agent-bom to AI Assistants
 
 agent-bom starts with 8 focused MCP tools. Select a task profile for graph, cloud, runtime or audit work;
-`--profile full` explicitly exposes the complete compatibility catalog of 100 MCP tools. Clients that negotiate the
+`--profile full` explicitly exposes the complete compatibility catalog of 101 MCP tools. Clients that negotiate the
 MCP SDK's legacy `2025-11-25` handshake can connect over stdio or
 Streamable HTTP. The `2026-07-28` protocol also supports stateless requests,
 `server/discover`, per-request capabilities, required HTTP headers, and private
@@ -311,7 +311,7 @@ For prerequisite checks and bounded identity paths, use [`consequence_assessment
 
 For scoped historical permission receipts, use [`compromise_assessment`](MCP_SERVER.md#assess-an-assumed-compromise) in the graph profile.
 
-## Tool Categories (100 tools)
+## Tool Categories (101 tools)
 
 These categories describe `--profile full`, not the default startup catalog.
 The [profile guide](#choose-a-profile-for-other-work) lists the smaller task surfaces.
@@ -320,7 +320,7 @@ The [profile guide](#choose-a-profile-for-other-work) lists the smaller task sur
 |----------|-------|-------------|
 | **Scan** | `scan`, `code_scan`, `vector_db_scan`, `gpu_infra_scan`, `ai_inventory_scan` | Discover agents; execute Semgrep SAST with typed findings/clean/skipped/failed status; scan packages, vector stores, GPU infra, and AI usage |
 | **Check** | `check`, `verify`, `marketplace_check`, `license_compliance_scan` | Pre-install CVE gate, integrity verification, marketplace trust, and license policy |
-| **Blast Radius** | `blast_radius`, `exposure_paths`, `compromise_assessment`, `consequence_assessment`, `graph_correlate`, `graph_correlation_status`, `should_i_deploy`, `graph_reach`, `graph_diff`, `cross_vendor_paths`, `agent_architecture`, `findings_query`, `finding_detail` | Map package → vulnerability finding → MCP server (tools + credential env names) → connected agents; correlate exact snapshot receipts; return ranked ExposurePath JSON and allow/warn/block deploy guidance for headless agents |
+| **Blast Radius** | `blast_radius`, `exposure_paths`, `compromise_assessment`, `consequence_assessment`, `graph_correlate`, `graph_correlation_status`, `should_i_deploy`, `graph_reach`, `graph_diff`, `cross_vendor_paths`, `agent_architecture`, `findings_query`, `finding_detail`, `am_i_affected`, `am_i_affected` | Map package → vulnerability finding → MCP server (tools + credential env names) → connected agents; correlate exact snapshot receipts; return ranked ExposurePath JSON and allow/warn/block deploy guidance for headless agents |
 | **Registry** | `registry_lookup`, `inventory`, `where`, `fleet_scan` | Query the MCP registry, inspect discovery paths, and summarize fleet inventories |
 | **Compliance** | `compliance`, `cis_benchmark`, `aisvs_benchmark` | Inspect framework applicability and evaluated controls; run CIS and AISVS benchmarks. MITRE technique associations are unscored |
 | **Policy** | `policy_check`, `remediate` | Evaluate policies and generate guided remediation plans |
@@ -331,7 +331,7 @@ The [profile guide](#choose-a-profile-for-other-work) lists the smaller task sur
 | **AI supply chain** | `dataset_card_scan`, `training_pipeline_scan`, `browser_extension_scan`, `model_provenance_scan`, `prompt_scan`, `model_file_scan`, `ingest_external_scan`, `runtime_evidence_ingest` | Scan AI artifacts, prompts, model files, and browser extensions; import tool-agnostic SARIF/SBOM/scanner evidence without executing its producer; merge CWPP runtime signals |
 
 <details>
-<summary>Complete current catalog (100 tools)</summary>
+<summary>Complete current catalog (101 tools)</summary>
 
 `scan`, `check`, `intel_lookup`, `affected_assets`, `intel_match`, `intel_sources`,
 `intel_daily_brief`, `youcom_search`, `blast_radius`, `executive_brief`, `exposure_paths`, `compromise_assessment`, `consequence_assessment`, `graph_correlate`,
@@ -424,6 +424,10 @@ Six more read-only tools answer follow-up questions from the same evidence:
   it, who reaches it, its `exploit_story` (the `GET /v1/graph/exploit-story`
   payload: what the package puts at risk and how, from recorded fields) and its
   triage/VEX state.
+- `am_i_affected(q)` is `GET /v1/affected`: for one advisory id or package
+  (`name` or `name@version`), every current and past finding across the estate,
+  the exposure window, the affected assets, KEV and fix state, and what the
+  affected hosts reach on the latest graph snapshot.
 
 `blast_radius` takes credentials, tools and reachability from those graph
 paths. When the graph cannot be read they are `null` with a `graph.status`
@@ -776,7 +780,7 @@ cannot be invoked. Profiles are not permissions: graph writes still require the
 existing authenticated role, tenant scope and audit reason.
 
 Existing clients that require the complete catalog can explicitly use
-`agent-bom mcp server --profile full`. It retains all 100 tools. The previous
+`agent-bom mcp server --profile full`. It retains all 101 tools. The previous
 28-tool `--profile guided` option remains available for compatibility with all
 eight workflow prompts. Neither is the recommended first-run configuration.
 Third-party tool plugins remain separately opt-in and are exposed only by `full`.

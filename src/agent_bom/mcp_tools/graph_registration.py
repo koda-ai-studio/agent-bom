@@ -6,6 +6,7 @@ from typing import Annotated, Any, Callable, Literal
 
 from pydantic import Field
 
+from agent_bom.mcp_tools.affected import am_i_affected_impl
 from agent_bom.mcp_tools.agent_architecture import agent_architecture_impl
 from agent_bom.mcp_tools.brief import executive_brief_impl
 from agent_bom.mcp_tools.cross_vendor_paths import cross_vendor_paths_impl
@@ -405,6 +406,23 @@ def _register_finding_detail(
         )
 
 
+def _register_am_i_affected(
+    mcp: Any, read_only: Any, execute_tool_async: Callable[..., Any], truncate_response: Callable[[str], str]
+) -> None:
+    @mcp.tool(annotations=read_only, title="Am I Affected")
+    async def am_i_affected(
+        q: Annotated[
+            str, Field(min_length=2, max_length=256, description="Advisory id (CVE-2024-3094, GHSA-...) or package name[@version].")
+        ],
+        tenant_id: Annotated[str, _TENANT] = "default",
+    ) -> str:
+        """Am I affected? Every current and past finding for one advisory or package, the exposure window
+        (first and last seen), the affected assets, KEV and fix state, and what the affected hosts reach
+        on the latest graph snapshot. The same answer ``GET /v1/affected`` returns.
+        """
+        return await execute_tool_async("am_i_affected", am_i_affected_impl, q=q, tenant_id=tenant_id, _truncate_response=truncate_response)
+
+
 def _register_executive_brief(
     mcp: Any, read_only: Any, execute_tool_async: Callable[..., Any], truncate_response: Callable[[str], str]
 ) -> None:
@@ -452,6 +470,7 @@ def register_graph_agent_tools(
         _register_graph_diff,
         _register_findings_query,
         _register_finding_detail,
+        _register_am_i_affected,
     ):
         register(mcp, read_only, execute_tool_async, truncate_response)
 

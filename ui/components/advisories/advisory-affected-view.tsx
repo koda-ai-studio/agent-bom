@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+
+import { ExposurePanel } from "./exposure-panel";
+import { isAdvisoryQuery } from "@/lib/incident-exposure";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight, RefreshCw, SearchX } from "lucide-react";
 
@@ -33,10 +36,10 @@ function AdvisoryPicker({ onPick }: { onPick: (id: string) => void }) {
   };
   return (
     <form onSubmit={submit} className="max-w-xl space-y-3 rounded-xl border border-outline bg-surface p-4">
-      <p className="text-sm text-ink-secondary">Answer &ldquo;am I affected?&rdquo; for one advisory from stored inventory, per asset. Use a CVE, GHSA or an emergency advisory id.</p>
+      <p className="text-sm text-ink-secondary">Answer &ldquo;am I affected?&rdquo; for one advisory or package: findings, exposure window and reach, and for an advisory its match against stored inventory per asset. Use a CVE, GHSA, an emergency advisory id or a package as name or name@version.</p>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-        <Field id="affected-advisory-id" label="Advisory ID" className="flex-1">
-          {props => <input {...props} className={inputClass} value={value} onChange={e => setValue(e.target.value)} placeholder="CVE-2026-12345" autoComplete="off" />}
+        <Field id="affected-advisory-id" label="Advisory ID or package" className="flex-1">
+          {props => <input {...props} className={inputClass} value={value} onChange={e => setValue(e.target.value)} placeholder="CVE-2026-12345 or pillow@9.0.0" autoComplete="off" />}
         </Field>
         <button type="submit" className={primaryButtonClass}>Show affected assets</button>
       </div>
@@ -185,7 +188,11 @@ export function AdvisoryAffectedView() {
   };
 
   if (!advisoryId) return <AdvisoryPicker onPick={id => navigate({ id })} />;
+  // A package has no advisory record to match inventory ranges against; its answer is the findings and reach alone.
+  if (!isAdvisoryQuery(advisoryId)) return <ExposurePanel query={advisoryId} />;
   return (
+    <div className="min-w-0 space-y-4">
+    <ExposurePanel query={advisoryId} />
     <AffectedResults
       key={`${advisoryId}|${verdict}|${q}`}
       advisoryId={advisoryId}
@@ -194,5 +201,6 @@ export function AdvisoryAffectedView() {
       onVerdict={next => navigate({ id: advisoryId, verdict: next, q })}
       onSearch={next => navigate({ id: advisoryId, verdict, q: next })}
     />
+    </div>
   );
 }

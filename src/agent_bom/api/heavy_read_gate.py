@@ -30,6 +30,7 @@ HEAVY_READ_PATHS = frozenset(
         "/v1/posture",
         "/v1/posture/counts",
         "/v1/findings",
+        "/v1/affected",
         "/v1/compliance",
         "/v1/compliance/summary",
         "/v1/graph",

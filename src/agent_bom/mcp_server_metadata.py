@@ -10,16 +10,8 @@ from agent_bom.mcp_tools.server_payloads import build_health_payload, build_root
 from agent_bom.mcp_tools.tool_capabilities import _TOOL_CAPABILITY_CLASSES as _TOOL_CAPABILITY_CLASSES
 
 # Immutable release metadata: older releases without this field expose the full catalog.
-_DEFAULT_PROFILE_TOOL_NAMES = [
-    "scan",
-    "check",
-    "intel_lookup",
-    "exposure_paths",
-    "compliance",
-    "remediate",
-    "generate_sbom",
-    "policy_check",
-]
+_DEFAULT_PROFILE_TOOL_NAMES = ["scan", "check", "intel_lookup", "exposure_paths", "compliance",
+    "remediate", "generate_sbom", "policy_check"]  # fmt: skip
 __all__ = ["_DEFAULT_PROFILE_TOOL_NAMES", "attach_metadata_routes", "build_health_payload", "build_root_metadata",
     "registered_mcp_tool_decorator_names"]  # fmt: skip
 
@@ -121,6 +113,11 @@ _SERVER_CARD_TOOLS = [
     {
         "name": "findings_query",
         "description": "Query tenant findings with the /v1/findings filters, sort and cursor in a compact projection",
+        "annotations": {"readOnlyHint": True},
+    },
+    {
+        "name": "am_i_affected",
+        "description": "Am I affected: findings, exposure window and reach for an advisory or package",
         "annotations": {"readOnlyHint": True},
     },
     {

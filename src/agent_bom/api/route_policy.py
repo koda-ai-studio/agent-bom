@@ -181,6 +181,7 @@ ROUTE_POLICIES: tuple[RoutePolicy, ...] = (
     RoutePolicy("PATCH", "/v1/cloud/connections/", "admin", "cloud.connection:write"),
     RoutePolicy("DELETE", "/v1/cloud/connections/", "admin", "cloud.connection:write"),
     RoutePolicy("GET", "/v1/findings", "viewer", "finding:read"),
+    RoutePolicy("GET", "/v1/affected", "viewer", "finding:read"),
     RoutePolicy("GET", "/v1/graph", "viewer", "graph:read"),
     RoutePolicy("GET", "/v1/intel", "viewer", "intel:read"),
     RoutePolicy("GET", "/v1/gateway/policies", "viewer", "gateway.policy:read"),
