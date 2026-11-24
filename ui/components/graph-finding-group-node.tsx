@@ -1,11 +1,12 @@
 "use client";
+import { COMPACT_GLYPH_SCALE } from "@/lib/graph-compact-glyph";
 import { Handle, Position } from "@xyflow/react";
 import { GraphCountHint } from "@/components/graph-count-hint";
 import { Binoculars } from "lucide-react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 
 const HANDLE = "!h-1 !w-1 !border-0 !bg-transparent";
-const GLYPH = "calc(var(--graph-node-glyph-size, 56px) * 0.7)";
+const GLYPH = `calc(var(--graph-node-glyph-size, 56px) * ${COMPACT_GLYPH_SCALE})`;
 
 /** A display group opens canonical finding nodes; it is never fetched as an asset. */
 export function GraphFindingGroupNode({ data }: { data: LineageNodeData }) {
@@ -25,7 +26,7 @@ export function GraphFindingGroupNode({ data }: { data: LineageNodeData }) {
         aria-label={`Expand ${count} finding${count === 1 ? "" : "s"} for ${data.description ?? "component"}`}
         style={{ width: GLYPH, height: GLYPH, ...(severity ? { borderColor: `var(--severity-ring-${severity})` } : {}) }}
         className="nodrag nopan graph-entity-glyph relative flex items-center justify-center rounded-full border-2 border-[var(--graph-edge-risk)] bg-surface text-[var(--graph-edge-risk)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
-        <Binoculars style={{ width: "calc(var(--graph-node-icon-size, 28px) * 0.7)", height: "calc(var(--graph-node-icon-size, 28px) * 0.7)" }} aria-hidden="true" />
+        <Binoculars style={{ width: `calc(var(--graph-node-icon-size, 28px) * ${COMPACT_GLYPH_SCALE})`, height: `calc(var(--graph-node-icon-size, 28px) * ${COMPACT_GLYPH_SCALE})` }} aria-hidden="true" />
       </button></GraphCountHint>
     </div>
     <span style={{ fontSize: "var(--graph-node-label-size, 14px)" }} className="mt-[0.4em] whitespace-nowrap font-semibold leading-tight text-foreground">Findings ({count})</span>

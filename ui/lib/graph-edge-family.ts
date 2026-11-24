@@ -22,6 +22,16 @@ export const edgeFamilyColor = (family: EdgeFamily) => `var(--graph-edge-${famil
 
 /** Dashes mark modeled links, blocked links, and access not observed in use; recorded structure stays solid. */
 export function edgeIsDashed(family: EdgeFamily, data: Record<string, unknown> | undefined): boolean {
-  if (data?.evidenceBlocked === true || data?.evidenceMode === "inferred") return true;
+  if (data?.evidenceBlocked === true) return true;
+  // When every drawn link is modeled the dash distinguishes nothing; the view states "Modeled" once instead.
+  if (data?.uniformlyModeled === true) return false;
+  if (data?.evidenceMode === "inferred") return true;
   return family === "access" && data?.evidenceMode !== "runtime";
+}
+
+/** Whether every edge would draw dashed for being modeled (none blocked), so a dash would carry no distinction. */
+export function allEdgesModeled(edges: readonly { data?: Record<string, unknown> }[]): boolean {
+  // Judged without the flag itself, so a second layout pass over already flagged edges reaches the same answer.
+  return edges.length > 1 && edges.every(edge => edge.data?.evidenceBlocked !== true
+    && edgeIsDashed(edgeFamily(String(edge.data?.relationship ?? "")), { ...edge.data, uniformlyModeled: false }));
 }

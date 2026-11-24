@@ -1,10 +1,11 @@
 import { assetKindLabel, assetServiceLabel } from "@/lib/asset-icon-registry";
+import { COMPACT_GLYPH_SCALE } from "@/lib/graph-compact-glyph";
 import type { Edge, Node } from "@xyflow/react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { semanticColumns, semanticLayer } from "@/lib/graph-semantic-columns";
 import { INTERNET_ANCHOR_ID, internetExposure, withInternetAnchor } from "@/lib/graph-internet-context";
 import { workloadImageContext } from "@/lib/graph-workload-image";
-import { edgeFamily, edgeFamilyColor } from "@/lib/graph-edge-family";
+import { allEdgesModeled, edgeFamily, edgeFamilyColor } from "@/lib/graph-edge-family";
 import { COMPACT_NODE_WIDTH, COMPACT_RANK_GAP, COMPACT_ROW_GAP, compactLayout } from "@/lib/graph-compact-layout";
 import { canvasName, prosePreview } from "@/components/graph-compact-node";
 import { captionGeometry } from "@/lib/graph-caption-geometry";
@@ -135,7 +136,9 @@ function cardWidth(node: Node<LineageNodeData> | undefined, id: string): number 
 
 /** A card whose name wraps to two lines at the largest label size is about 206 units tall; with the clear space
  * between cards it needs this much room under its row, a little more than one row gap. */
-const TALL_CARD_ROOM = 236;
+/** Room under a two-line name: 236 layout units at the original 0.7 glyph, growing with the glyph so a larger
+ * circle pushes its caption down without the caption reaching the card below. */
+const TALL_CARD_ROOM = Math.ceil(236 + (COMPACT_GLYPH_SCALE - 0.7) * 200);
 function twoLineName(node: Node<LineageNodeData> | undefined, id: string): boolean {
   // Wrap as the card does: between words, and inside an ordinary word after a hyphen or underscore.
   return captionGeometry({ name: shownName(node, id), box: cardWidth(node, id), nameChar: CEILING_CHAR_UNITS }).nameLines.length > 1;
@@ -186,6 +189,12 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
     width: id => boxes.get(id) ?? cardWidth(byId.get(id), id), tall: id => twoLineName(byId.get(id), id) ? TALL_CARD_ROOM : undefined }));
   const pathPairs = new Set(primary.slice(1).map((id, index) => `${primary[index]}\u0000${id}`));
   const fans = linkEndFans(drawn, positions);
+  const modeledOnly = allEdgesModeled(drawn);
+  const anchored = new Set(drawn.filter(edge => edge.source === INTERNET_ANCHOR_ID).map(edge => edge.target));
+  // The Internet arrow takes the glyph's upper left when another link also enters that node, so the two
+  // arrowheads never land on one point; nothing hangs above a glyph, so the entry clears every caption.
+  const sharedInternetEntry = (edge: Edge) => edge.source === INTERNET_ANCHOR_ID
+    && drawn.some(other => other.target === edge.target && other.source !== INTERNET_ANCHOR_ID);
   return {
     nodes: nodes.map(node => {
       const box = boxes.get(node.id) ?? cardWidth(node, node.id), placed = positions.get(node.id);
@@ -203,9 +212,10 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
         })() : undefined), semanticOwner: owners.get(node.id), readingOwner: semanticLayer(node) === "finding" ? owners.get(node.id) : undefined,
         imageSubrow: images.owners.has(node.id) && !onPath.has(node.id), evidenceSources: images.sources.get(node.id),
         semanticLayerIssue: semanticLayer(node) === null ? "Semantic layer unavailable" : undefined,
-        highlighted: node.data.highlighted || onPath.has(node.id) } };
+        highlighted: node.data.highlighted || onPath.has(node.id), ...(anchored.has(node.id) ? { internetAnchored: true } : {}) } };
     }),
     edges: edges.map((edge): Edge => {
+      const uniformlyModeled = modeledOnly;
       const from = positions.get(edge.source), to = positions.get(edge.target);
       const reverse = Boolean(from && to && from.x > to.x);
       const sameRank = Boolean(from && to && from.x === to.x);
@@ -216,8 +226,9 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
       const color = edgeFamilyColor(edgeFamily(String(edge.data?.relationship ?? "")));
       const marker = (value: Edge["markerEnd"]) => value && typeof value === "object" ? { ...value, color, width: 14, height: 14 } : value;
       return { ...edge, type: "compact", animated: false, ...(edge.markerEnd ? { markerEnd: marker(edge.markerEnd)! } : {}),
-        ...(edge.markerStart ? { markerStart: marker(edge.markerStart)! } : {}), sourceHandle: reverse ? "context" : null, targetHandle: reverse || sameRank ? "context" : null,
-        data: { ...edge.data, semanticLayout: true, individualLabel: true, arcDy: arcs.get(edge.id), ...fans.get(edge.id), ...(quietUntilFocus ? { quietUntilFocus } : {}), passesBehind: behind.has(edge.id) || undefined, quietLabel: edge.data?.isClusterEdge !== true,
+        ...(edge.markerStart ? { markerStart: marker(edge.markerStart)! } : {}), sourceHandle: reverse ? "context" : null,
+        targetHandle: reverse || sameRank ? "context" : sharedInternetEntry(edge) ? "above" : null,
+        data: { ...edge.data, ...(uniformlyModeled ? { uniformlyModeled } : {}), semanticLayout: true, individualLabel: true, arcDy: arcs.get(edge.id), ...fans.get(edge.id), ...(quietUntilFocus ? { quietUntilFocus } : {}), passesBehind: behind.has(edge.id) || undefined, quietLabel: edge.data?.isClusterEdge !== true,
           pathEmphasis: pathPairs.has(`${edge.source}\u0000${edge.target}`) || edge.data?.pathEmphasis === true } };
     }),
   };

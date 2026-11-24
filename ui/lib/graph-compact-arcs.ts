@@ -2,6 +2,7 @@
  * (horizontal tangents at both ends) would cross a card, its two control points
  * are raised or lowered so the single curve bends around the cards in its way. */
 
+import { COMPACT_GLYPH_SCALE } from "@/lib/graph-compact-glyph";
 import { captionGeometry, type CaptionGeometry, NAME_LINES } from "@/lib/graph-caption-geometry";
 
 type Point = { x: number; y: number };
@@ -15,7 +16,10 @@ type Card = Point & { g: CaptionExtent };
 /** Horizontal reach of each control point, as a share of the link's horizontal span. */
 export const ARC_REACH = 0.45;
 /** A card around its row: a narrow glyph on the row and a wider caption hanging below it. */
-const CARD_ABOVE = 60, GLYPH_BELOW = 28, GLYPH_HALF_WIDTH = 50, CARD_BELOW = 185, CARD_HALF_WIDTH = 112;
+/** The glyph obstacle grows with the drawn glyph (sized for the original 0.7 scale), so routing clears what is painted. */
+const GLYPH_GROWTH = COMPACT_GLYPH_SCALE / 0.7;
+const CARD_ABOVE = Math.round(60 * GLYPH_GROWTH), GLYPH_BELOW = Math.round(28 * GLYPH_GROWTH), GLYPH_HALF_WIDTH = Math.round(50 * GLYPH_GROWTH),
+  CARD_BELOW = 185, CARD_HALF_WIDTH = 112;
 const MAX_DETOUR = 1.58;
 /** How far a bent link may leave the rows of its own two cards: up to their glyph tops, down to their captions. */
 const SPAN_ABOVE = 100, SPAN_BELOW = 200;
@@ -68,7 +72,7 @@ function detour(points: Point[]): number {
 
 /** On-screen type and glyph sizes (CSS px); the canvas divides them by zoom, so in layout units they grow as Fit all zooms out. */
 const NAME_PX = 14 * 0.88, META_PX = 12, NAME_CHAR = 0.54, META_CHAR = 0.55, LINE = 1.15;
-const GLYPH_PX = 52 * 0.7, SMALL_GLYPH_PX = 66 * 0.7, SMALL_GRAPH = 12;
+const GLYPH_PX = 52 * COMPACT_GLYPH_SCALE, SMALL_GLYPH_PX = 66 * COMPACT_GLYPH_SCALE, SMALL_GRAPH = 12;
 /** The canvas a laptop fits an investigation into beside the open navigation, less Fit all's padding: the smallest common frame, so a larger one only gains room. */
 const DEFAULT_FRAME = { width: 1120 * 0.85, height: 500 * 0.85 };
 /** Share of a measured canvas the fitted graph is assumed to use, after Fit all's padding and the controls' reserve. */
