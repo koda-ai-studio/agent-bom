@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import sys
 import threading
 import time
 import uuid
@@ -296,6 +297,9 @@ def _refuse_non_json(_value: Any) -> Any:
 # The C encoder writes the same canonical bytes as the walk below for JSON-native
 # values with string keys; anything else raises instead of being stringified.
 _PLAIN_ENCODER = json.JSONEncoder(sort_keys=True, separators=(",", ":"), default=_refuse_non_json)
+# Before 3.12 the C encoder holds every token as its own string until the final join, about eleven times the
+# output, so a large section would be held many times over; those versions keep the token walk.
+_C_SECTIONS = sys.version_info >= (3, 12)
 _EXCLUDED_KEY = '"idempotency_key":'
 
 
@@ -305,6 +309,9 @@ def _json_mode_chunks(value: Any, encoder: json.JSONEncoder) -> Iterator[str]:
     A subtree without the excluded key is encoded in C; lists go one element at
     a time so no single encode holds the GIL for the whole report.
     """
+    if not _C_SECTIONS:
+        yield from _request_json_chunks(value, encoder)
+        return
     if isinstance(value, list | tuple):
         yield "["
         for index, item in enumerate(value):

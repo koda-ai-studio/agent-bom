@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import json
 import math
+import sys
 from typing import Any, cast
 
 import pydantic_core
@@ -59,6 +60,8 @@ _ACTIVE_STATUSES = {JobStatus.PENDING.value, JobStatus.RUNNING.value}
 # (``1e999``) to infinity, so every parsed body is checked. Finite subtrees are
 # confirmed by the C encoder; only one that holds a non-finite float is walked.
 _FINITE_ENCODER = json.JSONEncoder(allow_nan=False, check_circular=False)
+# Before 3.12 the C encoder holds every token as its own string (about eleven times the output); walk instead.
+_C_CHECK = sys.version_info >= (3, 12)
 
 
 def _finite(node: Any) -> bool:
@@ -87,7 +90,7 @@ def _non_finite_path(value: Any) -> tuple[int | str, ...] | None:
             stack.extend(
                 (child, (*path, index))
                 for index, child in reversed(list(enumerate(node)))
-                if not isinstance(child, dict | list) or not _finite(child)
+                if not _C_CHECK or not isinstance(child, dict | list) or not _finite(child)
             )
     return None
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import sys
 
 import pytest
 from starlette.testclient import TestClient
@@ -119,6 +120,7 @@ def test_pruned_walk_finds_the_same_first_non_finite_number(seed: int) -> None:
     assert _non_finite_path(tree) == _reference_path(tree)
 
 
+@pytest.mark.skipif(sys.version_info < (3, 12), reason="finite elements are confirmed in C from Python 3.12")
 def test_finite_list_elements_are_not_walked_in_python(monkeypatch) -> None:
     from agent_bom.api import push_receive
 

@@ -4,6 +4,7 @@ import gc
 import hashlib
 import json
 import random
+import sys
 import tracemalloc
 from datetime import datetime, timezone
 
@@ -149,6 +150,7 @@ def test_model_sections_encoded_in_c_keep_canonical_hashes(seed):
     assert idempotency_request_fingerprint(payload) == legacy_fingerprint(payload)
 
 
+@pytest.mark.skipif(sys.version_info < (3, 12), reason="the C section encoder is used from Python 3.12")
 def test_push_sections_without_the_excluded_key_skip_the_python_walk(monkeypatch):
     from agent_bom.api import idempotency_store_core
 
