@@ -20,6 +20,9 @@ export function edgeFamily(relationship: string): EdgeFamily {
 
 export const edgeFamilyColor = (family: EdgeFamily) => `var(--graph-edge-${family})`;
 
+/** One set of line weights for every graph renderer: a link at rest, one being inspected, and a selected path. */
+export const EDGE_STROKE = { rest: 2.2, inspect: 2.8, path: 3.2 } as const;
+
 /** Dashes mark modeled links, blocked links, and access not observed in use; recorded structure stays solid. */
 export function edgeIsDashed(family: EdgeFamily, data: Record<string, unknown> | undefined): boolean {
   if (data?.evidenceBlocked === true) return true;
