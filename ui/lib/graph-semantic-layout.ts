@@ -11,8 +11,17 @@ import { canvasName, prosePreview } from "@/components/graph-compact-node";
 import { captionGeometry } from "@/lib/graph-caption-geometry";
 import { layoutFrameKey } from "@/lib/graph-compact-arcs";
 import { linkEndFans } from "@/lib/graph-compact-fan";
+import { enclosingEnvironment, exposureSpine, withoutFrames } from "@/lib/graph-exposure-spine";
+import { MarkerType } from "@xyflow/react";
 
 const DENSE_MAP_NODES = 24;
+/** A map this small names every relationship and its direction at rest, as one reads a diagram. */
+const RESTING_VERB_MAX_NODES = 16;
+/** Clear space between a boundary frame and the cards inside it, and the room its title takes above them. */
+const FRAME_PAD = 56;
+const FRAME_TITLE = 72;
+/** Height a card occupies under its position: glyph plus a caption of up to two lines. */
+const CARD_HEIGHT = 150;
 /** A map past one readable page has a tangle to quiet; smaller maps draw every connection. */
 const QUIET_MIN_NODES = DENSE_MAP_NODES + 1;
 export const SEMANTIC_COLUMN_GAP = COMPACT_RANK_GAP;
@@ -156,11 +165,22 @@ function remember(signature: string, result: ReturnType<typeof compactLayout>) {
 /** One left-to-right grammar for every canvas. The backend's selected path
  * owns row zero; every other branch fans around the nodes it connects to. */
 export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[], selectedPath?: readonly string[]) {
+  // A layout may run again over its own output: drop the frame it drew and restore what framing hid.
+  ({ nodes, edges } = withoutFrames(nodes, edges));
   ({ nodes, edges } = withInternetAnchor(nodes, edges));
+  // On an exposure map, an environment or account holding everything drawn is a boundary around it, not a root
+  // competing with the Internet; a map without the Internet keeps the scope as its first card.
+  const frameOf = nodes.some(node => node.id === INTERNET_ANCHOR_ID && !node.hidden) ? enclosingEnvironment(nodes, edges) : null;
+  if (frameOf) {
+    nodes = nodes.map(node => node.id === frameOf.id ? { ...node, hidden: true, data: { ...node.data, framed: true } } : node);
+    edges = edges.map(edge => !edge.hidden && (edge.source === frameOf.id || edge.target === frameOf.id) ? { ...edge, hidden: true, data: { ...edge.data, framed: true } } : edge);
+  }
   const visible = nodes.filter(node => !node.hidden);
   const byId = new Map(nodes.map(node => [node.id, node]));
   let primary = selectedPath ?? visible.filter(node => typeof node.data.semanticPathIndex === "number")
     .sort((a, b) => a.data.semanticPathIndex! - b.data.semanticPathIndex!).map(node => node.id);
+  // With nothing selected, an exposed map reads from the Internet along its recorded links to the worst finding.
+  if (!primary.length) primary = exposureSpine(visible, edges);
   if (primary.length && primary[0] !== INTERNET_ANCHOR_ID
     && internetExposure(visible.find(node => node.id === primary[0])?.data.attributes) === true) primary = [INTERNET_ANCHOR_ID, ...primary];
   const onPath = new Set(primary);
@@ -195,9 +215,33 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
   // arrowheads never land on one point; nothing hangs above a glyph, so the entry clears every caption.
   const sharedInternetEntry = (edge: Edge) => edge.source === INTERNET_ANCHOR_ID
     && drawn.some(other => other.target === edge.target && other.source !== INTERNET_ANCHOR_ID);
+  // The exposure chain is coloured even when a pinned path leads the layout from elsewhere.
+  const exposureChain = primary[0] === INTERNET_ANCHOR_ID ? primary : exposureSpine(visible, drawn);
+  const exposurePairs = new Set(exposureChain.slice(1).map((id, index) => `${exposureChain[index]}\u0000${id}`));
+  const resting = visible.length <= RESTING_VERB_MAX_NODES;
+  const frame = frameOf ? boundaryFrame(frameOf, visible, positions, boxes, edges.filter(edge => edge.data?.framed === true).length) : null;
+  // The Internet stands outside the boundary, level with the first asset it reaches, so its arrow enters from the left.
+  const anchorAt = positions.get(INTERNET_ANCHOR_ID);
+  const entryAt = positions.get(drawn.find(edge => edge.source === INTERNET_ANCHOR_ID)?.target ?? "");
+  // Without a boundary it takes the free slot one column before that asset, so its arrow stays short.
+  // When other links already enter that asset from the left, it takes the slot a row above instead, clear of them.
+  const entryId = drawn.find(edge => edge.source === INTERNET_ANCHOR_ID)?.target ?? "";
+  const crowdedEntry = drawn.some(edge => edge.target === entryId && edge.source !== INTERNET_ANCHOR_ID);
+  const slot = entryAt ? { x: entryAt.x - SEMANTIC_COLUMN_GAP, y: entryAt.y - (crowdedEntry ? SEMANTIC_ROW_GAP : 0) } : null;
+  const besideEntry = !frame && anchorAt && slot && ![...positions].some(([id, at]) => id !== INTERNET_ANCHOR_ID
+    && Math.abs(at.x - slot.x) < SEMANTIC_COLUMN_GAP / 2 && Math.abs(at.y - slot.y) < SEMANTIC_ROW_GAP / 2) ? slot : null;
+  const outside = frame && anchorAt && entryAt ? { x: frame.position.x - SEMANTIC_COLUMN_GAP * 0.6 - COMPACT_NODE_WIDTH / 2, y: entryAt.y } : besideEntry;
+  const placedAt = (id: string) => id === INTERNET_ANCHOR_ID && outside ? outside : positions.get(id);
+  // A verb rests only on a level link, or a long gently sloped one; on a steep link it would sit on a caption.
+  const readsAtRest = (edge: Edge) => {
+    const a = placedAt(edge.source), b = placedAt(edge.target);
+    if (!a || !b) return false;
+    const dx = Math.abs(b.x - a.x), dy = Math.abs(b.y - a.y);
+    return dy <= 8 || (dx >= SEMANTIC_COLUMN_GAP * 1.5 && dy <= dx * 0.35);
+  };
   return {
-    nodes: nodes.map(node => {
-      const box = boxes.get(node.id) ?? cardWidth(node, node.id), placed = positions.get(node.id);
+    nodes: [...(frame ? [frame] : []), ...nodes.map(node => {
+      const box = boxes.get(node.id) ?? cardWidth(node, node.id), placed = node.id === INTERNET_ANCHOR_ID && outside ? outside : positions.get(node.id);
       // A wider caption box stays centred on its rank, so its glyph lines up with the others.
       return { ...node, position: placed ? { x: placed.x - (box - COMPACT_NODE_WIDTH) / 2, y: placed.y } : node.position,
       style: { ...node.style, width: box, "--graph-node-card-width": `${box}px` },
@@ -213,7 +257,7 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
         imageSubrow: images.owners.has(node.id) && !onPath.has(node.id), evidenceSources: images.sources.get(node.id),
         semanticLayerIssue: semanticLayer(node) === null ? "Semantic layer unavailable" : undefined,
         highlighted: node.data.highlighted || onPath.has(node.id), ...(anchored.has(node.id) ? { internetAnchored: true } : {}) } };
-    }),
+    })],
     edges: edges.map((edge): Edge => {
       const uniformlyModeled = modeledOnly;
       const from = positions.get(edge.source), to = positions.get(edge.target);
@@ -223,13 +267,35 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
       // the selected path and every short forward link stay drawn.
       const roundabout = Boolean(from && to) && (reverse || Math.abs(to!.x - from!.x) > SEMANTIC_COLUMN_GAP * 1.5 || Math.abs(to!.y - from!.y) > SEMANTIC_ROW_GAP);
       const quietUntilFocus = visible.length >= QUIET_MIN_NODES && roundabout && !pathPairs.has(`${edge.source}\u0000${edge.target}`);
-      const color = edgeFamilyColor(edgeFamily(String(edge.data?.relationship ?? "")));
+      const onExposure = exposurePairs.has(`${edge.source}\u0000${edge.target}`);
+      const color = edgeFamilyColor(onExposure ? "exposure" : edgeFamily(String(edge.data?.relationship ?? "")));
       const marker = (value: Edge["markerEnd"]) => value && typeof value === "object" ? { ...value, color, width: 14, height: 14 } : value;
-      return { ...edge, type: "compact", animated: false, ...(edge.markerEnd ? { markerEnd: marker(edge.markerEnd)! } : {}),
+      // A small map shows which way every link runs; a larger one keeps the arrows its data recorded.
+      // An aggregate or folded link may stand for several directions; it keeps only the arrow its data recorded.
+      const directional = !edge.data?.aggregate && edge.data?.isClusterEdge !== true && typeof edge.data?.relationship === "string";
+      const markerEnd = edge.markerEnd ?? (resting && directional ? { type: MarkerType.ArrowClosed } : undefined);
+      return { ...edge, type: "compact", animated: false, ...(markerEnd ? { markerEnd: marker(markerEnd)! } : {}),
         ...(edge.markerStart ? { markerStart: marker(edge.markerStart)! } : {}), sourceHandle: reverse ? "context" : null,
         targetHandle: reverse || sameRank ? "context" : sharedInternetEntry(edge) ? "above" : null,
-        data: { ...edge.data, ...(uniformlyModeled ? { uniformlyModeled } : {}), semanticLayout: true, individualLabel: true, arcDy: arcs.get(edge.id), ...fans.get(edge.id), ...(quietUntilFocus ? { quietUntilFocus } : {}), passesBehind: behind.has(edge.id) || undefined, quietLabel: edge.data?.isClusterEdge !== true,
-          pathEmphasis: pathPairs.has(`${edge.source}\u0000${edge.target}`) || edge.data?.pathEmphasis === true } };
+        data: { ...edge.data, ...(uniformlyModeled ? { uniformlyModeled } : {}), semanticLayout: true, individualLabel: true, arcDy: outside && edge.source === INTERNET_ANCHOR_ID ? undefined : arcs.get(edge.id), ...fans.get(edge.id), ...(quietUntilFocus ? { quietUntilFocus } : {}), passesBehind: behind.has(edge.id) || undefined, quietLabel: edge.data?.isClusterEdge !== true,
+          pathEmphasis: pathPairs.has(`${edge.source}\u0000${edge.target}`) || edge.data?.pathEmphasis === true,
+          ...(onExposure ? { exposurePath: true } : {}), ...(resting && readsAtRest(edge) ? { restingVerb: true } : {}) } };
     }),
   };
+}
+
+/** A titled boundary behind every card the environment holds; the Internet stays outside it. */
+function boundaryFrame(environment: Node<LineageNodeData>, visible: Node<LineageNodeData>[], positions: Map<string, { x: number; y: number }>,
+  boxes: Map<string, number>, links: number): Node<LineageNodeData> | null {
+  const inside = visible.filter(node => node.id !== INTERNET_ANCHOR_ID && positions.has(node.id));
+  if (!inside.length) return null;
+  const left = Math.min(...inside.map(node => positions.get(node.id)!.x - ((boxes.get(node.id) ?? COMPACT_NODE_WIDTH) - COMPACT_NODE_WIDTH) / 2));
+  const right = Math.max(...inside.map(node => positions.get(node.id)!.x + ((boxes.get(node.id) ?? COMPACT_NODE_WIDTH) + COMPACT_NODE_WIDTH) / 2));
+  const top = Math.min(...inside.map(node => positions.get(node.id)!.y));
+  const bottom = Math.max(...inside.map(node => positions.get(node.id)!.y)) + CARD_HEIGHT;
+  const x = left - FRAME_PAD, y = top - FRAME_PAD - FRAME_TITLE;
+  return { id: `display:frame:${environment.id}`, type: "boundaryFrame", position: { x, y }, draggable: false, selectable: false, focusable: false, zIndex: -1,
+    ariaLabel: `${environment.data.label}: environment boundary`,
+    style: { width: right - left + FRAME_PAD * 2, height: bottom - top + FRAME_PAD * 2 + FRAME_TITLE },
+    data: { ...environment.data, displayOnly: true, frameFor: environment.id, frameLinks: links } };
 }

@@ -1,4 +1,5 @@
 import type { Edge, Node } from "@xyflow/react";
+import { withoutFrames } from "@/lib/graph-exposure-spine";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { semanticColumns } from "@/lib/graph-semantic-columns";
 
@@ -95,6 +96,8 @@ function handles(from: Point, to: Point, positions: Map<string, Point>, stacked:
  * verdict. The backend-ranked path runs top to bottom; branches sit beside
  * each other under the hop they connect to. */
 export function graphPortraitLayout(nodes: Node<LineageNodeData>[], edges: Edge[]) {
+  // A phone stacks one column: the scope is its first card again, not a boundary around it.
+  ({ nodes, edges } = withoutFrames(nodes, edges));
   const visible = nodes.filter(node => !node.hidden);
   const positions = new Map<string, Point>();
   // Trunk hops sit on the centre line; branch rows keep it clear for links that pass them.
@@ -130,7 +133,8 @@ export function graphPortraitLayout(nodes: Node<LineageNodeData>[], edges: Edge[
       // Captions face away from the centre line, so a link's label sits on its centre-line side.
       const side = sides.get(edge.target) === "trunk" ? sides.get(edge.source) : sides.get(edge.target);
       const labelShift = side === "left" ? 1 : side === "right" ? -1 : 0;
-      return { ...edge, sourceHandle, targetHandle, data: { ...edge.data, phoneLayout: true, labelShift } };
+      // Verbs resting on desktop links would sit on a phone column's captions; they read on selection.
+      return { ...edge, sourceHandle, targetHandle, data: { ...edge.data, phoneLayout: true, labelShift, restingVerb: undefined } };
     }),
   };
 }
