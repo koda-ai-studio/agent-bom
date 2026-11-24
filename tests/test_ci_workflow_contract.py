@@ -1593,7 +1593,7 @@ def test_ui_e2e_gate_fails_on_any_failed_or_missing_required_lane() -> None:
     assert step["env"]["SHARD_REQUIRED"] == "${{ github.event_name != 'pull_request' }}"
     outcomes = ("success", "skipped", "failure", "cancelled")
     others = {"SHARD_RESULT": "skipped", "SHARD_REQUIRED": "false", "SMOKE_RESULT": "skipped", "SMOKE_REQUIRED": "false"}
-    others |= {"CONTAINER_RESULT": "skipped", "CONTAINER_REQUIRED": "false"}
+    others |= {"CONTAINER_RESULT": "skipped", "CONTAINER_REQUIRED": "false", "PROOF_RESULT": "success", "PROOF_REQUIRED": "true"}
     for lane in ("SHARD", "SMOKE", "CONTAINER"):
         for required in ("true", "false", ""):
             for outcome in outcomes:
