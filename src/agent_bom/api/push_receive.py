@@ -9,8 +9,8 @@ instead of parking the caller behind that commit.
 from __future__ import annotations
 
 import asyncio
+import json
 import math
-import re
 from typing import Any, cast
 
 import pydantic_core
@@ -55,14 +55,26 @@ PUSH_ACCEPTED_RESPONSES: dict[int | str, dict[str, Any]] = {
     }
 }
 _ACTIVE_STATUSES = {JobStatus.PENDING.value, JobStatus.RUNNING.value}
-# A parse that refuses NaN/Infinity literals still overflows a huge number to
-# infinity: a 3+ figure positive exponent or a 309+ figure run. Only a body
-# with such a token is walked.
-_OVERFLOW_CANDIDATE = re.compile(rb"(?<![0-9A-Za-z.])-?\d+(?:\.\d*)?[eE]\+?\d{3,}(?![0-9A-Za-z])|\d{309,}")
+# A parse that refuses NaN/Infinity literals still overflows a huge number
+# (``1e999``) to infinity, so every parsed body is checked. Finite subtrees are
+# confirmed by the C encoder; only one that holds a non-finite float is walked.
+_FINITE_ENCODER = json.JSONEncoder(allow_nan=False, check_circular=False)
+
+
+def _finite(node: Any) -> bool:
+    try:
+        _FINITE_ENCODER.encode(node)
+    except ValueError:
+        return False
+    return True
 
 
 def _non_finite_path(value: Any) -> tuple[int | str, ...] | None:
-    """Location of the first NaN or infinity in a parsed JSON tree, depth first."""
+    """Location of the first NaN or infinity in a parsed JSON tree, depth first.
+
+    List elements are checked in C one at a time, so a large report is never
+    encoded whole and a finite element is never walked in Python.
+    """
     stack: list[tuple[Any, tuple[int | str, ...]]] = [(value, ())]
     while stack:
         node, path = stack.pop()
@@ -72,7 +84,11 @@ def _non_finite_path(value: Any) -> tuple[int | str, ...] | None:
         elif isinstance(node, dict):
             stack.extend((child, (*path, key)) for key, child in reversed(list(node.items())))
         elif isinstance(node, list):
-            stack.extend((child, (*path, index)) for index, child in reversed(list(enumerate(node))))
+            stack.extend(
+                (child, (*path, index))
+                for index, child in reversed(list(enumerate(node)))
+                if not isinstance(child, dict | list) or not _finite(child)
+            )
     return None
 
 
@@ -92,8 +108,7 @@ def _parse_finite_json(raw: bytes) -> Any:
     except ValueError:
         _reject_non_finite(pydantic_core.from_json(raw))
         raise
-    if _OVERFLOW_CANDIDATE.search(raw):
-        _reject_non_finite(parsed)
+    _reject_non_finite(parsed)
     return parsed
 
 

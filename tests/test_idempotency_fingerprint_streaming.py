@@ -125,3 +125,43 @@ def test_push_model_fingerprint_never_dumps_the_whole_report_at_once():
     # Bounded by the largest top-level section (agents, 82% of this fixture), never the whole report.
     assert largest_section < whole
     assert fingerprint <= largest_section * 1.05 + 64 * 1024, (fingerprint, largest_section, whole)
+
+
+@pytest.mark.parametrize("seed", range(32))
+def test_model_sections_encoded_in_c_keep_canonical_hashes(seed):
+    from pydantic import ConfigDict
+
+    rng = random.Random(seed)
+
+    def value(depth=0):
+        kind = rng.randrange(3) if depth < 4 else 0
+        if kind == 1:
+            return [value(depth + 1) for _ in range(rng.randrange(5))]
+        if kind == 2:
+            return {key: value(depth + 1) for key in rng.sample(["idempotency_key", "a", "Ω", 'quote"', "z", "10", "9"], rng.randrange(6))}
+        return rng.choice([None, True, False, rng.randrange(-1_000_000, 1_000_000), rng.random(), 'é\n"', "", '"idempotency_key":'])
+
+    class Section(BaseModel):
+        model_config = ConfigDict(extra="allow")
+        items: list = []
+
+    payload = Section(items=[value() for _ in range(4)], extra_section=value(), idempotency_key="excluded")
+    assert idempotency_request_fingerprint(payload) == legacy_fingerprint(payload)
+
+
+def test_push_sections_without_the_excluded_key_skip_the_python_walk(monkeypatch):
+    from agent_bom.api import idempotency_store_core
+
+    payload = _push_payload(4)
+    expected = legacy_fingerprint(payload)
+    walked = []
+    original = idempotency_store_core._request_json_chunks
+
+    def counting(value, encoder):
+        walked.append(type(value).__name__)
+        return original(value, encoder)
+
+    monkeypatch.setattr(idempotency_store_core, "_request_json_chunks", counting)
+    assert idempotency_request_fingerprint(payload) == expected
+    # The model itself enters the walk once; every section below it is C-encoded.
+    assert walked == ["PushPayload"]

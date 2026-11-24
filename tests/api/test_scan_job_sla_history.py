@@ -5,16 +5,17 @@ from datetime import datetime, timezone
 import pytest
 from starlette.testclient import TestClient
 
-from agent_bom.api import stores
+from agent_bom.api import finding_fold_jobs, stores
 from agent_bom.api.compliance_hub_store import InMemoryComplianceHubStore, set_compliance_hub_store
 from agent_bom.api.server import app
 from agent_bom.api.store import InMemoryJobStore, SQLiteJobStore
 from agent_bom.evidence.finding_project import project_finding_id
 from tests.api.test_findings_owner_sla import _completed_job, _critical_finding
+from tests.api.versioned_job_store import VersionedInMemoryJobStore
 from tests.auth_helpers import disable_trusted_proxy_env, enable_trusted_proxy_env, proxy_headers
 
 
-@pytest.fixture(params=["memory", "sqlite", "sqlite-projected"])
+@pytest.fixture(params=["memory", "memory-versioned", "sqlite", "sqlite-projected"])
 def scan_store(request, tmp_path, monkeypatch):
     # Count request work separately from the independently tested campaign worker.
     monkeypatch.setattr("agent_bom.api.campaign_reconciliation.poll_campaign_reconciliation", lambda: None)
@@ -23,7 +24,11 @@ def scan_store(request, tmp_path, monkeypatch):
         monkeypatch.setenv("AGENT_BOM_SCAN_SNAPSHOT_FAST_READS", "1")
         monkeypatch.delenv("AGENT_BOM_SCAN_SNAPSHOT_READS", raising=False)
     original = stores._store
-    store = InMemoryJobStore() if request.param == "memory" else SQLiteJobStore(str(tmp_path / "jobs.db"))
+    finding_fold_jobs.clear()
+    if request.param == "memory-versioned":
+        store = VersionedInMemoryJobStore()
+    else:
+        store = InMemoryJobStore() if request.param == "memory" else SQLiteJobStore(str(tmp_path / "jobs.db"))
     stores.set_job_store(store)
     set_compliance_hub_store(InMemoryComplianceHubStore())
     enable_trusted_proxy_env()

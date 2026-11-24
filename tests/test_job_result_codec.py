@@ -201,3 +201,39 @@ def test_postgres_rows_are_compressed_and_projections_hold() -> None:
             store.delete(legacy.job_id, tenant_id=owner)
     finally:
         pool.close()
+
+
+@pytest.mark.skipif(not os.environ.get("AGENT_BOM_POSTGRES_URL"), reason="requires private Postgres")
+def test_postgres_done_job_versions_track_every_commit_and_stay_in_tenant() -> None:
+    from agent_bom.api.postgres_common import _new_application_pool
+    from agent_bom.api.postgres_job_store import PostgresJobStore
+
+    pool = _new_application_pool(min_size=1, max_size=3)
+    owner, other = "versions-" + uuid4().hex, "versions-other-" + uuid4().hex
+    try:
+        store = PostgresJobStore(pool)
+        done = _job(owner)
+        pending = _job(owner).model_copy(update={"status": JobStatus.PENDING, "completed_at": None})
+        with tenant(owner):
+            store.put(done)
+            store.put(pending)
+            versions = store.done_job_versions(owner)
+            assert [job_id for job_id, _ in versions] == [done.job_id]
+            loaded = {job.job_id: (version, job) for version, job in store.jobs_with_versions(owner, [done.job_id, pending.job_id])}
+            assert set(loaded) == {done.job_id, pending.job_id}
+            version = loaded[done.job_id][0]
+            assert version == versions[0][1] and loaded[done.job_id][1].model_dump() == done.model_dump()
+            done.result["findings"] = done.result["findings"][:1]
+            store.put(done)
+            [(_, rewritten)] = store.done_job_versions(owner)
+            assert rewritten != version
+            [(reread, reloaded)] = store.jobs_with_versions(owner, [done.job_id])
+            assert reread == rewritten and len(reloaded.result["findings"]) == 1
+        with tenant(other):
+            assert store.done_job_versions(other) == []
+            assert store.jobs_with_versions(other, [done.job_id]) == []
+        with tenant(owner):
+            store.delete(done.job_id, tenant_id=owner)
+            store.delete(pending.job_id, tenant_id=owner)
+    finally:
+        pool.close()
