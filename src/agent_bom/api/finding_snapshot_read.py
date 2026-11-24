@@ -78,6 +78,7 @@ def current_findings_snapshot(
     project_graph_reachability: bool = True,
     row_projection: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
     lane: str | None = None,
+    fix: str | None = None,
 ) -> dict[str, Any]:
     """Collect the canonical current finding queue for an internal consumer.
 
@@ -117,6 +118,7 @@ def current_findings_snapshot(
             project_graph_reachability=project_graph_reachability or reachability is not None,
             redact_page=row_projection is None,
             lane=lane,
+            fix=fix,
         )
         if first_metadata is None:
             first_metadata = page.get("count_metadata") if isinstance(page.get("count_metadata"), dict) else {}

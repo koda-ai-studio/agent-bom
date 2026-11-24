@@ -115,6 +115,18 @@ describe("FindingsPage", () => {
     expect(routerReplace.mock.lastCall?.[0]).not.toContain("kev=");
   });
 
+  it("applies fix=none on the server, keeps it in the URL, explains it and clears it", async () => {
+    navigationState.query = "scope=all&fix=none";
+    render(<FindingsPage />);
+    await waitFor(() => expect(apiMock.listFindings).toHaveBeenCalledWith(expect.objectContaining({ fix: "none" })));
+    expect(routerReplace).toHaveBeenCalledWith(expect.stringContaining("fix=none"), { scroll: false });
+    const notice = screen.getByTestId("findings-fix-filter");
+    expect(notice).toHaveTextContent("Findings without a recorded fix only");
+    fireEvent.click(within(notice).getByRole("button", { name: "Show all findings" }));
+    await waitFor(() => expect(apiMock.listFindings.mock.lastCall?.[0].fix).toBeUndefined());
+    expect(routerReplace.mock.lastCall?.[0]).not.toContain("fix=");
+  });
+
   it("applies a context deep link on the server and preserves it in the URL", async () => {
     navigationState.query = "lane=all&path_context=test";
     render(<FindingsPage />);

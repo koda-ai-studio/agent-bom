@@ -641,6 +641,7 @@ async def list_findings(
     reachability: Literal["reachable", "unreachable", "unassessed"] | None = None,
     triage: Literal["not_affected", "affected", "under_investigation", "untriaged"] | None = None,
     path_context: Literal["test", "example", "documentation", "unclassified"] | None = None,
+    fix: Literal["available", "none"] | None = None,
     include_facets: bool = False,
     include: FindingListInclude = None,
     lane: Annotated[
@@ -654,8 +655,7 @@ async def list_findings(
 
     Rows carry ``framework_tags`` and ``controls_count``; ``?include=controls`` restores full mappings.
 
-    ``offset`` is a compatibility path capped at 10,000: past the ceiling the
-    endpoint returns ``400`` and steers callers to ``cursor``/``next_cursor``.
+    ``offset`` is capped at 10,000; past it the endpoint returns ``400`` and steers callers to ``cursor``.
     """
     includes = list_query_or_422(include, framework=framework, control=control)
     refuse_unpinned_read_while_seeding(scan_id or "", require_request_tenant_id(request))
@@ -664,7 +664,7 @@ async def list_findings(
             implementation = _list_finding_groups_impl if group_occurrences else _list_findings_view_impl
             with finding_list_projection(include_controls="controls" in includes):
                 body = await anyio.to_thread.run_sync(
-                    partial(_with_ai_advice, implementation, lane=lane, path_context=path_context),
+                    partial(_with_ai_advice, implementation, lane=lane, path_context=path_context, fix=fix),
                     request,
                     q,
                     severity,

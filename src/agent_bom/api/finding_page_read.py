@@ -210,6 +210,7 @@ def _list_findings_impl(
     project_graph_reachability: bool = True,
     redact_page: bool = True,
     lane: str | None = None,
+    fix: str | None = None,
 ) -> dict:
     """Synchronous body of :func:`list_findings` (runs in a worker thread).
 
@@ -232,7 +233,7 @@ def _list_findings_impl(
         window_days=window_days,
     )
     scope_filters = _canonical_scope_filters(
-        provider, account, environment, domain, finding_class, q, kev, framework, control, owner, sla, lane
+        provider, account, environment, domain, finding_class, q, kev, framework, control, owner, sla, lane, fix=fix
     )
     query = query._replace(scope_filters=scope_filters)
     store = compliance_hub_store.get_compliance_hub_store()
@@ -294,15 +295,15 @@ def _list_findings_view_impl(
     redact_page: bool = True,
     lane: str | None = None,
     path_context: str | None = None,
+    fix: str | None = None,
 ) -> dict[str, Any]:
     """Apply evidence-backed view filters before pagination.
 
-    Walk canonical keysets for derived reachability, triage and path context;
-    filtering before pagination preserves occurrence IDs and complete pages.
+    Walk canonical keysets for derived reachability, triage and path context; filtering first keeps occurrence IDs and full pages.
     """
     query_kw = dict(q=q, severity=severity, scan_id=scan_id, sort=sort, window_days=window_days, finding_class=finding_class, kev=kev)
     scope_kw = dict(
-        provider=provider, account=account, environment=environment, domain=domain, framework=framework, control=control, lane=lane
+        provider=provider, account=account, environment=environment, domain=domain, framework=framework, control=control, lane=lane, fix=fix
     )
     tail_kw = dict(owner=owner, sla=sla, project_graph_reachability=project_graph_reachability, redact_page=redact_page)
     common: dict[str, Any] = {**query_kw, **scope_kw, **tail_kw}
@@ -377,6 +378,7 @@ def _list_finding_groups_impl(
     *,
     summary_only: bool = False,
     path_context: str | None = None,
+    fix: str | None = None,
 ) -> dict[str, Any]:
     """Build a bounded server-side issue queue over canonical occurrence rows.
 
@@ -387,12 +389,11 @@ def _list_finding_groups_impl(
     group_offset = _finding_group_offset(cursor, offset, sort_key)
 
     def fetch_page(budget: int, source_cursor: str | None, first: bool) -> dict[str, Any]:
-        # Severity applies after grouping so the issue histogram stays
-        # self-excluding: two occurrences of one advisory are one issue.
+        # Severity applies after grouping so the histogram stays self-excluding: two occurrences of one advisory are one issue.
         head = (q, None, scan_id, sort_key, budget, 0, source_cursor, True, provider, account, environment, domain, window_days, status)
         occurrence_facets = include_facets and first and not summary_only
         tail = (finding_class, kev, occurrence_facets, framework, control, owner, sla, reachability, triage, False, False)
-        return _list_findings_view_impl(request, *head, *tail, path_context=path_context)
+        return _list_findings_view_impl(request, *head, *tail, path_context=path_context, fix=fix)
 
     rows, first_page, warnings, source_cursor = _collect_group_occurrences(fetch_page)
     all_groups = _group_occurrence_rows(rows)

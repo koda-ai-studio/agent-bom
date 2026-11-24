@@ -34,6 +34,7 @@ from agent_bom.evidence.finding_lanes import finding_lane, lane_response_fields
 from agent_bom.evidence.finding_reach_sources import NOT_ASSESSED_REASON_KEY, safe_not_assessed_reason, safe_reach_sources
 from agent_bom.evidence.finding_response_fields import restore_atlas_receipts, restored_public_fields, safe_lineage_fields
 from agent_bom.evidence.finding_status import public_finding_status
+from agent_bom.finding_signal_filters import row_matches_signal_filters
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from agent_bom.finding import FindingSource, FindingType
@@ -961,13 +962,8 @@ def row_matches_scope(row: dict, filters: Mapping[str, str]) -> bool:
     if filters.get("framework_tag_field") is not None or filters.get("framework") is not None:
         if not _row_matches_framework(row, filters):
             return False
-    # KEV leads the executive headline — "actively exploited, fix these first" —
-    # so the list has to be able to answer it. An absent verdict is not a match:
-    # a row nobody checked must never be presented as known-exploited.
-    wanted_kev = filters.get("kev")
-    if wanted_kev is not None:
-        if (row.get("is_kev") is True) is not (str(wanted_kev).strip().lower() in {"true", "1", "yes"}):
-            return False
+    if not row_matches_signal_filters(row, filters):
+        return False
     if not row_matches_search(row, filters.get("q")):
         return False
     return True

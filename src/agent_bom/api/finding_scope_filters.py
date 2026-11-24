@@ -82,6 +82,7 @@ def _canonical_scope_filters(
     owner: str | None = None,
     sla: str | None = None,
     lane: str | None = None,
+    fix: str | None = None,
 ) -> dict[str, str]:
     """Normalize the optional scope/domain filters into an active-filter map.
 
@@ -134,6 +135,8 @@ def _canonical_scope_filters(
         filters["owner"] = owner.strip().lower()
     if sla and sla.strip():
         filters["sla"] = sla.strip().lower()
+    if fix and fix.strip():
+        filters["fix"] = fix.strip().lower()
     return filters
 
 

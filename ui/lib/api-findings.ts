@@ -48,6 +48,7 @@ export const findingsApi = {
     owner?: string;
     sla?: "overdue" | "due" | "unassigned";
     reachability?: "reachable" | "unreachable" | "unassessed";
+    fix?: "available" | "none";
     triage?: "not_affected" | "affected" | "under_investigation" | "untriaged";
     lane?: string;
     findingClass?: "vulnerability" | "misconfiguration" | "secret" | "pii" | "identity" | "unclassified";
@@ -79,6 +80,7 @@ export const findingsApi = {
     if (filters?.owner) params.set("owner", filters.owner);
     if (filters?.sla) params.set("sla", filters.sla);
     if (filters?.reachability) params.set("reachability", filters.reachability);
+    if (filters?.fix) params.set("fix", filters.fix);
     if (filters?.triage) params.set("triage", filters.triage);
     if (filters?.pathContext) params.set("path_context", filters.pathContext);
     if (filters?.lane) params.set("lane", filters.lane);
@@ -234,6 +236,7 @@ export const findingsApi = {
     owner?: string;
     sla?: string;
     reachability?: "reachable" | "unreachable" | "unassessed";
+    fix?: "available" | "none";
     triage?: "not_affected" | "affected" | "under_investigation" | "untriaged";
   }) => {
     const params = new URLSearchParams();
@@ -259,6 +262,7 @@ export const findingsApi = {
     if (filters?.owner) params.set("owner", filters.owner);
     if (filters?.sla) params.set("sla", filters.sla);
     if (filters?.reachability) params.set("reachability", filters.reachability);
+    if (filters?.fix) params.set("fix", filters.fix);
     if (filters?.triage) params.set("triage", filters.triage);
     const qs = params.toString();
     return get<FindingTriageVexResponse>(`/v1/findings/triage/vex${qs ? `?${qs}` : ""}`);
