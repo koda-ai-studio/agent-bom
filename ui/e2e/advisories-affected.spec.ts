@@ -4,6 +4,7 @@ import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 
 const php2shell = JSON.parse(readFileSync(path.join(__dirname, "..", "tests", "fixtures", "php2shell-affected.json"), "utf8"));
+const php2shellExposure = JSON.parse(readFileSync(path.join(__dirname, "..", "tests", "fixtures", "php2shell-exposure.json"), "utf8"));
 
 async function baseline(page: Page, theme: string) {
   await page.addInitScript((mode) => localStorage.setItem("agent-bom-theme", mode), theme);
@@ -16,17 +17,7 @@ async function baseline(page: Page, theme: string) {
     role_summary: { role: "admin", ui_role: "admin", display_name: "Admin", capabilities: ["policy.manage"] },
   } }));
   await page.route("**/v1/intel/advisories/*/affected?**", (route) => route.fulfill({ json: php2shell }));
-  await page.route("**/v1/affected?**", (route) => route.fulfill({ json: {
-    tenant_id: "default", query: { raw: "CVE-2026-109618", kind: "advisory", advisory: "CVE-2026-109618" },
-    verdict: "affected", verdict_basis: ["findings", "inventory_match"],
-    inventory: { available: true, affected: 1, possibly_affected: 1, not_affected: 1, assets_examined: 3 },
-    findings: { total: 2, open: 2, resolved: 0, suppressed: 0, severity: { critical: 2 }, kev: true, fix_available: 1, no_fix: 1,
-      internet_exposed: 1, advisories: ["CVE-2026-109618"], packages: ["php@8.3.30"] },
-    exposure: { first_seen: "2026-11-02T00:00:00Z", last_seen: "2026-11-20T00:00:00Z", still_open: true, last_resolved_at: null },
-    assets: [], assets_truncated: false, findings_truncated: false, findings_href: "/findings?q=CVE-2026-109618&status=all",
-    reach: { by_kind: { credentials: 2, data_stores: 1 }, items: {}, agents_on_findings: [], servers_on_findings: [],
-      basis: "graph_snapshot", scan_id: "scan-php-8.3.30", advisories_walked: ["CVE-2026-109618"] },
-  } }));
+  await page.route("**/v1/affected?**", (route) => route.fulfill({ json: php2shellExposure }));
   await page.route("**/v1/intel/operator-advisories", (route) => route.request().method() === "POST"
     ? route.fulfill({ status: 422, json: { detail: [{ loc: ["body", "affected", 0], msg: "Value error, introduced must precede fixed", type: "value_error" }] } })
     : route.fulfill({ json: {
