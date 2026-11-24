@@ -1,5 +1,6 @@
 import type { Edge, Node } from "@xyflow/react";
 
+import { EDGE_STROKE } from "@/lib/graph-edge-family";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import type { BlastRadiusState } from "@/lib/graph-blast-investigation";
 import type { ReachabilitySummary } from "@/lib/graph-reachability";
@@ -170,7 +171,7 @@ export function emphasizedDisplayEdges({ edges, nodes, neighborhood, pathEdgeIds
     ...edge,
     data: { ...edge.data, directionEmphasis: false },
     animated: false,
-    style: { ...edge.style, opacity: 0.85, stroke: "var(--text-secondary)", strokeWidth: 1.6, vectorEffect: "non-scaling-stroke", filter: undefined },
+    style: { ...edge.style, opacity: 0.85, stroke: "var(--text-secondary)", strokeWidth: EDGE_STROKE.rest, vectorEffect: "non-scaling-stroke", filter: undefined },
   } : ({
     ...edge,
     data: { ...edge.data, directionEmphasis: included },
@@ -193,7 +194,7 @@ export function emphasizedDisplayEdges({ edges, nodes, neighborhood, pathEdgeIds
     // theme-aware stroke. Focus restores semantic emphasis.
     ...(!neighborhood || neighborhood.size > 13 ? { style: { ...edge.style,
       stroke: edge.data?.boundedOverview ? "var(--text-secondary)" : "var(--text-tertiary)",
-      ...(edge.data?.boundedOverview ? { strokeWidth: 1.6, vectorEffect: "non-scaling-stroke" } : {}),
+      ...(edge.data?.boundedOverview ? { strokeWidth: EDGE_STROKE.rest, vectorEffect: "non-scaling-stroke" } : {}),
     } } : {}),
   }));
 }

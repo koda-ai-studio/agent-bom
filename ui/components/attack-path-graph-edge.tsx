@@ -1,5 +1,6 @@
 "use client";
 
+import { EDGE_STROKE } from "@/lib/graph-edge-family";
 import { BaseEdge, EdgeLabelRenderer, Position, useStore, type Edge, type EdgeProps } from "@xyflow/react";
 
 import type { AttackPathDirection } from "@/lib/attack-path-graph-layout";
@@ -23,7 +24,7 @@ export const LINE_STYLE: Record<EdgeEvidenceStyle, { name: "solid" | "dashed" | 
 };
 
 /** The selected path reads first: thick accent. Connected paths recede: thin and muted. */
-export const PATH_STROKE = { selected: { color: "var(--accent)", width: 2.5 }, connected: { color: "var(--border-strong)", width: 1.25 } } as const;
+export const PATH_STROKE = { selected: { color: "var(--accent)", width: EDGE_STROKE.path }, connected: { color: "var(--border-strong)", width: EDGE_STROKE.rest } } as const;
 
 export function edgeStroke(onPath: boolean): string {
   return (onPath ? PATH_STROKE.selected : PATH_STROKE.connected).color;
