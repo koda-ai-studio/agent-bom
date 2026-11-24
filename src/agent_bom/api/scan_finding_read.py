@@ -9,6 +9,7 @@ from types import SimpleNamespace
 from typing import Any
 
 from agent_bom.api import findings_current, time_window
+from agent_bom.api.finding_fold_jobs import fold_jobs
 from agent_bom.api.finding_history_read import current_findings_with_history
 from agent_bom.api.finding_lifecycle_read import lifecycle_read
 from agent_bom.api.finding_read_context import read_once
@@ -158,6 +159,25 @@ def scan_rows_inputs(tenant_id: str, window_since: str | None, job_store: Any) -
     return scan_row_inputs(tenant_id, sources=scan_row_sources(tenant_id), window_job_ids=in_window)
 
 
+def _digested_jobs(tenant_id: str, jobs: list[Any]) -> tuple[list[Any], Callable[[Any], list[dict[str, Any]]]] | None:
+    """Digests standing in for the caller's completed ``jobs``; ``None`` unless the store lists exactly those."""
+    inputs = scan_row_inputs(tenant_id, sources=scan_row_sources(tenant_id), window_job_ids=())
+    digested = fold_jobs(tenant_id, _get_store(), inputs, _iter_scan_findings)
+    if digested is None:
+        return None
+    wanted = {str(job.job_id) for job in jobs if job.status == JobStatus.DONE and job.result}
+    picked = [job for job in digested[0] if job.job_id in wanted]
+    return (picked, digested[1]) if len(picked) == len(wanted) else None
+
+
+def _fold_current_rows(tenant_id: str, window_since: str | None, scan_id: str | None) -> list[dict[str, Any]]:
+    """The fold over completed jobs, decoding only job versions not already digested when the store allows."""
+    inputs = scan_row_inputs(tenant_id, sources=scan_row_sources(tenant_id), window_job_ids=())
+    digested = fold_jobs(tenant_id, _get_store(), inputs, _iter_scan_findings)
+    jobs, iter_findings = digested if digested is not None else (_completed_jobs_for_tenant(tenant_id), _cached_scan_findings)
+    return findings_current.current_scan_findings(jobs, since=window_since, scan_id=scan_id, iter_findings=iter_findings)
+
+
 def _current_scan_rows(tenant_id: str, window_since: str | None, scan_id: str | None) -> list[dict[str, Any]]:
     def fold() -> list[dict[str, Any]]:
         return current_findings_with_history(
@@ -166,12 +186,7 @@ def _current_scan_rows(tenant_id: str, window_since: str | None, scan_id: str | 
             window_since,
             scan_id,
             _iter_scan_findings,
-            lambda: findings_current.current_scan_findings(
-                _completed_jobs_for_tenant(tenant_id),
-                since=window_since,
-                scan_id=scan_id,
-                iter_findings=_cached_scan_findings,
-            ),
+            lambda: _fold_current_rows(tenant_id, window_since, scan_id),
             fold=findings_current.current_scan_findings,
             select_jobs=findings_current._finding_snapshot_jobs,
         )
@@ -236,8 +251,9 @@ def current_open_scan_findings(jobs: list[Any]) -> list[dict[str, Any]]:
     job_keys = sorted((str(job.job_id), str(job.status), str(job.completed_at)) for job in jobs)
 
     def load() -> list[dict[str, Any]]:
+        fold_jobs_, iter_findings = _digested_jobs(tenant_id, jobs) or (jobs, _cached_scan_findings)
         rows = findings_current.current_scan_findings(
-            jobs, since=since, scan_id=None, iter_findings=_cached_scan_findings, require_authoritative_evidence=True
+            fold_jobs_, since=since, scan_id=None, iter_findings=iter_findings, require_authoritative_evidence=True
         )
         rows = _with_lifecycle(rows, lambda: jobs, tenant_id, since, None, False)
         # A suppressed finding (operator VEX, accepted exception) is kept as
