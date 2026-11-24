@@ -19,7 +19,7 @@ ENV HTTP_PROXY=${HTTP_PROXY} \
 
 # Build-time deps for wheel compilation when musllinux wheels are unavailable.
 # Pins track the base-image digest above; refresh both together.
-RUN apk add --no-cache build-base~=0.5 ca-certificates~=20261020 git~=2.52 libffi-dev~=3.5 linux-headers~=6.16 \
+RUN apk add --no-cache build-base~=0.5 ca-certificates~=20261020 git~=2.52 libffi-dev~=3.8 linux-headers~=6.16 \
     && apk upgrade --no-cache --available \
     && update-ca-certificates
 
