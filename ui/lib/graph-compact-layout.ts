@@ -199,7 +199,11 @@ export function compactLayout(input: CompactInput): { positions: Map<string, Poi
   }
   const order = [...byRank.keys()].sort((a, b) => a - b);
   const y = new Map<string, number>();
-  for (const r of order) byRank.get(r)!.forEach((id, i) => y.set(id, onSpine.has(id) ? 0 : (i + 1) * COMPACT_ROW_GAP));
+  // Members list the spine first; the first card under it starts one row down, not two.
+  for (const r of order) {
+    const members = byRank.get(r)!, offset = members.some(id => onSpine.has(id)) ? 0 : 1;
+    members.forEach((id, i) => y.set(id, onSpine.has(id) ? 0 : (i + offset) * COMPACT_ROW_GAP));
+  }
   const tall = (id: string) => dummies.has(id) ? undefined : input.tall?.(id);
   const mean = (list: string[]) => list.length ? list.reduce((sum, id) => sum + y.get(id)!, 0) / list.length : undefined;
   const placeRank = (r: number, leftToRight: boolean) => {

@@ -9,7 +9,8 @@ type Box = { left: number; top: number; right: number; bottom: number };
 
 function box(node: Node): Box | null {
   const width = node.measured?.width, height = node.measured?.height;
-  if (node.hidden || !width || !height) return null;
+  // A boundary frame sits behind the cards it holds; it is not a card to keep clear of.
+  if (node.hidden || node.type === "boundaryFrame" || !width || !height) return null;
   return { left: node.position.x, top: node.position.y, right: node.position.x + width, bottom: node.position.y + height };
 }
 

@@ -67,7 +67,7 @@ function GraphViewportCounts({ page, flowView }: Pick<Props, "page" | "flowView"
   // Asking for the whole map is asking for all of its connections too.
   const fitAll = () => { flowView.setAllEdgesShown(true); fitVisible(); };
   return showViewportScope ? <GraphViewportScope
-    collapsedFindings={disclosed.collapsed} canonicalVisibleNodes={flowView.canonicalVisibleNodes} totalNodes={displayNodes.length} totalEdges={displayEdges.length}
+    collapsedFindings={disclosed.collapsed} canonicalVisibleNodes={flowView.canonicalVisibleNodes} totalNodes={displayNodes.filter(node => node.type !== "boundaryFrame").length} totalEdges={displayEdges.length}
     scopeLabel={scenarioContextIds ? "Changes and neighbors" : rollupNavigationActive ? (rollupView?.mode === "drilldown" ? `Within ${rollupView.node?.label ?? "selected scope"}` : "Scope overview") : "Graph"}
     partialView={rollupNavigationActive && rollupMapIllegible ? "Opened on the riskiest scope's connections; Fit all shows every scope" : undefined}
     aggregate={rollupNavigationActive} unconnected={scenarioElements.unconnected.length}

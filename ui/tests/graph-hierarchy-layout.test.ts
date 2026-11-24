@@ -21,7 +21,9 @@ const edge = (id: string, source: string, target: string, relationship: string):
 });
 
 /** No two compact cards come closer than a row in one rank, or a rank across. */
-function expectCompactCardsClear(nodes: Node[]) {
+function expectCompactCardsClear(all: Node[]) {
+  // A boundary frame sits behind the cards it holds, and the environment it stands for is not drawn as a card.
+  const nodes = all.filter(node => !node.hidden && node.type !== "boundaryFrame");
   for (const [i, a] of nodes.entries()) for (const b of nodes.slice(i + 1)) {
     expect(Math.abs(a.position.x - b.position.x) >= SEMANTIC_COLUMN_GAP || Math.abs(a.position.y - b.position.y) >= SEMANTIC_ROW_GAP).toBe(true);
   }

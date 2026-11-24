@@ -6,7 +6,7 @@ import { flowEdgeLegend, type FlowLineStyle } from "@/lib/graph-flow-legend";
 
 const STYLE_LABELS: Record<FlowLineStyle, string> = {
   solid: "Recorded relationship",
-  modeled: "Every link in this view is modeled, not recorded",
+  modeled: "Links modeled from scan evidence",
   dashed: "Modeled, or access not observed in use",
   runtime: "Moving line: runtime receipt",
 };
@@ -22,15 +22,17 @@ function Swatch({ stroke = "var(--text-secondary)", dash }: { stroke?: string; d
 /** One line under the canvas saying what each drawn line style and colour means. */
 export function GraphFlowEdgeLegend({ edges }: { edges: readonly Edge[] }) {
   const legend = useMemo(() => flowEdgeLegend(edges), [edges]);
+  const exposure = useMemo(() => edges.some(edge => edge.data?.exposurePath === true), [edges]);
   if (!legend.styles.length) return null;
   const item = "inline-flex items-center gap-1.5";
   return (
     <ul aria-label="Line legend" data-testid="graph-flow-edge-legend" className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-outline bg-surface px-3 py-2 text-xs text-ink-secondary">
-      {legend.styles.map(style => (
-        <li key={style} className={item}><Swatch dash={style === "dashed" ? "6 3" : style === "runtime" ? "2 3" : undefined} />{STYLE_LABELS[style]}</li>
-      ))}
+      {exposure && <li className={item} data-legend-exposure-path=""><Swatch stroke="var(--graph-edge-exposure)" />Exposure path from the Internet</li>}
       {legend.relationships.map(entry => (
         <li key={entry.relationship} className={item}><Swatch stroke={entry.stroke} />{entry.label}</li>
+      ))}
+      {legend.styles.map(style => (
+        <li key={style} className={item}><Swatch dash={style === "dashed" ? "6 3" : style === "runtime" ? "2 3" : undefined} />{STYLE_LABELS[style]}</li>
       ))}
       {legend.more > 0 && <li className="text-ink-tertiary">+{legend.more} more {legend.more === 1 ? "relationship" : "relationships"} · hover a line for its name</li>}
     </ul>

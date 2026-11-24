@@ -1881,6 +1881,21 @@ const CAPTURE_ONLY = process.env.CAPTURE_ONLY ? new RegExp(process.env.CAPTURE_O
 
 async function capture(page, urlPath, filename, beforeShot, options = {}) {
   if (CAPTURE_ONLY && !CAPTURE_ONLY.test(filename)) return;
+  try {
+    return await captureFrame(page, urlPath, filename, beforeShot, options);
+  } catch (error) {
+    // A design preview keeps what a failing frame drew, so the failure can be looked at.
+    if (CAPTURE_ONLY && process.env.CAPTURE_STAGE_DIR) {
+      await page.screenshot({ path: path.join(process.env.CAPTURE_STAGE_DIR, filename.replace(/\.png$/, "-failed.png")) }).catch(() => {});
+      const layout = await page.locator(".react-flow__node").evaluateAll(nodes => nodes.map(node => ({ id: node.getAttribute("data-id"),
+        transform: node.style.transform, width: node.style.width, height: node.style.height, z: node.style.zIndex }))).catch(() => []);
+      await fs.writeFile(path.join(process.env.CAPTURE_STAGE_DIR, filename.replace(/\.png$/, "-failed-nodes.json")), JSON.stringify(layout, null, 1)).catch(() => {});
+    }
+    throw error;
+  }
+}
+
+async function captureFrame(page, urlPath, filename, beforeShot, options = {}) {
   if (README_CAPTURE_FILES.has(filename)) {
     // Keep the compact README hero and the full-width tour captures deterministic.
     const width = filename.startsWith("context-map-horizontal-") ? 1000 : 1440;
@@ -2122,8 +2137,11 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
         throw new Error(`Vendor badge overlaps a node caption on ${filename}: ${JSON.stringify(badgeAudit.logos)}`);
       }
       // Display-only anchors (the Internet entry, finding groups) and their links are not graph entities.
-      const graphNodeCount = await page.locator('.react-flow__node:visible:not([data-id^="display:"])').count();
-      const graphEdgeCount = await page.locator('.react-flow__edge:not([data-id^="display:"])').count();
+      // An environment boundary frame stands for its environment node.
+      const graphNodeCount = await page.locator('.react-flow__node:visible:not([data-id^="display:"])').count() + await page.locator("[data-boundary-frame]").count();
+      // An environment boundary frame stands for its containment links.
+      const framedLinks = await page.locator("[data-boundary-frame]").evaluateAll(frames => frames.reduce((sum, frame) => sum + Number(frame.getAttribute("data-frame-links") || 0), 0));
+      const graphEdgeCount = await page.locator('.react-flow__edge:not([data-id^="display:"])').count() + framedLinks;
       if (graphNodeCount < options.minGraphNodes || graphEdgeCount < (options.minGraphEdges ?? 1)) {
         throw new Error(`Incomplete graph on ${urlPath}: ${graphNodeCount} nodes / ${graphEdgeCount} edges`);
       }
@@ -2269,7 +2287,8 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
         if (clipped.length) throw new Error(`Graph nodes clipped on ${urlPath}: ${clipped.join(", ")}`);
       }
       if (options.assertGraphNodesSeparated) {
-        const collisions = await page.locator(".react-flow__node").evaluateAll(nodes => nodes.flatMap((left, index) => {
+        // A boundary frame sits behind the cards it holds by design; cards must still clear each other.
+        const collisions = await page.locator(".react-flow__node:not(:has([data-boundary-frame]))").evaluateAll(nodes => nodes.flatMap((left, index) => {
           const a = left.getBoundingClientRect();
           return nodes.slice(index + 1).filter(right => {
             const b = right.getBoundingClientRect();
@@ -2650,6 +2669,7 @@ async function fitReactFlow(page, { timeout = 30_000 } = {}) {
 async function main() {
   await fs.mkdir(IMAGE_DIR, { recursive: true });
   const stageDir = await fs.mkdtemp(path.join(os.tmpdir(), "agent-bom-product-proof-"));
+  process.env.CAPTURE_STAGE_DIR = stageDir;
   captureOutputDir = stageDir;
   const server = await startServerIfNeeded();
   let browser;
@@ -2692,8 +2712,10 @@ async function main() {
           // Findings fold only under an owner with a backend aggregate; the showcase draws every one.
           const expandFindings = p.getByRole("button", { name: /^Expand findings/ });
           if (await expandFindings.count()) await expandFindings.click();
-          // Every fixture node is drawn; display-only anchors (the Internet entry) are extra, and only for backend-true exposure.
-          await expect(p.locator('.react-flow__node:not([data-id^="display:"])')).toHaveCount(fixture.nodes.length);
+          // Every fixture node is drawn, as a card or, for an enclosing environment, as the boundary frame around the
+          // cards; display-only anchors (the Internet entry) are extra, and only for backend-true exposure.
+          const drawnEntities = async () => await p.locator('.react-flow__node:not([data-id^="display:"])').count() + await p.locator("[data-boundary-frame]").count();
+          await expect.poll(drawnEntities).toBe(fixture.nodes.length);
           const exposed = fixture.nodes.some(item => (item.attributes?.risk_context?.internet_exposed ?? item.attributes?.internet_exposed) === true);
           if (!exposed) await expect(p.locator('.react-flow__node[data-id^="display:internet:"]')).toHaveCount(0);
           await fitReactFlow(p);

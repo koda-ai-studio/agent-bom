@@ -35,7 +35,8 @@ export function flowEdgeLegend(edges: readonly Edge[]): FlowEdgeLegend {
     // A view whose every link is modeled draws them solid; the legend must still say they are modeled.
     styles.add(dashed ? "dashed" : edge.data?.uniformlyModeled === true ? "modeled" : "solid");
     if (edge.animated) styles.add("runtime");
-    if (!relationship || !stroke) continue;
+    // Links on the exposure path are named once, by the legend's exposure entry.
+    if (!relationship || !stroke || edge.data?.exposurePath === true) continue;
     const label = plainLabel(typeof edge.data?.relationshipLabel === "string" ? edge.data.relationshipLabel : relationship.replaceAll("_", " "));
     const entry = byStroke.get(stroke) ?? { stroke, count: 0, labels: new Map<string, number>(), first: relationship };
     entry.count++;
