@@ -53,6 +53,7 @@ _CHOICES = {
     "reachability": ("reachable", "unreachable", "unassessed"),
     "triage": ("not_affected", "affected", "under_investigation", "untriaged"),
     "sla": ("overdue", "due", "unassigned"),
+    "fix": ("available", "none"),
     "fields": ("summary", "full"),
 }
 _TRIAGE_ROW_FIELDS = ("status", "lifecycle_status", "suppressed", "suppression_id", "vex_status", "vex_justification")
@@ -90,12 +91,13 @@ async def findings_query_impl(
     status: str | None = None,
     window_days: int | None = None,
     fields: str = "summary",
+    fix: str | None = None,
     _truncate_response: Callable[[str], str] | None = None,
 ) -> str:
     """Page ``/v1/findings`` for the tool tenant with a compact projection."""
     if not 1 <= limit <= 200:
         return mcp_error_json(CODE_VALIDATION_INVALID_ARGUMENT, "limit must be between 1 and 200", details={"argument": "limit"})
-    for name, value in (("reachability", reachability), ("triage", triage), ("sla", sla), ("fields", fields)):
+    for name, value in (("reachability", reachability), ("triage", triage), ("sla", sla), ("fix", fix), ("fields", fields)):
         if value is not None and value not in _CHOICES[name]:
             return mcp_error_json(
                 CODE_VALIDATION_INVALID_ARGUMENT, f"{name} must be one of: {', '.join(_CHOICES[name])}", details={"argument": name}
@@ -113,6 +115,7 @@ async def findings_query_impl(
         "reachability": reachability,
         "triage": triage,
         "sla": sla,
+        "fix": fix,
         "status": status,
         "window_days": window_days,
     }

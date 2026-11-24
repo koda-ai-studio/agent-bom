@@ -233,6 +233,9 @@ def push_findings_cmd(
     help="Lifecycle status scope; stale is open findings whose asset was not re-checked recently.",
 )
 @click.option("--kev", is_flag=True, default=None, help="Return only CISA KEV findings.")
+@click.option(
+    "--fix", type=click.Choice(["available", "none"]), help="Only findings with a recorded fix (available) or without one (none)."
+)
 @click.option("--window-days", type=click.IntRange(min=0, max=3650), help="Current-state lookback; 0 means all retained history.")
 @click.option("--framework", help="Compliance framework drill-through (e.g. soc2, nist-csf).")
 @click.option("--control", help="Framework control code; narrows within --framework (e.g. CC6.1).")
@@ -263,6 +266,7 @@ def list_findings_cmd(
     finding_class: str | None,
     status: str | None,
     kev: bool | None,
+    fix: str | None,
     window_days: int | None,
     framework: str | None,
     control: str | None,
@@ -294,6 +298,7 @@ def list_findings_cmd(
         "finding_class": finding_class,
         "status": status,
         "kev": kev,
+        "fix": fix,
         "window_days": window_days,
         "cursor": cursor,
     }

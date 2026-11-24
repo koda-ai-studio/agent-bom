@@ -1,3 +1,4 @@
+import type { FindingSignals, FixFilter } from "@/components/findings/findings-kev-filter";
 import type { FindingTriageDecision } from "@/lib/api";
 
 export type ReachabilityFilter = "" | "reachable" | "unreachable" | "unassessed";
@@ -30,6 +31,7 @@ export function FindingsAdvancedFilters({
   ownerFilter,
   slaFilter,
   reachabilityFilter,
+  signals,
   triageFilter,
   setWindowDays,
   setDomainFilter,
@@ -52,6 +54,7 @@ export function FindingsAdvancedFilters({
   ownerFilter: string;
   slaFilter: "" | "overdue" | "due" | "unassigned";
   reachabilityFilter: ReachabilityFilter;
+  signals?: FindingSignals | undefined;
   triageFilter: TriageFilter;
   setWindowDays: (value: number) => void;
   setDomainFilter: (value: string) => void;
@@ -178,6 +181,19 @@ export function FindingsAdvancedFilters({
           <option value="unassessed">Unassessed</option>
         </select>
       </div>
+      {signals && <div className="flex flex-col gap-1">
+        <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-ink-tertiary">Fix</span>
+        <select
+          aria-label="Fix availability"
+          value={signals.fix}
+          onChange={(e) => signals.setFix(e.target.value as FixFilter)}
+          className="rounded-lg border border-outline bg-surface px-3 py-1.5 text-sm text-foreground focus:border-outline-strong focus:outline-none"
+        >
+          <option value="">Any fix status</option>
+          <option value="available">Fix available</option>
+          <option value="none">No fix available</option>
+        </select>
+      </div>}
       <div className="flex flex-col gap-1">
         <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-ink-tertiary">Triage</span>
         <select

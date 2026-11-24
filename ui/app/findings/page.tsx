@@ -48,7 +48,7 @@ import { Bug,ClipboardCheck,Loader2,SlidersHorizontal,X } from "lucide-react";
 import { usePathname,useRouter,useSearchParams } from "next/navigation";
 import { Suspense,useCallback,useEffect,useMemo,useRef,useState } from "react";
 import { DEFAULT_FINDINGS_WINDOW_DAYS } from "@/lib/findings-default-query";
-import { FindingsKevFilterNote, useKevOnlyParam } from "@/components/findings/findings-kev-filter";
+import { FindingsSignalFilterNotes, useFindingSignals } from "@/components/findings/findings-kev-filter";
 import { FindingsGraphFreshnessNote } from "@/components/graph-projection-notice";
 import type { GraphFreshness } from "@/lib/api-contracts/findings";
 
@@ -122,7 +122,7 @@ function FindingsPage() {
   const paramStatus = parseFindingStatus(searchParams.get("status"));
   const [statusFilter, setStatusFilter] = useState<FindingStatusFilter>(paramStatus);
   useEffect(() => { setStatusFilter(paramStatus); }, [paramStatus]);
-  const [kevOnly, setKevOnly] = useKevOnlyParam(searchParams);
+  const signals = useFindingSignals(searchParams);
   const paramContext = searchParams.get("path_context") ?? "";
   const [pathContextFilter, setPathContextFilter] = useState(Object.hasOwn(CONTEXT_LABELS, paramContext) ? paramContext : "");
   useEffect(() => { setPathContextFilter(Object.hasOwn(CONTEXT_LABELS, paramContext) ? paramContext : ""); }, [paramContext]);
@@ -322,7 +322,7 @@ function FindingsPage() {
     if (selectedId) params.set("finding", selectedId);
     if (filter !== "all") params.set("severity", filter);
     if (issueTypeFilter !== "all") params.set("issue", issueTypeFilter);
-    if (kevOnly) params.set("kev", "1");
+    signals.write(params);
     if (search.trim()) params.set("q", search.trim());
     if (domainFilter !== "all") params.set("domain", domainFilter);
     if (providerFilter.trim()) params.set("provider", providerFilter.trim());
@@ -346,7 +346,7 @@ function FindingsPage() {
     filter,
     lane,
     issueTypeFilter,
-    kevOnly,
+    signals,
     search,
     domainFilter,
     providerFilter,
@@ -465,7 +465,7 @@ function FindingsPage() {
         ...(frameworkFilter.trim() ? { framework: frameworkFilter.trim() } : {}),
         ...(frameworkFilter.trim() && controlFilter.trim() ? { control: controlFilter.trim() } : {}),
         ...(issueTypeFilter !== "all" ? { findingClass: issueTypeFilter } : {}),
-        ...(kevOnly ? { kev: true } : {}),
+        ...signals.query,
         ...(lane !== "all" ? { lane } : {}),
         windowDays,
       });
@@ -488,7 +488,7 @@ function FindingsPage() {
     frameworkFilter,
     lane,
     issueTypeFilter,
-    kevOnly,
+    signals,
     ownerFilter,
     paramScan,
     providerFilter,
@@ -528,7 +528,7 @@ function FindingsPage() {
           ...(frameworkFilter.trim() ? { framework: frameworkFilter.trim() } : {}),
           ...(frameworkFilter.trim() && controlFilter.trim() ? { control: controlFilter.trim() } : {}),
           ...(issueTypeFilter !== "all" ? { findingClass: issueTypeFilter } : {}),
-          ...(kevOnly ? { kev: true } : {}),
+          ...signals.query,
           ...(lane !== "all" ? { lane } : {}),
           sort: serverFindingsSort(sortKey),
           limit: PAGE_SIZE,
@@ -581,7 +581,7 @@ function FindingsPage() {
     reachabilityFilter,
     pathContextFilter, triageFilter, statusFilter,
     frameworkFilter, controlFilter, lane, issueTypeFilter,
-    kevOnly, windowDays, sortKey, pageCursors, readAttempt,
+    signals, windowDays, sortKey, pageCursors, readAttempt,
   ]);
 
   function handleSort(field: SortKey) {
@@ -610,7 +610,7 @@ function FindingsPage() {
     filter,
     lane,
     issueTypeFilter,
-    kevOnly,
+    signals,
     search,
     sortKey,
     sortDir,
@@ -709,7 +709,7 @@ function FindingsPage() {
     setControlFilter("");
   };
 
-  const hasActiveFilters = Boolean(statusFilter !== "open" || search.trim() || filter !== "all" || issueTypeFilter !== "all" || kevOnly || activeFilterCount || windowDays !== 90);
+  const hasActiveFilters = Boolean(statusFilter !== "open" || search.trim() || filter !== "all" || issueTypeFilter !== "all" || signals.active || activeFilterCount || windowDays !== 90);
   const clearFilters = () => {
     clearAdvancedFilters();
     setSearch("");
@@ -717,7 +717,7 @@ function FindingsPage() {
     setStatusFilter("open");
     setIssueTypeFilter("all");
     setWindowDays(90);
-    setKevOnly(false);
+    signals.clear();
   };
 
   const FILTERS = severityFilterDefinitions(findingFacetsApproximate || !findingFacets?.severity ? null : findingFacets, findingsFilterTotalLabel);
@@ -725,7 +725,7 @@ function FindingsPage() {
   return (
     <div className="space-y-6">
       {exceptionError && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{exceptionError}</p>}
-      {kevOnly && <FindingsKevFilterNote onClear={() => setKevOnly(false)} />}
+      <FindingsSignalFilterNotes signals={signals} />
       <PageLaneHeader
         lane="command"
         title="Findings"
@@ -866,6 +866,7 @@ function FindingsPage() {
                       ownerFilter={ownerFilter}
                       slaFilter={slaFilter}
                       reachabilityFilter={reachabilityFilter}
+                      signals={signals}
                       triageFilter={triageFilter}
                       setWindowDays={setWindowDays}
                       setDomainFilter={setDomainFilter}

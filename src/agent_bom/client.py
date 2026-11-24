@@ -496,11 +496,11 @@ class AgentBomClient(GraphClientMixin, EndpointClientMixin, GovernanceClientMixi
         window_days: int | None = None,
         cursor: str | None = None,
         include_controls: bool = False,
+        fix: str | None = None,
     ) -> JsonObject:
         """List normalized findings from scan jobs and bulk ingests.
 
-        ``framework``/``control`` drill into a compliance section id (``soc2``) and optional control code;
-        ``include_controls`` returns full control mappings, otherwise rows carry ``controls_count``.
+        ``framework``/``control`` drill into a section (``soc2``) and control; ``include_controls`` adds mappings, else ``controls_count``.
         """
         return self._request(
             "GET",
@@ -524,6 +524,7 @@ class AgentBomClient(GraphClientMixin, EndpointClientMixin, GovernanceClientMixi
                     "finding_class": finding_class,
                     "status": status,
                     "kev": kev,
+                    "fix": fix,
                     "window_days": window_days,
                     "cursor": cursor,
                     "include": "controls" if include_controls else None,

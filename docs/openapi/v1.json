@@ -64455,7 +64455,7 @@
     },
     "/v1/findings": {
       "get": {
-        "description": "List unified findings aggregated from completed scan results.\n\nDedup/sort and synchronous store reads run in a worker thread (tenant scope and projection propagate) so the event\nloop never blocks. Saturation is 429 + Retry-After; a read not pinned to a scan_id is 503 while the demo seed lands.\n\nRows carry ``framework_tags`` and ``controls_count``; ``?include=controls`` restores full mappings.\n\n``offset`` is a compatibility path capped at 10,000: past the ceiling the\nendpoint returns ``400`` and steers callers to ``cursor``/``next_cursor``.",
+        "description": "List unified findings aggregated from completed scan results.\n\nDedup/sort and synchronous store reads run in a worker thread (tenant scope and projection propagate) so the event\nloop never blocks. Saturation is 429 + Retry-After; a read not pinned to a scan_id is 503 while the demo seed lands.\n\nRows carry ``framework_tags`` and ``controls_count``; ``?include=controls`` restores full mappings.\n\n``offset`` is capped at 10,000; past it the endpoint returns ``400`` and steers callers to ``cursor``.",
         "operationId": "list_findings_v1_findings_get",
         "parameters": [
           {
@@ -64858,6 +64858,26 @@
                 }
               ],
               "title": "Path Context"
+            }
+          },
+          {
+            "in": "query",
+            "name": "fix",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "available",
+                    "none"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Fix"
             }
           },
           {

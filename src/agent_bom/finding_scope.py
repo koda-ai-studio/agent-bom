@@ -27,6 +27,7 @@ from typing import TYPE_CHECKING, Any, Literal, Optional
 from agent_bom.advisory_ids import derive_cve_from_advisory_id
 from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS, normalize_framework_slug
 from agent_bom.core.sla import finding_kev_dates
+from agent_bom.domain.finding_signal_filters import row_matches_signal_filters
 from agent_bom.domain.framework_evidence import _framework_control_codes as _framework_control_codes
 from agent_bom.domain.framework_evidence import framework_evidence_slugs as framework_evidence_slugs
 from agent_bom.evidence.asset_display import iac_source_label
@@ -961,13 +962,8 @@ def row_matches_scope(row: dict, filters: Mapping[str, str]) -> bool:
     if filters.get("framework_tag_field") is not None or filters.get("framework") is not None:
         if not _row_matches_framework(row, filters):
             return False
-    # KEV leads the executive headline — "actively exploited, fix these first" —
-    # so the list has to be able to answer it. An absent verdict is not a match:
-    # a row nobody checked must never be presented as known-exploited.
-    wanted_kev = filters.get("kev")
-    if wanted_kev is not None:
-        if (row.get("is_kev") is True) is not (str(wanted_kev).strip().lower() in {"true", "1", "yes"}):
-            return False
+    if not row_matches_signal_filters(row, filters):
+        return False
     if not row_matches_search(row, filters.get("q")):
         return False
     return True
