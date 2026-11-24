@@ -22,12 +22,17 @@ import { findingSeverity, graphNodeTooltip } from "@/lib/graph-node-tooltip";
 import { graphRepositoryContext } from "@/lib/graph-repository-context";
 import { showsProviderMark } from "@/lib/graph-scope-context";
 import { compactScopeCaption } from "@/lib/graph-compact-scope";
+import { ANCHOR_GLYPH_SCALE, COMPACT_GLYPH_SCALE, PHONE_GLYPH_SCALE } from "@/lib/graph-compact-glyph";
 
 export type CompactNodeTone = { data: LineageNodeData; borderClass: string; bgClass: string; ringClass: string; iconClass: string; source?: boolean; target?: boolean };
 
 const HANDLE = "!h-1 !w-1 !border-0 !bg-transparent";
-const GLYPH = "calc(var(--graph-node-glyph-size, 56px) * 0.7)";
-const ICON = "calc(var(--graph-node-icon-size, 28px) * 0.7)";
+const glyphSize = (scale: number) => `calc(var(--graph-node-glyph-size, 56px) * ${scale})`;
+const iconSize = (scale: number) => `calc(var(--graph-node-icon-size, 28px) * ${scale})`;
+const GLYPH = glyphSize(COMPACT_GLYPH_SCALE), ICON = iconSize(COMPACT_GLYPH_SCALE);
+const PHONE_GLYPH = glyphSize(PHONE_GLYPH_SCALE), PHONE_ICON = iconSize(PHONE_GLYPH_SCALE);
+const ANCHOR_GLYPH = glyphSize(ANCHOR_GLYPH_SCALE), ANCHOR_ICON = iconSize(ANCHOR_GLYPH_SCALE);
+const isInternetAnchor = (data: LineageNodeData) => data.attributes?.resource_type === "internet_boundary";
 const META = { fontSize: "var(--graph-node-meta-size, 12px)" };
 
 const PROSE_LIMIT = 36;
@@ -99,6 +104,8 @@ export function CompactHandles({ data, source, target }: { data: LineageNodeData
     <Handle type="source" id="context-up" position={Position.Top} className={HANDLE} />
     <Handle type="source" id="context" position={Position.Left} className={HANDLE} />
     <Handle type="target" id="context" position={Position.Right} className={HANDLE} />
+    {/* The Internet arrow's own entry on the upper left, when another link also enters this node. */}
+    <Handle type="target" id="above" position={Position.Left} style={{ top: "18%" }} className={HANDLE} />
     {phone && <>
       <Handle type="source" id="phone-up" position={Position.Top} className={HANDLE} />
       <Handle type="target" id="phone-down" position={Position.Bottom} className={HANDLE} />
@@ -111,7 +118,8 @@ export function CompactHandles({ data, source, target }: { data: LineageNodeData
 }
 
 function Markers({ data }: { data: LineageNodeData }) {
-  const exposed = !data.displayOnly && internetExposure(data.attributes) === true;
+  // A drawn Internet anchor already says this; the dot stays for views without the anchor.
+  const exposed = !data.displayOnly && !data.internetAnchored && internetExposure(data.attributes) === true;
   return <>
     {data.isKev && <span data-compact-marker="kev" title="Listed in the CISA Known Exploited Vulnerabilities catalog"
       className="absolute -right-0.5 -top-0.5 h-[28%] w-[28%] rounded-full border-2 border-[var(--graph-canvas)] bg-[var(--severity-ring-critical)]"><span className="sr-only">KEV-listed</span></span>}
@@ -153,6 +161,8 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
   const provider = repository?.source ?? (showsProviderMark(data) ? entitySource(data) : null);
   const severity = findingSeverity(data);
   const { badges, ring } = nodeBadges(data);
+  const anchor = isInternetAnchor(data);
+  const glyph = anchor ? ANCHOR_GLYPH : data.phoneLayout ? PHONE_GLYPH : GLYPH, icon = anchor ? ANCHOR_ICON : data.phoneLayout ? PHONE_ICON : ICON;
   const fullTitle = typeof data.attributes?.display_title === "string" && data.attributes.display_title.trim() ? data.attributes.display_title : data.label;
   // A prose finding draws its short preview; the full title stays in the tooltip, drawer and assistive text.
   const preview = ["misconfiguration", "vulnerability"].includes(data.nodeType) ? prosePreview(fullTitle) : fullTitle;
@@ -163,12 +173,12 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
   return <div title={tooltip} data-graph-entity="true" data-compact-node data-evidence-flow={data.evidenceFlow || undefined} data-finding-owner={data.readingOwner}
     data-rollup-container={data.attributes?.rollup_is_container === true ? "true" : undefined}
     style={{ maxWidth: "var(--graph-node-card-width, 200px)" }} className={`relative flex transition-opacity ${data.dimmed ? "opacity-25" : ""} ${phoneLayoutClass(data)}`}>
-    <div ref={glyphRef} data-severity-ring={severity} style={{ width: GLYPH, height: GLYPH }}
+    <div ref={glyphRef} data-severity-ring={severity} data-internet-anchor={anchor || undefined} style={{ width: glyph, height: glyph }}
       className={`graph-entity-glyph relative flex shrink-0 items-center justify-center rounded-full border-2 ${borderClass} ${bgClass} ${data.highlighted ? `ring-2 ring-offset-2 ring-offset-[var(--graph-canvas)] ${ringClass}` : ""}`}>
       {severity && <span className="sr-only" data-finding-severity={severity}>{`${severity} severity`}</span>}
       <CompactHandles data={data} source={source} target={target} />
       <GraphPackageGlyph ecosystem={data.nodeType === "package" ? badges.find(badge => badge.kind === "ecosystem")?.value : undefined}
-        fallback={<Icon aria-hidden="true" style={{ width: ICON, height: ICON }} className={iconClass} />} />
+        fallback={<Icon aria-hidden="true" style={{ width: icon, height: icon }} className={iconClass} />} />
       {provider && <GraphProviderMark source={provider} attributes={repository ? undefined : data.attributes} className="graph-provider-mark-node graph-provider-mark-compact absolute" />}
       <Markers data={data} />
       <FindingDisclosure data={data} />

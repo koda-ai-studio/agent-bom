@@ -1,11 +1,12 @@
 "use client";
 
+import { COMPACT_GLYPH_SCALE } from "@/lib/graph-compact-glyph";
 import type { LineageNodeData, LineageNodeType } from "@/components/lineage-nodes";
 import { CompactHandles } from "@/components/graph-compact-node";
 import { entityIcon } from "@/lib/entity-icons";
 
-const GLYPH = "calc(var(--graph-node-glyph-size, 56px) * 0.7)";
-const ICON = "calc(var(--graph-node-icon-size, 28px) * 0.7)";
+const GLYPH = `calc(var(--graph-node-glyph-size, 56px) * ${COMPACT_GLYPH_SCALE})`;
+const ICON = `calc(var(--graph-node-icon-size, 28px) * ${COMPACT_GLYPH_SCALE})`;
 
 /** Siblings folded into one compact group: a circle, the group's name, and an expand line. */
 export function CompactClusterNode({ data }: { data: LineageNodeData }) {

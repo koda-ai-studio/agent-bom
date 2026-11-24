@@ -1,11 +1,15 @@
 "use client";
 
+import { COMPACT_GLYPH_SCALE } from "@/lib/graph-compact-glyph";
 import { useLayoutEffect, useRef, useState } from "react";
 import { BaseEdge, EdgeLabelRenderer, Position, useStore, type EdgeProps } from "@xyflow/react";
 import { RelationshipBadge } from "@/components/relationship-edge";
 import { edgeFamily, edgeFamilyColor, edgeIsDashed } from "@/lib/graph-edge-family";
 import { ARC_REACH } from "@/lib/graph-compact-arcs";
 import { relationshipEdgeLabelText } from "@/lib/graph-utils";
+
+/** A resting label clears the largest drawn glyph (the small-graph circle) plus a gap, so it never sits on a card. */
+const LABEL_RISE = Math.max(28, Math.ceil((66 * COMPACT_GLYPH_SCALE) / 2) + 8);
 
 type Point = { x: number; y: number };
 
@@ -48,7 +52,7 @@ function InspectLabel({ id, at, relationship, text, aggregate, inspecting, shift
   // On a phone the label sits beside the link, on the side away from the captions, rather than over it.
   const anchor = shift > 0 ? `translate(${8 / Math.max(zoom, 0.16)}px, -50%) translate(${at.x}px, ${at.y}px)`
     : shift < 0 ? `translate(calc(-100% - ${8 / Math.max(zoom, 0.16)}px), -50%) translate(${at.x}px, ${at.y}px)`
-    : `translate(-50%, -100%) translate(${at.x}px, ${at.y - 28 / Math.max(zoom, 0.16)}px)`;
+    : `translate(-50%, -100%) translate(${at.x}px, ${at.y - LABEL_RISE / Math.max(zoom, 0.16)}px)`;
   return <EdgeLabelRenderer>
     <div data-edge-id={id} data-inspecting={inspecting ? "true" : "false"} className={`nodrag nopan graph-relationship-label ${aggregate ? "graph-aggregate-label" : ""}`}
       style={{ position: "absolute", transform: anchor, fontSize: 12.5 / Math.max(zoom, 0.16), pointerEvents: "none", whiteSpace: "nowrap" }}>
@@ -109,7 +113,7 @@ export function CompactRelationshipEdge(props: EdgeProps) {
   const restingSummary = aggregate && (folded === null || folded > 1);
   // A focused attack path names each hop's relationship at rest, as the path card does.
   const text = (inspecting || restingSummary || props.data?.pathLabel === true) && props.data?.labelVisibility !== "hide" ? count ?? full : null;
-  const style = { stroke: edgeFamilyColor(family), strokeWidth: spine ? 2.4 : inspecting ? 2 : 1.4, opacity: spine || inspecting ? 1 : stubbed || props.data?.passesBehind ? 0.4 : 0.85,
+  const style = { stroke: edgeFamilyColor(family), strokeWidth: spine ? 3.2 : inspecting ? 2.8 : 2.2, opacity: spine || inspecting ? 1 : stubbed || props.data?.passesBehind ? 0.4 : 0.95,
     strokeDasharray: edgeIsDashed(family, props.data) ? "6 4" : undefined, fill: "none" };
   return <g ref={ref} data-relationship={relationship || undefined} data-edge-family={family} data-edge-stub={stubbed || undefined} data-label-disclosure={relationship === "vulnerable_to" ? "on-demand" : undefined} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
     {typeof props.data?.hoverDescription === "string" && <title>{props.data.hoverDescription}</title>}

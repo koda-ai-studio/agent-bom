@@ -6,6 +6,7 @@ import { flowEdgeLegend, type FlowLineStyle } from "@/lib/graph-flow-legend";
 
 const STYLE_LABELS: Record<FlowLineStyle, string> = {
   solid: "Recorded relationship",
+  modeled: "Every link in this view is modeled, not recorded",
   dashed: "Modeled, or access not observed in use",
   runtime: "Moving line: runtime receipt",
 };

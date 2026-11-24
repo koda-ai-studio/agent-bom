@@ -1872,7 +1872,14 @@ const README_CAPTURE_FILES = new Set([
   "dashboard-live.png", "dashboard-frameworks-live.png", "dashboard-risks-live.png", "inventory-live.png", "remediation-live.png",
 ]);
 
+// Local design review only: CAPTURE_ONLY=<regex> renders just the matching frames
+// into the kept stage directory and never writes docs/images or the manifest.
+// Setup steps of skipped frames still run, so a later step may stop the run;
+// frames captured before it stay in the stage directory.
+const CAPTURE_ONLY = process.env.CAPTURE_ONLY ? new RegExp(process.env.CAPTURE_ONLY) : null;
+
 async function capture(page, urlPath, filename, beforeShot, options = {}) {
+  if (CAPTURE_ONLY && !CAPTURE_ONLY.test(filename)) return;
   if (README_CAPTURE_FILES.has(filename)) {
     // Keep the compact README hero and the full-width tour captures deterministic.
     const width = filename.startsWith("context-map-horizontal-") ? 1000 : 1440;
@@ -3512,6 +3519,10 @@ async function main() {
       assertNoHorizontalOverflow: true,
     });
     await captureAgentArchitecture({ capture, newCapturePage });
+    if (CAPTURE_ONLY) {
+      console.log(`CAPTURE_ONLY preview frames: ${stageDir}`);
+      return;
+    }
     await writeScreenshotManifest(stageDir);
     for (const artifact of await fs.readdir(stageDir)) {
       await fs.copyFile(path.join(stageDir, artifact), path.join(IMAGE_DIR, artifact));
@@ -3520,8 +3531,8 @@ async function main() {
     await browser?.close();
     await stopServer(server);
     // Local review of a failed run: keep the frames captured so far.
-    if (process.env.CAPTURE_KEEP_STAGE) console.log(`staged frames kept: ${stageDir}`);
-    else await fs.rm(stageDir, { recursive: true, force: true });
+    if (process.env.CAPTURE_KEEP_STAGE || CAPTURE_ONLY) console.log(`staged frames kept: ${stageDir}`);
+    else if (!CAPTURE_ONLY) await fs.rm(stageDir, { recursive: true, force: true });
   }
 }
 

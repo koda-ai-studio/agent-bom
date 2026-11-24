@@ -90,7 +90,7 @@ it.each(["package", "finding", "runtime_evidence"])("draws owned %s context as t
   const { container } = render(<ReactFlowProvider><Renderer data={{ label: "Recorded context", nodeType: "package", semanticLayout: true,
     semanticLayer, semanticOwner: "workload", attributes: { data_classification: "restricted" } }} /></ReactFlowProvider>);
   expect(container.querySelector("[data-graph-subrow]")).toBeNull();
-  expect(container.querySelector(".graph-entity-glyph")).toHaveStyle({ width: "calc(var(--graph-node-glyph-size, 56px) * 0.7)" });
+  expect(container.querySelector(".graph-entity-glyph")).toHaveStyle({ width: "calc(var(--graph-node-glyph-size, 56px) * 0.8)" });
   expect(container.querySelector("[data-semantic-badges]")).toBeNull();
 });
 

@@ -92,6 +92,8 @@ export type LineageNodeData = {
   imageSubrow?: boolean | undefined;
   evidenceSources?: string[] | undefined;
   /** Manifests and image inventories that record this package, folded into its card on a correlation overview. */
+  /** The Internet display anchor is drawn with a link to this node. */
+  internetAnchored?: boolean;
   seenIn?: import("@/lib/graph-evidence-fold").SeenIn[] | undefined;
   onExploreFindings?: (() => void) | undefined;
   complianceTags?: string[] | undefined;
