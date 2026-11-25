@@ -622,8 +622,23 @@ for (const theme of ["light", "dark"] as const) test(`independent environment ch
   await fixture(page, showcase.nodes, showcase.edges, false, { stats: showcase.stats, attack_paths: showcase.attack_paths });
   await routeNodeAggregates(page, ownedFindingAggregates(showcase.nodes, showcase.edges));
   await page.goto("/graph?scan=snapshot&rollup=0&capture=1&layers=environment,agent,server,container,package,vulnerability,credential,dataStore");
+  const context = page.getByRole("button", { name: /^Show supporting context/ });
+  await expect(context).toBeVisible();
+  await context.click();
   await expect(page.locator('[data-id="cred:tickets"]')).toHaveCount(1);
   await settle(page);
+  const chains = [["container:serving", "pkg:torch", "cve:torch"],
+    ["agent:triage", "server:tickets", "cred:tickets", "data:tickets"],
+    ["agent:intake", "server:docs", "pkg:pillow"]];
+  for (const chain of chains) {
+    const centers = await page.evaluate(ids => ids.map(id => {
+      const glyph = document.querySelector(`[data-id="${id}"] .graph-entity-glyph`);
+      if (!glyph) return null;
+      const box = glyph.getBoundingClientRect(); return box.y + box.height / 2;
+    }), chain);
+    expect(centers.every(center => center !== null), chain.join(" → ")).toBe(true);
+    expect(Math.max(...centers as number[]) - Math.min(...centers as number[]), "each dependency chain remains on its own reading lane").toBeLessThan(1);
+  }
   expect(await cardOverlaps(page)).toEqual([]);
   expect(await edgesThroughNodes(page)).toEqual([]);
   expect(await graphGrammarViolations(page)).toEqual({});
