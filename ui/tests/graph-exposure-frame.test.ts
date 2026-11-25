@@ -80,13 +80,13 @@ describe("environment boundary", () => {
 });
 
 describe("small map reading", () => {
-  it("colours the exposure path, names every link and shows each one's direction", () => {
+  it("colours the exposure path and retains direction markers for inspection", () => {
     const { nodes, edges } = estate();
     const out = semanticGraphLayout(nodes, edges);
     const path = out.edges.filter(e => e.data?.exposurePath === true).map(e => [e.source, e.target]);
     expect(path.sort()).toEqual([[INTERNET_ANCHOR_ID, "serving"], ["serving", "torch"], ["torch", "cve-crit"]].sort());
     for (const drawn of out.edges.filter(e => !e.hidden)) {
-      expect(drawn.data?.restingVerb).toBe(true);
+      expect(drawn.data?.restingVerb).toBeUndefined();
       expect(drawn.markerEnd).toBeTruthy();
     }
   });
@@ -126,4 +126,65 @@ describe("small map reading", () => {
       if (Math.abs(b.y - a.y) > Math.abs(b.x - a.x)) expect(drawn.data?.restingVerb).toBeUndefined();
     }
   });
+});
+
+it("does not emphasize an explicitly non-traversable exposure link", () => {
+  const nodes = [node(INTERNET_ANCHOR_ID, "cloudResource", "user"), node("w", "container", "infra"), node("finding", "vuln", "finding", { severity: "critical" })];
+  const edges = [edge(INTERNET_ANCHOR_ID, "w", "exposed_to"), { ...edge("w", "finding", "vulnerable_to"), data: { relationship: "vulnerable_to", traversable: false } }];
+  expect(exposureSpine(nodes, edges)).toEqual([INTERNET_ANCHOR_ID, "w"]);
+});
+
+it("does not promote a blocked parallel link when another edge carries the path", () => {
+  const nodes = [node("a", "agent", "orchestration"), node("b", "server", "mcp_server")];
+  const edges = [{ ...edge("a", "b", "uses"), data: { relationship: "uses", traversable: true } }, { ...edge("a", "b", "can_access"), id: "blocked", data: { relationship: "can_access", traversable: false } }];
+  const result = semanticGraphLayout(nodes, edges, ["a", "b"]);
+  expect(result.edges.find(e => e.id === "blocked")?.data?.pathEmphasis).toBe(false);
+});
+
+it("keeps the entry chain level, keeps findings beside their owners and identity-to-data below", () => {
+  const nodes = [node("gateway", "cloudResource", "app", exposed), node("workload", "container", "infra"),
+    node("finding", "vulnerability", "finding", { severity: "critical" }), node("role", "identity", "identity"), node("bucket", "dataStore", "asset")];
+  const edges = [edge("gateway", "workload", "exposed_to"), edge("workload", "finding", "vulnerable_to"),
+    edge("workload", "role", "authenticates_as"), edge("role", "bucket", "can_access")];
+  const result = semanticGraphLayout(nodes, edges);
+  const at = (id: string) => result.nodes.find(n => n.id === id)!.position;
+  expect(at("gateway").y).toBe(at("workload").y);
+  expect(at("finding").x).toBeGreaterThan(at("workload").x);
+  expect(at("role").y).toBeGreaterThan(at("workload").y);
+  expect(at("bucket").y).toBe(at("role").y);
+  expect(at("bucket").x).toBeGreaterThan(at("role").x);
+  expect(result.edges.map(e => [e.source, e.target])).toEqual(expect.arrayContaining(edges.map(e => [e.source, e.target])));
+  const reordered = semanticGraphLayout([...nodes].reverse(), [...edges].reverse());
+  for (const n of result.nodes) expect(reordered.nodes.find(other => other.id === n.id)?.position).toEqual(n.position);
+});
+
+it("uses available columns instead of stacking expanded findings into five rows", () => {
+  const nodes = [node("gateway", "cloudResource", "app", exposed), node("workload", "container", "infra"),
+    node("cluster", "cluster", "infra"), node("worker", "container", "infra"),
+    node("critical", "vulnerability", "finding", { severity: "critical" }), node("worker-finding", "vulnerability", "finding"),
+    node("gateway-finding", "misconfiguration", "finding"), node("role-finding", "misconfiguration", "finding"),
+    node("role", "identity", "identity"), node("bucket", "dataStore", "asset")];
+  const edges = [edge("gateway", "workload", "exposed_to"), edge("workload", "critical", "vulnerable_to"),
+    edge("cluster", "workload", "hosts"), edge("cluster", "worker", "hosts"), edge("worker", "worker-finding", "vulnerable_to"),
+    edge("gateway-finding", "gateway", "affects"), edge("role-finding", "role", "affects"),
+    edge("workload", "role", "authenticates_as"), edge("role", "bucket", "can_access")];
+  const result = semanticGraphLayout(nodes, edges);
+  const shown = result.nodes.filter(n => !n.hidden);
+  const ys = shown.map(n => n.position.y);
+  expect(Math.max(...ys) - Math.min(...ys)).toBeLessThanOrEqual(520);
+  const xs = shown.map(n => n.position.x);
+  expect((Math.max(...xs) - Math.min(...xs)) / (Math.max(...ys) - Math.min(...ys))).toBeGreaterThanOrEqual(3.2);
+  expect(new Set(shown.map(n => `${n.position.x}:${n.position.y}`)).size).toBe(shown.length);
+  for (const edge of edges) expect(result.edges.find(e => e.id === edge.id)).toMatchObject({ source: edge.source, target: edge.target });
+});
+
+it("does not highlight a different traversable relationship beside the ranked witness", () => {
+  const nodes = [node("a", "agent", "orchestration"), node("b", "server", "mcp_server")];
+  const edges = [
+    { ...edge("a", "b", "uses"), data: { relationship: "uses", traversable: true, rankedPathWitness: true } },
+    { ...edge("a", "b", "contains"), id: "parallel", data: { relationship: "contains", traversable: true, rankedPathWitness: false } },
+  ];
+  const result = semanticGraphLayout(nodes, edges, ["a", "b"]);
+  expect(result.edges.find(e => e.id === "parallel")?.data?.pathEmphasis).toBe(false);
+  expect(result.edges.find(e => e.id !== "parallel")?.data?.pathEmphasis).toBe(true);
 });

@@ -89,3 +89,15 @@ it("reports only the findings it actually folds: none when the owner has no back
   expect(plain.groupedIds.size).toBe(0);
   expect(plain.nodes.every(node => !node.hidden)).toBe(true);
 });
+
+it("keeps a single contextual finding on its owner badge without adding a redundant branch", () => {
+  const single = nodes.map(n => n.id === "owner" ? { ...n, data: { ...n.data, findingAggregate: { ...n.data.findingAggregate!, issue_count: 1 } } } : n);
+  const collapsed = cloudFindingDisclosure(single, edges, new Set(), () => {}, true);
+  expect(collapsed.nodes.some(n => n.type === "findingGroupNode")).toBe(false);
+  expect(collapsed.nodes[0]!.data.readingFindingsGroup).toBe(false);
+  expect(collapsed.nodes[0]!.data.readingFindings?.count).toBe(1);
+  expect(collapsed.groupedIds).toEqual(new Set(["finding"]));
+  const expanded = cloudFindingDisclosure(single, edges, new Set(["owner"]), () => {}, true);
+  expect(expanded.nodes.find(n => n.id === "finding")?.hidden).toBe(false);
+  expect(expanded.edges[0]).toMatchObject(edges[0]!);
+});

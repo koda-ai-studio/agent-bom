@@ -74,3 +74,19 @@ it("puts a branch that skips a stacked finding on the side away from it, leaving
   // The spine's own hop is unchanged: straight down to the finding under its asset.
   expect(result.edges.find(e => e.id === "checkout-cve")).toMatchObject({ sourceHandle: null, targetHandle: null });
 });
+
+
+it("keeps a bounded phone story consecutive with context links on the glyph side", () => {
+  const nodes: Node<LineageNodeData>[] = ["internet", "gateway", "workload", "finding"].map((id, index) => ({ id, position: { x: index * 480, y: 0 },
+    data: { label: id, nodeType: "server", roomyName: true, semanticPathIndex: index } }));
+  nodes.push({ id: "account", position: { x: 480, y: -260 }, data: { label: "prod-workloads", nodeType: "account", roomyName: true } });
+  const edges: Edge[] = [["internet", "gateway"], ["gateway", "workload"], ["workload", "finding"], ["account", "gateway"], ["account", "workload"]]
+    .map(([source, target]) => ({ id: `${source}-${target}`, source: source!, target: target! }));
+  const original = structuredClone({ nodes, edges });
+  const result = graphPortraitLayout(nodes, edges);
+  expect([...result.nodes].sort((a, b) => a.position.y - b.position.y).slice(0, 4).map(n => n.id)).toEqual(["internet", "gateway", "workload", "finding"]);
+  expect(result.nodes.every(n => n.data.phoneLinear && Number(n.style?.width) >= 260)).toBe(true);
+  expect(result.edges.find(e => e.id === "account-gateway")).toMatchObject({ sourceHandle: "phone-left", targetHandle: "phone-left" });
+  expect(result.edges.map(e => [e.id, e.source, e.target])).toEqual(edges.map(e => [e.id, e.source, e.target]));
+  expect({ nodes, edges }).toEqual(original);
+});
