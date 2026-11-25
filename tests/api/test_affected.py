@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from unittest.mock import Mock
+
 import pytest
 from starlette.testclient import TestClient
 
@@ -85,10 +87,18 @@ def test_a_resolved_finding_is_previously_affected_and_unknown_is_not_found(scan
 def test_reach_merges_the_story_groups_of_matched_advisories(scan_store, monkeypatch) -> None:
     scan_store.put(job(9, findings=[_finding("CVE-2026-1111", "left-pad")]))
 
+    graph_store = Mock()
+    graph_store.snapshot_identity.return_value = ("snap-1", "generation-1")
+    monkeypatch.setattr("agent_bom.api.stores._get_graph_store", lambda: graph_store)
+
     def story(_store, *, tenant_id, scan_id, node_id, **_kwargs):
         assert node_id == "vuln:CVE-2026-1111" and tenant_id == "history-tenant"
         items = [{"id": "cred:token", "label": "TOKEN", "entity_type": "credential"}]
-        return {"scan_id": "snap-1", "at_risk": {"groups": [{"kind": "credentials", "items": items}]}}
+        return {
+            "scan_id": "snap-1",
+            "snapshot_generation": "generation-1",
+            "at_risk": {"groups": [{"kind": "credentials", "items": items}], "listed_complete": True, "completeness": {"complete": True}},
+        }
 
     monkeypatch.setattr("agent_bom.graph.exploit_story_read.read_exploit_story", story)
     reach = _affected("CVE-2026-1111")["reach"]

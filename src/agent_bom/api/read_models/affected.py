@@ -65,6 +65,11 @@ class AffectedReach(ReadModel):
     servers_on_findings: list[str]
     basis: Literal["graph_snapshot", "findings_only", "unavailable"]
     scan_id: str | None = None
+    snapshot_generation: str | None = None
+    direction: Literal["outbound"] = "outbound"
+    complete: bool = False
+    truncated: bool = False
+    reasons: list[str] = []
     advisories_walked: list[str]
     note: str | None = None
 
