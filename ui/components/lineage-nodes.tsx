@@ -4,7 +4,7 @@ import { GraphAttributeBadges } from "@/components/graph-attribute-badges";
 import { SegmentedLabel } from "@/components/graph-segmented-label";
 import { canvasCaption } from "@/lib/graph-canvas-caption";
 import { GraphFindingGroupNode } from "@/components/graph-finding-group-node";
-import { CompactGraphNode } from "@/components/graph-compact-node";
+import { CompactGraphNode, type CompactNodePresentation } from "@/components/graph-compact-node";
 import { CompactClusterNode } from "@/components/graph-compact-cluster";
 import { agentExecutionCaption, type AgentContext } from "@/lib/graph-agent-context";
 import { topologyAgentTypeLabel } from "@/lib/agent-topology-graph";
@@ -47,7 +47,7 @@ export type { EntityIcon, LineageNodeType };
 
 export type RuntimeEvidenceTier = "static_scan" | "runtime_observed" | "runtime_blocked";
 
-export type LineageNodeData = {
+export type LineageNodeData = CompactNodePresentation & {
   label: string;
   /** On a boundary frame: the environment node it stands for. */
   frameFor?: string | undefined;
@@ -58,7 +58,6 @@ export type LineageNodeData = {
   semanticPathIndex?: number | undefined;
   semanticLayout?: boolean | undefined;
   phoneLayout?: boolean | undefined;
-  phoneLinear?: boolean | undefined;
   phoneSide?: "trunk" | "left" | "right" | undefined;
   semanticOwner?: string | undefined;
   evidenceFlow?: boolean;
@@ -86,8 +85,6 @@ export type LineageNodeData = {
   readingFindingsGroup?: boolean;
   readingFindings?: { count: number; expanded: boolean; severity?: string | undefined; toggle: () => void } | undefined;
   readingLabel?: string | undefined;
-  /** A bounded story reserves room for a longer finding caption. */
-  roomyName?: boolean | undefined;
   readingFinding?: boolean | undefined;
   readingOwner?: string | undefined;
   readingGroup?: string | undefined;

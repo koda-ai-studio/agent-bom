@@ -24,6 +24,9 @@ import { showsProviderMark } from "@/lib/graph-scope-context";
 import { compactScopeCaption } from "@/lib/graph-compact-scope";
 import { ANCHOR_GLYPH_SCALE, COMPACT_GLYPH_SCALE, PHONE_GLYPH_SCALE } from "@/lib/graph-compact-glyph";
 
+/** Presentation flags shared with the bounded story layout. */
+export type CompactNodePresentation = { phoneLinear?: boolean | undefined; roomyName?: boolean | undefined };
+
 export type CompactNodeTone = { data: LineageNodeData; borderClass: string; bgClass: string; ringClass: string; iconClass: string; source?: boolean; target?: boolean };
 
 const HANDLE = "!h-1 !w-1 !border-0 !bg-transparent";
