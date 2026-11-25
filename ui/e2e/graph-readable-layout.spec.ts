@@ -687,7 +687,8 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     if (width < 640) await page.getByRole("group", { name: "Investigation view" }).getByRole("button", { name: "Graph", exact: true }).click();
 
     await expect(page.getByRole("button", { name: "Show supporting context (3)", exact: true })).toBeVisible();
-    await expect(page.locator('[data-boundary-frame]')).toHaveCount(width >= 640 ? 1 : 0);
+    await expect(page.locator('[data-boundary-frame]')).toHaveCount(1);
+    await expect(page.locator('.graph-boundary-frame-kind')).toHaveText("AWS · Account context");
     await expect(page.locator('[data-id="cluster:payments"]')).toHaveCount(0);
     // An opaque foreground circle previously hid every continent.
     await expect(page.locator('[data-internet-globe] > circle:last-child')).toHaveAttribute("fill", "none");
@@ -716,7 +717,7 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     await page.screenshot({ path: info.outputPath(`story-first-${theme}-${width}.png`), animations: "disabled" });
     await page.getByRole("button", { name: "Show supporting context (3)", exact: true }).click();
     await settle(page);
-    await expect(page.locator('[data-boundary-frame]')).toHaveCount(width >= 640 ? 1 : 0);
+    await expect(page.locator('[data-boundary-frame]')).toHaveCount(1);
     await expect(page.getByText("prod-workloads", { exact: true })).toBeVisible();
     if (width >= 640) {
       await expect(page.locator('[data-boundary-frame]')).toHaveAttribute("data-frame-links", "2");
@@ -725,7 +726,12 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
       const internet = await page.locator('[data-id="display:internet"] .graph-entity-glyph').boundingBox();
       expect(internet!.x + internet!.width).toBeLessThan(bounds!.x);
       expect(await page.locator('[data-boundary-frame]').evaluate(el => getComputedStyle(el).borderTopColor)).not.toBe("rgba(0, 0, 0, 0)");
-    } else await expect(page.locator('.react-flow__edge[data-id*="contains"]')).not.toHaveCount(0);
+    } else {
+      await expect(page.locator('[data-id="account:prod"]')).toHaveCount(0);
+      const bounds = await page.locator('[data-boundary-frame]').boundingBox();
+      const internet = await page.locator('[data-id="display:internet"] .graph-entity-glyph').boundingBox();
+      expect(internet!.y + internet!.height).toBeLessThan(bounds!.y);
+    }
     if (width >= 640) {
       const spread = await page.locator('.react-flow__edge[data-id="display:internet:gateway:public"] .react-flow__edge-path').evaluate(path => {
         const line = path as SVGPathElement;

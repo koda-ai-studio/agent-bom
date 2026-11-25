@@ -39,6 +39,16 @@ describe("exposure spine", () => {
 });
 
 describe("environment boundary", () => {
+  it("does not wrap a foreign account asset even when its account node is absent from the loaded view", () => {
+    const nodes = [node("acct", "account", "scope", { attributes: { account_id: "123456789012" } }),
+      node("w", "container", "infra", { attributes: { account_id: "123456789012", internet_exposed: true } }),
+      node("data", "dataStore", "asset", { attributes: { account_id: "210987654321" } })];
+    const edges = [edge("acct", "w", "contains"), edge("w", "data", "can_access")];
+    expect(enclosingEnvironment(nodes, edges)).toBeNull();
+    const result = semanticGraphLayout(nodes, edges);
+    expect(result.nodes.some(n => n.type === "boundaryFrame")).toBe(false);
+    expect(result.edges.find(e => e.id === "w-data")).toMatchObject({ source: "w", target: "data", data: { relationship: "can_access" } });
+  });
   it("never represents permission or cross-account trust as one containment context", () => {
     const { nodes, edges } = estate();
     expect(enclosingEnvironment(nodes, edges.map(link => link.source === "env" ? { ...link, data: { relationship: "can_access" } } : link))).toBeNull();

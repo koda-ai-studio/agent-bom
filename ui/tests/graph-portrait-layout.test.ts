@@ -2,6 +2,34 @@ import { expect, it } from "vitest";
 import type { Node, Edge } from "@xyflow/react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { graphPortraitLayout } from "@/lib/graph-portrait-layout";
+import { semanticGraphLayout } from "@/lib/graph-semantic-layout";
+import { INTERNET_ANCHOR_ID } from "@/lib/graph-internet-context";
+
+it("keeps a bounded phone account as context rather than a trailing node with returning containment lines", () => {
+  const nodes: Node<LineageNodeData>[] = [
+    { id: "account", position: { x: 0, y: 0 }, data: { label: "Production", nodeType: "account", semanticLayer: "scope" } },
+    { id: "workload", position: { x: 0, y: 0 }, data: { label: "Checkout", nodeType: "container", semanticLayer: "infra", connectedScope: true, attributes: { internet_exposed: true } } },
+    { id: "finding", position: { x: 0, y: 0 }, data: { label: "CVE-2025-29927", nodeType: "vulnerability", semanticLayer: "finding", severity: "critical" } },
+  ];
+  const edges: Edge[] = [
+    { id: "contains", source: "account", target: "workload", data: { relationship: "contains" } },
+    { id: "finding", source: "workload", target: "finding", data: { relationship: "vulnerable_to" } },
+  ];
+  const desktop = semanticGraphLayout(nodes, edges);
+  const result = graphPortraitLayout(desktop.nodes, desktop.edges);
+  const frame = result.nodes.find(n => n.type === "boundaryFrame");
+  expect(frame).toBeDefined();
+  expect(result.nodes.find(n => n.id === "account")?.hidden).toBe(true);
+  expect(result.edges.find(e => e.id === "contains")?.hidden).toBe(true);
+  const internet = result.nodes.find(n => n.id === INTERNET_ANCHOR_ID)!;
+  expect(internet.position.y + 100).toBeLessThan(frame!.position.y);
+  for (const n of result.nodes.filter(n => !n.hidden && n.type !== "boundaryFrame" && n.id !== INTERNET_ANCHOR_ID)) {
+    expect(n.position.y).toBeGreaterThan(frame!.position.y + 40);
+    expect(n.position.y + 80).toBeLessThan(frame!.position.y + Number(frame!.style!.height));
+  }
+  expect(result.edges.map(e => [e.id, e.source, e.target])).toEqual(desktop.edges.map(e => [e.id, e.source, e.target]));
+  expect(graphPortraitLayout(result.nodes, result.edges).nodes.map(n => [n.id, n.position, n.hidden])).toEqual(result.nodes.map(n => [n.id, n.position, n.hidden]));
+});
 
 it("keeps the supplied spine connected vertically with its context beside the recorded owner", () => {
   const nodes: Node<LineageNodeData>[] = ["entry", "server", "asset"].map((id, index) => ({ id, position: { x: index * 380, y: 0 },

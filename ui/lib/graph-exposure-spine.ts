@@ -61,6 +61,13 @@ export function enclosingEnvironment(nodes: readonly Node<LineageNodeData>[], ed
   const scope = (value: unknown) => value === "environment" || value === "account";
   const environments = visible.filter(node => node.type === "environmentNode" || scope(node.data.nodeType) || scope(node.data.entityType));
   if (environments.length !== 1) return null;
+  // A partial view can omit a foreign account's root while retaining its assets.
+  // Recorded account identity still prevents a misleading single-account frame.
+  const accountIds = new Set(visible.flatMap(node => {
+    const value = node.data.attributes?.account_id;
+    return typeof value === "string" && value.trim() ? [value.trim()] : [];
+  }));
+  if (accountIds.size > 1) return null;
   const environment = environments[0]!;
   const children = edges.filter(edge => !edge.hidden && edge.source === environment.id);
   if (!children.length || children.some(edge => !["contains", "hosts"].includes(String(edge.data?.relationship)))) return null;

@@ -97,6 +97,8 @@ function handles(from: Point, to: Point, positions: Map<string, Point>, stacked:
  * verdict. The backend-ranked path runs top to bottom; branches sit beside
  * each other under the hop they connect to. */
 export function graphPortraitLayout(nodes: Node<LineageNodeData>[], edges: Edge[]) {
+  const cards = nodes.filter(node => !node.hidden && node.type !== "boundaryFrame");
+  if (cards.length <= 24 && cards.some(node => node.data.roomyName) && nodes.some(node => node.type === "boundaryFrame")) return phoneStoryLayout(nodes, edges);
   // A phone stacks one column: the scope is its first card again, not a boundary around it.
   ({ nodes, edges } = withoutFrames(nodes, edges));
   const visible = nodes.filter(node => !node.hidden);
