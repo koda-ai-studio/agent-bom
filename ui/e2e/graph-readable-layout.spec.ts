@@ -484,12 +484,13 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     await routeNodeAggregates(page, ownedFindingAggregates(entries, links));
     await page.goto("/graph?scan=snapshot&rollup=0&capture=1&layers=account,cluster,apiGateway,container,role,dataStore,vulnerability,misconfiguration");
     if (width < 640) await page.getByRole("group", { name: "Investigation view" }).getByRole("button", { name: "Graph", exact: true }).click();
+    await page.getByRole("button", { name: "Show supporting context (4)", exact: true }).click();
     // The selected path's terminal CVE stays on the spine; the other three findings group under their owners.
-    // Cards plus the account, drawn as the boundary around them (a phone stacks it as a card).
+    // The supporting account remains a node connected by its recorded containment.
     await expect.poll(async () => await page.locator('.react-flow__node:not([data-id^="display:"])').count() + await page.locator("[data-boundary-frame]").count()).toBe(8);
     await expect(page.locator('[data-graph-entity="finding-group"]')).toHaveCount(0);
-    // Modeled links drawn as lines; the account's two containment links are drawn by its boundary instead.
-    if (width >= 640) await expect(page.getByLabel("Visible relationship evidence")).toContainText("Modeled 6");
+    // Supporting containment links remain visible with the account node.
+    if (width >= 640) await expect(page.getByLabel("Visible relationship evidence")).toContainText("Modeled 8");
     await settle(page);
     expect(await graphGrammarViolations(page)).toEqual({});
     if (width >= 640) await readableCloudFrame(page);
@@ -598,7 +599,7 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
       await expect(page.getByTestId("graph-entity-drawer")).toContainText("Public API stage has no WAF association");
       await page.screenshot({ path: info.outputPath(`cloud-finding-inspector-${theme}.png`), animations: "disabled" });
       await page.getByRole("button", { name: "Collapse findings", exact: true }).click();
-      // Cards plus the account, drawn as the boundary around them (a phone stacks it as a card).
+      // The supporting account remains a node connected by its recorded containment.
     await expect.poll(async () => await page.locator('.react-flow__node:not([data-id^="display:"])').count() + await page.locator("[data-boundary-frame]").count()).toBe(8);
       await expect(page.locator('[data-graph-entity="finding-group"]')).toHaveCount(0);
       await expect(page.getByTestId("graph-entity-drawer")).toHaveCount(0);
