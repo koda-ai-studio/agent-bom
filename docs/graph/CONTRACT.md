@@ -1347,3 +1347,26 @@ addresses, permissive rules, subnet placement and frontend/backend attachments
 alone do not establish effective network reachability. Those bindings remain
 visible with unknown reachability until route, rule and endpoint evidence supports
 a stronger claim. Missing links do not prove isolation.
+
+## Attribute observation freshness
+
+When observations of the same graph node merge, `attributes.attribute_observations`
+records the selected value's `observed_at`, collector `sources`, `value_digest`,
+and `conflicted` flag for each attribute. A node-wide `last_seen` is not the
+observation time of every attribute. Newer dated assertions take precedence over
+older ones; absent dates remain unknown. Equal-time disagreements preserve
+positive boolean risk assertions, then use a stable tie-break for other values. They remain marked conflicted, rather than
+becoming verified facts.
+
+The receipt is bounded to one selected assertion per attribute and does not
+retain every discarded value. Original source snapshots, when retained, are
+needed to inspect those values; the receipt does not replace that history. Risk-score
+selection and conservative cross-source security assertions keep their separate
+contracts. Collector names and hashes do not authenticate a collector or prove
+its assertions. An operator must inspect conflicting source evidence before
+using a merged value as proof of effective access or remediation.
+
+Source-defined tools and entrypoints preserve case and identity component
+boundaries. Retired identifiers remain aliases only when they identify one node
+unambiguously within the tenant and snapshot. A legacy identifier that could name
+two distinct declarations does not silently select one of them.

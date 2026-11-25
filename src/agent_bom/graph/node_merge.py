@@ -9,8 +9,8 @@ from agent_bom.graph.recorded_time import merge_seen
 
 def merge_node(existing: UnifiedNode, incoming: UnifiedNode) -> None:
     """Merge *incoming* into *existing* in place; cross-source metadata is unioned."""
-    merge_seen(existing, incoming)
     existing.merge_attributes_and_risk(incoming)
+    merge_seen(existing, incoming)
     if SEVERITY_RANK.get(incoming.severity, 0) > SEVERITY_RANK.get(existing.severity, 0):
         existing.severity = incoming.severity
         existing.severity_id = incoming.severity_id
