@@ -18,7 +18,7 @@ import {
   DEMO_AGENT_SPECS, SCAN_ID, SCENARIO_ID, advisory, buildBlastRadius, buildGraph, contextGraph, edge,
   demoScanAgent, graphScenario, graphScenarioComparison, node, severityId, vuln,
 } from "./product-proof-graph.mjs";
-import { runGraphQualityCapture } from "./graph-quality-capture.mjs";
+import { assertRecordedDirections, runGraphQualityCapture } from "./graph-quality-capture.mjs";
 import { foldPackageEvidence } from "../lib/graph-evidence-fold.ts";
 import { AGENT_ARCHITECTURE_SCREENSHOTS, captureAgentArchitecture, installAgentArchitectureRoutes } from "./product-proof-agent-architecture.mjs";
 import { captureSourceProvenance } from "./product-proof-provenance.mjs";
@@ -2808,8 +2808,8 @@ async function main() {
     const prepareCorrelationPath = async (proofPage) => {
       await proofPage.locator(".react-flow__node").first().waitFor({ state: "visible" });
       await fitReactFlow(proofPage);
-      // Every relationship the overview draws has its direction; the Internet anchor's display link is extra context.
-      await expect(proofPage.locator('.react-flow__edge:not([data-id^="display:"]) .react-flow__edge-path[marker-end]')).toHaveCount(referenceOverview.edges.length);
+      // Every recorded direction is available on inspection; the Internet anchor is extra display context.
+      await assertRecordedDirections(proofPage, referenceOverview.edges);
       await expect(proofPage.locator(".graph-relationship-label")).toHaveCount(0);
       await scrollTo(proofPage, 0);
     };
