@@ -4,7 +4,7 @@ const LINK = "text-foreground underline underline-offset-4";
 const count = (value: number, one: string, many: string) => `${value.toLocaleString()} ${value === 1 ? one : many}`;
 
 /** Counts for what is on the canvas. Display-only objects are not nodes and are never counted as such. */
-export function GraphViewportScope({ collapsedFindings, canonicalVisibleNodes, totalNodes, totalEdges, scopeLabel, partialView, aggregate, unconnected, scenarioToggle, minimap, onFitAll, findingsToggle, connections, onMoreConnections }: {
+export function GraphViewportScope({ collapsedFindings, canonicalVisibleNodes, totalNodes, totalEdges, scopeLabel, partialView, aggregate, unconnected, scenarioToggle, minimap, onFitAll, findingsToggle, supporting, connections, onMoreConnections }: {
   /** Says the canvas opened on part of the map, so a partial view never reads as the whole. */
   partialView?: string | undefined;
   collapsedFindings: number;
@@ -18,6 +18,7 @@ export function GraphViewportScope({ collapsedFindings, canonicalVisibleNodes, t
   minimap?: { expanded: boolean; onToggle: () => void } | undefined;
   onFitAll: () => void;
   findingsToggle?: (() => void) | undefined;
+  supporting?: { count: number; expanded: boolean; onToggle: () => void } | undefined;
   connections?: { loaded: number; total: number } | undefined;
   onMoreConnections?: (() => void) | undefined;
 }) {
@@ -33,6 +34,7 @@ export function GraphViewportScope({ collapsedFindings, canonicalVisibleNodes, t
     {minimap && <button type="button" aria-pressed={minimap.expanded} onClick={minimap.onToggle} className={LINK}>{minimap.expanded ? "Hide minimap" : "Show minimap"}</button>}
     <button type="button" onClick={onFitAll} className={LINK}>Fit all</button>
     {findingsToggle && <button type="button" onClick={findingsToggle} className={LINK}>{collapsedFindings ? `Expand findings (${collapsedFindings} grouped)` : "Collapse findings"}</button>}
+    {supporting && <button type="button" aria-expanded={supporting.expanded} onClick={supporting.onToggle} className={LINK}>{supporting.expanded ? "Hide supporting context" : `Show supporting context (${supporting.count})`}</button>}
     {connections && <span data-testid="graph-connection-progress">Showing {connections.loaded} of {connections.total} connections</span>}
     {onMoreConnections && <button type="button" className="graph-page-action min-h-11 sm:min-h-7" onClick={onMoreConnections}>Show more connections</button>}
   </div>;

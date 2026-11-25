@@ -22,3 +22,10 @@ describe("a back link and a forward link on one side", () => {
     expect(fans.get("hosted")!.targetFan).not.toBe(fans.get("depends")!.sourceFan);
   });
 });
+
+it("keeps the unique same-row relationship on the glyph center while fanning its side branch", () => {
+  const positions = new Map([["main", { x: 0, y: 0 }], ["context", { x: 0, y: -200 }], ["target", { x: 400, y: 0 }]]);
+  const fans = linkEndFans([{ id: "straight", source: "main", target: "target" }, { id: "branch", source: "context", target: "target" }], positions);
+  expect(fans.get("straight")?.targetFan).toBe(0);
+  expect(fans.get("branch")?.targetFan).toBeLessThan(0);
+});

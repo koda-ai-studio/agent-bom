@@ -635,3 +635,68 @@ for (const theme of ["light", "dark"] as const) test(`independent environment ch
   expect(await graphGrammarViolations(page)).toEqual({});
   await page.screenshot({ path: info.outputPath(`environment-expanded-${theme}.png`), animations: "disabled" });
 });
+
+for (const theme of ["light", "dark"] as const) for (const width of [1440, 390]) {
+  test(`exposure story hierarchy opens legibly ${theme} ${width}`, async ({ page }, info) => {
+    await page.addInitScript(t => localStorage.setItem("agent-bom-theme", t), theme);
+    await page.setViewportSize({ width, height: 900 });
+    // The same owning fixture used by the product screenshot pipeline.
+    const { buildScopeShowcase } = await import("../scripts/product-proof-scope-showcase.mjs");
+    const catalog = JSON.parse(await readFile("fixtures/gallery-advisories.json", "utf8"));
+    const showcase = buildScopeShowcase("cloud", {
+      base: { scan_id: "snapshot" },
+      node: (id: string, type: string, label: string, severity: string, risk_score: number, attributes: Record<string, unknown>) => ({ ...node(id, type, label), severity, risk_score, attributes }),
+      edge: (source: string, target: string, relationship: string, weight: number, evidence: Record<string, unknown>) => ({ ...edge(source, target, relationship), weight, evidence: { tier: "modeled_infrastructure", source: "gallery-fixture", ...evidence } }),
+      advisory: (id: string) => catalog.advisories.find((item: { canonical_id: string }) => item.canonical_id === id) ?? catalog.advisories.find((item: { id: string }) => item.id === id),
+      referenceCve: { label: "unused", attributes: {} },
+    });
+    const entries: FixtureNode[] = showcase.nodes, links: FixtureEdge[] = showcase.edges;
+    await fixture(page, entries, links, false, { stats: showcase.stats, attack_paths: showcase.attack_paths });
+    await routeNodeAggregates(page, ownedFindingAggregates(entries, links));
+    await page.goto("/graph?scan=snapshot&rollup=0&capture=1&layers=account,cluster,apiGateway,container,role,dataStore,vulnerability,misconfiguration");
+    if (width < 640) await page.getByRole("group", { name: "Investigation view" }).getByRole("button", { name: "Graph", exact: true }).click();
+
+    await expect(page.getByRole("button", { name: "Show supporting context (4)", exact: true })).toBeVisible();
+    await expect(page.locator('[data-boundary-frame]')).toHaveCount(0);
+    await expect(page.locator('[data-id="cluster:payments"]')).toHaveCount(0);
+    // An opaque foreground circle previously hid every continent.
+    await expect(page.locator('[data-internet-globe] > circle:last-child')).toHaveAttribute("fill", "none");
+    expect(await page.locator('[data-internet-globe] path').count()).toBeGreaterThan(2);
+    await settle(page);
+    expect(await cardOverlaps(page)).toEqual([]);
+    expect(await edgesThroughNodes(page)).toEqual([]);
+    if (width >= 640) {
+      const reading = await page.locator(".react-flow").evaluate(canvas => {
+        const zoom = new DOMMatrixReadOnly(getComputedStyle(canvas.querySelector(".react-flow__viewport")!).transform).a;
+        const names = [...canvas.querySelectorAll("[data-semantic-name]")];
+        return Math.min(...names.map(n => parseFloat(getComputedStyle(n).fontSize) * zoom));
+      });
+      expect(reading).toBeGreaterThanOrEqual(15.9);
+    }
+    if (width >= 640) {
+      const straight = await page.locator('.react-flow__edge[data-id="display:internet:gateway:public"] .react-flow__edge-path').evaluate(path => {
+        const line = path as SVGPathElement;
+        const ys = [0, 0.25, 0.5, 0.75, 1].map(t => line.getPointAtLength(line.getTotalLength() * t).y);
+        return Math.max(...ys) - Math.min(...ys);
+      });
+      expect(straight, "same-row Internet entry stays straight").toBeLessThan(1);
+    }
+    await page.screenshot({ path: info.outputPath(`story-first-${theme}-${width}.png`), animations: "disabled" });
+    await page.getByRole("button", { name: "Show supporting context (4)", exact: true }).click();
+    await settle(page);
+    await expect(page.locator('[data-boundary-frame]')).toHaveCount(0);
+    await expect(page.getByText("prod-workloads", { exact: true })).toBeVisible();
+    await expect(page.locator('.react-flow__edge[data-id*="contains"]')).not.toHaveCount(0);
+    if (width >= 640) {
+      const spread = await page.locator('.react-flow__edge[data-id="display:internet:gateway:public"] .react-flow__edge-path').evaluate(path => {
+        const line = path as SVGPathElement;
+        const ys = [0, 0.25, 0.5, 0.75, 1].map(t => line.getPointAtLength(line.getTotalLength() * t).y);
+        return Math.max(...ys) - Math.min(...ys);
+      });
+      expect(spread, "account context must not bend the level exposure entry").toBeLessThan(1);
+    }
+    expect(await cardOverlaps(page)).toEqual([]);
+    expect(await edgesThroughNodes(page)).toEqual([]);
+    await page.screenshot({ path: info.outputPath(`story-context-${theme}-${width}.png`), animations: "disabled" });
+  });
+}

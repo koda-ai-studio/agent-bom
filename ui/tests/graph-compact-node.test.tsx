@@ -110,3 +110,17 @@ it("uses one wide phone caption column beside finding glyphs", () => {
   expect(container.querySelector("[data-compact-node]")).toHaveClass("flex-row");
   expect(container.querySelector("[data-semantic-name]")?.textContent).toBe("CVE-2025-29927");
 });
+
+
+it("shows administrator and critical-asset markers only for recorded verdicts", () => {
+  const Renderer = lineageNodeTypes.dataStoreNode;
+  const draw = (attributes: Record<string, unknown>) => <ReactFlowProvider><Renderer data={{ label: "admin-critical-pii", nodeType: "dataStore", semanticLayout: true, attributes }} /></ReactFlowProvider>;
+  const { container, rerender } = render(draw({ risk_context: { is_admin: true, crown_jewel: true, data_sensitivity: "regulated" } }));
+  expect(container.querySelector('[data-compact-marker="privilege"]')).toHaveAccessibleName("Recorded administrator privileges");
+  expect(container.querySelector('[data-compact-marker="sensitive"]')).toHaveAccessibleName("Recorded critical asset · data classification: regulated");
+  for (const attributes of [{}, { is_admin: "true" }, { privilege_level: "unknown" }, { is_admin: true, risk_context: { is_admin: false, crown_jewel: false } }, { is_admin: true, risk_context: { is_admin: null } }]) {
+    rerender(draw(attributes));
+    expect(container.querySelector('[data-compact-marker="privilege"]')).toBeNull();
+    expect(container.querySelector('[data-compact-marker="sensitive"]')).toBeNull();
+  }
+});

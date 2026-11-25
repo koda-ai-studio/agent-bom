@@ -34,14 +34,14 @@ export function GraphFlowCanvas({ page, flowView }: { page: GraphPageModel; flow
   const { disclosed, measured: measuredDisplay, quieted } = flowView;
   const roomyOverview = displayEdges.some(edge => edge.data?.roomyOverview === true);
   // Layout changes glide once (never while dragging or capturing); the camera frames the final positions.
-  const motion = useAnimatedLayout(measuredDisplay.nodes, captureMode || presentation.editing, narrowViewport ? "narrow" : "wide", `${compactLayoutKey}:${flowView.kind}:${disclosed.key}`);
+  const motion = useAnimatedLayout(measuredDisplay.nodes, captureMode || presentation.editing, narrowViewport ? "narrow" : "wide", `${compactLayoutKey}:${flowView.kind}:${disclosed.key}:${flowView.supporting.key}`);
   const nodes = useMemo(() => withFindingDrilldowns(motion.nodes, page.drillIntoRollup), [motion.nodes, page.drillIntoRollup]);
   const portrait = useMemo(() => narrowViewport ? graphPortraitLayout(nodes, quieted.edges) : { nodes, edges: quieted.edges }, [narrowViewport, nodes, quieted.edges]);
   return (
             <ReactFlow
-              style={{ ...readableGraphNodeStyle(graphViewport.zoom, Boolean(investigationContext) || roomyOverview, (roomyOverview || Boolean(investigationContext) && compactInvestigationTopology) && !narrowViewport, displayNodes.length),
+              style={{ ...readableGraphNodeStyle(graphViewport.zoom, Boolean(investigationContext) || roomyOverview, (roomyOverview || Boolean(investigationContext) && compactInvestigationTopology) && !narrowViewport, portrait.nodes.filter(node => !node.hidden && node.type !== "boundaryFrame").length, flowView.supporting.available),
                 ...flowView.cardStyle,
-                ...(disclosed.available && !narrowViewport ? { "--graph-node-glyph-size": disclosedGlyphSize(graphViewport.zoom, displayNodes.length) } : {}) }}
+                ...(disclosed.available && !narrowViewport ? { "--graph-node-glyph-size": disclosedGlyphSize(graphViewport.zoom, portrait.nodes.filter(node => !node.hidden && node.type !== "boundaryFrame").length) } : {}) }}
               className={selectedScenarioId ? "scenario-context-canvas" : undefined}
               key={captureMode ? `lineage-capture:${scenarioExpanded ? "full" : "context"}` : `${presentation.storageKey}:${flowView.kind}:${presentation.restoredSavedState ? "restored" : "initial"}:${scenarioExpanded ? "full" : "context"}`}
               nodes={portrait.nodes}
@@ -115,7 +115,7 @@ export function GraphFlowCanvas({ page, flowView }: { page: GraphPageModel; flow
                 primaryIds={selectedAttackPath?.hops ?? (selectedNodeId ? undefined : flowView.flow.primaryPath)}
                 primaryZoom={flowView.primaryZoom}
                 enabled={!layoutPending && !motion.animating}
-                layoutKey={`${compactLayoutKey}:${flowView.kind}:${disclosed.key}:${selectedScenarioId ?? "estate"}`}
+                layoutKey={`${compactLayoutKey}:${flowView.kind}:${disclosed.key}:${flowView.supporting.key}:${selectedScenarioId ?? "estate"}`}
                 anchorId={selectedNodeId ?? investigationMode?.rootId ?? (flowView.anchorId?.startsWith("display:") ? undefined : flowView.anchorId)}
                 inspector={Boolean(selectedNode || selectedRelationship) && !narrowViewport}
                 preserveViewport={manualCamera || flowView.kind === "auto" && presentation.restoredSavedState}

@@ -3,7 +3,9 @@
 - Investigation navigation no longer marks fixes complete without explicit completion evidence; incident reach distinguishes outbound listed entities and incomplete assessment.
 - Exposure canvases spread entry hops across the canvas, retain complete short finding captions, separate findings and access branches, and show account context without an enclosing panel. Single contextual findings expand from owner badges; links disclose direction and evidence on inspection.
 - Bounded phone stories keep ranked hops consecutive with wider captions and side-routed context links; connectors remeasure when expanded branches move.
+- Bounded exposure stories open with supporting infrastructure folded; expansion restores the account and its recorded containment links. Same-row glyph centers and link ends align, while findings and access branches use nearby rows.
 
 ### Added
 - Sensitive-data markers use recorded classifications; asset names never establish sensitivity.
+- Administrator and critical-asset markers read recorded risk-context verdicts, with keyboard-accessible explanations. Internet context uses a geographic globe; light-theme node outlines and finding counts have stronger contrast.
 - Node details display paginated observation values, timestamps, sources and conflicts, including explicit unknowns.

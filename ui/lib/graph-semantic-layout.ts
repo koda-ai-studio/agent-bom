@@ -200,7 +200,7 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
     levelLeaf: (id: string) => { const found = byId.get(id); return Boolean(found) && (semanticLayer(found!) === "finding"
       || (found!.type === "findingGroupNode" && !onPath.has(String(found!.data.displayTargetId ?? "")))); },
     spine: primary, attached: attachedRanks(visible, drawn, columns), arrange };
-  const boxes = new Map(visible.map(node => [node.id, cardWidth(node, node.id)]));
+  const boxes = new Map(visible.map(node => [node.id, Math.max(arrange ? 300 : 0, cardWidth(node, node.id))]));
   // Placement depends only on the graph's structure and its captions; a re-render that changes nothing else reuses it.
   const signature = JSON.stringify([visible.map(node => [node.id, node.type, node.data.label, node.data.semanticLayer, node.data.readingLabel,
     node.data.displayTargetId, node.data.readingFindings?.count, internetExposure(node.data.attributes)]),
@@ -216,7 +216,7 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
   const anchored = new Set(drawn.filter(edge => edge.source === INTERNET_ANCHOR_ID).map(edge => edge.target));
   // The Internet arrow takes the glyph's upper left when another link also enters that node, so the two
   // arrowheads never land on one point; nothing hangs above a glyph, so the entry clears every caption.
-  const sharedInternetEntry = (edge: Edge) => edge.source === INTERNET_ANCHOR_ID
+  const sharedInternetEntry = (edge: Edge) => !arrange && edge.source === INTERNET_ANCHOR_ID
     && drawn.some(other => other.target === edge.target && other.source !== INTERNET_ANCHOR_ID);
   // The exposure chain is coloured even when a pinned path leads the layout from elsewhere.
   const exposureChain = primary[0] === INTERNET_ANCHOR_ID ? primary : exposureSpine(visible, drawn);
@@ -235,7 +235,7 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
   const slot = entryAt ? { x: entryAt.x - SEMANTIC_COLUMN_GAP, y: entryAt.y - (crowdedEntry ? SEMANTIC_ROW_GAP : 0) } : null;
   const besideEntry = !frame && anchorAt && slot && ![...positions].some(([id, at]) => id !== INTERNET_ANCHOR_ID
     && Math.abs(at.x - slot.x) < SEMANTIC_COLUMN_GAP / 2 && Math.abs(at.y - slot.y) < SEMANTIC_ROW_GAP / 2) ? slot : null;
-  const outside = frame && anchorAt && entryAt ? { x: frame.position.x - SEMANTIC_COLUMN_GAP * 0.6 - COMPACT_NODE_WIDTH / 2, y: entryAt.y } : besideEntry;
+  const outside = arrange ? null : frame && anchorAt && entryAt ? { x: frame.position.x - SEMANTIC_COLUMN_GAP * 0.6 - COMPACT_NODE_WIDTH / 2, y: entryAt.y } : besideEntry;
   return {
     nodes: [...(frame ? [frame] : []), ...nodes.map(node => {
       const box = boxes.get(node.id) ?? cardWidth(node, node.id), placed = node.id === INTERNET_ANCHOR_ID && outside ? outside : positions.get(node.id);

@@ -966,6 +966,14 @@ main > div {
 /* Compact canvas: one line colour per relationship family. */
 :root { --graph-edge-structure: #8b96aa; --graph-edge-access: #b69cf5; --graph-edge-data: #45c4f5; --graph-edge-exposure: #f5b942; --graph-edge-risk: #ff6b7a; }
 [data-theme="light"] { --graph-edge-structure: #6b778c; --graph-edge-access: #7c3aed; --graph-edge-data: #0284c7; --graph-edge-exposure: #c76a06; --graph-edge-risk: #d21f3c; }
+
+/* Compact outlines carry the glyph's readable ink on a white canvas. */
+[data-theme="light"] [data-compact-node] > .graph-entity-glyph:not([data-severity-ring]) { border-color: currentColor; }
+[data-theme="light"] [data-finding-count-severity] { color: white; border-color: var(--graph-count-tone); background: var(--graph-count-tone); }
+[data-finding-count-severity="critical"] { --graph-count-tone: var(--severity-ring-critical); }
+[data-finding-count-severity="high"] { --graph-count-tone: #a63e08; }
+[data-finding-count-severity="medium"] { --graph-count-tone: #806100; }
+[data-finding-count-severity="low"] { --graph-count-tone: var(--severity-ring-low); }
 /* Environment captions preserve ownership context without enclosing the reading path in a panel. */
 .graph-boundary-frame { border-color: transparent; background: transparent; }
 .graph-boundary-frame-title { position: absolute; }

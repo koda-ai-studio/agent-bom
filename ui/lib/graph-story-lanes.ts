@@ -27,7 +27,7 @@ export function storyLanePlacement(nodes: Node<LineageNodeData>[], edges: Edge[]
   return (positions: Map<string, Point>) => {
     // The reading spine uses equal hop spacing. Recorded side branches occupy
     // neighbouring columns rather than inheriting distant global type columns.
-    const gap = 480;
+    const gap = 400;
     const placed = new Set<string>();
     [...spine].forEach((id, i) => { positions.set(id, { x: i * gap, y: 0 }); placed.add(id); });
     for (let pass = 0; pass < nodes.length; pass++) for (const edge of edges) {
@@ -35,7 +35,7 @@ export function storyLanePlacement(nodes: Node<LineageNodeData>[], edges: Edge[]
       if (placed.has(edge.source) && !placed.has(edge.target) && to && layer(edge.target) !== "finding" && byId.get(edge.target)?.type !== "findingGroupNode") {
         positions.set(edge.target, { ...to, x: from!.x + gap }); placed.add(edge.target);
       } else if (placed.has(edge.target) && !placed.has(edge.source) && from && layer(edge.source) !== "finding" && byId.get(edge.source)?.type !== "findingGroupNode") {
-        positions.set(edge.source, { ...from, x: Math.max(gap, to!.x - gap) }); placed.add(edge.source);
+        positions.set(edge.source, { ...from, x: Math.max(0, to!.x - gap) }); placed.add(edge.source);
       }
     }
     for (const node of nodes) {
@@ -66,12 +66,15 @@ export function storyLanePlacement(nodes: Node<LineageNodeData>[], edges: Edge[]
       const used = occupied.get(x)!;
       for (const id of ids.filter(finding).sort((a, b) => Number(primary.includes(b)) - Number(primary.includes(a)) || a.localeCompare(b))) {
         const parentRow = rows.get(String(owner(id))) ?? 0;
-        const candidates = [parentRow, ...Array.from({ length: nodes.length }, (_, i) => [parentRow - i - 1, parentRow + i + 1]).flat()];
+        const findingRow = primary.includes(id) ? parentRow - 1 : parentRow;
+        const candidates = [findingRow, ...Array.from({ length: nodes.length }, (_, i) => parentRow < 0
+          ? [parentRow + i + 1, parentRow - i - 1] : [parentRow - i - 1, parentRow + i + 1]).flat()];
         const row = candidates.find(row => !used.has(row))!;
         used.add(row); rows.set(id, row);
       }
     }
-    for (const [id, row] of rows) positions.set(id, { x: positions.get(id)!.x, y: row * 260 });
+    const rowGap = nodes.some(node => !spine.has(node.id) && !access.has(node.id) && !finding(node.id)) ? 220 : 180;
+    for (const [id, row] of rows) positions.set(id, { x: positions.get(id)!.x, y: row * rowGap });
     alignDetachedChains(nodes, edges, spine, positions, gap);
   };
 }
@@ -110,7 +113,7 @@ function alignDetachedChains(nodes: Node<LineageNodeData>[], edges: Edge[], spin
   const detached = new Set(chains.flat());
   let row = Math.min(0, ...[...positions].filter(([id]) => !detached.has(id)).map(([, point]) => point.y));
   for (const chain of chains) {
-    row -= 260;
+    row -= 220;
     chain.forEach((id, index) => positions.set(id, { x: (index + 1) * gap, y: row }));
   }
 }

@@ -59,7 +59,7 @@ export function enclosingEnvironment(nodes: readonly Node<LineageNodeData>[], ed
   // An environment or a cloud account: scopes a security map draws as a boundary.
   const scope = (value: unknown) => value === "environment" || value === "account";
   const environments = visible.filter(node => node.type === "environmentNode" || scope(node.data.nodeType) || scope(node.data.entityType));
-  if (environments.length !== 1) return null;
+  if (environments.length !== 1 || environments[0]?.data.connectedScope) return null;
   const environment = environments[0]!;
   // It must be the only root: nothing but the Internet leads into it, and every other node is connected to it.
   if (edges.some(edge => !edge.hidden && edge.target === environment.id && edge.source !== INTERNET_ANCHOR_ID)) return null;

@@ -65,7 +65,7 @@ function GraphViewportCounts({ page, flowView }: Pick<Props, "page" | "flowView"
   } = page;
   const { disclosed } = flowView;
   // Asking for the whole map is asking for all of its connections too.
-  const fitAll = () => { flowView.setAllEdgesShown(true); fitVisible(); };
+  const fitAll = () => { flowView.supporting.expand(); flowView.setAllEdgesShown(true); fitVisible(); };
   return showViewportScope ? <GraphViewportScope
     collapsedFindings={disclosed.collapsed} canonicalVisibleNodes={flowView.canonicalVisibleNodes} totalNodes={displayNodes.filter(node => node.type !== "boundaryFrame").length} totalEdges={displayEdges.length}
     scopeLabel={scenarioContextIds ? "Changes and neighbors" : rollupNavigationActive ? (rollupView?.mode === "drilldown" ? `Within ${rollupView.node?.label ?? "selected scope"}` : "Scope overview") : "Graph"}
@@ -74,6 +74,7 @@ function GraphViewportCounts({ page, flowView }: Pick<Props, "page" | "flowView"
     scenarioToggle={selectedScenarioId && !attackPathLens && !selectedAttackPath && !investigationMode ? { expanded: scenarioExpanded, onToggle: () => setExpandedScenarioId(scenarioExpanded ? null : selectedScenarioId) } : undefined}
     minimap={showMiniMap ? { expanded: minimapExpanded, onToggle: () => setMinimapExpanded(value => !value) } : undefined}
     onFitAll={fitAll} findingsToggle={disclosed.available ? flowView.toggleFindingGroups : undefined}
+    supporting={flowView.supporting.available ? { count: flowView.supporting.contextIds.size, expanded: flowView.supporting.expanded, onToggle: flowView.supporting.toggle } : undefined}
     connections={investigationMode?.truncated && rootConnections ? rootConnections : undefined}
     onMoreConnections={investigationMode?.truncated && investigationMode.nodeCount < 24 && !loadingGraph ? () => void loadRootInvestigation({ rootId: investigationMode.rootId, rootLabel: investigationMode.rootLabel, direction: investigationDirection, nodeLimit: Math.min(24, Math.max(8, investigationMode.nodeCount * 2)) }) : undefined}
   /> : null;
@@ -96,7 +97,7 @@ export function GraphStatusBar({ page, flowView, relationshipLabels }: Props) {
   if (firstFramePending) return null;
   if (!(showViewportScope || showChangesEntry || showScopeEvidence || showContextControls || showLegend || mobileListAvailable)) return null;
   return <div data-testid="graph-status-bar" className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-outline px-3 py-1.5 max-sm:gap-x-1 max-sm:px-0 max-sm:py-0.5">
-    {!narrowViewport && <GraphHeadlineMetrics page={page} />}
+    {!narrowViewport && <GraphHeadlineMetrics page={page} supportingFolded={flowView.supporting.available && !flowView.supporting.expanded} />}
     {narrowViewport && <GraphViewSwitch page={page} />}
     {!webgl && flowControl}
     {!narrowViewport && <GraphViewportCounts page={page} flowView={flowView} />}
@@ -110,7 +111,7 @@ export function GraphStatusBar({ page, flowView, relationshipLabels }: Props) {
     <details className="ml-auto text-xs open:w-full" data-testid="graph-options">
       <summary className="graph-page-action graph-action-compact ml-auto w-fit cursor-pointer max-sm:min-h-11">Graph options</summary>
       <div className="mt-2 flex w-full flex-wrap items-start gap-3 rounded-xl border border-outline bg-surface p-3">
-        {narrowViewport && <GraphHeadlineMetrics page={page} />}
+        {narrowViewport && <GraphHeadlineMetrics page={page} supportingFolded={flowView.supporting.available && !flowView.supporting.expanded} />}
         {narrowViewport && flowView.control?.disabledReason && <p role="status" data-testid="graph-flow-status" className="text-ink-secondary">{flowView.control.disabledReason}</p>}
         {webgl && flowControl}
         {!inlineChanges && <GraphChangesSummary page={page} />}

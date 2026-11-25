@@ -6,7 +6,8 @@ import { NAME_LINES, PHONE_NAME_LINES } from "@/lib/graph-caption-geometry";
 import { stacksOnPhone } from "@/lib/graph-portrait-layout";
 import { Fragment, useEffect, useRef, type ReactNode } from "react";
 import { Handle, Position, useNodeId, useUpdateNodeInternals } from "@xyflow/react";
-import { Diamond, FolderGit2 } from "lucide-react";
+import { Crown, Diamond, FolderGit2 } from "lucide-react";
+import { GraphInternetGlobe } from "@/components/graph-internet-globe";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { GraphPackageGlyph } from "@/components/graph-package-glyph";
 import { GraphProviderMark } from "@/components/graph-provider-mark";
@@ -25,7 +26,7 @@ import { compactScopeCaption } from "@/lib/graph-compact-scope";
 import { ANCHOR_GLYPH_SCALE, COMPACT_GLYPH_SCALE, PHONE_GLYPH_SCALE } from "@/lib/graph-compact-glyph";
 
 /** Presentation flags shared with the bounded story layout. */
-export type CompactNodePresentation = { phoneLinear?: boolean | undefined; roomyName?: boolean | undefined };
+export type CompactNodePresentation = { phoneLinear?: boolean | undefined; roomyName?: boolean | undefined; connectedScope?: boolean | undefined };
 
 export type CompactNodeTone = { data: LineageNodeData; borderClass: string; bgClass: string; ringClass: string; iconClass: string; source?: boolean; target?: boolean };
 
@@ -34,7 +35,7 @@ const glyphSize = (scale: number) => `calc(var(--graph-node-glyph-size, 56px) * 
 const iconSize = (scale: number) => `calc(var(--graph-node-icon-size, 28px) * ${scale})`;
 const GLYPH = glyphSize(COMPACT_GLYPH_SCALE), ICON = iconSize(COMPACT_GLYPH_SCALE);
 const PHONE_GLYPH = glyphSize(PHONE_GLYPH_SCALE), PHONE_ICON = iconSize(PHONE_GLYPH_SCALE);
-const ANCHOR_GLYPH = glyphSize(ANCHOR_GLYPH_SCALE), ANCHOR_ICON = iconSize(ANCHOR_GLYPH_SCALE);
+const ANCHOR_GLYPH = glyphSize(ANCHOR_GLYPH_SCALE);
 const isInternetAnchor = (data: LineageNodeData) => data.attributes?.resource_type === "internet_boundary";
 const META = { fontSize: "var(--graph-node-meta-size, 12px)" };
 
@@ -124,15 +125,24 @@ export function CompactHandles({ data, source, target }: { data: LineageNodeData
 const SENSITIVE_CLASSES = new Set(["pii", "phi", "pci", "restricted", "confidential", "sensitive", "secret"]);
 
 function Markers({ data }: { data: LineageNodeData }) {
-  const classification = [data.attributes?.data_sensitivity, data.attributes?.data_classification]
-    .filter((value): value is string => typeof value === "string" && SENSITIVE_CLASSES.has(value.trim().toLowerCase()))
+  const rawContext = data.attributes?.risk_context;
+  const context = rawContext && typeof rawContext === "object" && !Array.isArray(rawContext) ? rawContext as Record<string, unknown> : {};
+  const admin = "is_admin" in context ? context.is_admin === true : data.attributes?.is_admin === true;
+  const critical = context.crown_jewel === true;
+  const classification = [context.data_sensitivity ?? data.attributes?.data_sensitivity, data.attributes?.data_classification]
+    .filter((value): value is string => typeof value === "string" && (SENSITIVE_CLASSES.has(value.trim().toLowerCase()) || value === "regulated"))
     .map(value => value.trim()).join(", ");
+  const sensitiveTitle = critical ? `Recorded critical asset${classification ? ` · data classification: ${classification}` : ""}` : `Recorded data classification: ${classification}`;
   // A drawn Internet anchor already says this; the dot stays for views without the anchor.
   const exposed = !data.displayOnly && !data.internetAnchored && internetExposure(data.attributes) === true;
   return <>
-    {classification && <span role="img" data-compact-marker="sensitive" aria-label={`Recorded data classification: ${classification}`}
-      title={`Recorded data classification: ${classification}`} className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-sm bg-[var(--graph-canvas)] text-emerald-600 dark:text-emerald-400">
-      <Diamond aria-hidden="true" className="h-3.5 w-3.5" />
+    {(admin || classification || critical) && <span className="absolute bottom-full left-1/2 mb-1 flex -translate-x-1/2 gap-1">
+      {admin && <GraphCountHint text="Recorded administrator privileges"><span tabIndex={0} role="img" data-compact-marker="privilege" aria-label="Recorded administrator privileges" className="rounded-sm bg-[var(--graph-canvas)] text-violet-600 dark:text-violet-300">
+        <Crown aria-hidden="true" style={{ width: "var(--graph-node-meta-size, 14px)", height: "var(--graph-node-meta-size, 14px)" }} />
+      </span></GraphCountHint>}
+      {(classification || critical) && <GraphCountHint text={sensitiveTitle}><span tabIndex={0} role="img" data-compact-marker="sensitive" aria-label={sensitiveTitle} className="rounded-sm bg-[var(--graph-canvas)] text-emerald-700 dark:text-emerald-300">
+        <Diamond aria-hidden="true" style={{ width: "var(--graph-node-meta-size, 14px)", height: "var(--graph-node-meta-size, 14px)" }} />
+      </span></GraphCountHint>}
     </span>}
     {data.isKev && <span data-compact-marker="kev" title="Listed in the CISA Known Exploited Vulnerabilities catalog"
       className="absolute -right-0.5 -top-0.5 h-[28%] w-[28%] rounded-full border-2 border-[var(--graph-canvas)] bg-[var(--severity-ring-critical)]"><span className="sr-only">KEV-listed</span></span>}
@@ -145,9 +155,10 @@ function FindingDisclosure({ data }: { data: LineageNodeData }) {
   const findings = data.readingFindings;
   if (!findings || data.readingFindingsGroup || findings.expanded) return null;
   const plural = findings.count === 1 ? "" : "s";
+  const severity = ["critical", "high", "medium", "low"].includes(findings.severity ?? "") ? findings.severity : undefined;
   return <span className="absolute -bottom-1 -right-3">
     <GraphCountHint text={`${data.label}: ${findings.count} linked finding${plural}${findings.severity ? ` · highest severity: ${findings.severity}` : " · severity not rated"}. Click to expand.`}>
-      <button type="button" data-finding-disclosure aria-expanded={false} title="" aria-label={`Expand ${findings.count} finding${plural} for ${data.label}`}
+      <button type="button" data-finding-disclosure data-finding-count-severity={severity} aria-expanded={false} title="" aria-label={`Expand ${findings.count} finding${plural} for ${data.label}`}
         onClick={event => { event.stopPropagation(); findings.toggle(); }}
         className="nodrag nopan rounded-full border border-outline-strong bg-surface-elevated px-1.5 font-semibold leading-snug text-foreground" style={META}>
         {findings.count}<span className="sr-only"> findings</span>
@@ -176,7 +187,7 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
   const severity = findingSeverity(data);
   const { badges, ring } = nodeBadges(data);
   const anchor = isInternetAnchor(data);
-  const glyph = anchor ? ANCHOR_GLYPH : data.phoneLayout ? PHONE_GLYPH : GLYPH, icon = anchor ? ANCHOR_ICON : data.phoneLayout ? PHONE_ICON : ICON;
+  const glyph = anchor ? ANCHOR_GLYPH : data.phoneLayout ? PHONE_GLYPH : GLYPH, icon = data.phoneLayout ? PHONE_ICON : ICON;
   const fullTitle = typeof data.attributes?.display_title === "string" && data.attributes.display_title.trim() ? data.attributes.display_title : data.label;
   // A prose finding draws its short preview; the full title stays in the tooltip, drawer and assistive text.
   const preview = ["misconfiguration", "vulnerability"].includes(data.nodeType) ? prosePreview(fullTitle, data.roomyName && (!data.phoneLayout || data.phoneLinear)) : fullTitle;
@@ -186,13 +197,14 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
     ...(data.readingConnections ?? []).map(summary => `${summary.relationship === "hosts" ? "Hosts" : "Contains"} ${summary.label} in this view`)].filter(Boolean).join(" · ");
   return <div title={tooltip} data-graph-entity="true" data-compact-node data-evidence-flow={data.evidenceFlow || undefined} data-finding-owner={data.readingOwner}
     data-rollup-container={data.attributes?.rollup_is_container === true ? "true" : undefined}
-    style={{ maxWidth: "var(--graph-node-card-width, 200px)" }} className={`relative flex transition-opacity ${data.dimmed ? "opacity-25" : ""} ${phoneLayoutClass(data)}`}>
+    style={{ maxWidth: "var(--graph-node-card-width, 200px)", marginTop: anchor && data.roomyName && !data.phoneLayout ? glyphSize(-(ANCHOR_GLYPH_SCALE - COMPACT_GLYPH_SCALE) / 2) : undefined }} className={`relative flex transition-opacity ${data.dimmed ? "opacity-25" : ""} ${phoneLayoutClass(data)}`}>
     <div ref={glyphRef} data-severity-ring={severity} data-internet-anchor={anchor || undefined} style={{ width: glyph, height: glyph }}
-      className={`graph-entity-glyph relative flex shrink-0 items-center justify-center rounded-full border-2 ${borderClass} ${bgClass} ${data.highlighted ? `ring-2 ring-offset-2 ring-offset-[var(--graph-canvas)] ${ringClass}` : ""}`}>
+      className={`graph-entity-glyph relative flex shrink-0 items-center justify-center rounded-full ${iconClass} ${anchor ? "border-0 bg-transparent" : `border-2 ${borderClass} ${bgClass}`} ${data.highlighted && !anchor ? `ring-2 ring-offset-2 ring-offset-[var(--graph-canvas)] ${ringClass}` : ""}`}>
       {severity && <span className="sr-only" data-finding-severity={severity}>{`${severity} severity`}</span>}
       <CompactHandles data={data} source={source} target={target} />
-      <GraphPackageGlyph ecosystem={data.nodeType === "package" ? badges.find(badge => badge.kind === "ecosystem")?.value : undefined}
-        fallback={<Icon aria-hidden="true" style={{ width: icon, height: icon }} className={iconClass} />} />
+      {anchor ? <GraphInternetGlobe />
+        : <GraphPackageGlyph ecosystem={data.nodeType === "package" ? badges.find(badge => badge.kind === "ecosystem")?.value : undefined}
+          fallback={<Icon aria-hidden="true" style={{ width: icon, height: icon }} className={iconClass} strokeWidth={1.6} />} />}
       {provider && <GraphProviderMark source={provider} attributes={repository ? undefined : data.attributes} className="graph-provider-mark-node graph-provider-mark-compact absolute" />}
       <Markers data={data} />
       <FindingDisclosure data={data} />

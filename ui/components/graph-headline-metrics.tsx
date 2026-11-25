@@ -4,7 +4,7 @@ import { formatGraphHeadline } from "@/lib/graph-headline";
 import { readAttackPathCounts } from "@/lib/graph-snapshot-metrics";
 import type { GraphPageModel } from "@/components/graph-page-view";
 
-export function GraphHeadlineMetrics({ page }: { page: GraphPageModel }) {
+export function GraphHeadlineMetrics({ page, supportingFolded = false }: { page: GraphPageModel; supportingFolded?: boolean }) {
   const { investigationMode, selectedAttackPath, firstFramePending, flow, connectionPreview, previewExpanded } = page;
   const pathCounts = readAttackPathCounts(page.graphData?.stats.attack_paths);
   return <>
@@ -13,7 +13,7 @@ export function GraphHeadlineMetrics({ page }: { page: GraphPageModel }) {
           data-testid="graph-headline-metrics"
           className="text-xs text-ink-secondary"
         >
-          {formatGraphHeadline(flow.summary, pathCounts?.retained_count ?? null, connectionPreview && !previewExpanded ? "loaded scope" : "view")}
+          {formatGraphHeadline(flow.summary, pathCounts?.retained_count ?? null, (supportingFolded || connectionPreview && !previewExpanded) ? "loaded scope" : "view")}
           {pathCounts && <span title={pathCounts.basis}> · {pathCounts.assessed_count.toLocaleString()} assessed</span>}
           {flow.summary.costUsd30d > 0 && (
             <>
