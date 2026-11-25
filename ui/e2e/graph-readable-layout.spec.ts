@@ -215,7 +215,14 @@ for (const theme of ["light", "dark"] as const) test(`reference correlation read
   expect(await edgesThroughNodes(page)).toEqual([]);
   expect(await labelCollisions(page)).toEqual([]);
   expect(await graphGrammarViolations(page)).toEqual({});
-  await expect(page.locator('.react-flow__edge:not([data-id^="display:"]) .react-flow__edge-path[marker-end]')).toHaveCount(proof.capture_fixture.graph.edges.length);
+  const recorded = page.locator('.react-flow__edge:not([data-id^="display:"])');
+  await expect(recorded).toHaveCount(proof.capture_fixture.graph.edges.length);
+  for (const link of proof.capture_fixture.graph.edges) {
+    const drawn = page.locator(`.react-flow__edge[data-id="${link.id}"]`);
+    await drawn.focus();
+    await expect(drawn.locator(".react-flow__edge-path")).toHaveAttribute("marker-end", /.+/);
+    await drawn.evaluate(element => (element as SVGElement).blur());
+  }
   // The overview keeps all directional relationships without nine competing captions.
   expect(await visibleLabelTexts(page)).toEqual([]);
   const smallestCaption = await page.locator("[data-graph-entity] > p:first-of-type").evaluateAll(labels => {
@@ -490,6 +497,13 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
       const order = await page.locator('.react-flow__node').evaluateAll(nodes => [...nodes]
         .sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top).slice(0, 4).map(node => node.getAttribute("data-id")));
       expect(order.slice(1)).toEqual(["gateway:public", "container:checkout", "cve:next"]);
+      const firstTop = await page.locator('.react-flow').evaluate(canvas => {
+        const first = [...canvas.querySelectorAll("[data-graph-entity]")]
+          .map(node => node.getBoundingClientRect().top).sort((a, b) => a - b)[0];
+        return first - canvas.getBoundingClientRect().top;
+      });
+      expect(firstTop, "the reading path starts below the controls, without a blank screen").toBeGreaterThanOrEqual(48);
+      expect(firstTop).toBeLessThanOrEqual(96);
       await expect(page.locator('[data-id="gateway:public"] [data-entity-role]')).toHaveText("Amazon API Gateway");
     }
     await page.screenshot({ path: info.outputPath(`cloud-branches-${theme}-${width}.png`), animations: "disabled" });
