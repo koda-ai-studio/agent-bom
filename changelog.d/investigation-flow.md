@@ -5,7 +5,7 @@
 - Bounded phone stories keep ranked hops consecutive with wider captions and side-routed context links; connectors remeasure when expanded branches move.
 - Bounded exposure stories open with supporting infrastructure folded; expansion shows a labelled account/environment context boundary on desktop and recorded containment links on phones. Same-row glyph centers and link ends align, while findings and access branches use nearby rows.
 
-- Expanded scopes lead with Internet exposure, then separate independent dependency chains into labelled supporting context with directed relationship steps. Curve clearance includes the larger story labels; canvas totals exclude display-only anchors and frames.
+- Account context stays with the focused flow. Independent chains open individually through a connected-flow selector; an explicit all-connections overview preserves the complete scope. Curve clearance includes the larger story labels; canvas totals exclude display-only anchors and frames.
 
 ### Added
 - Sensitive-data markers use recorded classifications; asset names never establish sensitivity.

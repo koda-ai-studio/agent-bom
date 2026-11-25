@@ -1,4 +1,4 @@
-import { scopeFlowSections, storyLanePlacement } from "@/lib/graph-story-lanes";
+import { storyLanePlacement } from "@/lib/graph-story-lanes";
 import { assetKindLabel, assetServiceLabel } from "@/lib/asset-icon-registry";
 import { COMPACT_GLYPH_SCALE } from "@/lib/graph-compact-glyph";
 import type { Edge, Node } from "@xyflow/react";
@@ -171,7 +171,7 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
   ({ nodes, edges } = withInternetAnchor(nodes, edges));
   // On an exposure map, an environment or account holding everything drawn is a boundary around it, not a root
   // competing with the Internet; a map without the Internet keeps the scope as its first card.
-  const frameOf = nodes.some(node => node.id === INTERNET_ANCHOR_ID && !node.hidden) ? enclosingEnvironment(nodes, edges) : null;
+  const frameOf = nodes.some(node => !node.hidden && (node.id === INTERNET_ANCHOR_ID || node.data.connectedScope)) ? enclosingEnvironment(nodes, edges) : null;
   if (frameOf) {
     nodes = nodes.map(node => node.id === frameOf.id ? { ...node, hidden: true, data: { ...node.data, framed: true } } : node);
     edges = edges.map(edge => !edge.hidden && (edge.source === frameOf.id || edge.target === frameOf.id) ? { ...edge, hidden: true, data: { ...edge.data, framed: true } } : edge);
@@ -193,15 +193,15 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
   const images = workloadImageContext(visible, edges);
   for (const [id, owner] of images.owners) if (!onPath.has(id)) owners.set(id, owner);
   const arrange = storyLanePlacement(visible, drawn, primary);
-  const nameScale = arrange ? 1 : 0.88;
   const readableStory = visible.some(node => node.data.connectedScope === true);
+  const nameScale = arrange || readableStory ? 1 : 0.88;
   const base = { ids: visible.map(node => node.id), links: drawn, column: (id: string) => columns.get(id) ?? 0, containment,
     // Findings, and the group that folds an asset's findings, sit level with the asset they were found on.
     // A group whose asset is on the spine would sit on the spine's own row and block it, so it fans off the row instead.
     levelLeaf: (id: string) => { const found = byId.get(id); return Boolean(found) && (semanticLayer(found!) === "finding"
       || (found!.type === "findingGroupNode" && !onPath.has(String(found!.data.displayTargetId ?? "")))); },
     spine: primary, attached: attachedRanks(visible, drawn, columns), arrange };
-  const boxes = new Map(visible.map(node => [node.id, Math.max(arrange ? 300 : 0, cardWidth(node, node.id))]));
+  const boxes = new Map(visible.map(node => [node.id, Math.max(arrange || readableStory ? 300 : 0, cardWidth(node, node.id))]));
   // Placement depends only on the graph's structure and its captions; a re-render that changes nothing else reuses it.
   const signature = JSON.stringify([visible.map(node => [node.id, node.type, node.data.label, node.data.semanticLayer, node.data.readingLabel,
     node.data.displayTargetId, node.data.readingFindings?.count, internetExposure(node.data.attributes)]),
@@ -223,8 +223,7 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
   const exposureChain = primary[0] === INTERNET_ANCHOR_ID ? primary : exposureSpine(visible, drawn);
   const exposurePairs = new Set(exposureChain.slice(1).map((id, index) => `${exposureChain[index]}\u0000${id}`));
   const resting = visible.length <= DIRECTION_MARKER_MAX_NODES;
-  const sections = frameOf && arrange ? scopeFlowSections(visible, drawn, primary, positions) : [];
-  const frame = frameOf ? boundaryFrame(frameOf, visible, positions, boxes, edges.filter(edge => edge.data?.framed === true).length, sections) : null;
+  const frame = frameOf ? boundaryFrame(frameOf, visible, positions, boxes, edges.filter(edge => edge.data?.framed === true).length) : null;
   // The Internet stands outside the boundary, level with the first asset it reaches, so its arrow enters from the left.
   const anchorAt = positions.get(INTERNET_ANCHOR_ID);
   const entryAt = positions.get(drawn.find(edge => edge.source === INTERNET_ANCHOR_ID)?.target ?? "");
@@ -244,7 +243,7 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
       // A wider caption box stays centred on its rank, so its glyph lines up with the others.
       return { ...node, position: placed ? { x: placed.x - (box - COMPACT_NODE_WIDTH) / 2, y: placed.y } : node.position,
       style: { ...node.style, width: box, "--graph-node-name-scale": nameScale, "--graph-node-card-width": `${box}px` },
-      data: { ...node.data, evidenceFlow: true, semanticLayout: true, roomyName: Boolean(arrange),
+      data: { ...node.data, evidenceFlow: true, semanticLayout: true, roomyName: Boolean(arrange) || readableStory,
         ...(onPath.has(node.id) ? { semanticPathIndex: primary.indexOf(node.id) } : {}), renderBand: dense ? node.data.renderBand : "detail" as const,
         readingLabel: node.data.readingLabel ?? assetServiceLabel({ nodeType: node.data.nodeType, entityType: node.data.entityType, attributes: node.data.attributes, provider: node.data.dimensions?.cloud_provider }) ?? assetKindLabel({ nodeType: node.data.nodeType, entityType: node.data.entityType, attributes: node.data.attributes }),
         readingFinding: semanticLayer(node) === "finding",
@@ -277,7 +276,6 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
         ...(edge.markerStart ? { markerStart: marker(edge.markerStart)! } : {}), sourceHandle: reverse ? "context" : null,
         targetHandle: reverse || sameRank ? "context" : sharedInternetEntry(edge) ? "above" : null,
         data: { ...edge.data, ...(uniformlyModeled ? { uniformlyModeled } : {}), semanticLayout: true, individualLabel: true, arcDy: outside && edge.source === INTERNET_ANCHOR_ID ? undefined : arcs.get(edge.id), ...fans.get(edge.id), ...(quietUntilFocus ? { quietUntilFocus } : {}), passesBehind: behind.has(edge.id) || undefined, quietLabel: edge.data?.isClusterEdge !== true,
-          scopeFlowLabel: sections.length && from && to && from.y === to.y && edge.source !== INTERNET_ANCHOR_ID && !edge.hidden ? true : undefined,
           pathEmphasis: edge.data?.rankedPathWitness !== false && edge.data?.traversable !== false && (pathPairs.has(`${edge.source}\u0000${edge.target}`) || edge.data?.pathEmphasis === true),
           ...(onExposure ? { exposurePath: true } : {}) } };
     }),
@@ -286,16 +284,16 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
 
 /** A titled boundary behind every card the environment holds; the Internet stays outside it. */
 function boundaryFrame(environment: Node<LineageNodeData>, visible: Node<LineageNodeData>[], positions: Map<string, { x: number; y: number }>,
-  boxes: Map<string, number>, links: number, sections: { label: string; y: number }[]): Node<LineageNodeData> | null {
+  boxes: Map<string, number>, links: number): Node<LineageNodeData> | null {
   const inside = visible.filter(node => node.id !== INTERNET_ANCHOR_ID && positions.has(node.id));
   if (!inside.length) return null;
   const left = Math.min(...inside.map(node => positions.get(node.id)!.x - ((boxes.get(node.id) ?? COMPACT_NODE_WIDTH) - COMPACT_NODE_WIDTH) / 2));
   const right = Math.max(...inside.map(node => positions.get(node.id)!.x + ((boxes.get(node.id) ?? COMPACT_NODE_WIDTH) + COMPACT_NODE_WIDTH) / 2));
-  const top = Math.min(...inside.map(node => positions.get(node.id)!.y), ...sections.map(section => section.y));
+  const top = Math.min(...inside.map(node => positions.get(node.id)!.y));
   const bottom = Math.max(...inside.map(node => positions.get(node.id)!.y)) + CARD_HEIGHT;
   const x = left - FRAME_PAD, y = top - FRAME_PAD - FRAME_TITLE;
   return { id: `display:frame:${environment.id}`, type: "boundaryFrame", position: { x, y }, draggable: false, selectable: false, focusable: false, zIndex: -1,
     ariaLabel: `${environment.data.label}: environment boundary`,
     style: { width: right - left + FRAME_PAD * 2, height: bottom - top + FRAME_PAD * 2 + FRAME_TITLE },
-    data: { ...environment.data, displayOnly: true, frameFor: environment.id, frameLinks: links, frameSections: sections.map(section => ({ ...section, y: section.y - y })) } };
+    data: { ...environment.data, displayOnly: true, frameFor: environment.id, frameLinks: links } };
 }

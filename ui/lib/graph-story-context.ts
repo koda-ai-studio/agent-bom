@@ -31,6 +31,10 @@ export function storyContext(input: Node<LineageNodeData>[], inputEdges: Edge[],
     if (kept.has(edge.source) && byId.has(edge.target) && FINDING.has(String(edge.data?.relationship)) && semanticLayer(byId.get(edge.target)!) === "finding") kept.add(edge.target);
     if (kept.has(edge.target) && edge.data?.relationship === "affects" && byId.has(edge.source) && semanticLayer(byId.get(edge.source)!) === "finding") kept.add(edge.source);
   }
+  // Scope remains visible context for the focused story. It does not pull its
+  // unrelated children into the path or establish any access relationship.
+  for (const node of visible) if (["account", "environment"].includes(String(node.data.nodeType)) && node.id !== INTERNET_ANCHOR_ID
+    && edges.some(edge => !edge.hidden && edge.source === node.id && kept.has(edge.target) && ["contains", "hosts"].includes(String(edge.data?.relationship)))) kept.add(node.id);
   const contextIds = new Set(visible.filter(node => !kept.has(node.id) && !node.data.displayOnly).map(node => node.id));
   if (!contextIds.size) return unchanged;
   return {

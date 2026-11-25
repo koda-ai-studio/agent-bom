@@ -39,7 +39,7 @@ export function GraphFlowCanvas({ page, flowView }: { page: GraphPageModel; flow
   const portrait = useMemo(() => narrowViewport ? graphPortraitLayout(nodes, quieted.edges) : { nodes, edges: quieted.edges }, [narrowViewport, nodes, quieted.edges]);
   return (
             <ReactFlow
-              style={{ ...readableGraphNodeStyle(graphViewport.zoom, Boolean(investigationContext) || roomyOverview, (roomyOverview || Boolean(investigationContext) && compactInvestigationTopology) && !narrowViewport, portrait.nodes.filter(node => !node.hidden && node.type !== "boundaryFrame").length, flowView.supporting.available),
+              style={{ ...readableGraphNodeStyle(graphViewport.zoom, Boolean(investigationContext) || roomyOverview, (roomyOverview || Boolean(investigationContext) && compactInvestigationTopology) && !narrowViewport, portrait.nodes.filter(node => !node.hidden && node.type !== "boundaryFrame").length, flowView.supporting.available || flowView.supporting.focused),
                 ...flowView.cardStyle,
                 ...(disclosed.available && !narrowViewport ? { "--graph-node-glyph-size": disclosedGlyphSize(graphViewport.zoom, portrait.nodes.filter(node => !node.hidden && node.type !== "boundaryFrame").length) } : {}) }}
               className={selectedScenarioId ? "scenario-context-canvas" : undefined}

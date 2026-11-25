@@ -2710,6 +2710,8 @@ async function main() {
           await expect(view).toHaveAttribute("aria-pressed", "true");
           await p.getByRole("button", { name: "View & layers", exact: true }).click();
           // This showcase records the full scope, including supporting containment.
+          const flowSelector = p.getByRole("combobox", { name: "Follow a connected flow" });
+          if (await flowSelector.count()) await flowSelector.selectOption({ label: "All connections" });
           const expandContext = p.getByRole("button", { name: /^Show supporting context/ });
           if (await expandContext.count()) await expandContext.click();
           // Findings fold only under an owner with a backend aggregate; the showcase draws every one.

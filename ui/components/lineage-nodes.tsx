@@ -55,7 +55,6 @@ export type LineageNodeData = CompactNodePresentation & {
   framed?: boolean | undefined;
   /** On a boundary frame: the containment links its boundary stands for. */
   frameLinks?: number | undefined;
-  frameSections?: { label: string; y: number }[] | undefined;
   semanticPathIndex?: number | undefined;
   semanticLayout?: boolean | undefined;
   phoneLayout?: boolean | undefined;

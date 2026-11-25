@@ -4,7 +4,7 @@ const LINK = "text-foreground underline underline-offset-4";
 const count = (value: number, one: string, many: string) => `${value.toLocaleString()} ${value === 1 ? one : many}`;
 
 /** Counts for what is on the canvas. Display-only objects are not nodes and are never counted as such. */
-export function GraphViewportScope({ collapsedFindings, canonicalVisibleNodes, totalNodes, totalEdges, scopeLabel, partialView, aggregate, unconnected, scenarioToggle, minimap, onFitAll, findingsToggle, supporting, connections, onMoreConnections }: {
+export function GraphViewportScope({ collapsedFindings, canonicalVisibleNodes, totalNodes, totalEdges, scopeLabel, partialView, aggregate, unconnected, scenarioToggle, minimap, onFitAll, findingsToggle, supporting, stories, connections, onMoreConnections }: {
   /** Says the canvas opened on part of the map, so a partial view never reads as the whole. */
   partialView?: string | undefined;
   collapsedFindings: number;
@@ -19,10 +19,17 @@ export function GraphViewportScope({ collapsedFindings, canonicalVisibleNodes, t
   onFitAll: () => void;
   findingsToggle?: (() => void) | undefined;
   supporting?: { count: number; expanded: boolean; onToggle: () => void } | undefined;
+  stories?: { value: string; options: { id: string; label: string }[]; onChange: (id: string) => void } | undefined;
   connections?: { loaded: number; total: number } | undefined;
   onMoreConnections?: (() => void) | undefined;
 }) {
   return <div className="flex min-w-0 max-w-full flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground" data-testid="graph-viewport-scope">
+    {stories && <label className="flex items-center gap-2 text-foreground">Follow
+      <select aria-label="Follow a connected flow" value={stories.value} onChange={event => stories.onChange(event.target.value)} className="graph-page-action max-w-64">
+        {stories.options.map(story => <option key={story.id} value={story.id}>{story.label}</option>)}
+        <option value="">All connections</option>
+      </select>
+    </label>}
     {collapsedFindings ? <span title={`${totalNodes} total nodes and ${totalEdges} total relationships loaded`}>
       Graph · {canonicalVisibleNodes} visible items · {collapsedFindings} grouped findings
     </span> : <span>

@@ -132,26 +132,3 @@ function alignDetachedChains(nodes: Node<LineageNodeData>[], edges: Edge[], spin
     positions.set(id, { x, y });
   }
 }
-
-/** Section labels only separate disconnected relationship components. A real
- * branch, shared resource or return link stays in the primary component. */
-export function scopeFlowSections(nodes: Node<LineageNodeData>[], edges: Edge[], primary: readonly string[], positions: Map<string, Point>) {
-  if (!primary.length || nodes.length > 24) return [];
-  const reached = new Set(primary), pending = [...primary];
-  const links = edges.filter(edge => !edge.hidden);
-  while (pending.length) {
-    const id = pending.pop()!;
-    for (const edge of links) {
-      const next = edge.source === id ? edge.target : edge.target === id ? edge.source : null;
-      if (next && !reached.has(next)) { reached.add(next); pending.push(next); }
-    }
-  }
-  const inside = nodes.filter(node => node.id !== INTERNET_ANCHOR_ID && positions.has(node.id));
-  const main = inside.filter(node => reached.has(node.id)), context = inside.filter(node => !reached.has(node.id));
-  if (!main.length || !context.length) return [];
-  const mainTop = Math.min(...main.map(node => positions.get(node.id)!.y));
-  const mainBottom = Math.max(...main.map(node => positions.get(node.id)!.y));
-  const contextTop = Math.min(...context.map(node => positions.get(node.id)!.y));
-  if (contextTop - mainBottom < 280) return [];
-  return [{ label: "Internet exposure", y: mainTop - 120 }, { label: "Other relationships in this scope", y: contextTop - 120 }];
-}
