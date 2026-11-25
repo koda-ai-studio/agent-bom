@@ -18,6 +18,7 @@ it("keeps a bounded phone account as context rather than a trailing node with re
   const desktop = semanticGraphLayout(nodes, edges);
   const result = graphPortraitLayout(desktop.nodes, desktop.edges);
   const frame = result.nodes.find(n => n.type === "boundaryFrame");
+  expect(frame?.data).toMatchObject({ phoneLayout: true, phoneLinear: true });
   expect(frame).toBeDefined();
   expect(result.nodes.find(n => n.id === "account")?.hidden).toBe(true);
   expect(result.edges.find(e => e.id === "contains")?.hidden).toBe(true);

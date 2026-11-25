@@ -46,8 +46,18 @@ function NodeIdentifier({ data }: { data: LineageNodeData }) {
 }
 
 export function OverviewDetails({ data, onShowBlastRadius, blastRadiusActive = false, blastRadiusLoading = false }: LineageDetailProps) {
+  const aggregate = data.findingAggregate;
   return (<>
     <PrimaryNodeDetails data={data} />
+    {aggregate && <section aria-label="Finding count scope" className="space-y-2 rounded-lg border border-outline p-3 text-xs">
+      <Label>Finding count scope</Label>
+      <p className="text-ink-secondary">This asset and its containment scope in the selected snapshot. Counts can overlap between assets and are not estate totals.</p>
+      <Row label="Distinct open findings" value={aggregate.issue_count} />
+      <Row label="Finding occurrences" value={aggregate.finding_occurrence_count ?? "Not available"} />
+      <Row label="Descendant entities" value={aggregate.descendant_count ?? "Not available"} />
+      <p className="text-ink-secondary">{["critical", "high", "medium", "low", "none", "unknown"].filter(level => (aggregate.severity_counts?.[level] ?? 0) > 0).map(level => `${level}: ${aggregate.severity_counts[level]}`).join(" · ")}</p>
+      <p className="text-ink-secondary">Inspect recorded relationships or explore this scope to follow the underlying assets and findings.</p>
+    </section>}
     <EvidenceTierBadge tier={data.evidenceTier} captureReplay={data.evidenceCaptureReplay} notAfter={data.evidenceNotAfter} />
     <RuntimeEvidenceBadge tier={data.runtimeEvidenceTier} />
     <LifecycleDetails data={data} />

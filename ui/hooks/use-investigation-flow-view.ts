@@ -61,6 +61,7 @@ export function useInvestigationFlowView({ presentation, edges, loaded, narrowVi
       : presentation.hasPositionOverrides ? "Your saved layout is showing. Reset it under Layout to use a flow." : undefined;
   const active = !otherSurface && !pausedReason;
   const [receiptId, setReceiptId] = useState<string | null>(null);
+  const closeReceipt = useCallback(() => setReceiptId(null), []);
 
   const previewRootId = connectionPreview?.root.id;
   // Placement is computed for the canvas actually on screen, re-placed when its size bucket changes.
@@ -140,7 +141,7 @@ export function useInvestigationFlowView({ presentation, edges, loaded, narrowVi
     primaryZoom: flow.scenario === "connections" && flow.applied ? GRAPH_CARD_ZOOM : undefined,
     anchorId: flow.primaryPath[0] ?? (active ? flow.nodes.find(node => !node.hidden && node.position.x === 0 && node.position.y === 0)?.id : undefined),
     receipt: receiptId ? disclosed.edges.find(edge => edge.id === receiptId) ?? null : null,
-    closeReceipt: () => setReceiptId(null),
+    closeReceipt,
     control: otherSurface ? null : {
       value: kind, available, onChange: selectFlow,
       automaticLabel: automaticFlowLabel({ applied: flow.applied, scenario: flow.scenario, preview: previewActive }),

@@ -153,15 +153,22 @@ function Markers({ data }: { data: LineageNodeData }) {
 
 function FindingDisclosure({ data }: { data: LineageNodeData }) {
   const findings = data.readingFindings;
-  if (!findings || data.readingFindingsGroup || findings.expanded) return null;
-  const plural = findings.count === 1 ? "" : "s";
-  const severity = ["critical", "high", "medium", "low"].includes(findings.severity ?? "") ? findings.severity : undefined;
+  const aggregate = data.findingAggregate ?? data.rollup?.aggregate;
+  const count = findings?.count ?? aggregate?.issue_count;
+  const toggle = findings?.toggle ?? data.onExploreFindings;
+  if (data.displayOnly || data.readingFindingsGroup || !toggle || !Number.isSafeInteger(count) || !count || count < 0
+    || ["vulnerability", "misconfiguration"].includes(data.nodeType)) return null;
+  const plural = count === 1 ? "" : "s";
+  const rating = findings?.severity ?? aggregate?.worst_severity;
+  const severity = ["critical", "high", "medium", "low"].includes(rating ?? "") ? rating : undefined;
+  const action = findings ? findings.expanded ? "Collapse" : "Expand" : "Inspect";
+  const label = findings ? `${action} ${count} finding${plural} for ${data.label}` : `Inspect ${count} finding${plural} in the scope of ${data.label}`;
   return <span className="absolute -bottom-1 -right-3">
-    <GraphCountHint text={`${data.label}: ${findings.count} linked finding${plural}${findings.severity ? ` · highest severity: ${findings.severity}` : " · severity not rated"}. Click to expand.`}>
-      <button type="button" data-finding-disclosure data-finding-count-severity={severity} aria-expanded={false} title="" aria-label={`Expand ${findings.count} finding${plural} for ${data.label}`}
-        onClick={event => { event.stopPropagation(); findings.toggle(); }}
+    <GraphCountHint text={`${data.label}: ${count} distinct open finding${plural} in this asset's containment scope${severity ? ` · highest severity: ${severity}` : " · severity not rated"}. ${findings ? "Expand or collapse the loaded findings; primary path findings remain visible." : "Inspect the asset for scope and relationship details."}`}>
+      <button type="button" data-finding-disclosure data-finding-count-source="rollup" data-finding-count-severity={severity} aria-expanded={findings?.expanded} title="" aria-label={label}
+        onClick={event => { event.stopPropagation(); toggle(); }}
         className="nodrag nopan rounded-full border border-outline-strong bg-surface-elevated px-1.5 font-semibold leading-snug text-foreground" style={META}>
-        {findings.count}<span className="sr-only"> findings</span>
+        {count}<span className="sr-only"> findings</span>
       </button>
     </GraphCountHint>
   </span>;

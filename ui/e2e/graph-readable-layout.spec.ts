@@ -496,7 +496,7 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     expect(await graphGrammarViolations(page)).toEqual({});
     if (width >= 640) await readableCloudFrame(page);
     else {
-      const order = await page.locator('.react-flow__node').evaluateAll(nodes => [...nodes]
+      const order = await page.locator('.react-flow__node:not(:has([data-boundary-frame]))').evaluateAll(nodes => [...nodes]
         .sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top).slice(0, 4).map(node => node.getAttribute("data-id")));
       expect(order.slice(1)).toEqual(["gateway:public", "container:checkout", "cve:next"]);
       const firstTop = await page.locator('.react-flow').evaluate(canvas => {
@@ -524,7 +524,11 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
       await page.screenshot({ path: info.outputPath(`cloud-finding-tooltip-${theme}.png`), animations: "disabled" });
       await count.click();
       await expect(page.locator('[data-id="finding:wildcard"]')).toHaveCount(1);
-      await expect(page.locator('[data-id="role:checkout"] [data-finding-disclosure]')).toHaveCount(0);
+      const collapse = page.getByRole("button", { name: "Collapse 1 finding for checkout-runtime-role", exact: true });
+      await expect(collapse).toHaveAttribute("aria-expanded", "true");
+      await collapse.click();
+      await expect(page.locator('[data-id="finding:wildcard"]')).toHaveCount(0);
+      await count.click();
       await page.getByRole("button", { name: "Expand findings (2 grouped)", exact: true }).click();
       await page.getByRole("button", { name: "Collapse findings", exact: true }).click();
       await page.getByRole("heading", { name: "Investigation", exact: true }).click();
@@ -715,6 +719,12 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
       expect(straight, "same-row Internet entry stays straight").toBeLessThan(1);
     }
     await page.screenshot({ path: info.outputPath(`story-first-${theme}-${width}.png`), animations: "disabled" });
+    const findingCount = page.getByRole("button", { name: "Inspect 1 finding in the scope of checkout-api", exact: true });
+    await expect(findingCount).toBeVisible();
+    await findingCount.click();
+    const drawer = page.getByTestId("graph-entity-drawer");
+    await expect(drawer.getByRole("region", { name: "Finding count scope" })).toContainText("Distinct open findings");
+    await drawer.getByRole("button", { name: "Close", exact: true }).click();
     await page.getByRole("button", { name: "Show supporting context (3)", exact: true }).click();
     await settle(page);
     await expect(page.locator('[data-boundary-frame]')).toHaveCount(1);

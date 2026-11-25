@@ -7,6 +7,7 @@
 
 - Account context stays with the focused flow. Independent chains open individually through a connected-flow selector; an explicit all-connections overview preserves the complete scope. Curve clearance includes the larger story labels; canvas totals exclude display-only anchors and frames.
 - Account boundaries use larger provider-labelled titles and clearer outlines. Recorded conflicting account IDs prevent a partial view from wrapping foreign assets into one account context.
+- Finding badges retain backend scope counts through expansion and link to scope details; distinct issues, occurrences and descendant entities stay separately labelled. Summary graph responses preserve compact normalized risk markers and account identity. Fitting an ordinary focused graph preserves its detail drawer.
 
 ### Added
 - Sensitive-data markers use recorded classifications; asset names never establish sensitivity.

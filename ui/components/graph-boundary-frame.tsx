@@ -16,8 +16,8 @@ export function GraphBoundaryFrame({ data }: { data: LineageNodeData }) {
       <div className="graph-boundary-frame-title flex items-center" style={{ fontSize: size, gap: size * 0.6, top: size * 0.8, left: size, right: size }}>
         {provider && <GraphProviderMark source={provider} attributes={data.attributes} className="graph-provider-mark-frame" style={{ width: size * 1.7, height: size * 1.7 }} />}
         <div className="min-w-0 leading-tight">
-          <div className="graph-boundary-frame-name truncate" title={data.label}>{data.label}</div>
-          <div className="graph-boundary-frame-kind" style={{ fontSize: size * 0.72 }} title={`${data.frameLinks ?? 0} recorded containment links; remaining links show related investigation context`}>{provider?.label ? `${provider.label} · ` : ""}{data.readingLabel ?? "Environment"} context</div>
+          <span className="graph-boundary-frame-name block truncate" title={data.label}>{data.label}</span>
+          <span className="graph-boundary-frame-kind block" style={{ fontSize: size * 0.72 }} title={`${data.frameLinks ?? 0} recorded containment links; remaining links show related investigation context`}>{provider?.label ? `${provider.label} · ` : ""}{data.readingLabel ?? "Environment"} context</span>
         </div>
       </div>
     </div>

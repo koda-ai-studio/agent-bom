@@ -3,10 +3,11 @@ import type { LineageNodeData } from "@/components/lineage-nodes";
 import { mixedEvidenceFlow } from "@/lib/graph-mixed-flow";
 import type { GraphRollupContainer } from "@/lib/api-contracts/graph-views";
 
-export function withFindingDrilldowns(nodes: Node<LineageNodeData>[], open: (item: GraphRollupContainer) => void) {
+export function withFindingDrilldowns(nodes: Node<LineageNodeData>[], open: (item: GraphRollupContainer) => void, inspect?: (node: Node<LineageNodeData>) => void) {
   return nodes.map(node => {
     const rollup = node.data.rollup;
-    if (!rollup?.has_children) return node;
+    if (!rollup?.has_children) return inspect && !node.data.displayOnly && !["vulnerability", "misconfiguration"].includes(node.data.nodeType)
+      ? { ...node, data: { ...node.data, onExploreFindings: () => inspect(node) } } : node;
     const explore = () => open(rollup);
     return { ...node, data: { ...node.data, onExploreFindings: explore,
       ...(node.data.readingFindings ? { readingFindings: { ...node.data.readingFindings, toggle: explore } } : {}) } };

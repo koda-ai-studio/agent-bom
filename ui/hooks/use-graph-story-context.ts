@@ -25,5 +25,5 @@ export function useGraphStoryContext(nodes: Node<LineageNodeData>[], edges: Edge
     focused: Boolean(stories && storyId),
     focusedCounts: stories && storyId ? { nodes: projected.nodes.filter(n => !n.hidden && !n.data.displayOnly).length, edges: projected.edges.filter(e => !e.hidden && !e.data?.displayOnly).length } : undefined,
     toggle: () => { if (expanded) clearSelection(); setExpandedScope(expanded ? null : `${scope}:${storyId}`); },
-    expand: () => { clearSelection(); setChosen({ scope, id: "" }); setExpandedScope(`${scope}:`); }, key: `${scope}:${storyId}:${expanded}` };
+    expand: () => { if (stories) clearSelection(); setChosen({ scope, id: "" }); setExpandedScope(`${scope}:`); }, key: `${scope}:${storyId}:${expanded}` };
 }

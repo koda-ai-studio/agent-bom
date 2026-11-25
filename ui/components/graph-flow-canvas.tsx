@@ -35,7 +35,10 @@ export function GraphFlowCanvas({ page, flowView }: { page: GraphPageModel; flow
   const roomyOverview = displayEdges.some(edge => edge.data?.roomyOverview === true);
   // Layout changes glide once (never while dragging or capturing); the camera frames the final positions.
   const motion = useAnimatedLayout(measuredDisplay.nodes, captureMode || presentation.editing, narrowViewport ? "narrow" : "wide", `${compactLayoutKey}:${flowView.kind}:${disclosed.key}:${flowView.supporting.key}`);
-  const nodes = useMemo(() => withFindingDrilldowns(motion.nodes, page.drillIntoRollup), [motion.nodes, page.drillIntoRollup]);
+  const nodes = useMemo(() => withFindingDrilldowns(motion.nodes, page.drillIntoRollup, node => {
+    flowView.closeReceipt();
+    onNodeClick({} as React.MouseEvent, node);
+  }), [motion.nodes, page.drillIntoRollup, flowView.closeReceipt, onNodeClick]);
   const portrait = useMemo(() => narrowViewport ? graphPortraitLayout(nodes, quieted.edges) : { nodes, edges: quieted.edges }, [narrowViewport, nodes, quieted.edges]);
   return (
             <ReactFlow

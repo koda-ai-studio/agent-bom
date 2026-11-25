@@ -969,6 +969,7 @@ main > div {
 
 /* Compact outlines carry the glyph's readable ink on a white canvas. */
 [data-theme="light"] [data-compact-node] > .graph-entity-glyph:not([data-severity-ring]) { border-color: currentColor; }
+[data-finding-count-severity] { border-color: var(--graph-count-tone); background: color-mix(in srgb, var(--graph-count-tone) 45%, var(--graph-canvas)); }
 [data-theme="light"] [data-finding-count-severity] { color: white; border-color: var(--graph-count-tone); background: var(--graph-count-tone); }
 [data-finding-count-severity="critical"] { --graph-count-tone: var(--severity-ring-critical); }
 [data-finding-count-severity="high"] { --graph-count-tone: #a63e08; }

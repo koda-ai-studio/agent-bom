@@ -15,6 +15,15 @@ const finding: Node<LineageNodeData> = { id: "finding", position: { x: 800, y: 0
   label: "Finding", nodeType: "vulnerability", severity: "low", readingOwner: "owner",
 } };
 
+it("wires raw asset count inspection without making a finding or display anchor an aggregate", () => {
+  const inspect = vi.fn();
+  const raw = { ...owner, data: { ...owner.data, rollup: undefined } };
+  const result = withFindingDrilldowns([raw, finding], vi.fn(), inspect);
+  result[0]!.data.onExploreFindings!();
+  expect(inspect).toHaveBeenCalledWith(raw);
+  expect(result[1]!.data.onExploreFindings).toBeUndefined();
+});
+
 it("labels exposed rollup entities without asserting that the owner itself is internet-exposed", () => {
   const data = { ...owner.data, attributes: { internet_exposed: false }, rollup: { ...owner.data.rollup!,
     aggregate: { ...owner.data.rollup!.aggregate, exposed_count: 3, internet_exposed: true } } };

@@ -22,7 +22,8 @@ export function phoneStoryLayout(nodes: Node<LineageNodeData>[], edges: Edge[]) 
   const frameBottom = Math.max(...inside.map(y)) + 104;
   return {
     nodes: nodes.map(node => {
-      if (node === frame && inside.length) return { ...node, position: { x: 16, y: frameTop }, style: { ...node.style, width: 344, height: frameBottom - frameTop } };
+      if (node === frame && inside.length) return { ...node, position: { x: 16, y: frameTop }, style: { ...node.style, width: 344, height: frameBottom - frameTop },
+        data: { ...node.data, phoneLayout: true, phoneLinear: true } };
       const row = order.get(node.id);
       return { ...node, position: row === undefined ? node.position : { x: anchor(node) ? 37 : 56, y: y(node) },
         style: { ...node.style, width: WIDTH, "--graph-node-card-width": `${WIDTH}px`, "--graph-node-glyph-size": "56px",
