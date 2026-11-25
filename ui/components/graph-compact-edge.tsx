@@ -6,7 +6,7 @@ import { BaseEdge, EdgeLabelRenderer, Position, useStore, type EdgeProps } from 
 import { RelationshipBadge } from "@/components/relationship-edge";
 import { EDGE_STROKE, edgeFamily, edgeFamilyColor, edgeIsDashed } from "@/lib/graph-edge-family";
 import { ARC_REACH } from "@/lib/graph-compact-arcs";
-import { relationshipEdgeLabelText, relationshipLegendItem } from "@/lib/graph-utils";
+import { relationshipEdgeLabelText } from "@/lib/graph-utils";
 
 /** A resting label clears the largest drawn glyph (the small-graph circle) plus a gap, so it never sits on a card. */
 const LABEL_RISE = Math.max(28, Math.ceil((66 * COMPACT_GLYPH_SCALE) / 2) + 8);
@@ -33,7 +33,7 @@ export function compactEdgeCurve(props: Pick<EdgeProps, "sourceX" | "sourceY" | 
   const dx = Math.abs(target.x - source.x), dy = Math.abs(target.y - source.y);
   const upright = (position: Position) => position === Position.Top || position === Position.Bottom;
   // On a phone a same-side link runs close beside its column, inside the gap before the next column's cards.
-  const sideReach = props.data?.phoneLayout ? PHONE_SIDE_REACH : Math.max(110, dy * 0.3);
+  const sideReach = props.data?.phoneLinear ? 30 : props.data?.phoneLayout ? PHONE_SIDE_REACH : Math.max(110, dy * 0.3);
   const reach = (position: Position) => sameSide ? sideReach : upright(position) ? Math.max(24, dy * 0.5) : Math.max(24, dx * ARC_REACH);
   let c1 = control(source, props.sourcePosition, reach(props.sourcePosition)), c2 = control(target, props.targetPosition, reach(props.targetPosition));
   // One upright end and one side end: run along the upright axis, then turn into the side.
@@ -57,17 +57,6 @@ function InspectLabel({ id, at, relationship, text, aggregate, inspecting, shift
     <div data-edge-id={id} data-inspecting={inspecting ? "true" : "false"} className={`nodrag nopan graph-relationship-label ${aggregate ? "graph-aggregate-label" : ""}`}
       style={{ position: "absolute", transform: anchor, fontSize: 12.5 / Math.max(zoom, 0.16), pointerEvents: "none", whiteSpace: "nowrap" }}>
       <RelationshipBadge relationship={relationship}>{text}</RelationshipBadge>
-    </div>
-  </EdgeLabelRenderer>;
-}
-
-/** At rest a small map names each link with its verb alone, centred on the line. */
-function RestingVerb({ id, at, text, exposure }: { id: string; at: Point; text: string; exposure: boolean }) {
-  const zoom = useStore(state => state.transform[2]);
-  return <EdgeLabelRenderer>
-    <div data-edge-id={id} data-resting-verb="" data-exposure-path={exposure ? "true" : undefined} className="nodrag nopan graph-resting-verb"
-      style={{ position: "absolute", transform: `translate(-50%, -50%) translate(${at.x}px, ${at.y}px)`, fontSize: 11.5 / Math.max(zoom, 0.16), pointerEvents: "none", whiteSpace: "nowrap" }}>
-      {text}
     </div>
   </EdgeLabelRenderer>;
 }
@@ -124,9 +113,9 @@ export function CompactRelationshipEdge(props: EdgeProps) {
   const restingSummary = aggregate && (folded === null || folded > 1);
   // A focused attack path names each hop's relationship at rest, as the path card does.
   const hidden = props.data?.labelVisibility === "hide";
-  const text = (inspecting || restingSummary || (props.data?.pathLabel === true && props.data?.restingVerb !== true)) && !hidden ? count ?? full : null;
-  const verb = !inspecting && text == null && !hidden && !stubbed && props.data?.restingVerb === true && relationship ? relationshipLegendItem(relationship).label : null;
+  const text = (inspecting || restingSummary || props.data?.pathLabel === true) && !hidden ? count ?? full : null;
   const exposure = props.data?.exposurePath === true;
+  const showDirection = inspecting || props.data?.directionEmphasis === true || props.data?.pathLabel === true;
   const style = { stroke: edgeFamilyColor(exposure ? "exposure" : family), strokeWidth: spine ? EDGE_STROKE.path : inspecting ? EDGE_STROKE.inspect : EDGE_STROKE.rest, opacity: spine || inspecting ? 1 : stubbed || props.data?.passesBehind ? 0.4 : 0.95,
     strokeDasharray: edgeIsDashed(family, props.data) ? "6 4" : undefined, fill: "none" };
   return <g ref={ref} data-relationship={relationship || undefined} data-edge-family={family} data-edge-stub={stubbed || undefined} data-label-disclosure={relationship === "vulnerable_to" ? "on-demand" : undefined} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
@@ -134,10 +123,9 @@ export function CompactRelationshipEdge(props: EdgeProps) {
     {/* A canvas-coloured underlay: where two links cross, the later one cuts a gap through the other, so each reads as one line. */}
     {!stubbed && <path d={path} aria-hidden="true" data-edge-underlay="" style={{ stroke: "var(--graph-canvas)", strokeWidth: style.strokeWidth + 5, fill: "none", pointerEvents: "none" }} />}
     <BaseEdge id={props.id} path={path} style={style}
-      {...(props.markerStart ? { markerStart: props.markerStart } : {})}
-      {...(props.markerEnd && !(stubbed && offscreen & 2) ? { markerEnd: props.markerEnd } : {})}
+      {...(props.markerStart && showDirection ? { markerStart: props.markerStart } : {})}
+      {...(props.markerEnd && showDirection && !(stubbed && offscreen & 2) ? { markerEnd: props.markerEnd } : {})}
       {...(props.interactionWidth !== undefined ? { interactionWidth: props.interactionWidth } : {})} />
-    {verb && <RestingVerb id={props.id} at={mid} text={verb} exposure={exposure} />}
     {text != null && <InspectLabel id={props.id} at={mid} relationship={relationship} text={text} aggregate={aggregate} inspecting={inspecting} shift={Number(props.data?.labelShift ?? 0)} />}
   </g>;
 }

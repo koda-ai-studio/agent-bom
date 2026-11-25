@@ -6,7 +6,7 @@ import { NAME_LINES, PHONE_NAME_LINES } from "@/lib/graph-caption-geometry";
 import { stacksOnPhone } from "@/lib/graph-portrait-layout";
 import { Fragment, useEffect, useRef, type ReactNode } from "react";
 import { Handle, Position, useNodeId, useUpdateNodeInternals } from "@xyflow/react";
-import { FolderGit2 } from "lucide-react";
+import { Diamond, FolderGit2 } from "lucide-react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { GraphPackageGlyph } from "@/components/graph-package-glyph";
 import { GraphProviderMark } from "@/components/graph-provider-mark";
@@ -60,7 +60,7 @@ function phoneLayoutClass(data: LineageNodeData): string {
 }
 
 function stackedOnPhone(data: LineageNodeData): boolean {
-  return Boolean(data.phoneLayout) && stacksOnPhone(data.label);
+  return Boolean(data.phoneLayout) && !data.phoneLinear && stacksOnPhone(data.label);
 }
 
 export { nameBreaks, type NamePiece } from "@/lib/graph-name-breaks";
@@ -77,9 +77,10 @@ function NameWords({ text, hidden }: { text: string; hidden: boolean }) {
 }
 
 /** A prose finding title (a sentence, not an identifier) previews in about two lines, cut at a word. */
-export function prosePreview(title: string): string {
-  if (title.length <= PROSE_LIMIT || !title.includes(" ")) return title;
-  return `${title.slice(0, PROSE_LIMIT - 2).replace(/\s+\S*$/, "")}…`;
+export function prosePreview(title: string, roomy = false): string {
+  const limit = roomy ? 72 : PROSE_LIMIT;
+  if (title.length <= limit || !title.includes(" ")) return title;
+  return `${title.slice(0, limit - 2).replace(/\s+\S*$/, "")}…`;
 }
 
 function typeLine(data: LineageNodeData, title: string): string {
@@ -117,10 +118,19 @@ export function CompactHandles({ data, source, target }: { data: LineageNodeData
   </>;
 }
 
+const SENSITIVE_CLASSES = new Set(["pii", "phi", "pci", "restricted", "confidential", "sensitive", "secret"]);
+
 function Markers({ data }: { data: LineageNodeData }) {
+  const classification = [data.attributes?.data_sensitivity, data.attributes?.data_classification]
+    .filter((value): value is string => typeof value === "string" && SENSITIVE_CLASSES.has(value.trim().toLowerCase()))
+    .map(value => value.trim()).join(", ");
   // A drawn Internet anchor already says this; the dot stays for views without the anchor.
   const exposed = !data.displayOnly && !data.internetAnchored && internetExposure(data.attributes) === true;
   return <>
+    {classification && <span role="img" data-compact-marker="sensitive" aria-label={`Recorded data classification: ${classification}`}
+      title={`Recorded data classification: ${classification}`} className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-sm bg-[var(--graph-canvas)] text-emerald-600 dark:text-emerald-400">
+      <Diamond aria-hidden="true" className="h-3.5 w-3.5" />
+    </span>}
     {data.isKev && <span data-compact-marker="kev" title="Listed in the CISA Known Exploited Vulnerabilities catalog"
       className="absolute -right-0.5 -top-0.5 h-[28%] w-[28%] rounded-full border-2 border-[var(--graph-canvas)] bg-[var(--severity-ring-critical)]"><span className="sr-only">KEV-listed</span></span>}
     {exposed && <span data-compact-marker="internet" title="Recorded internet exposure"
@@ -150,12 +160,13 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
   const glyphRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!nodeId || !glyphRef.current || typeof ResizeObserver === "undefined") return;
-    // The glyph resizes with zoom; handles must be remeasured to stay on its centre.
+    // Zoom resizes the glyph; a portrait side change moves it without resizing.
+    // Re-observe either change so edges land on the newly rendered handles.
     let frame = 0;
     const observer = new ResizeObserver(() => { cancelAnimationFrame(frame); frame = requestAnimationFrame(() => updateNodeInternals(nodeId)); });
     observer.observe(glyphRef.current);
     return () => { observer.disconnect(); cancelAnimationFrame(frame); };
-  }, [nodeId, updateNodeInternals]);
+  }, [nodeId, updateNodeInternals, data.phoneLayout, data.phoneSide, data.phoneLinear, data.label]);
   const repository = graphRepositoryContext(data);
   const Icon = repository ? FolderGit2 : nodeGlyph(data.nodeType, data.attributes, data.entityType, data.dimensions?.cloud_provider);
   const provider = repository?.source ?? (showsProviderMark(data) ? entitySource(data) : null);
@@ -165,7 +176,7 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
   const glyph = anchor ? ANCHOR_GLYPH : data.phoneLayout ? PHONE_GLYPH : GLYPH, icon = anchor ? ANCHOR_ICON : data.phoneLayout ? PHONE_ICON : ICON;
   const fullTitle = typeof data.attributes?.display_title === "string" && data.attributes.display_title.trim() ? data.attributes.display_title : data.label;
   // A prose finding draws its short preview; the full title stays in the tooltip, drawer and assistive text.
-  const preview = ["misconfiguration", "vulnerability"].includes(data.nodeType) ? prosePreview(fullTitle) : fullTitle;
+  const preview = ["misconfiguration", "vulnerability"].includes(data.nodeType) ? prosePreview(fullTitle, data.roomyName && (!data.phoneLayout || data.phoneLinear)) : fullTitle;
   const scope = data.rollup ? compactScopeCaption(data.rollup) : null;
   const held = data.heldConnections ? `${data.heldConnections} more ${data.heldConnections === 1 ? "connection" : "connections"} not drawn` : undefined;
   const tooltip = [graphNodeTooltip(data), data.evidenceFlowContext, ring?.description, held, data.seenIn?.length ? seenInSummary(data.seenIn) : undefined,
@@ -185,7 +196,7 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
       {held && <span data-testid="graph-held-connections" className="sr-only">{held}</span>}
     </div>
     <CaptionBox phone={Boolean(data.phoneLayout) && !stackedOnPhone(data)}>
-    <p data-semantic-name title={fullTitle} className={`mt-[0.3em] ${data.phoneLayout ? NAME_CLAMP.phone : NAME_CLAMP.desktop} max-w-full font-semibold leading-[1.15] text-foreground`} style={{ fontSize: "calc(var(--graph-node-label-size, 14px) * 0.88)" }}>
+    <p data-semantic-name title={fullTitle} className={`mt-[0.3em] ${data.phoneLayout && !data.phoneLinear ? NAME_CLAMP.phone : NAME_CLAMP.desktop} max-w-full font-semibold leading-[1.15] text-foreground`} style={{ fontSize: data.phoneLinear ? "var(--graph-node-label-size, 16px)" : data.phoneLayout ? "calc(var(--graph-node-label-size, 14px) * 0.88)" : "calc(var(--graph-node-label-size, 14px) * var(--graph-node-name-scale, 0.88))" }}>
       <NameWords text={canvasName(preview)} hidden={canvasName(preview) !== fullTitle} />
     </p>
     {canvasName(preview) !== fullTitle && <span className="sr-only">{fullTitle}</span>}

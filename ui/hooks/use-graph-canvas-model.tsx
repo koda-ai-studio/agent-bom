@@ -152,15 +152,14 @@ export function useGraphCanvasModel(page: GraphPageData) {
   });
 
   useEffect(() => {
-    if (initializedFocus) return;
+    if (initializedFocus || !graphData || !queueSettled) return;
     if (flow.agentNames.length === 0) {
       // Nothing to focus: release the first frame instead of waiting forever.
       if (graphData && queueSettled) setInitializedFocus(true);
       return;
     }
-    if (createCanvasLensGraphFilters(canvasLens, canvasAgent)) {
-      // Canonical Canvas lenses are estate projections. Auto-picking the first
-      // agent would silently collapse them into a single-agent investigation.
+    if (createCanvasLensGraphFilters(canvasLens, canvasAgent) || flow.nodes.some(node => node.data.semanticPathIndex === 0)) {
+      // Keep a complete ranked story in view, including cloud paths without an agent.
       setInitializedFocus(true);
       return;
     }
@@ -172,7 +171,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
     }
     setFilters(createFocusedGraphFilters(flow.agentNames[0]));
     setInitializedFocus(true);
-  }, [canvasAgent, canvasLens, flow.agentNames, initializedFocus, graphData, queueSettled, seededFromUrlRef, setFilters, setInitializedFocus]);
+  }, [canvasAgent, canvasLens, flow.agentNames, flow.nodes, initializedFocus, graphData, queueSettled, seededFromUrlRef, setFilters, setInitializedFocus]);
 
   // Push the current filter state into the URL (replace, not push) so a
   // copied address bar reproduces the view but back/forward isn't spammed.

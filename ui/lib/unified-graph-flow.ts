@@ -1,3 +1,4 @@
+import { rankedVisiblePath } from "@/lib/graph-ranked-spine";
 import { recordSemanticLayer } from "@/lib/graph-semantic-columns";
 import { agentContextRelationshipLabel, graphAgentContext, platformAgentCount } from "@/lib/graph-agent-context";
 import { graphEdgeEvidence, graphEdgeEvidenceLabel } from "@/lib/graph-edge-evidence";
@@ -146,8 +147,7 @@ export function buildUnifiedFlowGraph(
       id: node.id,
       type: flowRendererTypeForEntity(node.entity_type) ?? FLOW_NODE_TYPES[nodeType],
       position: { x: 0, y: 0 },
-      data: { ...toLineageData(node, nodeType, outgoing, incoming, nodeById),
-        ...(graph.attack_paths[0]?.hops.includes(node.id) ? { semanticPathIndex: graph.attack_paths[0].hops.indexOf(node.id) } : {}) },
+      data: toLineageData(node, nodeType, outgoing, incoming, nodeById),
       ...(isCriticalNode(node) ? { className: "node-critical-pulse" } : {}),
     });
   }
@@ -186,6 +186,16 @@ export function buildUnifiedFlowGraph(
       visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target),
   );
 
+  const witness = rankedVisiblePath(prunedNodes, edges, graph.attack_paths);
+  const primary = witness?.hops ?? [];
+  if (witness?.edges?.length) {
+    const relations = new Map(primary.slice(1).map((target, index) => [JSON.stringify([primary[index], target]), witness.edges![index]]));
+    for (const edge of edges) {
+      const pair = JSON.stringify([edge.source, edge.target]);
+      if (relations.has(pair)) edge.data = { ...edge.data, rankedPathWitness: edge.data?.relationship === relations.get(pair) };
+    }
+  }
+  for (const node of prunedNodes) if (primary.includes(node.id)) node.data.semanticPathIndex = primary.indexOf(node.id);
   assignOccurrenceRoles(prunedNodes);
   assignCollisionScopes(prunedNodes, graph.edges, new Map(graph.nodes.map((node) => [node.id, node.label])));
   assignScopeContext(prunedNodes, graph.edges.filter((edge) => visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)));

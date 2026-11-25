@@ -58,6 +58,7 @@ export type LineageNodeData = {
   semanticPathIndex?: number | undefined;
   semanticLayout?: boolean | undefined;
   phoneLayout?: boolean | undefined;
+  phoneLinear?: boolean | undefined;
   phoneSide?: "trunk" | "left" | "right" | undefined;
   semanticOwner?: string | undefined;
   evidenceFlow?: boolean;
@@ -85,6 +86,8 @@ export type LineageNodeData = {
   readingFindingsGroup?: boolean;
   readingFindings?: { count: number; expanded: boolean; severity?: string | undefined; toggle: () => void } | undefined;
   readingLabel?: string | undefined;
+  /** A bounded story reserves room for a longer finding caption. */
+  roomyName?: boolean | undefined;
   readingFinding?: boolean | undefined;
   readingOwner?: string | undefined;
   readingGroup?: string | undefined;

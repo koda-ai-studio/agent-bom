@@ -1,3 +1,4 @@
+import { ObservationEvidence } from "./observation-evidence";
 import type { ReactNode } from "react";
 import type { LineageNodeData } from "../lineage-nodes";
 import { graphRepositoryContext } from "@/lib/graph-repository-context";
@@ -97,6 +98,7 @@ function extraAttributeEntries(data: LineageNodeData) {
     ([key]) => {
       if (repository && ["repo_url", "full_name", "provider", "host", "branch", "default_branch", "commit_sha", "repository_commit", "git_commit"].includes(key)) return false;
       return !new Set([
+        "attribute_observations",
         "agent_type",
         "status",
         "version",
@@ -135,7 +137,7 @@ export function attributesSection(data: LineageNodeData) {
   const hasAttributes =
     (data.dataSources?.length ?? 0) > 0 ||
     (data.complianceTags?.length ?? 0) > 0 ||
-    extraAttributes.length > 0;
+    extraAttributes.length > 0 || Boolean(data.attributes?.attribute_observations);
 
   return hasAttributes ? (
     <div className="space-y-4">
@@ -156,6 +158,7 @@ export function attributesSection(data: LineageNodeData) {
         />
       )}
 
+      <ObservationEvidence attributes={data.attributes ?? {}} />
       {extraAttributes.length > 0 && (
         <div className="space-y-2">
           <Label>Attributes</Label>
