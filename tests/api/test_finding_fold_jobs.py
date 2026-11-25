@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import copy
 import time
 from pathlib import Path
 
@@ -170,3 +171,48 @@ def test_retained_history_keeps_only_the_fields_it_reads(versioned):
     row = jobs[0].result["findings"][0]
     assert "description" not in row
     assert set(row) <= finding_fold_jobs.HISTORY_ROW_KEYS | {"asset", "evidence"}
+
+
+def _fold_rows(store, project):
+    jobs, rows_for = fold_jobs("history-tenant", store, (("a",), None), project)
+    return [rows_for(scan) for scan in jobs]
+
+
+def test_cached_rows_round_trip_and_each_fold_gets_its_own(versioned):
+    """Rows are held compressed: equal on every read, never the same objects, and a caller's edit stays its own."""
+    versioned.put(job(8))
+    row = {"id": "x", "cwe_ids": [], "score": 9.8, "kev": True, "owner": None, "asset": {"tags": ["a"]}, "note": "\ud800"}
+    projected: list[str] = []
+    first = _fold_rows(versioned, lambda scan: projected.append(scan.job_id) or [copy.deepcopy(row)])[0]
+    first[0]["cwe_ids"].append("CWE-79")
+    second = _fold_rows(versioned, lambda scan: projected.append(scan.job_id) or [copy.deepcopy(row)])[0]
+    third = _fold_rows(versioned, lambda scan: projected.append(scan.job_id) or [copy.deepcopy(row)])[0]
+    assert projected == ["history-tenant-repo-a-8"]
+    assert second == [row] and third == [row] and second[0] is not third[0]
+    digest = next(iter(finding_fold_jobs._DIGESTS.values()))
+    assert isinstance(digest.packed, bytes) and digest.row_count == 1
+
+
+def test_rows_json_would_not_round_trip_are_projected_again(versioned):
+    from datetime import UTC, datetime
+
+    versioned.put(job(8))
+    calls: list[str] = []
+    stamp = datetime(2026, 11, 24, tzinfo=UTC)
+    for _ in range(2):
+        assert _fold_rows(versioned, lambda scan: calls.append(scan.job_id) or [{"seen": stamp}]) == [[{"seen": stamp}]]
+    assert len(calls) == 2
+    assert next(iter(finding_fold_jobs._DIGESTS.values())).row_count == 0
+
+
+def test_no_projected_row_is_held_as_live_objects(versioned):
+    """Live rows were millions of tracked dicts and lists that every full collection walked."""
+    import gc
+
+    versioned.put(job(8))
+    marker = {"marker": "held-live-check", "tags": []}
+    _fold_rows(versioned, lambda _scan: [marker])
+    digest = next(iter(finding_fold_jobs._DIGESTS.values()))
+    assert digest.row_count == 1
+    assert not any(referrer is not None and digest in gc.get_referrers(referrer) for referrer in gc.get_referrers(marker))
+    assert all(not isinstance(value, list) for value in vars(digest).values())
