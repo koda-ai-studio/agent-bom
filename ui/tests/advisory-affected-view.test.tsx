@@ -33,7 +33,7 @@ const exposure = (verdict: AffectedAnswer["verdict"]): AffectedAnswer => ({
   findings: { total: 2, open: 1, resolved: 1, suppressed: 0, severity: { high: 2 }, kev: true, fix_available: 1, no_fix: 1, internet_exposed: 0, advisories: ["CVE-2026-109618"], packages: ["pillow@9.0.0"] },
   exposure: { first_seen: "2026-08-01T00:00:00Z", last_seen: "2026-09-01T00:00:00Z", still_open: true, last_resolved_at: null },
   assets: [], assets_truncated: false, findings_truncated: false, findings_href: "/findings?q=CVE-2026-109618&status=all",
-  reach: { by_kind: { credentials: 2, data_stores: 1 }, items: {}, agents_on_findings: [], servers_on_findings: [], basis: "graph_snapshot", scan_id: "snap-1", advisories_walked: [] },
+  reach: { complete: false, direction: "outbound", truncated: false, reasons: [], by_kind: { credentials: 2, data_stores: 1 }, items: {}, agents_on_findings: [], servers_on_findings: [], basis: "graph_snapshot", scan_id: "snap-1", advisories_walked: [] },
 } as AffectedAnswer);
 const countReferencing = vi.mocked(countFindingsReferencing);
 const php2shell = fixture as AdvisoryAffectedResponse;
