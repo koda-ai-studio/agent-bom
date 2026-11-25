@@ -1,9 +1,16 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { Edge, Node } from "@xyflow/react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { semanticGraphLayout } from "@/lib/graph-semantic-layout";
 import { canvasName } from "@/components/graph-compact-node";
+
+// Counts real placements, so reuse is checked by what ran, not by a shared runner's clock.
+const placements = vi.hoisted(() => ({ count: 0 }));
+vi.mock("@/lib/graph-compact-layout", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/graph-compact-layout")>("@/lib/graph-compact-layout");
+  return { ...actual, compactLayout: (...args: Parameters<typeof actual.compactLayout>) => { placements.count += 1; return actual.compactLayout(...args); } };
+});
 
 // The layout's input exactly as the investigation canvas hands it over for the reference correlation view.
 const reference = JSON.parse(readFileSync("tests/fixtures/reference-layout-input.json", "utf8")) as { nodes: Node<LineageNodeData>[]; edges: Edge[]; selectedPath: string[] };
@@ -107,17 +114,20 @@ describe("finding leaves in a shared rank", () => {
 
 describe("layout reuse", () => {
   it("reuses the placement for a graph whose structure is unchanged, so re-renders stay fast", () => {
-    const first = performance.now();
-    const a = semanticGraphLayout(nodes, edges, reference.selectedPath);
-    const cold = performance.now() - first;
+    // A label no other test lays out, so the first call has to place rather than hit an earlier test's entry.
+    const relabel = (label: string) => nodes.map((node, index) => index === 0 ? { ...node, data: { ...node.data, label } } : node);
+    const before = placements.count;
+    const a = semanticGraphLayout(relabel("reuse-probe"), edges, reference.selectedPath);
+    expect(placements.count).toBe(before + 1);
     // Same structure, new objects with a presentation-only change (a highlight).
-    const again = nodes.map(node => ({ ...node, data: { ...node.data, highlighted: !node.data.highlighted } }));
-    const start = performance.now();
+    const again = relabel("reuse-probe").map(node => ({ ...node, data: { ...node.data, highlighted: !node.data.highlighted } }));
     const b = semanticGraphLayout(again, edges.map(edge => ({ ...edge })), reference.selectedPath);
-    const warm = performance.now() - start;
+    expect(placements.count).toBe(before + 1);
     expect(b.nodes.map(node => node.position)).toEqual(a.nodes.map(node => node.position));
     expect(b.nodes.find(node => node.id === nodes[0]!.id)!.data.highlighted).toBe(true);
-    expect(warm).toBeLessThan(Math.max(5, cold / 4));
+    // A caption change can move cards, so it places again.
+    semanticGraphLayout(relabel("reuse-probe-renamed"), edges, reference.selectedPath);
+    expect(placements.count).toBe(before + 2);
   });
 });
 
