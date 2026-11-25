@@ -1012,6 +1012,15 @@ components:
             type: integer
           title: By Kind
           type: object
+        complete:
+          default: false
+          title: Complete
+          type: boolean
+        direction:
+          const: outbound
+          default: outbound
+          title: Direction
+          type: string
         items:
           additionalProperties:
             items:
@@ -1024,6 +1033,12 @@ components:
           - type: string
           - type: 'null'
           title: Note
+        reasons:
+          default: []
+          items:
+            type: string
+          title: Reasons
+          type: array
         scan_id:
           anyOf:
           - type: string
@@ -1034,6 +1049,15 @@ components:
             type: string
           title: Servers On Findings
           type: array
+        snapshot_generation:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Snapshot Generation
+        truncated:
+          default: false
+          title: Truncated
+          type: boolean
       required:
       - by_kind
       - items

@@ -150,49 +150,88 @@ def _asset(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _collect_story_reach(story: dict[str, Any], items: dict[str, dict[str, dict[str, str]]], reasons: set[str]) -> None:
+    """Preserve story bounds while unioning listed nodes across advisories."""
+    risk = _mapping(story.get("at_risk"))
+    complete = _mapping(risk.get("completeness")).get("complete")
+    if complete is not True:
+        reasons.add("traversal_limit" if complete is False else "completeness_unknown")
+    if risk.get("listed_complete") is not True:
+        reasons.add("item_limit" if risk.get("listed_complete") is False else "completeness_unknown")
+    for group in risk.get("groups") or []:
+        bucket = items.setdefault(str(group.get("kind")), {})
+        for item in group.get("items") or []:
+            bucket.setdefault(
+                str(item["id"]),
+                {
+                    "id": str(item["id"]),
+                    "label": str(item.get("label") or item["id"]),
+                    "entity_type": str(item.get("entity_type") or ""),
+                },
+            )
+
+
 def _story_reach(tenant_id: str, advisories: list[str]) -> dict[str, Any]:
     """At-risk groups of up to :data:`MAX_STORIES` advisories on the latest snapshot, merged by node."""
     from agent_bom.api.stores import _get_graph_store
-    from agent_bom.graph.exploit_story_read import read_exploit_story
+    from agent_bom.graph.exploit_story_read import SnapshotChangedError, read_exploit_story
 
     items: dict[str, dict[str, dict[str, str]]] = {kind: {} for kind in _REACH_KINDS}
     walked: list[str] = []
-    scan_id: str | None = None
-    note = None
+    identity: tuple[str, str] | None = None
+    reasons: set[str] = set()
+    notes: list[str] = []
+    unavailable = False
+    if len(advisories) > MAX_STORIES:
+        reasons.add("advisory_limit")
+        notes.append(f"Reach covers the first {MAX_STORIES} of {len(advisories)} matched advisories.")
     try:
-        store = _get_graph_store()
-        for advisory in advisories[:MAX_STORIES]:
-            story = read_exploit_story(store, tenant_id=tenant_id, scan_id=None, node_id=f"vuln:{advisory}")
-            if not story:
-                continue
-            walked.append(advisory)
-            scan_id = scan_id or story.get("scan_id")
-            for group in (story.get("at_risk") or {}).get("groups") or []:
-                bucket = items.setdefault(str(group.get("kind")), {})
-                for item in group.get("items") or []:
-                    bucket.setdefault(
-                        str(item["id"]),
-                        {
-                            "id": str(item["id"]),
-                            "label": str(item.get("label") or item["id"]),
-                            "entity_type": str(item.get("entity_type") or ""),
-                        },
-                    )
+        if advisories:
+            store = _get_graph_store()
+            identity = store.snapshot_identity(tenant_id=tenant_id, scan_id="", for_paging=True)
+            if not all(identity):
+                reasons.add("no_snapshot")
+            for advisory in advisories[:MAX_STORIES] if all(identity) else []:
+                story = read_exploit_story(store, tenant_id=tenant_id, scan_id=identity[0], node_id=f"vuln:{advisory}")
+                if not story:
+                    reasons.add("advisory_not_linked")
+                    continue
+                if (story.get("scan_id"), story.get("snapshot_generation")) != identity:
+                    raise SnapshotChangedError("graph snapshot changed between advisory reads")
+                walked.append(advisory)
+                _collect_story_reach(story, items, reasons)
+            if all(identity) and store.snapshot_identity(tenant_id=tenant_id, scan_id=identity[0], for_paging=True) != identity:
+                raise SnapshotChangedError("graph snapshot changed during the aggregate read")
+    except SnapshotChangedError:
+        unavailable = True
+        reasons.add("snapshot_changed")
+        notes.append("Graph snapshot changed during this read; retry to obtain consistent reach.")
     except NotImplementedError:
-        note = "This graph backend does not support pinned reach reads."
+        unavailable = True
+        reasons.add("pinned_read_unsupported")
+        notes.append("This graph backend does not support pinned reach reads.")
     except Exception as exc:  # noqa: BLE001  # broad-except: reach is additive; the findings answer stands without it
         _logger.warning("Affected reach unavailable: %s", type(exc).__name__)
-        note = "Graph reach is unavailable for this read."
-    if len(advisories) > MAX_STORIES:
-        note = f"Reach covers the first {MAX_STORIES} of {len(advisories)} matched advisories."
-    listed = {kind: sorted(bucket.values(), key=lambda item: item["label"]) for kind, bucket in items.items() if bucket}
+        unavailable = True
+        reasons.add("read_unavailable")
+        notes.append("Graph reach is unavailable for this read.")
+    if unavailable:
+        items, walked, identity = {}, [], None
+    elif reasons:
+        notes.append("Reach is incomplete; listed counts are lower bounds, not proof of isolation.")
+    listed = {kind: sorted(bucket.values(), key=lambda item: (item["label"], item["id"])) for kind, bucket in items.items() if bucket}
     return {
         "by_kind": {kind: len(values) for kind, values in listed.items()},
         "items": listed,
-        "basis": "graph_snapshot" if walked else "unavailable" if note else "findings_only",
-        "scan_id": scan_id,
+        "basis": "unavailable" if unavailable else "graph_snapshot" if walked else "findings_only",
+        "scan_id": identity[0] if identity and walked else None,
+        "snapshot_generation": identity[1] if identity and walked else None,
+        "direction": "outbound",
+        "complete": bool(walked) and not reasons,
+        "truncated": bool(reasons & {"advisory_limit", "traversal_limit", "item_limit"}),
+        "reasons": sorted(reasons),
         "advisories_walked": walked,
-        "note": note,
+        "note": " ".join(notes) or None,
     }
 
 
@@ -238,11 +277,12 @@ def read_affected(request: Request, tenant_id: str, raw: str) -> dict[str, Any]:
     query = parse_query(raw)
     rows, truncated = _walk(request, query)
     summary = _summary(rows)
-    reach = (
-        _story_reach(tenant_id, summary["advisories"])
-        if rows
-        else {"by_kind": {}, "items": {}, "basis": "findings_only", "scan_id": None, "advisories_walked": [], "note": None}
-    )
+    reach = _story_reach(tenant_id, sorted({advisory for row in rows for advisory in _advisory_ids(row)}))
+    if truncated:
+        reach["complete"] = False
+        reach["truncated"] = True
+        reach["reasons"] = sorted({*reach["reasons"], "findings_limit"})
+        reach["note"] = " ".join(filter(None, [reach["note"], "Findings walk stopped at its limit; reach covers only the matched prefix."]))
     reach["agents_on_findings"] = sorted(
         {str(agent) for row in rows for agent in row.get("graph_reachable_from_agents") or row.get("affected_agents") or []}
     )

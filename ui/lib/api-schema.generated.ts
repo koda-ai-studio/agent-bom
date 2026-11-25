@@ -9302,16 +9302,39 @@ export interface components {
             by_kind: {
                 [key: string]: number;
             };
+            /**
+             * Complete
+             * @default false
+             */
+            complete: boolean;
+            /**
+             * Direction
+             * @default outbound
+             * @constant
+             */
+            direction: "outbound";
             /** Items */
             items: {
                 [key: string]: components["schemas"]["AffectedReachItem"][];
             };
             /** Note */
             note?: string | null;
+            /**
+             * Reasons
+             * @default []
+             */
+            reasons: string[];
             /** Scan Id */
             scan_id?: string | null;
             /** Servers On Findings */
             servers_on_findings: string[];
+            /** Snapshot Generation */
+            snapshot_generation?: string | null;
+            /**
+             * Truncated
+             * @default false
+             */
+            truncated: boolean;
         } & {
             [key: string]: unknown;
         };

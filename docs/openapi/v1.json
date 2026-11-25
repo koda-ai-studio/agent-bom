@@ -1577,6 +1577,17 @@
             "title": "By Kind",
             "type": "object"
           },
+          "complete": {
+            "default": false,
+            "title": "Complete",
+            "type": "boolean"
+          },
+          "direction": {
+            "const": "outbound",
+            "default": "outbound",
+            "title": "Direction",
+            "type": "string"
+          },
           "items": {
             "additionalProperties": {
               "items": {
@@ -1598,6 +1609,14 @@
             ],
             "title": "Note"
           },
+          "reasons": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
           "scan_id": {
             "anyOf": [
               {
@@ -1615,6 +1634,22 @@
             },
             "title": "Servers On Findings",
             "type": "array"
+          },
+          "snapshot_generation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Generation"
+          },
+          "truncated": {
+            "default": false,
+            "title": "Truncated",
+            "type": "boolean"
           }
         },
         "required": [

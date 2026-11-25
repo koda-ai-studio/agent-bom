@@ -342,10 +342,20 @@ def _affected_summary(payload: JsonObject) -> str:
     """Verdict first, then the window, the counts, the first assets and what they reach."""
     body = _obj(payload)
     findings, exposure, reach = (_obj(body.get(key)) for key in ("findings", "exposure", "reach"))
-    verdict = {"affected": "AFFECTED", "previously_affected": "Previously affected (all resolved)", "not_found": "Not affected"}
+    verdict = {
+        "affected": "AFFECTED",
+        "previously_affected": "Previously affected (all resolved)",
+        "not_found": "No match found",
+        "possibly_affected": "Possibly affected",
+    }
     lines = [f"{verdict.get(str(body.get('verdict')), body.get('verdict'))}: {_obj(body.get('query')).get('raw')}"]
     if body.get("verdict") == "not_found":
-        return "\n".join([*lines, "No current or past finding matches this advisory or package."])
+        return "\n".join(
+            filter(
+                None,
+                [*lines, "No match in the available evidence; this does not prove the estate is unaffected.", str(reach.get("note") or "")],
+            )
+        )
     lines.append(f"Exposure: first seen {exposure.get('first_seen') or 'unknown'}, last seen {exposure.get('last_seen') or 'unknown'}")
     lines.append(
         f"Findings: {findings.get('total')} ({findings.get('open')} open, {findings.get('resolved')} resolved) · "
@@ -357,7 +367,11 @@ def _affected_summary(payload: JsonObject) -> str:
         lines.append(f"  - {asset.get('name')} {asset.get('version') or ''} [{asset.get('status')}] {asset.get('advisory') or ''}".rstrip())
     by_kind = _obj(reach.get("by_kind"))
     if by_kind:
-        lines.append("Reaches: " + ", ".join(f"{count} {kind.replace('_', ' ')}" for kind, count in sorted(by_kind.items())))
+        lines.append(
+            "Outbound reach (listed): " + ", ".join(f"{count} {kind.replace('_', ' ')}" for kind, count in sorted(by_kind.items()))
+        )
+    if reach.get("note"):
+        lines.append(str(reach["note"]))
     return "\n".join(lines)
 
 
