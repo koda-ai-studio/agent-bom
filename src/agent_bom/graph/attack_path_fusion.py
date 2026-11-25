@@ -96,12 +96,6 @@ _TRAVERSABLE_RELS = frozenset(
     }
 )
 
-# A compromised compute host controls what runs on it, so a chain steps from the
-# host to each hosted agent, server or workload: ``hosts`` forward, ``hosted_on``
-# read backwards. Only compute hosts qualify. An environment, account or cluster
-# also "hosts" its inventory, and stepping from one would reach everything.
-_HOST_STEP_RELS = frozenset({RelationshipType.HOSTS, RelationshipType.HOSTED_ON})
-
 # Crown-jewel target types — chains only "complete" when they reach a data store.
 _CROWN_JEWEL_TYPES = frozenset({EntityType.DATA_STORE})
 
