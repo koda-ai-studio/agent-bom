@@ -78,11 +78,6 @@ helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom -
 
 ![agent-bom dashboard overview](https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/docs/images/dashboard-live.png)
 
-![Sample production environment showing agents, MCP servers, dependencies and findings, with modeled access labeled](https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/docs/images/graph-environment-dark-live.png)
-
-Follow Document Intake Agent → document-tools MCP → pillow@9.0.0 → CVE-2023-4863.
-Sample data; dashed links are modeled, not observed.
-
 ![Repository pin, image inventory and deployment occurrence resolve to one package, with relationship evidence open](https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/docs/images/graph-relationship-dark-live.png)
 
 A repository pin, image SBOM and Kubernetes workload resolve to one package; the

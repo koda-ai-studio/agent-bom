@@ -94,10 +94,6 @@ the chain, agent → MCP server → tool → package → credential → data, ke
 evidence for every edge, and ranks findings by that reach. Start with the
 [five-minute path for your role](site-docs/getting-started/start-by-role.md).
 
-<p align="center"><a href="docs/images/graph-environment-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-environment-light-live.png"><img src="docs/images/graph-environment-dark-live.png" alt="Sample production AI environment: Document Intake Agent uses a document-tools MCP server that depends on pillow 9.0.0, linked to KEV-listed CVE-2023-4863; Support Triage Agent uses a ticketing MCP server that references TICKETING_API_KEY, which can access a customer ticket archive" width="1100"></picture></a></p>
-
-*Sample data.* [What the sample shows](docs/GALLERY.md#what-the-readme-sample-shows)
-
 ## What it covers
 
 Agents and MCP servers, models and AI platforms, dependencies, code, containers

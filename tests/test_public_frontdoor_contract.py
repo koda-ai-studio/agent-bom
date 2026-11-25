@@ -371,8 +371,7 @@ def test_support_and_contributor_feedback_links_use_the_active_repository() -> N
 
 def test_pypi_graph_examples_share_readme_identity_and_evidence_story() -> None:
     pypi = (ROOT / "docs/registry/PYPI_README.md").read_text()
-    for filename in ("graph-environment-dark-live.png", "graph-relationship-dark-live.png"):
-        assert filename in pypi
+    assert "graph-relationship-dark-live.png" in pypi
     assert "image inventory and deployment occurrence stay distinct" in pypi
     assert "does not prove execution or exploitation" in pypi
 
