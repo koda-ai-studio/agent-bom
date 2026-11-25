@@ -39,6 +39,11 @@ describe("exposure spine", () => {
 });
 
 describe("environment boundary", () => {
+  it("never represents permission or cross-account trust as one containment context", () => {
+    const { nodes, edges } = estate();
+    expect(enclosingEnvironment(nodes, edges.map(link => link.source === "env" ? { ...link, data: { relationship: "can_access" } } : link))).toBeNull();
+    expect(enclosingEnvironment(nodes, [...edges, edge("docs", "serving", "cross_account_trust")])).toBeNull();
+  });
   it("frames an environment only when it is the single root holding every other node", () => {
     const { nodes, edges } = estate();
     expect(enclosingEnvironment(nodes, edges)?.id).toBe("env");
@@ -226,7 +231,7 @@ it("keeps sibling dependency chains level when their recorded scope is expanded"
   }
   expect(new Set(chains.map(chain => point(chain[0]!).y)).size).toBe(3);
   expect(point("scope").x).toBeLessThan(point("agent").x);
-  expect(result.nodes.find(node => node.id === "scope")!.hidden).toBeFalsy();
+  expect(result.nodes.find(node => node.type === "boundaryFrame")?.data.frameFor).toBe("scope");
   expect(result.edges.filter(edge => !edge.data?.displayOnly).map(edge => [edge.id, edge.source, edge.target])).toEqual(edges.map(edge => [edge.id, edge.source, edge.target]));
   const reordered = semanticGraphLayout([...nodes].reverse(), [...edges].reverse());
   for (const node of result.nodes) expect(reordered.nodes.find(other => other.id === node.id)?.position).toEqual(node.position);

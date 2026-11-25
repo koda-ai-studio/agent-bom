@@ -490,7 +490,7 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     await expect.poll(async () => await page.locator('.react-flow__node:not([data-id^="display:"])').count() + await page.locator("[data-boundary-frame]").count()).toBe(8);
     await expect(page.locator('[data-graph-entity="finding-group"]')).toHaveCount(0);
     // Supporting containment links remain visible with the account node.
-    if (width >= 640) await expect(page.getByLabel("Visible relationship evidence")).toContainText("Modeled 8");
+    if (width >= 640) await expect(page.getByLabel("Visible relationship evidence")).toContainText("Modeled 6");
     await settle(page);
     expect(await graphGrammarViolations(page)).toEqual({});
     if (width >= 640) await readableCloudFrame(page);
@@ -599,7 +599,7 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
       await expect(page.getByTestId("graph-entity-drawer")).toContainText("Public API stage has no WAF association");
       await page.screenshot({ path: info.outputPath(`cloud-finding-inspector-${theme}.png`), animations: "disabled" });
       await page.getByRole("button", { name: "Collapse findings", exact: true }).click();
-      // The supporting account remains a node connected by its recorded containment.
+      // Desktop represents the account once, as its labelled context boundary.
     await expect.poll(async () => await page.locator('.react-flow__node:not([data-id^="display:"])').count() + await page.locator("[data-boundary-frame]").count()).toBe(8);
       await expect(page.locator('[data-graph-entity="finding-group"]')).toHaveCount(0);
       await expect(page.getByTestId("graph-entity-drawer")).toHaveCount(0);
@@ -701,9 +701,16 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     await page.screenshot({ path: info.outputPath(`story-first-${theme}-${width}.png`), animations: "disabled" });
     await page.getByRole("button", { name: "Show supporting context (4)", exact: true }).click();
     await settle(page);
-    await expect(page.locator('[data-boundary-frame]')).toHaveCount(0);
+    await expect(page.locator('[data-boundary-frame]')).toHaveCount(width >= 640 ? 1 : 0);
     await expect(page.getByText("prod-workloads", { exact: true })).toBeVisible();
-    await expect(page.locator('.react-flow__edge[data-id*="contains"]')).not.toHaveCount(0);
+    if (width >= 640) {
+      await expect(page.locator('[data-boundary-frame]')).toHaveAttribute("data-frame-links", "2");
+      await expect(page.getByTestId("graph-viewport-scope")).toContainText("8 visible items");
+      const bounds = await page.locator('[data-boundary-frame]').boundingBox();
+      const internet = await page.locator('[data-id="display:internet"] .graph-entity-glyph').boundingBox();
+      expect(internet!.x + internet!.width).toBeLessThan(bounds!.x);
+      expect(await page.locator('[data-boundary-frame]').evaluate(el => getComputedStyle(el).borderTopColor)).not.toBe("rgba(0, 0, 0, 0)");
+    } else await expect(page.locator('.react-flow__edge[data-id*="contains"]')).not.toHaveCount(0);
     if (width >= 640) {
       const spread = await page.locator('.react-flow__edge[data-id="display:internet:gateway:public"] .react-flow__edge-path').evaluate(path => {
         const line = path as SVGPathElement;

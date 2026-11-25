@@ -15,13 +15,16 @@ it("opens the recorded exposure and access story with supporting containment exp
   expect(result.edges.map(e => [e.id, e.source, e.target, e.data])).toEqual(edges.map(e => [e.id, e.source, e.target, e.data]));
   expect(nodes.every(n => !n.hidden)).toBe(true);
 });
-it("expanded context retains the account and its actual containment links, never a floating frame caption", () => {
+it("expanded context represents the account with a labelled boundary and retains its original links", () => {
   const restored = storyContext(nodes, edges, true);
   const result = semanticGraphLayout(restored.nodes, restored.edges);
-  expect(result.nodes.find(n => n.id === "account")?.hidden).toBeFalsy();
-  expect(result.nodes.some(n => n.type === "boundaryFrame")).toBe(false);
-  expect(result.edges.find(e => e.id === "account-cluster")?.hidden).toBeFalsy();
-  expect(result.edges.find(e => e.id === "account-entry")?.hidden).toBeFalsy();
+  expect(result.nodes.find(n => n.type === "boundaryFrame")?.data.frameFor).toBe("account");
+  expect(result.nodes.find(n => n.type === "boundaryFrame")?.data.frameLinks).toBe(2);
+  for (const id of ["account-cluster", "account-entry"]) {
+    const link = result.edges.find(e => e.id === id)!;
+    expect(link.data?.framed).toBe(true);
+    expect([link.source, link.target, link.data?.traversable]).toEqual(["account", id.slice(8), false]);
+  }
 });
 it("does not fold a broken or nontraversable primary witness", () => {
   for (const links of [edges.filter(e => e.id !== "entry-app"), edges.map(e => e.id === "entry-app" ? { ...e, data: { ...e.data, traversable: false } } : e)]) {
