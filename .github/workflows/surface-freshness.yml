@@ -83,6 +83,7 @@ jobs:
 
       - name: Probe every distribution surface
         id: probe
+        continue-on-error: true
         env:
           GLAMA_API_KEY: ${{ secrets.GLAMA_API_KEY }}
           GLAMA_DIAGNOSTICS_DIR: ${{ runner.temp }}/glama-response
@@ -101,18 +102,20 @@ jobs:
             --expected "${{ steps.expected.outputs.version }}" \
             --expected-tool-names-file /tmp/surface-expected-tool-names.json \
             --out /tmp/surface-expected-tool-contract.json
-          PYTHONPATH=src python3 scripts/check_surface_freshness.py --retired-smithery \
+          probe_exit=0
+          PYTHONPATH=src python3 scripts/check_surface_freshness.py --retired-smithery --fail-on-stale \
             --expected "$EXPECTED_VERSION" \
             --mcp-registry-manifest /tmp/surface-mcp-registry.json \
             --expected-tool-count "${{ steps.expected.outputs.tool_count }}" \
             --expected-tool-names-file /tmp/surface-expected-tool-names.json \
             --expected-tool-contract-file /tmp/surface-expected-tool-contract.json \
-            --out surface-freshness.json
+            --out surface-freshness.json || probe_exit=$?
           {
             echo "report<<EOF"
             cat surface-freshness.json
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
+          exit "$probe_exit"
 
       - name: Upload freshness and failed public response evidence
         if: always()
@@ -277,3 +280,9 @@ jobs:
               return;
             }
             await github.rest.issues.create({ owner, repo, title, body, labels });
+
+      - name: Enforce required distribution health
+        if: always()
+        env:
+          PROBE_OUTCOME: ${{ steps.probe.outcome }}
+        run: test "$PROBE_OUTCOME" = success

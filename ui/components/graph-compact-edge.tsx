@@ -1,12 +1,13 @@
 "use client";
 
 import { COMPACT_GLYPH_SCALE } from "@/lib/graph-compact-glyph";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { BaseEdge, EdgeLabelRenderer, Position, useStore, type EdgeProps } from "@xyflow/react";
 import { RelationshipBadge } from "@/components/relationship-edge";
 import { EDGE_STROKE, edgeFamily, edgeFamilyColor, edgeIsDashed } from "@/lib/graph-edge-family";
 import { ARC_REACH } from "@/lib/graph-compact-arcs";
 import { relationshipEdgeLabelText } from "@/lib/graph-utils";
+import { scheduleRelationshipLabelLayout, scheduleRelationshipLabelLayoutAfterMove } from "@/lib/relationship-label-layout";
 
 /** A resting label clears the largest drawn glyph (the small-graph circle) plus a gap, so it never sits on a card. */
 const LABEL_RISE = Math.max(28, Math.ceil((66 * COMPACT_GLYPH_SCALE) / 2) + 8);
@@ -48,13 +49,22 @@ export function compactEdgeCurve(props: Pick<EdgeProps, "sourceX" | "sourceY" | 
 
 /** An inspected link names its relationship and evidence in full, just above the line: names hang below glyphs. */
 function InspectLabel({ id, at, relationship, text, aggregate, inspecting, shift = 0 }: { id: string; at: Point; relationship: string; text: React.ReactNode; aggregate: boolean; inspecting: boolean; shift?: number }) {
-  const zoom = useStore(state => state.transform[2]);
+  const [panX, panY, zoom] = useStore(state => state.transform);
+  const labelRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (aggregate) scheduleRelationshipLabelLayout(labelRef.current);
+  }, [aggregate, at.x, at.y, zoom, text, inspecting]);
+  useEffect(() => {
+    if (aggregate) scheduleRelationshipLabelLayoutAfterMove(labelRef.current);
+  }, [aggregate, panX, panY]);
   // On a phone the label sits beside the link, on the side away from the captions, rather than over it.
-  const anchor = shift > 0 ? `translate(${8 / Math.max(zoom, 0.16)}px, -50%) translate(${at.x}px, ${at.y}px)`
+  const anchor = aggregate ? `translate(-50%, -50%) translate(${at.x}px, ${at.y}px)`
+    : shift > 0 ? `translate(${8 / Math.max(zoom, 0.16)}px, -50%) translate(${at.x}px, ${at.y}px)`
     : shift < 0 ? `translate(calc(-100% - ${8 / Math.max(zoom, 0.16)}px), -50%) translate(${at.x}px, ${at.y}px)`
     : `translate(-50%, -100%) translate(${at.x}px, ${at.y - LABEL_RISE / Math.max(zoom, 0.16)}px)`;
   return <EdgeLabelRenderer>
-    <div data-edge-id={id} data-inspecting={inspecting ? "true" : "false"} className={`nodrag nopan graph-relationship-label ${aggregate ? "graph-aggregate-label" : ""}`}
+    <div ref={labelRef} data-edge-id={id} data-label-x={aggregate ? at.x : undefined} data-label-y={aggregate ? at.y : undefined}
+      data-inspecting={inspecting ? "true" : "false"} className={`nodrag nopan graph-relationship-label ${aggregate ? "graph-aggregate-label" : ""}`}
       style={{ position: "absolute", transform: anchor, fontSize: 12.5 / Math.max(zoom, 0.16), pointerEvents: "none", whiteSpace: "nowrap" }}>
       <RelationshipBadge relationship={relationship}>{text}</RelationshipBadge>
     </div>

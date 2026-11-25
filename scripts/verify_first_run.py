@@ -20,10 +20,11 @@ import subprocess
 import sys
 import time
 import tomllib
+from http.cookiejar import CookieJar
 from pathlib import Path
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
-from urllib.request import urlopen
+from urllib.request import HTTPCookieProcessor, Request, build_opener, urlopen
 
 
 def validate_report(report: dict) -> str:
@@ -42,6 +43,27 @@ def validate_graph(graph: dict, scan_id: str) -> dict:
     if not nodes or not edges or any(edge["source"] not in ids or edge["target"] not in ids for edge in edges):
         raise ValueError("Sample graph must contain connected nodes and edges")
     return {"nodes": len(nodes), "edges": len(edges)}
+
+
+def validate_repeat(report: dict, previous_scan_id: str) -> str:
+    scan_id = validate_report(report)
+    if scan_id == previous_scan_id:
+        raise ValueError("Repeat scan must have a distinct snapshot identity")
+    return scan_id
+
+
+def validate_retained(before: dict, after: dict, scan_id: str) -> dict:
+    counts = validate_graph(after, scan_id)
+
+    def identity(graph: dict) -> tuple:
+        return (
+            sorted(node["id"] for node in graph["nodes"]),
+            sorted((edge["source"], edge["target"], edge.get("relationship", "")) for edge in graph["edges"]),
+        )
+
+    if identity(before) != identity(after):
+        raise ValueError("Original graph must be retained across restart and repeat scan")
+    return counts
 
 
 def validate_repository(report: dict, expected: set[tuple[str, str]]) -> None:
@@ -162,6 +184,54 @@ def _get_json(url: str) -> dict:
         return json.load(response)
 
 
+def _local_session(base: str):
+    try:
+        _get_json(base + "/v1/graph")
+    except HTTPError as exc:
+        if exc.code != 401:
+            raise ValueError("Expected anonymous graph rejection") from None
+    else:
+        raise ValueError("Expected anonymous graph rejection")
+    opener = build_opener(HTTPCookieProcessor(CookieJar()))
+    request = Request(base + "/v1/auth/dev-session", data=b"", headers={"Origin": base}, method="POST")
+    with opener.open(request, timeout=5) as response:
+        if response.status != 204:
+            raise ValueError("Loopback session was not established")
+    return opener
+
+
+def _read_graph(session, base: str, scan_id: str) -> dict:
+    with session.open(base + "/v1/graph?" + urlencode({"scan_id": scan_id, "limit": 500}), timeout=15) as response:
+        return json.load(response)
+
+
+def _stop_server(process) -> None:
+    if process is not None and process.poll() is None:
+        process.terminate()
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=10)
+
+
+def _start_server(executable: Path, output: Path, env: dict, port: int, name: str):
+    with (output / f"{name}.log").open("w", encoding="utf-8") as log:
+        process = subprocess.Popen(
+            [str(executable), "serve", "--persist", env["AGENT_BOM_DB"], "--host", "127.0.0.1", "--port", str(port), "--log-json"],
+            cwd=output,
+            env=env,
+            stdout=log,
+            stderr=log,
+        )
+    try:
+        _wait_for_server(f"http://127.0.0.1:{port}", process)
+    except Exception:
+        _stop_server(process)
+        raise
+    return process
+
+
 def _wait_for_server(base: str, process: subprocess.Popen, timeout: float = 90) -> None:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -266,29 +336,23 @@ def run(output: Path, expected_version: str, install_seconds: float | None = Non
             sock.bind(("127.0.0.1", 0))
             port = sock.getsockname()[1]
         base = f"http://127.0.0.1:{port}"
-        with (output / "server.log").open("w", encoding="utf-8") as log:
-            process = subprocess.Popen(
-                [
-                    str(executable),
-                    "serve",
-                    "--persist",
-                    env["AGENT_BOM_DB"],
-                    "--host",
-                    "127.0.0.1",
-                    "--port",
-                    str(port),
-                    "--allow-insecure-no-auth",
-                ],
-                cwd=output,
-                env=env,
-                stdout=log,
-                stderr=log,
-            )
-            _wait_for_server(base, process)
-            graph = _get_json(base + "/v1/graph?" + urlencode({"scan_id": scan_id, "limit": 500}))
-            receipt["graph"] = validate_graph(graph, scan_id)
-            receipt["views"] = _browser(base, scan_id, graph, output, started)
-            receipt["timings_seconds"]["first_rendered_graph"] = receipt["views"][0]["elapsed_seconds"]
+        process = _start_server(executable, output, env, port, "server")
+        session = _local_session(base)
+        receipt["authentication"] = "anonymous_graph_rejected_loopback_session_accepted"
+        graph = _read_graph(session, base, scan_id)
+        receipt["graph"] = validate_graph(graph, scan_id)
+        receipt["views"] = _browser(base, scan_id, graph, output, started)
+        receipt["timings_seconds"]["first_rendered_graph"] = receipt["views"][0]["elapsed_seconds"]
+        shutil.copyfile(output / "sample/agent-bom-report.json", output / "first-report.json")
+        _stop_server(process)
+        process = _start_server(executable, output, env, port, "server-restarted")
+        session = _local_session(base)
+        receipt["restart"] = validate_retained(graph, _read_graph(session, base, scan_id), scan_id)
+        command("repeat-quickstart", ["quickstart", "--run", "--offline", "--sample-dir", str(output / "sample")], 0)
+        repeated = json.loads((output / "sample/agent-bom-report.json").read_text(encoding="utf-8"))
+        repeat_id = validate_repeat(repeated, scan_id)
+        receipt["repeat_scan"] = {"scan_id": repeat_id, **validate_graph(_read_graph(session, base, repeat_id), repeat_id)}
+        receipt["retained_first_scan"] = validate_retained(graph, _read_graph(session, base, scan_id), scan_id)
         receipt["timings_seconds"]["all_graph_views"] = round(time.monotonic() - started, 3)
         receipt["status"] = "passed"
         return receipt
@@ -297,13 +361,7 @@ def run(output: Path, expected_version: str, install_seconds: float | None = Non
         receipt["error_type"] = type(exc).__name__
         raise
     finally:
-        if process is not None and process.poll() is None:
-            process.terminate()
-            try:
-                process.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait(timeout=10)
+        _stop_server(process)
         receipt["elapsed_seconds"] = round(time.monotonic() - started, 3)
         (output / "receipt.json").write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
 

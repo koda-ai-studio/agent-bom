@@ -196,3 +196,29 @@ def test_offline_qualification_accepts_explicit_unavailable_advisory_evidence():
             }
         }
     )
+
+
+def test_repeat_scan_requires_distinct_complete_snapshot():
+    with pytest.raises(ValueError, match="distinct"):
+        verify_first_run.validate_repeat(report(), "sample-1")
+    with pytest.raises(ValueError, match="complete"):
+        verify_first_run.validate_repeat(report(scan_id="sample-2", scan_run={"outcome": "partial"}), "sample-1")
+    assert verify_first_run.validate_repeat(report(scan_id="sample-2"), "sample-1") == "sample-2"
+
+
+def test_restart_must_preserve_graph_identity_not_just_counts():
+    graph = {"scan_id": "sample-1", "nodes": [{"id": "a"}, {"id": "b"}], "edges": [{"source": "a", "target": "b", "relationship": "uses"}]}
+    verify_first_run.validate_retained(graph, graph, "sample-1")
+    replacement = {**graph, "nodes": [{"id": "c"}, {"id": "b"}], "edges": [{"source": "c", "target": "b", "relationship": "uses"}]}
+    with pytest.raises(ValueError, match="retained"):
+        verify_first_run.validate_retained(graph, replacement, "sample-1")
+
+
+def test_loopback_session_requires_unauthenticated_rejection(monkeypatch):
+    import io
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(verify_first_run, "urlopen", lambda *args, **kwargs: io.BytesIO(b"{}"))
+    monkeypatch.setattr(verify_first_run, "build_opener", lambda *args: SimpleNamespace(open=lambda *args, **kwargs: io.BytesIO(b"")))
+    with pytest.raises(ValueError, match="anonymous"):
+        verify_first_run._local_session("http://127.0.0.1:3139")
