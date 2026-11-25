@@ -102,7 +102,7 @@ const referenceGraph = REFERENCE_LAB.capture_fixture.graph;
 const CANVAS_NODE_TYPE = { source_file: "sourceFile", config_file: "configFile" };
 const referenceOverview = foldPackageEvidence(
   referenceGraph.nodes.map(node => ({ id: node.id, position: { x: 0, y: 0 }, data: { label: node.label, nodeType: CANVAS_NODE_TYPE[node.entity_type] ?? node.entity_type } })),
-  referenceGraph.edges.map(edge => ({ id: `${edge.source}->${edge.target}:${edge.relationship}`, source: edge.source, target: edge.target, data: { relationship: edge.relationship } })),
+  referenceGraph.edges.map(edge => ({ id: edge.id || `${edge.source}:${edge.relationship}:${edge.target}`, source: edge.source, target: edge.target, data: { relationship: edge.relationship } })),
 );
 const referenceSnapshots = [
   {
