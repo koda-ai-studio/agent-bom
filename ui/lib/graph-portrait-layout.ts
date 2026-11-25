@@ -1,3 +1,4 @@
+import { phoneStoryLayout } from "@/lib/graph-phone-story";
 import type { Edge, Node } from "@xyflow/react";
 import { withoutFrames } from "@/lib/graph-exposure-spine";
 import type { LineageNodeData } from "@/components/lineage-nodes";
@@ -99,6 +100,7 @@ export function graphPortraitLayout(nodes: Node<LineageNodeData>[], edges: Edge[
   // A phone stacks one column: the scope is its first card again, not a boundary around it.
   ({ nodes, edges } = withoutFrames(nodes, edges));
   const visible = nodes.filter(node => !node.hidden);
+  if (visible.length <= 24 && visible.some(node => node.data.roomyName)) return phoneStoryLayout(nodes, edges);
   const positions = new Map<string, Point>();
   // Trunk hops sit on the centre line; branch rows keep it clear for links that pass them.
   const sides = new Map<string, "trunk" | "left" | "right">();

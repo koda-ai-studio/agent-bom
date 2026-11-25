@@ -44,14 +44,13 @@ export function InvestigationStepStrip({
   /** Continue on an existing product surface instead of duplicating it here. */
   stepHrefs?: Partial<Record<InvestigationStep, string>> | undefined;
 }) {
-  const activeIndex = STEPS.findIndex((item) => item.key === step);
 
   return (
     <nav aria-label="Investigation steps" data-testid="investigation-step-strip" className="min-w-0">
       <ol className="flex min-w-0 flex-wrap gap-2">
         {STEPS.map((item, index) => {
           const active = item.key === step;
-          const done = Boolean(completed?.[item.key]) || index < activeIndex;
+          const done = Boolean(completed?.[item.key]);
           const Icon = done && !active ? CheckCircle2 : item.icon;
           const descriptionId = `investigation-step-${item.key}-hint`;
           const className = `inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium transition motion-reduce:transition-none ${
@@ -76,6 +75,7 @@ export function InvestigationStepStrip({
                   href={stepHrefs[item.key]!}
                   aria-current={active ? "step" : undefined}
                   aria-describedby={descriptionId}
+                  data-completed={done}
                   title={item.hint}
                   className={className}
                 >
@@ -86,6 +86,7 @@ export function InvestigationStepStrip({
                   type="button"
                   aria-current={active ? "step" : undefined}
                   aria-describedby={descriptionId}
+                  data-completed={done}
                   title={item.hint}
                   onClick={() => onStepChange(item.key)}
                   className={className}

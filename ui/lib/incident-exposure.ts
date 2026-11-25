@@ -18,8 +18,8 @@ export function getAffected(query: string, signal?: AbortSignal) {
 export const VERDICT_LABEL: Record<AffectedAnswer["verdict"], string> = {
   affected: "Affected",
   possibly_affected: "Possibly affected",
-  previously_affected: "Previously affected, all resolved",
-  not_found: "Not affected",
+  previously_affected: "Previously affected",
+  not_found: "No match found",
 };
 
 export const REACH_LABEL: Record<string, string> = {

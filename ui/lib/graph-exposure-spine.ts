@@ -22,7 +22,7 @@ export function exposureSpine(nodes: readonly Node<LineageNodeData>[], edges: re
   if (!byId.has(INTERNET_ANCHOR_ID)) return [];
   const next = new Map<string, string[]>();
   for (const edge of edges) {
-    if (edge.hidden || edge.source === edge.target || !byId.has(edge.source) || !byId.has(edge.target)) continue;
+    if (edge.hidden || (edge.data?.traversable === false && !(edge.source === INTERNET_ANCHOR_ID && edge.data?.displayOnly === true)) || edge.source === edge.target || !byId.has(edge.source) || !byId.has(edge.target)) continue;
     if (BACKWARD.has(String(edge.data?.relationship ?? ""))) continue;
     next.set(edge.source, [...(next.get(edge.source) ?? []), edge.target].sort());
   }

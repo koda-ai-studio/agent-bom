@@ -10,7 +10,7 @@ const TONE: Record<AffectedAnswer["verdict"], string> = {
   affected: "border-[color:var(--status-danger-border)] bg-[color:var(--status-danger-bg)] text-[color:var(--status-danger)]",
   possibly_affected: "border-[color:var(--status-warn-border)] bg-[color:var(--status-warn-bg)] text-[color:var(--status-warn)]",
   previously_affected: "border-outline bg-surface text-ink-secondary",
-  not_found: "border-[color:var(--status-success-border)] bg-[color:var(--status-success-bg)] text-[color:var(--status-success)]",
+  not_found: "border-outline bg-surface text-ink-secondary",
 };
 
 function day(value: string | null | undefined): string {
@@ -33,9 +33,9 @@ function Exposure({ answer }: { answer: AffectedAnswer }) {
         </dd>
       </div>
       <div>
-        <dt className="text-xs text-ink-tertiary">Reaches{reach.scan_id ? ` (graph snapshot ${reach.scan_id})` : ""}</dt>
+        <dt className="text-xs text-ink-tertiary">Outbound reach (listed){reach.scan_id ? ` (graph snapshot ${reach.scan_id})` : ""}</dt>
         <dd className="font-medium text-foreground" data-testid="exposure-reach">
-          {kinds.length ? kinds.map(([kind, count]) => `${count} ${REACH_LABEL[kind] ?? kind}`).join(" · ") : "No recorded reach"}
+          {kinds.length ? kinds.map(([kind, count]) => `${count} ${REACH_LABEL[kind] ?? kind}`).join(" · ") : reach.complete ? "No outbound entities recorded" : "Reach evidence incomplete or unavailable"}
         </dd>
       </div>
     </dl>
@@ -73,6 +73,7 @@ export function ExposurePanel({ query }: { query: string }) {
         {answer.findings.total > 0 && <Link href={answer.findings_href} className="ml-auto text-sm font-medium text-[color:var(--accent)] underline">View {answer.findings.total} findings</Link>}
       </div>
       {answer.verdict !== "not_found" && <Exposure answer={answer} />}
+      {!answer.reach.complete && <p role="status" className="text-xs text-ink-secondary">Reach is not a complete assessment. Unlisted assets may still be affected.</p>}
       {answer.reach.note && <p className="text-xs text-ink-tertiary">{answer.reach.note}</p>}
     </section>
   );

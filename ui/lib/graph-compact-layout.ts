@@ -97,6 +97,8 @@ export type CompactInput = {
   width?: (id: string) => number;
   /** Room a card needs under its row when its caption is taller than one row gap allows. */
   tall?: (id: string) => number | undefined;
+  /** Optional semantic story lanes, applied before routing and kept fixed. */
+  arrange?: ((positions: Map<string, Point>) => void) | undefined;
 };
 
 function rankKeys({ ids, links, column, attached, containment }: CompactInput) {
@@ -252,18 +254,22 @@ export function compactLayout(input: CompactInput): { positions: Map<string, Poi
   levelLeaves(ids, positions, leaf, neighbours, onSpine, tall);
   // Captions are judged at a fixed zoom a little below the one the starting layout fits at, and the search may not
   // grow the layout past it: what it makes drawable stays drawable at the zoom Fit all then picks.
-  const zoom = ids.length <= REFINE_CARDS ? fitZoom(positions, COMPACT_NODE_WIDTH) * ZOOM_BUDGET : undefined;
+  let zoom = ids.length <= REFINE_CARDS ? fitZoom(positions, COMPACT_NODE_WIDTH) * ZOOM_BUDGET : undefined;
   if (input.caption && zoom !== undefined) {
     // Findings stay level with their asset inside the search: every candidate is re-levelled before it is scored.
     const relevel = (map: Map<string, Point>) => levelLeaves(ids, map, leaf, neighbours, onSpine, tall);
     refinePlacement(ids, links, positions, onSpine, input.caption, input.levelLeaf, tall, zoom, relevel);
     relevel(positions);
   }
-  clearLevelLinks(ids, links, positions, tall, onSpine);
+  if (input.arrange) {
+    input.arrange(positions);
+    zoom = fitZoom(positions, COMPACT_NODE_WIDTH) * ZOOM_BUDGET;
+  }
+  else clearLevelLinks(ids, links, positions, tall, onSpine);
   let { arcs, behind } = linkArcs(links, positions, input.caption, COMPACT_NODE_WIDTH, zoom);
   // A link no curve can clear would be drawn through a glyph, which reads as a false route: move the card in its way
   // off the curve (never a spine hop or one of the link's ends) and draw again.
-  for (let pass = 0; pass < 3 && behind.size && ids.length <= REFINE_CARDS; pass++) {
+  for (let pass = 0; pass < 3 && behind.size && ids.length <= REFINE_CARDS && !input.arrange; pass++) {
     const moved = clearGlyphs(links.filter(link => link.id && behind.has(link.id)), ids, links, positions, tall, onSpine, input.caption, zoom);
     if (!moved) break;
     ({ arcs, behind } = linkArcs(links, positions, input.caption, COMPACT_NODE_WIDTH, zoom));

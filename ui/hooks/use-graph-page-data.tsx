@@ -664,15 +664,9 @@ export function useGraphPageData() {
     };
   }, [activeScopePreset]);
 
-  const attackPaths = useMemo(
-    () =>
-      [...(mergedGraphData?.attack_paths ?? [])].sort(
-        (left, right) =>
-          right.composite_risk - left.composite_risk ||
-          right.hops.length - left.hops.length,
-      ),
-    [mergedGraphData?.attack_paths],
-  );
+  // The server ranks evidence, exploitation and exposure before composite risk.
+  // Re-sorting here would disagree with the queue and the default canvas story.
+  const attackPaths = useMemo(() => mergedGraphData?.attack_paths ?? [], [mergedGraphData?.attack_paths]);
 
   // Attack-path focus is opt-in (#3932). Auto-selecting the top-ranked path on
   // load filtered the canvas down to a single chain, and when that chain's

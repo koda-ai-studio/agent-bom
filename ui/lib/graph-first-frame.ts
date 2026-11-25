@@ -1,8 +1,8 @@
 /**
  * Whether the default canvas must wait before its first frame.
  *
- * The default view focuses the first agent once the ranked graph page and the
- * attack-path queue (which contributes agent context) have both arrived.
+ * The default view preserves a complete ranked story, falling back to an agent after
+ * both the graph and attack-path queue have arrived.
  * Rendering earlier shows a findings-only frame that is replaced a moment later.
  */
 export function graphFirstFramePending({ awaitingAutoFocus, graphLoaded, queueSettled, agentCount }: {
