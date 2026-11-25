@@ -2709,6 +2709,9 @@ async function main() {
           await view.click();
           await expect(view).toHaveAttribute("aria-pressed", "true");
           await p.getByRole("button", { name: "View & layers", exact: true }).click();
+          // This showcase records the full scope, including supporting containment.
+          const expandContext = p.getByRole("button", { name: /^Show supporting context/ });
+          if (await expandContext.count()) await expandContext.click();
           // Findings fold only under an owner with a backend aggregate; the showcase draws every one.
           const expandFindings = p.getByRole("button", { name: /^Expand findings/ });
           if (await expandFindings.count()) await expandFindings.click();
