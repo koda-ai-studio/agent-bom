@@ -258,7 +258,12 @@ def _stable(value: Any) -> Any:
 
 def project(objects: list[Obj], extra: Obj | None = None) -> Obj:
     inventory = build_k8s_inventory(objects, source="live", cluster="prod-eks")
-    report = {"scan_id": SCAN_ID, "kubernetes_inventory": kubernetes_inventory_section([inventory], []), **(extra or {})}
+    report = {
+        "generated_at": "2026-11-01T00:00:00+00:00",
+        "scan_id": SCAN_ID,
+        "kubernetes_inventory": kubernetes_inventory_section([inventory], []),
+        **(extra or {}),
+    }
     built = build_unified_graph_from_report(report)
     graph = built.to_dict()
     # Nodes as the API serves them, each with its semantic layer.

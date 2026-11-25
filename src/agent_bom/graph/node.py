@@ -14,6 +14,7 @@ from agent_bom.core.severity import (
     SEVERITY_TO_OCSF,
     OCSFSeverity,
 )
+from agent_bom.graph.attribute_observations import merge_attributes
 from agent_bom.graph.integration_contract import node_evidence_provenance
 from agent_bom.graph.ocsf import ENTITY_OCSF_MAP
 from agent_bom.graph.types import EntityType, NodeStatus
@@ -24,7 +25,7 @@ _AGENT_BOM_NS = uuid.UUID("7f3e4b2a-9c1d-5f8e-a0b4-12c3d4e5f6a7")
 
 
 def stable_node_id(*parts: str) -> str:
-    """Deterministic UUID v5 from content parts."""
+    """Legacy case-folded ID for compatibility; new source identities use canonical_id."""
     fingerprint = ":".join(p.lower().strip() for p in parts if p)
     return str(uuid.uuid5(_AGENT_BOM_NS, fingerprint))
 
@@ -176,7 +177,7 @@ class UnifiedNode:
         ):
             self.risk_score = incoming.risk_score
             assessment = candidate
-        self.attributes.update(incoming.attributes)
+        self.attributes = merge_attributes(self, incoming)
         self.attributes["risk_assessment"] = (
             {**assessment, "scored_value": self.risk_score} if assessment["status"] == "assessed" else assessment
         )

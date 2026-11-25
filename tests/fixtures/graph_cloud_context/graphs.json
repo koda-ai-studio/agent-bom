@@ -5357,6 +5357,37 @@
           "account_id": "ACME-PROD",
           "admin_equivalence_resource_scopes": [],
           "admin_equivalence_status": "unknown",
+          "attribute_observations": {
+            "account_id": {
+              "conflicted": false,
+              "observed_at": "2026-09-30T12:00:00+00:00",
+              "sources": [
+                "mcp-scan",
+                "snowflake-objects",
+                "snowflake-services"
+              ],
+              "value_digest": "7eae07045e1fc932e4e2b3ebca71b15a792347a6f39e085a20caa973faf25064"
+            },
+            "cloud_provider": {
+              "conflicted": false,
+              "observed_at": "2026-09-30T12:00:00+00:00",
+              "sources": [
+                "mcp-scan",
+                "snowflake-objects",
+                "snowflake-services"
+              ],
+              "value_digest": "ee57f1743863169f519ff174349ece0b9ed998ce9e574a95eef5931da57bed5b"
+            },
+            "source": {
+              "conflicted": true,
+              "observed_at": "2026-09-30T12:00:00+00:00",
+              "sources": [
+                "mcp-scan",
+                "snowflake-services"
+              ],
+              "value_digest": "4f49f11c57889cdb48dd979c9f27860944ad03a85a0f44fbc1d7fddc142ae6f1"
+            }
+          },
           "cloud_provider": "snowflake",
           "evidence_tier": "static_scan",
           "risk_assessment": {
