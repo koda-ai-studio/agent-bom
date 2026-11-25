@@ -661,7 +661,9 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     await expect(page.locator('[data-id="cluster:payments"]')).toHaveCount(0);
     // An opaque foreground circle previously hid every continent.
     await expect(page.locator('[data-internet-globe] > circle:last-child')).toHaveAttribute("fill", "none");
-    expect(await page.locator('[data-internet-globe] path').count()).toBeGreaterThan(2);
+    const land = await page.request.get("/graph-internet-land.svg");
+    expect(land.ok()).toBe(true);
+    expect((await land.text()).match(/<path /g)?.length).toBeGreaterThan(2);
     await settle(page);
     expect(await cardOverlaps(page)).toEqual([]);
     expect(await edgesThroughNodes(page)).toEqual([]);
