@@ -52,13 +52,15 @@ def test_same_names_in_distinct_accounts_keep_separate_nodes_and_owners(provider
 
 @pytest.mark.parametrize("provider", ["aws", "azure", "gcp"])
 def test_native_identity_survives_display_name_change(provider):
-    graph = UnifiedGraph()
+    graph = UnifiedGraph(created_at="2026-11-24T00:00:00+00:00")
     payload = inventory(provider, "account-a")
     _add_cloud_inventory(graph, payload, "fixture")
     old = next(node for node in graph.nodes.values() if node.attributes.get("resource_name") == "shared")
     renamed = copy.deepcopy(payload)
     collection = {"aws": "lambda_functions", "azure": "key_vaults", "gcp": "cloud_sql_instances"}[provider]
     renamed[collection][0]["name"] = "renamed"
+    # A rename is a later observation, not a conflicting assertion at the same instant.
+    graph.created_at = "2026-11-25T00:00:00+00:00"
     _add_cloud_inventory(graph, renamed, "fixture")
     resources = [node for node in graph.nodes.values() if node.attributes.get("resource_name") in {"shared", "renamed"}]
     assert len(resources) == 1

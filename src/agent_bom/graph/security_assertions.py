@@ -12,21 +12,7 @@ from collections.abc import Iterable, Mapping
 from typing import Any
 
 from agent_bom.cloud.normalization import coerce_bool_or_none
-
-SECURITY_ASSERTIONS = frozenset(
-    {
-        "admin_equivalent",
-        "internet_exposed",
-        "internet_facing",
-        "is_public",
-        "on_attack_path",
-        "public",
-        "public_access",
-        "publicly_accessible",
-        "toxic_exposed_sensitive",
-        "toxic_exposed_vulnerable",
-    }
-)
+from agent_bom.core.security_assertions import SECURITY_ASSERTIONS
 
 
 def prior_security_assertions(attributes: Mapping[str, Any]) -> dict[str, list[dict[str, Any]]]:

@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from agent_bom.canonical_ids import canonical_graph_node_id
+from agent_bom.canonical_ids import canonical_graph_node_id, canonical_id
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import NodeDimensions, UnifiedNode, stable_node_id
@@ -59,7 +59,7 @@ def _project_ast_tools(graph: UnifiedGraph, raw_tools: list[Any]) -> None:
                 )
             )
 
-        tool_id = f"tool:source:{stable_node_id(source_file, tool_name)}"
+        tool_id = f"tool:source:{canonical_id(source_file, tool_name)}"
         graph.add_node(
             UnifiedNode(
                 id=tool_id,
@@ -76,6 +76,7 @@ def _project_ast_tools(graph: UnifiedGraph, raw_tools: list[Any]) -> None:
                     "provenance": sanitize_text(raw.get("provenance", ""), max_len=500),
                     "discovery_source": "ast_analysis",
                     "canonical_id": canonical_graph_node_id(EntityType.TOOL.value, tool_id),
+                    "identity": {"aliases": [f"tool:source:{stable_node_id(source_file, tool_name)}"]},
                 },
                 data_sources=["ast_analysis"],
                 dimensions=NodeDimensions(surface="code"),
@@ -126,7 +127,7 @@ def _project_ast_entrypoints(graph: UnifiedGraph, raw_entrypoints: list[Any]) ->
                 )
             )
 
-        entry_id = f"application_entrypoint:source:{stable_node_id(source_file, entry_name, handler)}"
+        entry_id = f"application_entrypoint:source:{canonical_id(source_file, entry_name, handler)}"
         graph.add_node(
             UnifiedNode(
                 id=entry_id,
@@ -143,6 +144,7 @@ def _project_ast_entrypoints(graph: UnifiedGraph, raw_entrypoints: list[Any]) ->
                     "line": raw.get("line") if isinstance(raw.get("line"), int) else None,
                     "discovery_source": "ast_analysis",
                     "canonical_id": canonical_graph_node_id(EntityType.CODE_MODULE.value, entry_id),
+                    "identity": {"aliases": [f"application_entrypoint:source:{stable_node_id(source_file, entry_name, handler)}"]},
                 },
                 data_sources=["ast_analysis"],
                 dimensions=NodeDimensions(surface="code"),
