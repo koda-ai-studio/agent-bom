@@ -55,6 +55,18 @@ for (const theme of ["light", "dark"]) {
       await expect.poll(async () => (await frame(page)).framed, { timeout: 10_000 }).toBe(6);
       const view = await frame(page);
       expect(view.smallest).toBeGreaterThanOrEqual(11);
+      const summaries = page.locator(".graph-aggregate-label");
+      await expect(summaries).toHaveCount(2);
+      await expect(summaries).toHaveText(["4 relationships", "4 relationships"]);
+      await expect.poll(() => summaries.evaluateAll(labels => {
+        const boxes = labels.map(label => label.getBoundingClientRect());
+        const overlaps = (a: DOMRect, b: DOMRect) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+        const captions = [...document.querySelectorAll("[data-graph-entity] > *")].map(node => node.getBoundingClientRect());
+        return boxes.flatMap((box, index) => [
+          ...boxes.slice(index + 1).filter(other => overlaps(box, other)).map(() => "count labels overlap"),
+          ...captions.filter(other => overlaps(box, other)).map(() => "count label overlaps a card"),
+        ]);
+      }), { timeout: 3000 }).toEqual([]);
       await expect(page.getByTestId("graph-in-view")).toHaveCount(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
       await page.screenshot({ path: info.outputPath(`scope-${theme}-${viewport.width}.png`), fullPage: true });

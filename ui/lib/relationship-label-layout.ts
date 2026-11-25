@@ -95,7 +95,7 @@ export function scheduleRelationshipLabelLayout(label: HTMLElement | null) {
       return { x: point.x + shiftInside(box.left, box.right, inner.left, inner.right) / scaleX,
         y: point.y + shiftInside(box.top, box.bottom, inner.top, inner.bottom) / scaleY };
     };
-    const labels = [...canvas.querySelectorAll<HTMLElement>(".graph-relationship-label[data-edge-id]")].flatMap(element => {
+    const labels = [...canvas.querySelectorAll<HTMLElement>(".graph-relationship-label[data-edge-id][data-label-x][data-label-y]")].flatMap(element => {
       const edge = canvas.querySelector(`.react-flow__edge[data-id="${CSS.escape(element.dataset.edgeId!)}"]`);
       const path = edge?.querySelector<SVGPathElement>(".react-flow__edge-path");
       if (!path?.getTotalLength || !path.getScreenCTM) return [];
