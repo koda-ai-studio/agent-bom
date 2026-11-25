@@ -10,7 +10,13 @@ Each digest keeps the job with its result trimmed to :data:`FOLD_RESULT_KEYS`
 (what job selection and retained history read) and the job's projected rows.
 Projected rows also read tenant-wide inputs; a digest serves only the row-input
 fingerprint it was built under and only before that fingerprint's clock
-horizon. Digests and their rows are shared across requests and read-only.
+horizon.
+
+Projected rows are held as zstd-compressed JSON, not as live objects. Held live,
+a few dozen retained scans came to millions of dicts and lists: gigabytes of
+resident memory that every full garbage collection walked, freezing every
+request for seconds while a scan landed. Each fold decodes the rows it reads, so
+callers get rows of their own and nothing they do reaches the digest.
 
 Stores without row versions, and the opt-in snapshot read modes (which read
 other stores per job), keep the full decode. ``AGENT_BOM_FINDING_WALK_CACHE=0``
@@ -19,12 +25,16 @@ turns this off with the rest of the cross-request finding reuse.
 
 from __future__ import annotations
 
+import json
 import threading
 import time
 from collections import OrderedDict
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
+
+import zstandard as zstd
+from pydantic_core import from_json
 
 from agent_bom.api.finding_row_inputs import history_ledger_reads_enabled
 from agent_bom.api.finding_walk_cache import reuse_enabled
@@ -68,11 +78,12 @@ MAX_DIGEST_ROWS = 400_000
 
 @dataclass
 class _Digest:
-    """A completed scan as the fold reads it; ``rows`` is projected only once the fold selects the scan."""
+    """A completed scan as the fold reads it; rows are projected only once the fold selects the scan."""
 
     job: ScanJob
     size: int
-    rows: list[dict[str, Any]] | None = None
+    packed: bytes | None = None
+    row_count: int = 0
     inputs: tuple[Any, ...] | None = None
     horizon: float | None = None
 
@@ -91,7 +102,25 @@ def clear() -> None:
 
 
 def _rows_fresh(digest: _Digest, inputs: tuple[Any, ...]) -> bool:
-    return digest.rows is not None and digest.inputs == inputs and (digest.horizon is None or time.time() < digest.horizon)
+    return digest.packed is not None and digest.inputs == inputs and (digest.horizon is None or time.time() < digest.horizon)
+
+
+def _pack(rows: list[dict[str, Any]]) -> bytes | None:
+    """``None`` when a row holds a value JSON would not round-trip; those rows are re-projected instead."""
+    try:
+        raw = json.dumps(rows, separators=(",", ":"), allow_nan=True).encode()
+    except (TypeError, ValueError):
+        return None
+    return zstd.ZstdCompressor(level=3).compress(raw)
+
+
+def _unpack(packed: bytes) -> list[dict[str, Any]]:
+    raw = zstd.ZstdDecompressor().decompress(packed)
+    try:
+        return list(from_json(raw, cache_strings=True))
+    except ValueError:
+        # Lone surrogates and deep nesting the fast parser refuses; the stdlib wrote them.
+        return list(json.loads(raw))
 
 
 def _resize(version: str, digest: _Digest, size: int) -> None:
@@ -173,18 +202,20 @@ def fold_jobs(
 
     def rows_for(slim: ScanJob) -> list[dict[str, Any]]:
         version, digest = by_slim[id(slim)]
-        if _rows_fresh(digest, fingerprint):
-            return digest.rows or []
+        if _rows_fresh(digest, fingerprint) and digest.packed is not None:
+            return _unpack(digest.packed)
         full = decoded.get(slim.job_id)
         if full is None:
             reloaded = [job for _, job in load(tenant_id, [slim.job_id]) if job.job_id == slim.job_id]
             if not reloaded:  # deleted since it was listed
                 return []
             full = reloaded[0]
-        history = digest.size - len(digest.rows or [])
+        history = digest.size - digest.row_count
         rows = project(full)
-        digest.rows, digest.inputs, digest.horizon = rows, fingerprint, horizon
-        _resize(version, digest, history + len(rows))
+        packed = _pack(rows)
+        digest.packed, digest.row_count = packed, len(rows) if packed is not None else 0
+        digest.inputs, digest.horizon = (fingerprint, horizon) if packed is not None else (None, None)
+        _resize(version, digest, history + digest.row_count)
         return rows
 
     return [digest.job for _, digest in ordered], rows_for
