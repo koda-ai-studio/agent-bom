@@ -23,6 +23,7 @@ export function storyLanePlacement(nodes: Node<LineageNodeData>[], edges: Edge[]
   const owner = (id: string) => byId.get(id)?.data.displayTargetId ?? byId.get(id)?.data.readingOwner ?? edges.find(edge =>
     edge.target === id && ["vulnerable_to", "exhibits_drift", "has_finding"].includes(String(edge.data?.relationship)))?.source
     ?? edges.find(edge => edge.source === id && edge.data?.relationship === "affects")?.target;
+  const spineAccess = edges.some(edge => spine.has(edge.source) && access.has(edge.target));
   const band = (id: string) => spine.has(id) ? 0 : access.has(id) ? 1 : (layer(id) === "finding" || byId.get(id)?.type === "findingGroupNode") ? access.has(owner(id) ?? "") ? 2 : -1 : -1;
   return (positions: Map<string, Point>) => {
     // The reading spine uses equal hop spacing. Recorded side branches occupy
@@ -66,7 +67,7 @@ export function storyLanePlacement(nodes: Node<LineageNodeData>[], edges: Edge[]
       const used = occupied.get(x)!;
       for (const id of ids.filter(finding).sort((a, b) => Number(primary.includes(b)) - Number(primary.includes(a)) || a.localeCompare(b))) {
         const parentRow = rows.get(String(owner(id))) ?? 0;
-        const findingRow = primary.includes(id) ? parentRow - 1 : parentRow;
+        const findingRow = primary.includes(id) && spineAccess ? parentRow - 1 : parentRow;
         const candidates = [findingRow, ...Array.from({ length: nodes.length }, (_, i) => parentRow < 0
           ? [parentRow + i + 1, parentRow - i - 1] : [parentRow - i - 1, parentRow + i + 1]).flat()];
         const row = candidates.find(row => !used.has(row))!;
@@ -82,8 +83,12 @@ export function storyLanePlacement(nodes: Node<LineageNodeData>[], edges: Edge[]
 /** Independent linear contexts get their own rows. Pulling their credential
  * below the primary path would route an unrelated connection through it. */
 function alignDetachedChains(nodes: Node<LineageNodeData>[], edges: Edge[], spine: Set<string>, positions: Map<string, Point>, gap: number) {
+  const scopes = new Set(nodes.filter(node => semanticLayer(node) === "scope").map(node => node.id));
   const neighbours = new Map(nodes.map(node => [node.id, new Set<string>()]));
   for (const edge of edges) {
+    // Recorded containment connects the scope, but does not join otherwise
+    // independent execution/access chains into one reading lane.
+    if (scopes.has(edge.source) && ["contains", "hosts"].includes(String(edge.data?.relationship))) continue;
     neighbours.get(edge.source)?.add(edge.target);
     neighbours.get(edge.target)?.add(edge.source);
   }
@@ -111,9 +116,19 @@ function alignDetachedChains(nodes: Node<LineageNodeData>[], edges: Edge[], spin
     chains.push(chain);
   }
   const detached = new Set(chains.flat());
-  let row = Math.min(0, ...[...positions].filter(([id]) => !detached.has(id)).map(([, point]) => point.y));
+  let row = Math.min(0, ...[...positions].filter(([id]) => !detached.has(id) && !scopes.has(id)).map(([, point]) => point.y));
   for (const chain of chains) {
     row -= 220;
     chain.forEach((id, index) => positions.set(id, { x: (index + 1) * gap, y: row }));
+  }
+  for (const id of scopes) {
+    const children = edges.filter(edge => edge.source === id && ["contains", "hosts"].includes(String(edge.data?.relationship)))
+      .map(edge => positions.get(edge.target)).filter((point): point is Point => Boolean(point));
+    if (children.length < 2) continue;
+    const ys = children.map(point => point.y).sort((a, b) => a - b);
+    const x = Math.max(0, Math.min(...children.map(point => point.x)) - gap);
+    let y = ys[Math.floor((ys.length - 1) / 2)]!;
+    while ([...positions].some(([peer, point]) => peer !== id && point.x === x && Math.abs(point.y - y) < 200)) y -= 220;
+    positions.set(id, { x, y });
   }
 }

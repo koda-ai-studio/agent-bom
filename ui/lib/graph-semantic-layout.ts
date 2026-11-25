@@ -194,6 +194,7 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
   for (const [id, owner] of images.owners) if (!onPath.has(id)) owners.set(id, owner);
   const arrange = storyLanePlacement(visible, drawn, primary);
   const nameScale = arrange ? 1 : 0.88;
+  const readableStory = visible.some(node => node.data.connectedScope === true);
   const base = { ids: visible.map(node => node.id), links: drawn, column: (id: string) => columns.get(id) ?? 0, containment,
     // Findings, and the group that folds an asset's findings, sit level with the asset they were found on.
     // A group whose asset is on the spine would sit on the spine's own row and block it, so it fans off the row instead.
@@ -204,11 +205,11 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
   // Placement depends only on the graph's structure and its captions; a re-render that changes nothing else reuses it.
   const signature = JSON.stringify([visible.map(node => [node.id, node.type, node.data.label, node.data.semanticLayer, node.data.readingLabel,
     node.data.displayTargetId, node.data.readingFindings?.count, internetExposure(node.data.attributes)]),
-    drawn.map(edge => [edge.id, edge.source, edge.target, edge.data?.relationship, edge.data?.traversable]), primary, nameScale, layoutFrameKey()]);
+    drawn.map(edge => [edge.id, edge.source, edge.target, edge.data?.relationship, edge.data?.traversable]), primary, nameScale, readableStory, layoutFrameKey()]);
   const { positions, arcs, behind } = LAYOUT_CACHE.get(signature) ?? remember(signature, compactLayout({ ...base,
     caption: id => { const found = byId.get(id);
-      if (found?.type === "findingGroupNode") return { name: `Findings (${found.data.readingFindings?.count ?? 0})`, typeLine: "Click to explore", nameScale };
-      return { name: shownName(found, id, Boolean(arrange)), nameScale, typeLine: String(found?.data.readingLabel ?? found?.data.entityType ?? ""), box: boxes.get(id) ?? cardWidth(found, id) }; },
+      if (found?.type === "findingGroupNode") return { name: `Findings (${found.data.readingFindings?.count ?? 0})`, typeLine: "Click to explore", nameScale, readableStory };
+      return { name: shownName(found, id, Boolean(arrange)), nameScale, readableStory, typeLine: String(found?.data.readingLabel ?? found?.data.entityType ?? ""), box: boxes.get(id) ?? cardWidth(found, id) }; },
     width: id => boxes.get(id) ?? cardWidth(byId.get(id), id), tall: id => twoLineName(byId.get(id), id) ? TALL_CARD_ROOM : undefined }));
   const pathPairs = new Set(primary.slice(1).map((id, index) => `${primary[index]}\u0000${id}`));
   const fans = linkEndFans(drawn, positions);

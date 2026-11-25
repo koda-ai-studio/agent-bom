@@ -10,7 +10,7 @@ type Link = { id?: string; source: string; target: string };
 /** The caption under a glyph, in layout units around the glyph centre, with its obstacle test. */
 export type CaptionExtent = CaptionGeometry;
 /** The text a card draws under its glyph: its name (wrapping between words) and its one-line type. */
-export type CaptionText = { name: string; typeLine: string; box?: number; nameScale?: number };
+export type CaptionText = { name: string; typeLine: string; box?: number; nameScale?: number; readableStory?: boolean };
 type Card = Point & { g: CaptionExtent };
 
 /** Horizontal reach of each control point, as a share of the link's horizontal span. */
@@ -115,12 +115,12 @@ export function fitZoom(positions: ReadonlyMap<string, Point>, box: number, fram
 
 /** How much room a caption's rendered text takes at a zoom, in layout units, with the card's glyph:
  * names break as the card breaks them (see `captionGeometry`), the type line is one line. */
-export function captionExtent({ name, typeLine, box: own, nameScale = 0.88 }: CaptionText, fallbackBox: number, zoom: number, small = false): CaptionExtent {
-  const namePx = NAME_PX * nameScale / 0.88;
+export function captionExtent({ name, typeLine, box: own, nameScale = 0.88, readableStory = false }: CaptionText, fallbackBox: number, zoom: number, small = false): CaptionExtent {
+  const namePx = (readableStory ? 16 : NAME_PX / 0.88) * nameScale, metaPx = readableStory ? 13 : META_PX;
   const near = Math.min(1, zoom * WIDER_SCREEN), radius = (small ? SMALL_GLYPH_PX : GLYPH_PX) / 2;
   // A wider screen draws the same graph closer (up to `near`), where the name may wrap differently.
-  return captionGeometry({ name, typeLine, box: own ?? fallbackBox, nameChar: namePx * NAME_CHAR, metaChar: META_PX * META_CHAR,
-    nameLine: LINE * namePx, metaLine: LINE * META_PX, maxLines: NAME_LINES, zoom, near, firstTop: radius + 0.3 * namePx, above: (radius + 4) / zoom, pad: 4 / zoom, glyph: GLYPH_RECT });
+  return captionGeometry({ name, typeLine, box: own ?? fallbackBox, nameChar: namePx * NAME_CHAR, metaChar: metaPx * META_CHAR,
+    nameLine: LINE * namePx, metaLine: LINE * metaPx, maxLines: NAME_LINES, zoom, near, firstTop: radius + 0.3 * namePx, above: (radius + 4) / zoom, pad: 4 / zoom, glyph: GLYPH_RECT });
 }
 
 /** The glyph's solid area on another card, in layout units around its centre. */

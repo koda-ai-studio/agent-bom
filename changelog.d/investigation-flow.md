@@ -5,6 +5,8 @@
 - Bounded phone stories keep ranked hops consecutive with wider captions and side-routed context links; connectors remeasure when expanded branches move.
 - Bounded exposure stories open with supporting infrastructure folded; expansion restores the account and its recorded containment links. Same-row glyph centers and link ends align, while findings and access branches use nearby rows.
 
+- Expanded scopes keep independent dependency chains on separate horizontal lanes; curve clearance includes the larger story labels.
+
 ### Added
 - Sensitive-data markers use recorded classifications; asset names never establish sensitivity.
 - Administrator and critical-asset markers read recorded risk-context verdicts, with keyboard-accessible explanations. Internet context uses a geographic globe; light-theme node outlines and finding counts have stronger contrast.
