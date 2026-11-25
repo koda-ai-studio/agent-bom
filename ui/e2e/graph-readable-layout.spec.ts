@@ -605,3 +605,32 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     }
   });
 }
+
+for (const theme of ["light", "dark"] as const) test(`independent environment chains keep credential links clear ${theme}`, async ({ page }, info) => {
+  await page.addInitScript(t => localStorage.setItem("agent-bom-theme", t), theme);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const { buildScopeShowcase } = await import("../scripts/product-proof-scope-showcase.mjs");
+  const catalog = JSON.parse(await readFile("fixtures/gallery-advisories.json", "utf8"));
+  const showcase = buildScopeShowcase("environment", {
+    base: { scan_id: "snapshot" },
+    node: (id: string, type: string, label: string, severity: string, risk_score: number, attributes: Record<string, unknown>) => ({ ...node(id, type, label), severity, risk_score, attributes }),
+    edge: (source: string, target: string, relationship: string, weight: number, evidence: Record<string, unknown>) => ({ ...edge(source, target, relationship), weight, evidence }),
+    advisory: (id: string) => catalog.advisories.find((item: { canonical_id: string }) => item.canonical_id === id) ?? catalog.advisories.find((item: { id: string }) => item.id === id),
+    referenceCve: { label: "CVE-2023-4863", severity: "high", risk_score: 8.8, attributes: { canonical_id: "CVE-2023-4863", is_kev: true } },
+  });
+  await fixture(page, showcase.nodes, showcase.edges, false, { stats: showcase.stats, attack_paths: showcase.attack_paths });
+  await routeNodeAggregates(page, ownedFindingAggregates(showcase.nodes, showcase.edges));
+  await page.goto("/graph?scan=snapshot&rollup=0&capture=1&layers=environment,agent,server,container,package,vulnerability,credential,dataStore");
+  await expect(page.locator('[data-id="cred:tickets"]')).toHaveCount(1);
+  await settle(page);
+  expect(await cardOverlaps(page)).toEqual([]);
+  expect(await edgesThroughNodes(page)).toEqual([]);
+  expect(await graphGrammarViolations(page)).toEqual({});
+  await page.screenshot({ path: info.outputPath(`environment-chains-${theme}.png`), animations: "disabled" });
+  await page.getByRole("button", { name: "Expand findings (1 grouped)", exact: true }).click();
+  await settle(page);
+  expect(await cardOverlaps(page)).toEqual([]);
+  expect(await edgesThroughNodes(page)).toEqual([]);
+  expect(await graphGrammarViolations(page)).toEqual({});
+  await page.screenshot({ path: info.outputPath(`environment-expanded-${theme}.png`), animations: "disabled" });
+});

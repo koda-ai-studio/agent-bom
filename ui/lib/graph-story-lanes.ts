@@ -72,5 +72,45 @@ export function storyLanePlacement(nodes: Node<LineageNodeData>[], edges: Edge[]
       }
     }
     for (const [id, row] of rows) positions.set(id, { x: positions.get(id)!.x, y: row * 260 });
+    alignDetachedChains(nodes, edges, spine, positions, gap);
   };
+}
+
+/** Independent linear contexts get their own rows. Pulling their credential
+ * below the primary path would route an unrelated connection through it. */
+function alignDetachedChains(nodes: Node<LineageNodeData>[], edges: Edge[], spine: Set<string>, positions: Map<string, Point>, gap: number) {
+  const neighbours = new Map(nodes.map(node => [node.id, new Set<string>()]));
+  for (const edge of edges) {
+    neighbours.get(edge.source)?.add(edge.target);
+    neighbours.get(edge.target)?.add(edge.source);
+  }
+  const seen = new Set<string>(), chains: string[][] = [];
+  for (const id of [...neighbours.keys()].sort()) {
+    if (seen.has(id)) continue;
+    const component: string[] = [], pending = [id];
+    while (pending.length) {
+      const next = pending.pop()!;
+      if (seen.has(next)) continue;
+      seen.add(next); component.push(next);
+      for (const peer of neighbours.get(next) ?? []) if (!seen.has(peer)) pending.push(peer);
+    }
+    if (component.some(member => spine.has(member)) || component.length < 2
+      || component.some(member => (neighbours.get(member)?.size ?? 0) > 2)) continue;
+    const ends = component.filter(member => neighbours.get(member)?.size === 1)
+      .sort((a, b) => positions.get(a)!.x - positions.get(b)!.x || a.localeCompare(b));
+    if (ends.length !== 2) continue;
+    const chain = [ends[0]!];
+    while (chain.length < component.length) {
+      const next = [...neighbours.get(chain.at(-1)!)!].find(peer => !chain.includes(peer));
+      if (!next) break;
+      chain.push(next);
+    }
+    chains.push(chain);
+  }
+  const detached = new Set(chains.flat());
+  let row = Math.min(0, ...[...positions].filter(([id]) => !detached.has(id)).map(([, point]) => point.y));
+  for (const chain of chains) {
+    row -= 260;
+    chain.forEach((id, index) => positions.set(id, { x: (index + 1) * gap, y: row }));
+  }
 }
