@@ -500,6 +500,7 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
       const firstTop = await page.locator('.react-flow').evaluate(canvas => {
         const first = [...canvas.querySelectorAll("[data-graph-entity]")]
           .map(node => node.getBoundingClientRect().top).sort((a, b) => a - b)[0];
+        if (first === undefined) throw new Error("The reading path has no visible nodes");
         return first - canvas.getBoundingClientRect().top;
       });
       expect(firstTop, "the reading path starts below the controls, without a blank screen").toBeGreaterThanOrEqual(48);
