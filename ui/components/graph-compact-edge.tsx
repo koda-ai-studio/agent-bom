@@ -123,9 +123,10 @@ export function CompactRelationshipEdge(props: EdgeProps) {
   const restingSummary = aggregate && (folded === null || folded > 1);
   // A focused attack path names each hop's relationship at rest, as the path card does.
   const hidden = props.data?.labelVisibility === "hide";
-  const text = (inspecting || restingSummary || props.data?.pathLabel === true) && !hidden ? count ?? full : null;
+  const scopeStep = props.data?.scopeFlowLabel === true && !props.data?.phoneLayout;
+  const text = (inspecting || restingSummary || props.data?.pathLabel === true || scopeStep) && !hidden ? count ?? full : null;
   const exposure = props.data?.exposurePath === true;
-  const showDirection = inspecting || props.data?.directionEmphasis === true || props.data?.pathLabel === true;
+  const showDirection = inspecting || props.data?.directionEmphasis === true || props.data?.pathLabel === true || scopeStep;
   const style = { stroke: edgeFamilyColor(exposure ? "exposure" : family), strokeWidth: spine ? EDGE_STROKE.path : inspecting ? EDGE_STROKE.inspect : EDGE_STROKE.rest, opacity: spine || inspecting ? 1 : stubbed || props.data?.passesBehind ? 0.4 : 0.95,
     strokeDasharray: edgeIsDashed(family, props.data) ? "6 4" : undefined, fill: "none" };
   return <g ref={ref} data-relationship={relationship || undefined} data-edge-family={family} data-edge-stub={stubbed || undefined} data-label-disclosure={relationship === "vulnerable_to" ? "on-demand" : undefined} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>

@@ -18,6 +18,10 @@ export function GraphBoundaryFrame({ data }: { data: LineageNodeData }) {
         <span className="graph-boundary-frame-name">{data.label}</span>
         <span className="graph-boundary-frame-kind" title={`${data.frameLinks ?? 0} recorded containment links; remaining links show related investigation context`}>{data.readingLabel ?? "Environment"} context</span>
       </div>
+      {data.frameSections?.map((section, index) => <div key={section.label} data-scope-section={index === 0 ? "exposure" : "context"}
+        className="absolute flex items-center gap-3 text-ink-secondary" style={{ top: section.y, left: size * 1.2, right: size * 1.2, fontSize: 12 / Math.max(zoom, 0.16) }}>
+        <span>{section.label}</span><span className="flex-1 border-t border-outline" />
+      </div>)}
     </div>
   );
 }

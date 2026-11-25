@@ -92,6 +92,7 @@ async function labelCollisions(page: Page) {
       const pad = child.classList.contains("graph-entity-glyph") ? 8 * Math.min(1, width > 0 ? r.width / width : 1) : 0;
       return { text: el.getAttribute("title") ?? "", r: new DOMRect(r.left - pad, r.top - pad, r.width + pad * 2, r.height + pad * 2) };
     }));
+    cards.push(...[...canvas.querySelectorAll("[data-scope-section] > span:first-child")].map(el => ({ text: el.textContent ?? "", r: el.getBoundingClientRect() })));
     const overlap = (a: DOMRect, b: DOMRect) => a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;
     const out: string[] = [];
     labels.forEach((a, i) => {
@@ -627,6 +628,10 @@ for (const theme of ["light", "dark"] as const) test(`independent environment ch
   await context.click();
   await expect(page.locator('[data-id="cred:tickets"]')).toHaveCount(1);
   await settle(page);
+  await expect(page.locator('[data-scope-section="exposure"]')).toHaveText("Internet exposure");
+  await expect(page.locator('[data-scope-section="context"]')).toHaveText("Other relationships in this scope");
+  const exposureTop = (await page.locator('[data-id="container:serving"]').boundingBox())!.y;
+  for (const id of ["agent:triage", "agent:intake"]) expect((await page.locator(`[data-id="${id}"]`).boundingBox())!.y).toBeGreaterThan(exposureTop);
   const chains = [["container:serving", "pkg:torch", "cve:torch"],
     ["agent:triage", "server:tickets", "cred:tickets", "data:tickets"],
     ["agent:intake", "server:docs", "pkg:pillow"]];
@@ -645,6 +650,8 @@ for (const theme of ["light", "dark"] as const) test(`independent environment ch
   await page.screenshot({ path: info.outputPath(`environment-chains-${theme}.png`), animations: "disabled" });
   await page.getByRole("button", { name: "Expand findings (1 grouped)", exact: true }).click();
   await settle(page);
+  await expect(page.getByTestId("graph-viewport-scope")).toContainText("12 nodes · 11 relationships");
+  expect(await labelCollisions(page)).toEqual([]);
   expect(await cardOverlaps(page)).toEqual([]);
   expect(await edgesThroughNodes(page)).toEqual([]);
   expect(await graphGrammarViolations(page)).toEqual({});
