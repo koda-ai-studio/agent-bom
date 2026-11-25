@@ -20,9 +20,10 @@ Each surface reports one of:
     not_configured — required URL/var missing (treated as a MISCONFIGURATION, not skipped)
     unreachable    — configured but probe failed
 
-The script always exits 0 — the workflow inspects the JSON and decides whether to
-open/refresh/close the tracking issue. This keeps the scheduled run itself green
-while still surfacing drift through the issue tracker.
+The default mode writes an observational report. With --fail-on-stale, any
+unhealthy required surface returns 1 after preserving the JSON report. The
+scheduled workflow updates evidence and the tracking issue before enforcing
+that health result.
 """
 
 from __future__ import annotations

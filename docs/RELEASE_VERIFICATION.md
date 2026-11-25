@@ -62,7 +62,7 @@ signed release evidence.
 | Package build | `make release-build` | Builds the dashboard, wheel, and sdist, then rejects any wheel missing the schemas, dashboard index, CSP manifest, or CSP script hashes. |
 | Packaged dashboard | `uv run python scripts/verify_release_wheel.py dist` | Every wheel includes the dashboard and CSP manifest; compiled Docker and Action install pins match the wheel version. |
 | PyPI smoke | `python -m venv /tmp/agent-bom-smoke && /tmp/agent-bom-smoke/bin/pip install agent-bom==<version> && /tmp/agent-bom-smoke/bin/agent-bom --version` | Published package installs in a fresh environment. |
-| Registry surface freshness (post-publish) | `gh workflow run surface-freshness.yml` | Compares distribution surfaces with the latest published release and its exact packaged MCP schemas. Inspect the `surface-freshness-evidence` artifact and drift issue; asynchronous rebuild acceptance is not release completion. |
+| Registry surface freshness (post-publish) | `gh workflow run surface-freshness.yml` | Compares distribution surfaces with the latest published release and its exact packaged MCP schemas. Required stale or unavailable surfaces fail the workflow after its `surface-freshness-evidence` artifact and drift issue are published; asynchronous rebuild acceptance is not release completion. |
 | Quickstart E2E | `agent-bom quickstart --run --offline --force --sample-dir /tmp/agent-bom-quickstart` | Generates a sample inventory report and reads back its saved graph. Offline package-CVE lookup is explicitly skipped; zero CVEs is not a clean verdict. Review `scan_run` and `coverage_warnings`, then scan your own repository. Run `agent-bom scan --demo --offline` separately for bundled CVE proof. |
 | Hosted preflight | `python scripts/deploy/hosted_poc_preflight.py --write-secret` | Hosted compose has an HTTPS URL, no unauth mode, non-placeholder secrets, private API/UI binds, and safe CORS. |
 
@@ -730,3 +730,20 @@ tool names, and schemas must match before the budget is exhausted.
 Legacy Smithery catalog parsing remains available for explicitly requested
 historical diagnostics; scheduled checks use `--retired-smithery` and perform no
 Smithery request. No retired surface is reported as freshly verified.
+
+
+### Isolated first-run continuity
+
+From a clean installation of `agent-bom[ui]` and Playwright, run
+`python scripts/verify_first_run.py --expected-version VERSION --output /path/to/new-evidence`.
+The script writes `receipt.json`, command logs and four graph screenshots. It rejects
+editable installs and existing output directories. It checks the base-only repository
+scan, incomplete offline coverage, default loopback authentication, a rendered sample
+graph, restart retention, and a distinct second complete sample scan. Inspect the
+receipt and screenshots before using them in release qualification. The bundled
+sample is automated local evidence, not external-user adoption or production proof.
+
+Opt-in installation adoption summaries retain failed and partial scan events but
+only complete scans derive CI, control-plane and repeat-use milestones. Repeat use
+requires two complete scans; it counts an installation milestone, not unique users.
+Existing recorded milestones remain historical observations and are not rewritten.
