@@ -22,7 +22,7 @@ const DIRECTION_MARKER_MAX_NODES = 16;
 const FRAME_PAD = 56;
 const FRAME_TITLE = 72;
 /** Height a card occupies under its position: glyph plus a caption of up to two lines. */
-const CARD_HEIGHT = 150;
+const CARD_HEIGHT = 240;
 /** A map past one readable page has a tangle to quiet; smaller maps draw every connection. */
 const QUIET_MIN_NODES = DENSE_MAP_NODES + 1;
 export const SEMANTIC_COLUMN_GAP = COMPACT_RANK_GAP;

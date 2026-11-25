@@ -5,7 +5,7 @@ import type { LineageNodeData } from "@/components/lineage-nodes";
 import { GraphProviderMark } from "@/components/graph-provider-mark";
 import { entitySource } from "@/lib/agent-source";
 
-/** The environment every card inside belongs to, drawn as a titled boundary behind them. */
+/** Recorded scope and related investigation context, with its own visible boundary. */
 export function GraphBoundaryFrame({ data }: { data: LineageNodeData }) {
   const provider = entitySource(data);
   // The title reads at caption size on screen whatever the fit zoom, as captions do.
@@ -16,7 +16,7 @@ export function GraphBoundaryFrame({ data }: { data: LineageNodeData }) {
       <div className="graph-boundary-frame-title flex items-center" style={{ fontSize: size, gap: size * 0.5, top: size, left: size * 1.2 }}>
         {provider && <GraphProviderMark source={provider} attributes={data.attributes} className="graph-provider-mark-frame" style={{ width: size * 1.7, height: size * 1.7 }} />}
         <span className="graph-boundary-frame-name">{data.label}</span>
-        <span className="graph-boundary-frame-kind">{data.readingLabel ?? "Environment"}</span>
+        <span className="graph-boundary-frame-kind" title={`${data.frameLinks ?? 0} recorded containment links; remaining links show related investigation context`}>{data.readingLabel ?? "Environment"} context</span>
       </div>
     </div>
   );

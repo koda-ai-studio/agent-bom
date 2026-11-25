@@ -148,6 +148,6 @@ export function useInvestigationFlowView({ presentation, edges, loaded, narrowVi
       note: kind !== "auto" && !flow.applied ? flow.reason : undefined,
     },
     canonicalEdges: disclosed.edges.filter(edge => !edge.hidden && !edge.data?.displayOnly),
-    canonicalVisibleNodes: disclosed.nodes.filter(node => !node.hidden && !node.data.displayOnly).length,
+    canonicalVisibleNodes: disclosed.nodes.filter(node => !node.hidden && (!node.data.displayOnly || node.type === "boundaryFrame")).length,
   };
 }
