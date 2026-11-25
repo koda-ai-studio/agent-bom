@@ -71,3 +71,10 @@ describe("InvestigationStepStrip", () => {
     );
   });
 });
+
+it("does not mark fixes complete merely because Verify was opened", () => {
+  const { container } = render(<InvestigationStepStrip step="verify" onStepChange={vi.fn()} />);
+  expect(container.querySelectorAll("svg")[3]?.outerHTML).not.toContain("M22 11.08");
+  expect(screen.getByRole("button", { name: /Fix/i })).toHaveAttribute("data-completed", "false");
+  expect(screen.getByRole("button", { name: /Fix/i })).not.toHaveAccessibleDescription(/completed/i);
+});

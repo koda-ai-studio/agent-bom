@@ -444,6 +444,20 @@ for (const theme of ["light", "dark"] as const) test(`provider marks read as par
 });
 
 
+async function readableCloudFrame(page: Page) {
+  const measured = await page.locator(".react-flow").evaluate(canvas => {
+    const zoom = new DOMMatrixReadOnly(getComputedStyle(canvas.querySelector(".react-flow__viewport")!).transform).a;
+    const names = [...canvas.querySelectorAll("[data-semantic-name]")];
+    const boxes = [...canvas.querySelectorAll("[data-graph-entity]")].map(node => node.getBoundingClientRect());
+    return {
+      smallestName: Math.min(...names.map(node => parseFloat(getComputedStyle(node).fontSize) * zoom)),
+      widthShare: (Math.max(...boxes.map(box => box.right)) - Math.min(...boxes.map(box => box.left))) / canvas.clientWidth,
+    };
+  });
+  expect(measured.smallestName).toBeGreaterThanOrEqual(13.9);
+  expect(measured.widthShare).toBeGreaterThanOrEqual(0.75);
+}
+
 for (const theme of ["light", "dark"] as const) for (const width of [1440, 390]) {
   test(`cloud roles and finding ownership stay readable ${theme} ${width}`, async ({ page }, info) => {
     await page.addInitScript(t => localStorage.setItem("agent-bom-theme", t), theme);
@@ -466,11 +480,18 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     // The selected path's terminal CVE stays on the spine; the other three findings group under their owners.
     // Cards plus the account, drawn as the boundary around them (a phone stacks it as a card).
     await expect.poll(async () => await page.locator('.react-flow__node:not([data-id^="display:"])').count() + await page.locator("[data-boundary-frame]").count()).toBe(8);
-    await expect(page.locator('[data-graph-entity="finding-group"]')).toHaveCount(3);
+    await expect(page.locator('[data-graph-entity="finding-group"]')).toHaveCount(0);
     // Modeled links drawn as lines; the account's two containment links are drawn by its boundary instead.
     if (width >= 640) await expect(page.getByLabel("Visible relationship evidence")).toContainText("Modeled 6");
     await settle(page);
     expect(await graphGrammarViolations(page)).toEqual({});
+    if (width >= 640) await readableCloudFrame(page);
+    else {
+      const order = await page.locator('.react-flow__node').evaluateAll(nodes => [...nodes]
+        .sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top).slice(0, 4).map(node => node.getAttribute("data-id")));
+      expect(order.slice(1)).toEqual(["gateway:public", "container:checkout", "cve:next"]);
+      await expect(page.locator('[data-id="gateway:public"] [data-entity-role]')).toHaveText("Amazon API Gateway");
+    }
     await page.screenshot({ path: info.outputPath(`cloud-branches-${theme}-${width}.png`), animations: "disabled" });
     if (width >= 640) {
       const count = page.getByRole("button", { name: "Expand 1 finding for checkout-runtime-role", exact: true });
@@ -526,9 +547,15 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
         return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
       }).map(span => span.textContent);
     }))).toEqual([]);
-    // Every link shows its direction; the account's containment links are drawn by its boundary on desktop.
-    await expect.poll(async () => await page.locator('.react-flow__edge:not([data-id^="display:"]) .react-flow__edge-path[marker-end]').count()
-      + (await page.locator("[data-boundary-frame]").evaluateAll(frames => frames.reduce((sum, frame) => sum + Number(frame.getAttribute("data-frame-links") || 0), 0)))).toBe(links.length);
+    // Overview connectors stay quiet; every recorded direction remains available
+    // to keyboard users, including links whose direction opposes reading order.
+    for (const link of links) {
+      const drawn = page.locator(`.react-flow__edge[data-id="${link.id}"]`);
+      if (!await drawn.count()) continue; // Account containment is represented by its scope caption.
+      await drawn.focus();
+      await expect(drawn.locator(".react-flow__edge-path")).toHaveAttribute("marker-end", /.+/);
+      await drawn.evaluate(element => (element as SVGElement).blur());
+    }
     const labels = await visibleLabelTexts(page);
     if (width >= 640) {
       expect(labels).toEqual([]); // Captions appear on focus; the overview stays quiet.
@@ -551,13 +578,14 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
         }).map(el => el.textContent);
       });
       expect(clipped).toEqual([]);
+      await readableCloudFrame(page);
       await page.locator('[data-id="finding:waf"] [data-graph-entity]').click();
       await expect(page.getByTestId("graph-entity-drawer")).toContainText("Public API stage has no WAF association");
       await page.screenshot({ path: info.outputPath(`cloud-finding-inspector-${theme}.png`), animations: "disabled" });
       await page.getByRole("button", { name: "Collapse findings", exact: true }).click();
       // Cards plus the account, drawn as the boundary around them (a phone stacks it as a card).
     await expect.poll(async () => await page.locator('.react-flow__node:not([data-id^="display:"])').count() + await page.locator("[data-boundary-frame]").count()).toBe(8);
-      await expect(page.locator('[data-graph-entity="finding-group"]')).toHaveCount(3);
+      await expect(page.locator('[data-graph-entity="finding-group"]')).toHaveCount(0);
       await expect(page.getByTestId("graph-entity-drawer")).toHaveCount(0);
     }
   });

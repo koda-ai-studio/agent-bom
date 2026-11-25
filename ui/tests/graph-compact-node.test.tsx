@@ -83,3 +83,30 @@ it("names a container's recorded role in its type line when two visible containe
     occurrenceRole: "Image inventory", attributes: {} }} /></ReactFlowProvider>);
   expect(container.querySelector("[data-entity-role]")?.textContent).toBe("Image inventory");
 });
+
+it("marks recorded sensitive data without inferring it from an asset name", () => {
+  const Renderer = lineageNodeTypes.dataStoreNode;
+  const { container, rerender } = render(<ReactFlowProvider><Renderer data={{ label: "Archive", nodeType: "dataStore", semanticLayout: true,
+    attributes: { data_sensitivity: "PII", data_classification: "restricted" } }} /></ReactFlowProvider>);
+  expect(container.querySelector('[data-compact-marker="sensitive"]')).toHaveAccessibleName("Recorded data classification: PII, restricted");
+  for (const attributes of [{}, { data_classification: "public" }, { data_sensitivity: "unknown" }, { data_sensitivity: false }]) {
+    rerender(<ReactFlowProvider><Renderer data={{ label: "customer-pii-bucket", nodeType: "dataStore", semanticLayout: true, attributes }} /></ReactFlowProvider>);
+    expect(container.querySelector('[data-compact-marker="sensitive"]')).toBeNull();
+  }
+});
+
+
+it("uses the reserved caption room for a complete short finding title", () => {
+  const Renderer = lineageNodeTypes.vulnNode;
+  const label = "Public API stage has no WAF association";
+  const { container } = render(<ReactFlowProvider><Renderer data={{ label, nodeType: "misconfiguration", semanticLayout: true, roomyName: true }} /></ReactFlowProvider>);
+  expect(container.querySelector("[data-semantic-name]")?.textContent).toBe(label);
+});
+
+
+it("uses one wide phone caption column beside finding glyphs", () => {
+  const Renderer = lineageNodeTypes.vulnNode;
+  const { container } = render(<ReactFlowProvider><Renderer data={{ label: "CVE-2025-29927", nodeType: "vulnerability", semanticLayout: true, phoneLayout: true, phoneLinear: true, phoneSide: "right", roomyName: true }} /></ReactFlowProvider>);
+  expect(container.querySelector("[data-compact-node]")).toHaveClass("flex-row");
+  expect(container.querySelector("[data-semantic-name]")?.textContent).toBe("CVE-2025-29927");
+});
