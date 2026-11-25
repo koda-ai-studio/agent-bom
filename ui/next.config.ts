@@ -66,6 +66,16 @@ const nextConfig: NextConfig = {
         priority: 2,
         reuseExistingChunk: true,
       };
+      // Investigation and architecture views share one layout library instead
+      // of carrying another copy in each route chunk.
+      config.optimization.splitChunks.cacheGroups.graphLayoutShared = {
+        test: /[\\/]node_modules[\\/]@dagrejs[\\/]/,
+        name: "graph-layout",
+        minChunks: 2,
+        minSize: 0,
+        priority: 2,
+        reuseExistingChunk: true,
+      };
     }
     return config;
   },
