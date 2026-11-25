@@ -96,6 +96,12 @@ _TRAVERSABLE_RELS = frozenset(
     }
 )
 
+# A compromised compute host controls what runs on it, so a chain steps from the
+# host to each hosted agent, server or workload: ``hosts`` forward, ``hosted_on``
+# read backwards. Only compute hosts qualify. An environment, account or cluster
+# also "hosts" its inventory, and stepping from one would reach everything.
+_HOST_STEP_RELS = frozenset({RelationshipType.HOSTS, RelationshipType.HOSTED_ON})
+
 # Crown-jewel target types — chains only "complete" when they reach a data store.
 _CROWN_JEWEL_TYPES = frozenset({EntityType.DATA_STORE})
 
@@ -122,12 +128,9 @@ def traversal_steps(graph: UnifiedGraph, node_id: str, hops: list[str] | None = 
     ]
     if not _is_compute_host(graph.nodes.get(node_id)):
         return steps
-    steps += [(edge, edge.target) for edge in graph.adjacency.get(node_id, []) if _rel(edge) == RelationshipType.HOSTS]
-    steps += [
-        (edge, edge.source)
-        for edge in graph.reverse_adjacency.get(node_id, [])
-        if _rel(edge) == RelationshipType.HOSTED_ON and edge.target == node_id
-    ]
+    forward, backward = _HOST_STEP_RELS - {RelationshipType.HOSTED_ON}, _HOST_STEP_RELS - {RelationshipType.HOSTS}
+    steps += [(edge, edge.target) for edge in graph.adjacency.get(node_id, []) if _rel(edge) in forward]
+    steps += [(edge, edge.source) for edge in graph.reverse_adjacency.get(node_id, []) if _rel(edge) in backward and edge.target == node_id]
     return steps
 
 
