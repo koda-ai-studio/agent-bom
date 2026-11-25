@@ -73,7 +73,7 @@ Entity types grouped into domains by each type's semantic layer (`graph/containe
 
 54 relationship types, one `RelationshipSpec` each (`agent_bom.graph.relationship_specs`). Source and target kinds are the spec's `source_types` / `target_types`; the exact allowed pairs are in [relationship pairs](data-model/relationships.md). *Traversable* is the default for the attack-path view (`UnifiedGraph.attack_path_view` keeps traversable edges only).
 
-Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Dependency reach (blast radius) · **LT** Toxic-combination lateral reach · **MT** ATT&CK / ATLAS hop mapping · **RT** Runtime-observed path evidence.
+Consumed by: **FU** Attack-path fusion · **HO** Host compromise (attack-path fusion, compute hosts only) · **CR** Credential reach · **BR** Dependency reach (blast radius) · **LT** Toxic-combination lateral reach · **MT** ATT&CK / ATLAS hop mapping · **RT** Runtime-observed path evidence.
 
 | Relationship | Class | Category | Direction | Traversable | Source kinds | Target kinds | Pairs | Consumed by | Emitting modules |
 |---|---|---|---|---|---|---|---|---|---|
@@ -100,8 +100,8 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | `exposes_cred` | `authority` | inventory | directed | yes | `agent`, `resource`, `server` | `credential` | 3 | FU, CR | 2 (+1 demo) |
 | `governs` | `governance` | governance | directed | no | `access_policy`, `blueprint`, `policy` | `account`, `agent`, `drift_incident`, `managed_identity`, `org`, `tool` | 10 | — | 3 |
 | `has_permission` | `authority` | identity | directed | yes | `group`, `managed_identity`, `role`, `service_account`, `service_principal`, `user` | `account`, `cloud_resource`, `cluster`, `data_store`, `org`, `resource` (+1 more) | 42 | FU, LT | 5 |
-| `hosted_on` | `dependency` | inventory | directed | yes | `agent`, `container`, `server` | `cloud_resource`, `cluster`, `container`, `fleet` | 12 | — | 4 (+1 demo) |
-| `hosts` | `structural` | inventory | directed | yes | `account`, `cloud_resource`, `environment`, `fleet`, `provider` | `account`, `agent`, `cloud_resource`, `org`, `server` | 25 | — | 3 |
+| `hosted_on` | `dependency` | inventory | directed | yes | `agent`, `container`, `server` | `cloud_resource`, `cluster`, `container`, `fleet` | 12 | HO | 4 (+1 demo) |
+| `hosts` | `structural` | inventory | directed | yes | `account`, `cloud_resource`, `environment`, `fleet`, `provider` | `account`, `agent`, `cloud_resource`, `org`, `server` | 25 | HO | 3 |
 | `imports` | `dependency` | code_topology | directed | yes | `code_module`, `source_file` | `code_module`, `external_import`, `package` | 6 | — | 1 |
 | `inherits` | `authority` | identity | directed | yes | `group`, `role`, `service_account`, `service_principal`, `user` | `policy`, `role` | 10 | FU | 0 |
 | `invoked` | `runtime` | runtime | directed | yes | `agent`, `federated_identity`, `role`, `service_account`, `service_principal`, `user` | `cloud_resource`, `tool`, `tool_call` | 9 | CR, MT, RT | 3 (+1 demo) |
@@ -151,6 +151,7 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | Code | Analysis | Defined in | Relationships |
 |---|---|---|---|
 | FU | Attack-path fusion | graph/attack_path_fusion.py `_TRAVERSABLE_RELS` | `accessed`, `assumes`, `authenticates_as`, `can_access`, `contains`, `depends_on`, `exploitable_via`, `exposed_to`, `exposes_cred`, `has_permission`, `inherits`, `provides_tool`, `reaches_tool`, `scoped_to`, `stores`, `uses`, `vulnerable_to` |
+| HO | Host compromise (attack-path fusion, compute hosts only) | graph/attack_path_fusion.py `_HOST_STEP_RELS` | `hosted_on`, `hosts` |
 | CR | Credential reach | graph/credential_reach.py `_CHAIN` | `called`, `exposes_cred`, `invoked`, `provides_tool`, `reaches_tool`, `used_credential`, `uses` |
 | BR | Dependency reach (blast radius) | graph/dependency_reach.py `_REACH_EDGE_TYPES` + `_VULN_TO_PACKAGE_EDGE_TYPES` | `affects`, `contains`, `depends_on`, `provides_tool`, `uses`, `vulnerable_to` |
 | LT | Toxic-combination lateral reach | graph/toxic_findings.py `_LATERAL_RELS` | `assumes`, `can_access`, `has_permission` |

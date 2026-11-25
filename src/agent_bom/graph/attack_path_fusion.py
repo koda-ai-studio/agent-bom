@@ -35,6 +35,7 @@ from typing import Any
 
 from agent_bom.cloud.normalization import coerce_truthy
 from agent_bom.graph.analysis import GraphAnalysisState, GraphAnalysisStatus
+from agent_bom.graph.asset_identity import is_compute_instance
 from agent_bom.graph.container import AttackPath, UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge, credential_edge_admits
 from agent_bom.graph.node import UnifiedNode
@@ -95,12 +96,45 @@ _TRAVERSABLE_RELS = frozenset(
     }
 )
 
+# A compromised compute host controls what runs on it, so a chain steps from the
+# host to each hosted agent, server or workload: ``hosts`` forward, ``hosted_on``
+# read backwards. Only compute hosts qualify. An environment, account or cluster
+# also "hosts" its inventory, and stepping from one would reach everything.
+_HOST_STEP_RELS = frozenset({RelationshipType.HOSTS, RelationshipType.HOSTED_ON})
+
 # Crown-jewel target types — chains only "complete" when they reach a data store.
 _CROWN_JEWEL_TYPES = frozenset({EntityType.DATA_STORE})
 
 
 def _rel(edge: UnifiedEdge) -> RelationshipType:
     return edge.relationship
+
+
+def _is_compute_host(node: UnifiedNode | None) -> bool:
+    if node is None:
+        return False
+    if node.entity_type == EntityType.CONTAINER:
+        return True
+    attributes = node.attributes or {}
+    return node.entity_type == EntityType.CLOUD_RESOURCE and is_compute_instance(attributes.get("resource_type"), node.id)
+
+
+def traversal_steps(graph: UnifiedGraph, node_id: str, hops: list[str] | None = None) -> list[tuple[UnifiedEdge, str]]:
+    """Each ``(edge, next node)`` a chain may take from ``node_id``: traversable links, then a compute host's hosted inventory."""
+    steps = [
+        (edge, edge.target)
+        for edge in graph.adjacency.get(node_id, [])
+        if edge.traversable and _rel(edge) in _TRAVERSABLE_RELS and (hops is None or _owner_admits(graph, edge, hops))
+    ]
+    if not _is_compute_host(graph.nodes.get(node_id)):
+        return steps
+    steps += [(edge, edge.target) for edge in graph.adjacency.get(node_id, []) if _rel(edge) == RelationshipType.HOSTS]
+    steps += [
+        (edge, edge.source)
+        for edge in graph.reverse_adjacency.get(node_id, [])
+        if _rel(edge) == RelationshipType.HOSTED_ON and edge.target == node_id
+    ]
+    return steps
 
 
 def _is_entry(node: UnifiedNode) -> bool:
@@ -368,17 +402,11 @@ def _walk_from_entry(
             # A data store can also be a transit hop, so keep exploring.
 
         if len(hops) > _MAX_DEPTH:
-            if any(
-                edge.traversable and _rel(edge) in _TRAVERSABLE_RELS and edge.target not in on_path
-                for edge in graph.adjacency.get(node_id, [])
-            ):
+            if any(nxt not in on_path for _, nxt in traversal_steps(graph, node_id)):
                 limit_reasons.add("depth_cap_reached")
             return
 
-        for edge in graph.adjacency.get(node_id, []):
-            if not edge.traversable or _rel(edge) not in _TRAVERSABLE_RELS or not _owner_admits(graph, edge, hops):
-                continue
-            nxt = edge.target
+        for edge, nxt in traversal_steps(graph, node_id, hops):
             if nxt in on_path:  # no cycles
                 continue
             target = graph.nodes.get(nxt)
