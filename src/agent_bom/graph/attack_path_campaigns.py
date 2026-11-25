@@ -38,7 +38,6 @@ from dataclasses import dataclass
 
 from agent_bom.graph.analysis import GraphAnalysisState, GraphAnalysisStatus
 from agent_bom.graph.attack_path_fusion import (
-    _TRAVERSABLE_RELS,
     _edge_boost,
     _is_crown_jewel,
     _is_entry,
@@ -46,6 +45,7 @@ from agent_bom.graph.attack_path_fusion import (
     _node_boost,
     _rel,
     _summary,
+    traversal_steps,
 )
 from agent_bom.graph.container import AttackPath, Campaign, UnifiedGraph
 from agent_bom.graph.node import UnifiedNode
@@ -294,10 +294,7 @@ def _explore_partition(
             reason_codes.add("depth_cap_reached")
             return
 
-        for edge in graph.adjacency.get(node_id, []):
-            if not edge.traversable or _rel(edge) not in _TRAVERSABLE_RELS:
-                continue
-            nxt = edge.target
+        for edge, nxt in traversal_steps(graph, node_id):
             if nxt in prefix_set or nxt in hops:
                 continue
             target = graph.nodes.get(nxt)

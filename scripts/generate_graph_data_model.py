@@ -103,6 +103,12 @@ ANALYSES: tuple[tuple[str, str, str, frozenset[str]], ...] = (
         "graph/attack_path_fusion.py `_TRAVERSABLE_RELS`",
         frozenset(r.value for r in attack_path_fusion._TRAVERSABLE_RELS),
     ),
+    (
+        "HO",
+        "Host compromise (attack-path fusion, compute hosts only)",
+        "graph/attack_path_fusion.py `_HOST_STEP_RELS`",
+        frozenset(r.value for r in attack_path_fusion._HOST_STEP_RELS),
+    ),
     ("CR", "Credential reach", "graph/credential_reach.py `_CHAIN`", frozenset(r.value for r in credential_reach._CHAIN)),
     (
         "BR",
