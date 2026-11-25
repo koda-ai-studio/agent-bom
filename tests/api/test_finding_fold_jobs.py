@@ -200,7 +200,8 @@ def test_rows_json_would_not_round_trip_are_projected_again(versioned):
     calls: list[str] = []
     stamp = datetime(2026, 11, 24, tzinfo=UTC)
     for _ in range(2):
-        assert _fold_rows(versioned, lambda scan: calls.append(scan.job_id) or [{"seen": stamp}]) == [[{"seen": stamp}]]
+        rows = _fold_rows(versioned, lambda scan: calls.append(scan.job_id) or [{"seen": stamp}])
+        assert rows == [[{"seen": stamp}]]
     assert len(calls) == 2
     assert next(iter(finding_fold_jobs._DIGESTS.values())).row_count == 0
 
