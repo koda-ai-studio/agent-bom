@@ -7,11 +7,11 @@ const n = (id: string, nodeType: LineageNodeData["nodeType"], path?: number): No
 const nodes = [n("display:internet", "environment", 0), n("entry", "apiGateway", 1), n("app", "container", 2), n("cve", "vulnerability", 3), n("role", "role"), n("data", "dataStore"), n("account", "account"), n("cluster", "cluster"), n("sibling", "container")];
 const e = (source: string, target: string, relationship: string, traversable = true): Edge => ({ id: `${source}-${target}`, source, target, data: { relationship, traversable } });
 const edges = [e("display:internet", "entry", "exposed_to"), e("entry", "app", "exposed_to"), e("app", "cve", "vulnerable_to"), e("app", "role", "authenticates_as"), e("role", "data", "has_permission"), e("account", "cluster", "contains", false), e("account", "entry", "contains", false), e("cluster", "app", "hosts", false), e("cluster", "sibling", "hosts", false)];
-it("opens the recorded exposure and access story with supporting containment explicitly folded", () => {
+it("opens the recorded exposure and access story with account context and folds supporting assets", () => {
   const result = storyContext(nodes, edges, false);
-  expect(result.contextIds).toEqual(new Set(["account", "cluster", "sibling"]));
-  expect(result.nodes.filter(n => !n.hidden).map(n => n.id)).toEqual(["display:internet", "entry", "app", "cve", "role", "data"]);
-  expect(result.edges.filter(e => !e.hidden).map(e => e.id)).toEqual(edges.slice(0, 5).map(e => e.id));
+  expect(result.contextIds).toEqual(new Set(["cluster", "sibling"]));
+  expect(result.nodes.filter(n => !n.hidden).map(n => n.id)).toEqual(["display:internet", "entry", "app", "cve", "role", "data", "account"]);
+  expect(result.edges.filter(e => !e.hidden).map(e => e.id)).toEqual([...edges.slice(0, 5), edges[6]!].map(e => e.id));
   expect(result.edges.map(e => [e.id, e.source, e.target, e.data])).toEqual(edges.map(e => [e.id, e.source, e.target, e.data]));
   expect(nodes.every(n => !n.hidden)).toBe(true);
 });

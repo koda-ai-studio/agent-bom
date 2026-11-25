@@ -26,11 +26,6 @@ it("keeps an explicitly investigated path named and directed", () => {
   expect(queryByText(/Has Permission/)).toBeVisible();
 });
 
-it("names each recorded step in a structured expanded scope", () => {
-  const { getByTestId, queryByText } = render(<svg><CompactRelationshipEdge {...props} data={{ relationship: "has_permission", scopeFlowLabel: true }} /></svg>);
-  expect(getByTestId("edge")).toHaveAttribute("marker-end", "url(#target)");
-  expect(queryByText(/Has Permission/)).toBeVisible();
-});
 
 it("keeps a single-column phone context curve within its caption-free side margin", () => {
   const curve = compactEdgeCurve({ sourceX: 100, targetX: 100, sourceY: 0, targetY: 600, sourcePosition: Position.Left, targetPosition: Position.Left, data: { phoneLayout: true, phoneLinear: true } });

@@ -485,7 +485,7 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     await routeNodeAggregates(page, ownedFindingAggregates(entries, links));
     await page.goto("/graph?scan=snapshot&rollup=0&capture=1&layers=account,cluster,apiGateway,container,role,dataStore,vulnerability,misconfiguration");
     if (width < 640) await page.getByRole("group", { name: "Investigation view" }).getByRole("button", { name: "Graph", exact: true }).click();
-    await page.getByRole("button", { name: "Show supporting context (4)", exact: true }).click();
+    await page.getByRole("button", { name: "Show supporting context (3)", exact: true }).click();
     // The selected path's terminal CVE stays on the spine; the other three findings group under their owners.
     // The supporting account remains a node connected by its recorded containment.
     await expect.poll(async () => await page.locator('.react-flow__node:not([data-id^="display:"])').count() + await page.locator("[data-boundary-frame]").count()).toBe(8);
@@ -623,15 +623,23 @@ for (const theme of ["light", "dark"] as const) test(`independent environment ch
   await fixture(page, showcase.nodes, showcase.edges, false, { stats: showcase.stats, attack_paths: showcase.attack_paths });
   await routeNodeAggregates(page, ownedFindingAggregates(showcase.nodes, showcase.edges));
   await page.goto("/graph?scan=snapshot&rollup=0&capture=1&layers=environment,agent,server,container,package,vulnerability,credential,dataStore");
-  const context = page.getByRole("button", { name: /^Show supporting context/ });
-  await expect(context).toBeVisible();
-  await context.click();
-  await expect(page.locator('[data-id="cred:tickets"]')).toHaveCount(1);
+  const selector = page.getByRole("combobox", { name: "Follow a connected flow" });
+  await expect(selector).toHaveValue("display:internet");
+  await expect(page.locator('[data-id="agent:triage"]')).toHaveCount(0);
+  await expect(page.locator("[data-boundary-frame]")).toBeVisible();
   await settle(page);
-  await expect(page.locator('[data-scope-section="exposure"]')).toHaveText("Internet exposure");
-  await expect(page.locator('[data-scope-section="context"]')).toHaveText("Other relationships in this scope");
-  const exposureTop = (await page.locator('[data-id="container:serving"]').boundingBox())!.y;
-  for (const id of ["agent:triage", "agent:intake"]) expect((await page.locator(`[data-id="${id}"]`).boundingBox())!.y).toBeGreaterThan(exposureTop);
+  await page.screenshot({ path: info.outputPath(`environment-first-${theme}.png`), animations: "disabled" });
+  await selector.selectOption({ label: "Support Triage Agent" });
+  await expect(page.locator('[data-id="cred:tickets"]')).toHaveCount(1);
+  await expect(page.locator('[data-id="display:internet"]')).toHaveCount(0);
+  await expect(page.locator("[data-boundary-frame]")).toBeVisible();
+  await settle(page);
+  expect(await cardOverlaps(page)).toEqual([]);
+  expect(await edgesThroughNodes(page)).toEqual([]);
+  await page.screenshot({ path: info.outputPath(`environment-drilldown-${theme}.png`), animations: "disabled" });
+  await selector.selectOption({ label: "All connections" });
+  await expect(page.locator('[data-id="container:serving"]')).toHaveCount(1);
+  await settle(page);
   const chains = [["container:serving", "pkg:torch", "cve:torch"],
     ["agent:triage", "server:tickets", "cred:tickets", "data:tickets"],
     ["agent:intake", "server:docs", "pkg:pillow"]];
@@ -678,8 +686,8 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     await page.goto("/graph?scan=snapshot&rollup=0&capture=1&layers=account,cluster,apiGateway,container,role,dataStore,vulnerability,misconfiguration");
     if (width < 640) await page.getByRole("group", { name: "Investigation view" }).getByRole("button", { name: "Graph", exact: true }).click();
 
-    await expect(page.getByRole("button", { name: "Show supporting context (4)", exact: true })).toBeVisible();
-    await expect(page.locator('[data-boundary-frame]')).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Show supporting context (3)", exact: true })).toBeVisible();
+    await expect(page.locator('[data-boundary-frame]')).toHaveCount(width >= 640 ? 1 : 0);
     await expect(page.locator('[data-id="cluster:payments"]')).toHaveCount(0);
     // An opaque foreground circle previously hid every continent.
     await expect(page.locator('[data-internet-globe] > circle:last-child')).toHaveAttribute("fill", "none");
@@ -706,7 +714,7 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
       expect(straight, "same-row Internet entry stays straight").toBeLessThan(1);
     }
     await page.screenshot({ path: info.outputPath(`story-first-${theme}-${width}.png`), animations: "disabled" });
-    await page.getByRole("button", { name: "Show supporting context (4)", exact: true }).click();
+    await page.getByRole("button", { name: "Show supporting context (3)", exact: true }).click();
     await settle(page);
     await expect(page.locator('[data-boundary-frame]')).toHaveCount(width >= 640 ? 1 : 0);
     await expect(page.getByText("prod-workloads", { exact: true })).toBeVisible();

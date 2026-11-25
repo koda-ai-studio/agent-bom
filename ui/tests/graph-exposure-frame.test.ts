@@ -232,9 +232,6 @@ it("keeps sibling dependency chains level when their recorded scope is expanded"
   expect(new Set(chains.map(chain => point(chain[0]!).y)).size).toBe(3);
   expect(point("serving").y).toBeLessThan(point("agent").y);
   expect(point("serving").y).toBeLessThan(point("intake").y);
-  expect(result.nodes.find(node => node.type === "boundaryFrame")?.data.frameSections?.map(section => section.label)).toEqual([
-    "Internet exposure", "Other relationships in this scope",
-  ]);
   expect(point("scope").x).toBeLessThan(point("agent").x);
   expect(result.nodes.find(node => node.type === "boundaryFrame")?.data.frameFor).toBe("scope");
   expect(result.edges.filter(edge => !edge.data?.displayOnly).map(edge => [edge.id, edge.source, edge.target])).toEqual(edges.map(edge => [edge.id, edge.source, edge.target]));
