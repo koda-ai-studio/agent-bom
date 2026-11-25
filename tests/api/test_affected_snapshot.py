@@ -165,3 +165,17 @@ def test_real_sqlite_replacement_between_reads_cannot_mix_generations(tmp_path, 
     reach = _story_reach("tenant-a", ["CVE-2023-0001", "CVE-2023-0001"])
     assert reach["basis"] == "unavailable" and not reach["items"]
     assert "snapshot_changed" in reach["reasons"]
+
+
+def test_previous_match_does_not_claim_all_findings_were_resolved() -> None:
+    from agent_bom.cli._findings_group import _affected_summary
+
+    result = _affected_summary(
+        {
+            "verdict": "previously_affected",
+            "query": {"raw": "example"},
+            "findings": {"total": 1, "open": 0, "resolved": 0, "suppressed": 1},
+        }
+    )
+    assert "all resolved" not in result.lower()
+    assert "0 resolved" in result

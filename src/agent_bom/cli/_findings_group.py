@@ -344,7 +344,7 @@ def _affected_summary(payload: JsonObject) -> str:
     findings, exposure, reach = (_obj(body.get(key)) for key in ("findings", "exposure", "reach"))
     verdict = {
         "affected": "AFFECTED",
-        "previously_affected": "Previously affected (all resolved)",
+        "previously_affected": "Previously affected",
         "not_found": "No match found",
         "possibly_affected": "Possibly affected",
     }
