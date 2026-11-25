@@ -204,7 +204,7 @@ it("keeps an independent credential chain together instead of crossing the expos
   const point = (id: string) => result.nodes.find(node => node.id === id)!.position;
   const chain = ["agent", "server", "credential", "data"];
   expect(new Set(chain.map(id => point(id).y)).size).toBe(1);
-  expect(point("agent").y).toBeLessThan(point("serving").y);
+  expect(point("agent").y).toBeGreaterThan(point("serving").y);
   for (let i = 1; i < chain.length; i++) expect(point(chain[i]!).x).toBeGreaterThan(point(chain[i - 1]!).x);
   expect(result.edges.filter(edge => !edge.data?.displayOnly).map(edge => [edge.id, edge.source, edge.target])).toEqual(edges.map(edge => [edge.id, edge.source, edge.target]));
   const reordered = semanticGraphLayout([...nodes].reverse(), [...edges].reverse());
@@ -230,6 +230,11 @@ it("keeps sibling dependency chains level when their recorded scope is expanded"
     for (let i = 1; i < chain.length; i++) expect(point(chain[i]!).x).toBeGreaterThan(point(chain[i - 1]!).x);
   }
   expect(new Set(chains.map(chain => point(chain[0]!).y)).size).toBe(3);
+  expect(point("serving").y).toBeLessThan(point("agent").y);
+  expect(point("serving").y).toBeLessThan(point("intake").y);
+  expect(result.nodes.find(node => node.type === "boundaryFrame")?.data.frameSections?.map(section => section.label)).toEqual([
+    "Internet exposure", "Other relationships in this scope",
+  ]);
   expect(point("scope").x).toBeLessThan(point("agent").x);
   expect(result.nodes.find(node => node.type === "boundaryFrame")?.data.frameFor).toBe("scope");
   expect(result.edges.filter(edge => !edge.data?.displayOnly).map(edge => [edge.id, edge.source, edge.target])).toEqual(edges.map(edge => [edge.id, edge.source, edge.target]));
