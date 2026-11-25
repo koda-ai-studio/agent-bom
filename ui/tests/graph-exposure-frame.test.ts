@@ -188,3 +188,20 @@ it("does not highlight a different traversable relationship beside the ranked wi
   expect(result.edges.find(e => e.id === "parallel")?.data?.pathEmphasis).toBe(false);
   expect(result.edges.find(e => e.id !== "parallel")?.data?.pathEmphasis).toBe(true);
 });
+
+it("keeps an independent credential chain together instead of crossing the exposure spine", () => {
+  const nodes = [node("serving", "container", "infra", exposed), node("pkg", "package", "package"),
+    node("cve", "vuln", "finding", { severity: "critical" }), node("agent", "agent", "orchestration"),
+    node("server", "server", "mcp_server"), node("credential", "credential", "identity"), node("data", "dataStore", "data")];
+  const edges = [edge("serving", "pkg", "contains"), edge("pkg", "cve", "vulnerable_to"), edge("agent", "server", "uses"),
+    edge("server", "credential", "exposes_cred"), edge("credential", "data", "can_access")];
+  const result = semanticGraphLayout(nodes, edges);
+  const point = (id: string) => result.nodes.find(node => node.id === id)!.position;
+  const chain = ["agent", "server", "credential", "data"];
+  expect(new Set(chain.map(id => point(id).y)).size).toBe(1);
+  expect(point("agent").y).toBeLessThan(point("serving").y);
+  for (let i = 1; i < chain.length; i++) expect(point(chain[i]!).x).toBeGreaterThan(point(chain[i - 1]!).x);
+  expect(result.edges.filter(edge => !edge.data?.displayOnly).map(edge => [edge.id, edge.source, edge.target])).toEqual(edges.map(edge => [edge.id, edge.source, edge.target]));
+  const reordered = semanticGraphLayout([...nodes].reverse(), [...edges].reverse());
+  for (const node of result.nodes) expect(reordered.nodes.find(other => other.id === node.id)?.position).toEqual(node.position);
+});
