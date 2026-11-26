@@ -58,8 +58,8 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
       internet_exposed: false, toxic_combo: false, exposed_count: 0, toxic_count: 0 };
     const items = [
       ["environment", "Sample environment", "environment"], ["agent-a", "Research assistant", "agent"],
-      ["agent-b", "Review assistant", "agent"], ["folder-a", "Services", "folder"],
-      ["folder-b", "Project root", "folder"], ["package", "Shared package", "package"],
+      ["agent-b", "Review assistant", "agent"], ["folder-a", "Services", "directory"],
+      ["folder-b", "Project root", "directory"], ["package", "Shared package", "package"],
     ].map(([id, label, entity_type]) => ({ id, label, entity_type, severity: "high", is_container: true, has_children: true, direct_child_count: 2, aggregate }));
     const edges = [["environment", "agent-a"], ["environment", "agent-b"], ["folder-a", "agent-a"],
       ["folder-b", "agent-a"], ["folder-a", "package"], ["folder-b", "package"]]
@@ -80,6 +80,8 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     await expect(canvas.locator(".react-flow__node")).toHaveCount(4);
     await expect(canvas.locator(".react-flow__edge")).toHaveCount(3);
     await expect(overview).toContainText("12 of 12 loaded relationships");
+    await expect(canvas.locator('[data-id="folder-a"]')).toContainText("Folder");
+    await expect(canvas.locator('[data-id="folder-b"]')).toContainText("Folder");
     await page.waitForLoadState("networkidle");
     expect(await canvas.locator(".react-flow__node").evaluateAll(nodes => nodes.every(node => {
       const box = node.getBoundingClientRect(), frame = node.closest(".react-flow")!.getBoundingClientRect();
