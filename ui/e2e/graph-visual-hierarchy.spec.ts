@@ -67,7 +67,7 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     await page.goto("/graph?scan=hierarchy&lens=estate&rollup=0&layers=account,apiGateway,container,role,dataStore,vulnerability,misconfiguration");
     if (width === 390) {
       await expect(page.getByRole("button", { name: "Graph", exact: true })).toBeVisible();
-      await page.screenshot({ path: info.outputPath(`cloud-phone-opening-${theme}.png`), fullPage: true });
+      await page.screenshot({ path: info.outputPath(`cloud-phone-opening-${theme}.png`), fullPage: width === 390 });
       await page.getByRole("button", { name: "Graph", exact: true }).click();
     }
     await expect(page.locator('[data-boundary-frame="account"]')).toBeVisible();
@@ -78,16 +78,19 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     await expect(page.locator('[data-compact-marker="privilege"]')).toBeVisible();
     await expect(page.locator('[data-compact-marker="sensitive"]')).toBeVisible();
     await stable(page);
+    if (width === 1440) for (const id of ["gateway", "app", "role", "bucket"]) await expect(page.locator(`.react-flow__node[data-id="${id}"] .graph-entity-glyph`)).toBeInViewport({ ratio: 0.999 });
+    if (width === 1440) await expect(page.locator("[data-internet-anchor]")).toBeInViewport({ ratio: 0.999 });
     expect(await page.locator(".graph-entity-glyph").evaluateAll((glyphs, desktop) => glyphs.every(glyph => {
       const box = glyph.getBoundingClientRect(), frame = glyph.closest(".react-flow")!.getBoundingClientRect();
       return box.left >= frame.left && box.right <= frame.right && (!desktop || box.top >= frame.top && box.bottom <= frame.bottom);
     }), width === 1440)).toBe(true);
-    await page.screenshot({ path: info.outputPath(`cloud-first-${theme}-${width}.png`), fullPage: true });
+    await page.screenshot({ path: info.outputPath(`cloud-first-${theme}-${width}.png`), fullPage: width === 390 });
+    await stable(page);
     await expand.click();
     await expect(page.locator('.react-flow__node[data-id="cve"]')).toBeVisible();
     await expect(page.locator('.react-flow__edge[data-id="app:vulnerable_to:cve"]')).toHaveCount(1);
     await stable(page);
-    await page.screenshot({ path: info.outputPath(`cloud-expanded-${theme}-${width}.png`), fullPage: true });
+    await page.screenshot({ path: info.outputPath(`cloud-expanded-${theme}-${width}.png`), fullPage: width === 390 });
     await page.getByRole("button", { name: "Collapse 1 finding for checkout-api", exact: true }).click();
     await expect(page.locator('.react-flow__node[data-id="cve"]')).toHaveCount(0);
     await expect(expand).toBeVisible();
@@ -117,6 +120,6 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
       const y = (id: string) => canvas.locator(`.react-flow__node[data-id="${id}"]`).evaluate(el => el.getBoundingClientRect().top);
       expect(await y("peer")).toBeLessThan(await y("policy"));
     }
-    await page.screenshot({ path: info.outputPath(`agent-${theme}-${width}.png`), fullPage: true });
+    await page.screenshot({ path: info.outputPath(`agent-${theme}-${width}.png`), fullPage: width === 390 });
   });
 }
