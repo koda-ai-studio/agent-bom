@@ -194,7 +194,7 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
   const severity = findingSeverity(data);
   const { badges, ring } = nodeBadges(data);
   const anchor = isInternetAnchor(data);
-  const outline = ["role", "credential"].includes(data.nodeType) ? borderClass.replace(/\bborder-dashed\b/g, "") : borderClass;
+  const outline = ["role", "credential", "policy", "accessPolicy"].includes(data.nodeType) ? borderClass.replace(/\bborder-dashed\b/g, "") : borderClass;
   const glyph = anchor ? ANCHOR_GLYPH : data.phoneLayout ? PHONE_GLYPH : data.readingFocus ? glyphSize(1) : GLYPH, icon = data.phoneLayout ? PHONE_ICON : ICON;
   const fullTitle = typeof data.attributes?.display_title === "string" && data.attributes.display_title.trim() ? data.attributes.display_title : data.label;
   // A prose finding draws its short preview; the full title stays in the tooltip, drawer and assistive text.
@@ -206,7 +206,7 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
   return <div title={tooltip} data-graph-entity="true" data-compact-node data-evidence-flow={data.evidenceFlow || undefined} data-finding-owner={data.readingOwner} data-reading-focus={data.readingFocus || undefined}
     data-rollup-container={data.attributes?.rollup_is_container === true ? "true" : undefined}
     style={{ maxWidth: "var(--graph-node-card-width, 200px)", marginTop: anchor && data.roomyName && !data.phoneLayout ? glyphSize(-(ANCHOR_GLYPH_SCALE - COMPACT_GLYPH_SCALE) / 2) : data.readingFocus && !data.phoneLayout ? glyphSize(-(1 - COMPACT_GLYPH_SCALE) / 2) : undefined }} className={`relative flex transition-opacity ${data.dimmed ? "opacity-25" : ""} ${phoneLayoutClass(data)}`}>
-    <div ref={glyphRef} data-severity-ring={severity} data-internet-anchor={anchor || undefined} style={{ width: glyph, height: glyph, outline: data.readingFocus ? "2px solid var(--border-strong)" : undefined, outlineOffset: data.readingFocus ? 5 : undefined }}
+    <div ref={glyphRef} data-severity-ring={severity} data-internet-anchor={anchor || undefined} style={{ width: glyph, height: glyph, outline: data.readingFocus ? "2px solid var(--border-strong)" : undefined, outlineOffset: data.readingFocus ? data.phoneLayout ? 2 : 5 : undefined }}
       className={`graph-entity-glyph relative flex shrink-0 items-center justify-center rounded-full ${iconClass} ${anchor ? "border-0 bg-transparent" : `border-2 ${outline} ${bgClass}`} ${data.highlighted && !anchor ? `ring-2 ring-offset-2 ring-offset-[var(--graph-canvas)] ${ringClass}` : ""}`}>
       {severity && <span className="sr-only" data-finding-severity={severity}>{`${severity} severity`}</span>}
       <CompactHandles data={data} source={source} target={target} />

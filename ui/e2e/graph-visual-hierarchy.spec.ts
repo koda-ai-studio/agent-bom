@@ -49,6 +49,7 @@ async function serve(page: Page, fixture: typeof cloud, rollup: boolean) {
 
 async function stable(page: Page) {
   await page.waitForLoadState("networkidle");
+  if (await page.locator("[data-internet-anchor]").count()) await expect(page.locator("[data-graph-adaptive-frame]")).toHaveAttribute("data-graph-camera-settled", "true");
   let last = "", settled = 0;
   await expect.poll(async () => {
     const value = await page.locator(".react-flow__viewport").evaluate(el => getComputedStyle(el).transform);
@@ -64,6 +65,11 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
     await serve(page, cloud, false);
     await page.goto("/graph?scan=hierarchy&lens=estate&rollup=0&layers=account,apiGateway,container,role,dataStore,vulnerability,misconfiguration");
+    if (width === 390) {
+      await expect(page.getByRole("button", { name: "Graph", exact: true })).toBeVisible();
+      await page.screenshot({ path: info.outputPath(`cloud-phone-opening-${theme}.png`), fullPage: true });
+      await page.getByRole("button", { name: "Graph", exact: true }).click();
+    }
     await expect(page.locator('[data-boundary-frame="account"]')).toBeVisible();
     await expect(page.locator('.react-flow__node[data-id="cve"]')).toHaveCount(0);
     const expand = page.getByRole("button", { name: "Expand 1 finding for checkout-api", exact: true });
@@ -72,6 +78,10 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     await expect(page.locator('[data-compact-marker="privilege"]')).toBeVisible();
     await expect(page.locator('[data-compact-marker="sensitive"]')).toBeVisible();
     await stable(page);
+    expect(await page.locator(".graph-entity-glyph").evaluateAll((glyphs, desktop) => glyphs.every(glyph => {
+      const box = glyph.getBoundingClientRect(), frame = glyph.closest(".react-flow")!.getBoundingClientRect();
+      return box.left >= frame.left && box.right <= frame.right && (!desktop || box.top >= frame.top && box.bottom <= frame.bottom);
+    }), width === 1440)).toBe(true);
     await page.screenshot({ path: info.outputPath(`cloud-first-${theme}-${width}.png`), fullPage: true });
     await expand.click();
     await expect(page.locator('.react-flow__node[data-id="cve"]')).toBeVisible();
@@ -102,6 +112,10 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
       expect(Math.abs(await center("agent") - await center("peer"))).toBeLessThan(1);
       expect(await center("host")).toBeLessThan(await center("agent") - 50);
       expect(await center("policy")).toBeLessThan(await center("agent") - 50);
+    }
+    if (width === 390) {
+      const y = (id: string) => canvas.locator(`.react-flow__node[data-id="${id}"]`).evaluate(el => el.getBoundingClientRect().top);
+      expect(await y("peer")).toBeLessThan(await y("policy"));
     }
     await page.screenshot({ path: info.outputPath(`agent-${theme}-${width}.png`), fullPage: true });
   });

@@ -35,7 +35,9 @@ export function GraphScopeOverview(props: Props) {
   const preview = useMemo(() => buildScopePreview(props.items, props.edges, rootId) ?? buildScopePreview(props.items, props.edges), [props.items, props.edges, rootId]);
   if (!preview || props.edges.length < 3) return <GraphRollupDecisionSurface {...props} />;
   const scope = preview.root;
-  const nodes: Node<LineageNodeData>[] = preview.nodes.map((node, index) => ({ ...node,
+  const contextIds = new Set(preview.edges.filter(edge => edge.data?.supportingContext).flatMap(edge => [edge.source, edge.target]).filter(id => id !== scope.id));
+  const ordered = narrow ? [...preview.nodes].sort((a, b) => Number(contextIds.has(a.id)) - Number(contextIds.has(b.id))) : preview.nodes;
+  const nodes: Node<LineageNodeData>[] = ordered.map((node, index) => ({ ...node,
     style: { ...node.style, "--graph-node-name-scale": 1 },
     ...(narrow ? { position: { x: 0, y: index * 230 } } : {}),
     data: { ...node.data, onExploreFindings: () => {
@@ -47,7 +49,7 @@ export function GraphScopeOverview(props: Props) {
   return <section data-testid="graph-scope-overview" className="overflow-hidden rounded-2xl bg-surface">
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline px-4 py-3">
       <div className="flex min-w-0 flex-wrap items-center gap-3">
-        <span className="text-sm font-semibold text-foreground">{scope.entity_type === "account" ? "Account connections" : scope.entity_type === "org" ? "Organization connections" : "Recorded connections"}</span>
+        <span className="text-sm font-semibold text-foreground">{scope.entity_type === "account" ? "Account connections" : scope.entity_type === "org" ? "Organization connections" : scope.entity_type === "agent" ? "Agent connections" : ["server", "mcp_server"].includes(scope.entity_type) ? "MCP server connections" : "Recorded connections"}</span>
         {!showList && preview.sharedProvider && <span data-testid="graph-preview-provider" className="inline-flex items-center gap-2 text-sm text-ink-secondary">
           <GraphProviderMark source={preview.sharedProvider} className="h-6 w-6" />
           {preview.sharedProvider.label} · shown {preview.nodes.every(node => node.data.entityType === "account") ? "accounts" : "nodes"}

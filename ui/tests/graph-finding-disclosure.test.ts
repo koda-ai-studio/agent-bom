@@ -2,6 +2,8 @@ import { expect, it } from "vitest";
 import type { Edge, Node } from "@xyflow/react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { cloudFindingDisclosure } from "@/lib/graph-finding-disclosure";
+import { renderHook } from "@testing-library/react";
+import { useCloudFindingDisclosure } from "@/hooks/use-cloud-finding-disclosure";
 const nodes: Node<LineageNodeData>[] = [
   { id: "owner", position: { x: 0, y: 0 }, data: { nodeType: "container", label: "app", readingGroup: "Applications", semanticLayer: "app", findingAggregate: {
     issue_count: 7, finding_occurrence_count: 7, descendant_count: 8, by_type: {}, severity_counts: { critical: 7 }, worst_severity: "critical",
@@ -10,6 +12,16 @@ const nodes: Node<LineageNodeData>[] = [
   { id: "finding", position: { x: 600, y: 0 }, data: { nodeType: "misconfiguration", label: "WAF missing", semanticLayer: "finding", readingFinding: true, readingOwner: "owner", severity: "high" } },
 ];
 const edges: Edge[] = [{ id: "affects", source: "finding", target: "owner", data: { relationship: "affects", evidenceMode: "inferred" } }];
+it("reframes when late authoritative counts introduce finding disclosure", () => {
+  const { result, rerender } = renderHook(({ available }) => useCloudFindingDisclosure(
+    available ? nodes : nodes.map(node => ({ ...node, data: { ...node.data, findingAggregate: undefined } })), edges, null, "snapshot", true, true,
+  ), { initialProps: { available: false } });
+  const before = result.current.key;
+  expect(result.current.collapsed).toBe(0);
+  rerender({ available: true });
+  expect(result.current.collapsed).toBe(1);
+  expect(result.current.key).not.toBe(before);
+});
 it("folds a primary finding only in the automatic overview, retaining its canonical path evidence", () => {
   const primary = nodes.map(node => node.id === "finding" ? { ...node, data: { ...node.data, semanticPathIndex: 3 } } : node);
   const selectedPath = cloudFindingDisclosure(primary, edges, new Set(), () => {}, true);

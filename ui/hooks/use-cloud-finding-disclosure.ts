@@ -20,7 +20,7 @@ export function useCloudFindingDisclosure(nodes: Node<LineageNodeData>[], edges:
     const grouped = nodes.filter(n => result.groupedIds.has(n.id));
     const owners = [...new Set(grouped.flatMap(n => n.data.readingOwner ? [n.data.readingOwner] : []))];
     const collapsed = grouped.filter(n => !expanded.has(n.data.readingOwner!)).length;
-    return { ...result, key: [...expanded].sort().join("|"), collapsed, available: owners.length > 0,
+    return { ...result, key: JSON.stringify([[...result.groupedIds].sort(), [...expanded].sort()]), collapsed, available: owners.length > 0,
       reset: () => setState({ scope, ids: new Set() }),
       toggleAll: () => setState({ scope, ids: collapsed ? new Set(owners) : new Set() }) };
 
