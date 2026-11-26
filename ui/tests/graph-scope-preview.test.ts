@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildScopePreview } from "@/lib/graph-scope-preview";
+import { buildScopePreview, hasSharedScopeCycle } from "@/lib/graph-scope-preview";
 import type { GraphRollupContainer, GraphRollupEdge } from "@/lib/api-types";
 
 const item = (id: string, entity_type = "misconfiguration", label = id): GraphRollupContainer => ({
@@ -57,5 +57,17 @@ describe("scope relationship preview", () => {
       item("c", "misconfiguration", "Unpinned server version"), item("d", "misconfiguration", "Wildcard permissions")];
     const edges = items.slice(1).map(n => ({ source: n.id, target: "root", count: 1, relationships: ["affects"] }));
     expect(buildScopePreview(items, edges)?.nodes.map(n => n.id)).toEqual(["root", "a", "c", "d"]);
+  });
+});
+
+describe("shared scope overview", () => {
+  const scopes = ["a", "b", "agent", "package"].map(id => item(id, "application"));
+  const links = [["a", "agent"], ["b", "agent"], ["a", "package"], ["b", "package"]].map(([source, target]) => ({ source: source!, target: target!, count: 4, relationships: ["depends_on"] }));
+  it("recognizes shared branches without calling the directed relationships a cyclic attack path", () => {
+    expect(hasSharedScopeCycle(scopes, links)).toBe(true);
+    expect(hasSharedScopeCycle(scopes, links.slice(0, 3))).toBe(false);
+  });
+  it("ignores duplicate pairs, self links and endpoints outside the loaded scope", () => {
+    expect(hasSharedScopeCycle(scopes, [...links.slice(0, 3), links[0]!, { ...links[0]!, source: "agent", target: "a" }, { ...links[0]!, source: "missing" }, { ...links[0]!, target: "a" }])).toBe(false);
   });
 });

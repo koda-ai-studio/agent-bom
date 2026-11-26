@@ -4,6 +4,31 @@ import { severityRank } from "@/lib/severity";
 
 const FINDINGS = new Set(["misconfiguration", "vulnerability", "finding", "iac_finding"]);
 
+/** Shared aggregate branches need a focused connection overview, even with few scopes.
+ * This checks undirected layout topology, not directed reachability or attack paths. */
+export function hasSharedScopeCycle(items: readonly GraphRollupContainer[], edges: readonly GraphRollupEdge[]): boolean {
+  if (items.length < 4) return false;
+  const parent = new Map(items.map(item => [item.id, item.id]));
+  const pairs = new Set<string>();
+  const root = (id: string): string => {
+    while (parent.get(id) !== id) {
+      parent.set(id, parent.get(parent.get(id)!)!);
+      id = parent.get(id)!;
+    }
+    return id;
+  };
+  for (const { source, target } of edges) {
+    if (source === target || !parent.has(source) || !parent.has(target)) continue;
+    const pair = JSON.stringify([source, target].sort());
+    if (pairs.has(pair)) continue;
+    pairs.add(pair);
+    const a = root(source), b = root(target);
+    if (a === b) return true;
+    parent.set(a, b);
+  }
+  return false;
+}
+
 /** Vertical distance between the scope's neighbour cards. */
 export const SCOPE_PREVIEW_ROW = 150;
 /** Neighbours drawn on each side of a scope: a laptop frame shows both sides at full size. */

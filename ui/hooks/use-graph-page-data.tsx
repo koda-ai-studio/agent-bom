@@ -7,6 +7,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useReactFlow, useNodesInitialized, useViewport } from "@xyflow/react";
 import { type DriftScrubberPair } from "@/components/graph-drift-timeline";
 import { ROLLUP_DECISION_THRESHOLD } from "@/components/graph-rollup-decision-surface";
+import { hasSharedScopeCycle } from "@/lib/graph-scope-preview";
 import { ASSET_DRIFT_GRAPH_SCOPE_PARAM, DEFAULT_FILTERS, createAssetLifecycleDriftGraphFilters, createCanvasLensGraphFilters, graphScopePresetForFilters, type FilterState } from "@/components/lineage-filter";
 import { type LineageNodeData } from "@/components/lineage-nodes";
 import { type UnifiedNode } from "@/lib/graph-schema";
@@ -758,8 +759,9 @@ export function useGraphPageData() {
         : (rollupView?.top_level ?? []),
     [rollupView],
   );
+  const sharedScopeOverview = useMemo(() => hasSharedScopeCycle(rollupItems, rollupView?.edges ?? []), [rollupItems, rollupView?.edges]);
   const rollupDecisionAvailable =
-    rollupNavigationActive && (rollupItems.length > ROLLUP_DECISION_THRESHOLD || rollupSummaryRequested || rollupMapIllegible);
+    rollupNavigationActive && (rollupItems.length > ROLLUP_DECISION_THRESHOLD || sharedScopeOverview || rollupSummaryRequested || rollupMapIllegible);
   const rollupDecisionActive = rollupDecisionAvailable && !rollupMapExpanded;
 
   useEffect(() => {
