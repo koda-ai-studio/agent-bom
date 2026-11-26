@@ -69,9 +69,10 @@ export function GraphAgentConnections({ scanId, rootId, generation, onInspect, o
   if (!graph || !flow) return <p role="status" className="p-4">Loading recorded connections…</p>;
   const labels = new Map(graph.nodes.map(node => [node.id, node.label]));
   const rootAggregate = records.get(rootId)?.aggregate ?? aggregate;
+  const connectionList = narrow || graph.nodes.length > 6 || graph.edges.length > 6 || flow.nodes.some(node => node.position.y > 400);
   return <>
     <p className="px-4 pt-3 text-xs text-ink-secondary">Showing {graph.nodes.length} assets · {graph.edges.length} original relationships{(response && ("truncated" in response ? response.truncated : response.completeness?.truncated)) ? " · partial neighborhood" : ""}. Shared infrastructure does not establish successful lateral access.</p>
-    {narrow ? <section data-testid="graph-agent-evidence" aria-label="Directed agent connections" className="px-4 py-3 text-sm">
+    {connectionList ? <section data-testid="graph-agent-evidence" aria-label="Directed agent connections" className="px-4 py-3 text-sm">
       {!!rootAggregate.issue_count && <button className="graph-page-action mb-3" onClick={() => onFindings(rootId, labels.get(rootId) ?? rootId, rootAggregate)}>Open {rootAggregate.issue_count} {rootAggregate.issue_count === 1 ? "finding" : "findings"} for {labels.get(rootId)}</button>}
       <ul className="divide-y divide-outline">{graph.edges.map(edge => <li key={edge.id} className="py-3" data-recorded-edge={edge.id}>
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><button className="text-left font-medium underline underline-offset-4" onClick={() => onInspect(edge.source, labels.get(edge.source) ?? edge.source)}>{labels.get(edge.source)}</button>
@@ -88,7 +89,7 @@ export function GraphAgentConnections({ scanId, rootId, generation, onInspect, o
         <Background gap={20} size={1} /><LegibleFitControls className={CONTROLS_CLASS} floor={0.65} showInteractive={false} />
       </ReactFlow>
     </div></ReactFlowProvider>}
-    {!narrow && <details className="border-t border-outline px-4 py-2 text-xs"><summary className="cursor-pointer">Relationship evidence ({graph.edges.length})</summary>
+    {!connectionList && <details className="border-t border-outline px-4 py-2 text-xs"><summary className="cursor-pointer">Relationship evidence ({graph.edges.length})</summary>
       <ul className="mt-2 divide-y divide-outline">{graph.edges.map(edge => <li key={edge.id} className="py-2">
         {labels.get(edge.source)} {edge.direction === "bidirectional" ? "↔" : edge.direction === "directed" ? "→" : "—"} {labels.get(edge.target)} · {edge.relationship.replaceAll("_", " ")} · {graphEdgeEvidence(edge.evidence ?? {}).label}
       </li>)}</ul>
