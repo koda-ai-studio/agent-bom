@@ -133,7 +133,7 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
 }
 
 for (const theme of ["light", "dark"]) {
-  test(`bounded agent neighborhood keeps every returned server inside its canvas ${theme}`, async ({ page }, info) => {
+  test(`bounded agent neighborhood keeps every recorded connection readable ${theme}`, async ({ page }, info) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
     const servers = Array.from({ length: 7 }, (_, index) => node(`server-${index}`, "server", `Recorded MCP ${index + 1}`));
@@ -141,17 +141,17 @@ for (const theme of ["light", "dark"]) {
       edges: [...servers.map(server => edge("agent", server.id, "uses")), edge("peer", "server-0", "uses"), edge("peer", "server-1", "uses")] }, true);
     await page.goto("/graph?scan=hierarchy&rollup=1");
     const canvas = page.getByTestId("graph-agent-evidence");
-    await expect(canvas.locator(".react-flow__node")).toHaveCount(9);
-    await expect(canvas.locator(".react-flow__edge")).toHaveCount(9);
-    await stable(page);
-    const outside = await canvas.locator(".react-flow").evaluate(flow => {
-      const frame = flow.getBoundingClientRect();
-      return [...flow.querySelectorAll(".graph-entity-glyph")].filter(glyph => {
-        const box = glyph.getBoundingClientRect();
-        return box.left < frame.left || box.right > frame.right || box.top < frame.top || box.bottom > frame.bottom;
-      }).map(glyph => glyph.closest(".react-flow__node")?.getAttribute("data-id"));
-    });
-    expect(outside).toEqual([]);
+    const rows = canvas.locator("li[data-recorded-edge]");
+    await expect(rows).toHaveCount(9);
+    await expect(canvas.locator(".react-flow__node")).toHaveCount(0);
+    for (const server of servers) await expect(rows.filter({ hasText: `Agent with seven servers→${server.label}` })).toContainText("uses");
+    await expect(rows.filter({ hasText: "Shared server peer→Recorded MCP" })).toHaveCount(2);
+    const boxes = await rows.evaluateAll(elements => elements.map(element => {
+      const rect = element.getBoundingClientRect();
+      return { top: rect.top, bottom: rect.bottom, width: rect.width, scrollWidth: element.scrollWidth };
+    }));
+    expect(boxes.every((box, index) => box.scrollWidth <= box.width && (index === 0 || box.top >= boxes[index - 1]!.bottom))).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: info.outputPath(`bounded-agent-${theme}.png`), fullPage: true });
   });
 }
