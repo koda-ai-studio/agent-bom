@@ -9,6 +9,7 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     await page.goto(`/graph?scan=${graph.scan_id}&rollup=1`);
     const canvas = page.getByTestId("graph-agent-evidence");
     await expect(canvas).toBeVisible();
+    if (width === 1440) expect((await page.getByRole("heading", {name: "Investigation", exact: true}).boundingBox())!.y).toBeGreaterThanOrEqual(56);
     if (width === 1440) {
       await expect(canvas.locator('.react-flow__node[data-id="server:filesystem"]')).toBeVisible();
       await expect(canvas.locator('[data-relationship="can_access"]')).toHaveCount(0);
@@ -62,6 +63,12 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     await expect.poll(() => queries.at(-1)?.roots).toEqual(["server:filesystem"]);
     await expect(page.getByText("execute_command", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("AWS_ROLE_SESSION", { exact: true }).first()).toBeVisible();
+    if (width === 1440) {
+      const credential = page.locator('.react-flow__edge[data-id="server:filesystem->cred:aws:exposes_cred"] .react-flow__edge-path');
+      await expect(credential).toHaveCSS("stroke-dasharray", "none");
+      await expect(page.getByRole("region", {name: "Capability risk assessment"})).toBeVisible();
+      expect((await page.getByRole("heading", {name: "Investigation", exact: true}).boundingBox())!.y).toBeGreaterThanOrEqual(56);
+    }
     await page.screenshot({ path: info.outputPath(`server-expanded-${theme}-${width}.png`), fullPage: true });
     await page.goto(`/graph?scan=${graph.scan_id}&rollup=1`);
     if (width === 1440) await page.getByText("Exposure and tool context", { exact: true }).click();

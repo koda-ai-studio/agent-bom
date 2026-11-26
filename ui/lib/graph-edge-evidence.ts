@@ -66,3 +66,8 @@ export function graphEdgeEvidenceLabel(edge: { evidence?: Record<string, unknown
   const { label } = graphEdgeEvidence(edge.evidence ?? {});
   return label === "Not recorded" && text(edge.source_scan_id) ? "Scan inventory · no per-edge receipt" : label;
 }
+
+/** Evidence alone controls line pattern; configured access is not a runtime claim. */
+export function graphEvidenceDash(mode: unknown): string | undefined {
+  return mode === "inferred" ? "6 3" : ["static", "recorded", "runtime"].includes(String(mode)) ? undefined : "1.5 5";
+}

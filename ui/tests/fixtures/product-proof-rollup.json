@@ -1,4 +1,97 @@
 {
+  "mcp_risk": {
+    "server:filesystem": {
+      "capability_risk": {
+        "basis": "mcp_capability_portfolio_risk",
+        "capabilities": {
+          "execute": 1
+        },
+        "justification": "Server has EXECUTE capabilities across 1 tool(s). Dangerous combinations detected: Can execute arbitrary code/commands. 1 credential(s) exposed (cred:aws). EXECUTE tools: execute_command.",
+        "level": "low",
+        "scope": "loaded_mcp_capabilities_and_credential_references",
+        "score": 2.41
+      },
+      "risk_assessment": {
+        "basis": "mcp_capability_portfolio_risk",
+        "scope": "loaded_mcp_capabilities_and_credential_references",
+        "status": "assessed"
+      },
+      "risk_score": 2.41
+    },
+    "tool:exec": {
+      "capability_risk": {
+        "basis": "mcp_capability_risk_declared",
+        "capabilities": [
+          "execute"
+        ],
+        "justification": "Declared capabilities: EXECUTE.",
+        "level": "medium",
+        "scope": "loaded_mcp_capabilities_and_credential_references",
+        "score": 5.0
+      },
+      "risk_assessment": {
+        "basis": "mcp_capability_risk_declared",
+        "scope": "loaded_mcp_capabilities_and_credential_references",
+        "status": "assessed"
+      },
+      "risk_score": 5
+    },
+    "tool:post": {
+      "capability_risk": {
+        "basis": "mcp_capability_risk_inferred_from_descriptor",
+        "capabilities": [
+          "write"
+        ],
+        "justification": "Inferred capabilities: WRITE.",
+        "level": "low",
+        "scope": "loaded_mcp_capabilities_and_credential_references",
+        "score": 3.0
+      },
+      "risk_assessment": {
+        "basis": "mcp_capability_risk_inferred_from_descriptor",
+        "scope": "loaded_mcp_capabilities_and_credential_references",
+        "status": "assessed"
+      },
+      "risk_score": 3
+    },
+    "tool:query": {
+      "capability_risk": {
+        "basis": "mcp_capability_risk_inferred_from_descriptor",
+        "capabilities": [
+          "execute"
+        ],
+        "justification": "Inferred capabilities: EXECUTE.",
+        "level": "medium",
+        "scope": "loaded_mcp_capabilities_and_credential_references",
+        "score": 5.0
+      },
+      "risk_assessment": {
+        "basis": "mcp_capability_risk_inferred_from_descriptor",
+        "scope": "loaded_mcp_capabilities_and_credential_references",
+        "status": "assessed"
+      },
+      "risk_score": 5
+    },
+    "tool:repo-write": {
+      "capability_risk": {
+        "basis": "mcp_capability_risk_inferred_from_descriptor",
+        "capabilities": [
+          "network",
+          "write"
+        ],
+        "justification": "Inferred capabilities: NETWORK, WRITE.",
+        "level": "medium",
+        "scope": "loaded_mcp_capabilities_and_credential_references",
+        "score": 5.0
+      },
+      "risk_assessment": {
+        "basis": "mcp_capability_risk_inferred_from_descriptor",
+        "scope": "loaded_mcp_capabilities_and_credential_references",
+        "status": "assessed"
+      },
+      "risk_score": 5
+    }
+  },
   "node_aggregates": {
     "agent:developer-copilot": {
       "aggregate": {

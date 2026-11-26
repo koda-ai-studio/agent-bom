@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { CREATED_AT } from "./product-proof-fixtures.mjs";
+import riskFixture from "../tests/fixtures/product-proof-rollup.json" with { type: "json" };
 import layerByEntityType from "../tests/fixtures/product-proof-layers.json" with { type: "json" };
 
 const UI_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
@@ -207,6 +208,10 @@ export function buildGraph() {
     edge("agent:finance-rag", "model:gpt-prod", "uses"),
     edge("policy:gateway-default-deny", "tool:exec", "manages"),
   ];
+  for (const item of nodes) {
+    const assessment = riskFixture.mcp_risk?.[item.id];
+    if (assessment) { item.risk_score = assessment.risk_score; item.risk_assessment = assessment.risk_assessment; item.attributes.capability_risk = assessment.capability_risk; }
+  }
   const attackPaths = buildAttackPaths(nodes, edges);
   const stats = {
     total_nodes: nodes.length,

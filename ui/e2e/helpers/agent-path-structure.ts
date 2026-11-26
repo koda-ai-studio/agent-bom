@@ -48,6 +48,16 @@ export async function assertAgentPathStructure(page: Page) {
     const path = canvas.locator(`[data-id="${edge.id}"] .react-flow__edge-path`);
     expect(await path.evaluate((element, token) => (element as SVGElement).style.stroke === `var(${token})`, color)).toBe(true);
   }
+  for (const path of await canvas.locator('.react-flow__edge-path[marker-end]').all()) {
+    const width = await path.evaluate(element => {
+      const id = element.getAttribute("marker-end")!.replace(/^url\(['"]?#/, "").replace(/['"]?\)$/, "");
+      const marker = document.getElementById(id) as unknown as SVGMarkerElement;
+      const shape = marker.querySelector<SVGGraphicsElement>("polyline")!;
+      return shape.getBBox().width / marker.viewBox.baseVal.width * marker.markerWidth.baseVal.value * (element as SVGPathElement).getScreenCTM()!.a * (marker.markerUnits.baseVal === 2 ? Number.parseFloat(getComputedStyle(element).strokeWidth) : 1);
+    });
+    expect(width).toBeGreaterThanOrEqual(4);
+    expect(width).toBeLessThanOrEqual(9);
+  }
   await expect(canvas.locator(".graph-relationship-label:visible")).toHaveCount(0);
   await expect(canvas.locator('[data-id="role:prod-admin"]')).toHaveCount(0);
   await expect(canvas.getByRole("button", {name: "admin via prod-ai-admin"})).toBeVisible();
@@ -55,7 +65,10 @@ export async function assertAgentPathStructure(page: Page) {
     const asset = canvas.locator(`.react-flow__node[data-id="${owner}"]`);
     const group = canvas.locator(`.react-flow__node[data-id="display:scope-findings:${owner}"]`);
     await expect(asset.locator("[data-finding-disclosure]")).toHaveCount(0);
-    expect((await group.boundingBox())!.y).toBeLessThan((await asset.boundingBox())!.y);
+    const a = (await asset.boundingBox())!, g = (await group.boundingBox())!;
+    expect(g.y).toBeLessThan(a.y);
+    const hop = (await canvas.locator('.react-flow__node[data-id="server:filesystem"]').boundingBox())!.x - (await canvas.locator('.react-flow__node[data-id="agent:developer-copilot"]').boundingBox())!.x;
+    expect(g.x - a.x).toBeLessThanOrEqual(hop / 2 + 1);
   }
   await expect(canvas.locator('[data-id="cred:aws"] [data-compact-marker="sensitive"]')).toHaveAttribute("aria-label", /Recorded critical asset/);
   for (const edge of edges.slice(0, 5)) expect(await canvas.locator(`[data-id="${edge.id}"] .react-flow__edge-path`).evaluate(element => (element as SVGElement).style.strokeDasharray)).toBe("");

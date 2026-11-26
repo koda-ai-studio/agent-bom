@@ -1,7 +1,7 @@
 import type { Edge } from "@xyflow/react";
 import { edgeFamily, edgeFamilyColor, edgeIsDashed } from "@/lib/graph-edge-family";
 
-export type FlowLineStyle = "solid" | "modeled" | "dashed" | "runtime";
+export type FlowLineStyle = "solid" | "modeled" | "dashed" | "unknown" | "runtime";
 export interface FlowEdgeLegend {
   styles: FlowLineStyle[];
   /** One entry per drawn colour, naming every relationship drawn in it, most drawn first. */
@@ -10,7 +10,7 @@ export interface FlowEdgeLegend {
   more: number;
 }
 
-const STYLE_ORDER: FlowLineStyle[] = ["solid", "modeled", "dashed", "runtime"];
+const STYLE_ORDER: FlowLineStyle[] = ["solid", "modeled", "dashed", "unknown", "runtime"];
 
 /** The colour and dash a line is actually drawn with: a compact link by its relationship family, any other by its style. */
 function drawn(edge: Edge, relationship: string): { stroke: string; dashed: boolean } {
@@ -33,7 +33,7 @@ export function flowEdgeLegend(edges: readonly Edge[]): FlowEdgeLegend {
     const relationship = typeof edge.data?.relationship === "string" ? edge.data.relationship : "";
     const { stroke, dashed } = drawn(edge, relationship);
     // A view whose every link is modeled draws them solid; the legend must still say they are modeled.
-    styles.add(dashed ? "dashed" : edge.data?.uniformlyModeled === true ? "modeled" : "solid");
+    styles.add(edge.data?.evidenceMode === "unknown" || edge.type === "compact" && !edge.data?.evidenceMode ? "unknown" : dashed ? "dashed" : "solid");
     if (edge.animated) styles.add("runtime");
     // Links on the exposure path are named once, by the legend's exposure entry.
     if (!relationship || !stroke || edge.data?.exposurePath === true) continue;

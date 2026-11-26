@@ -10,7 +10,18 @@ export function GraphScopeFindings({ scanId, nodeId, label, expected, onClose, o
   onClose: () => void; onInspect: (id: string, label: string) => void;
 }) {
   const panel = useRef<HTMLElement>(null);
-  useEffect(() => { panel.current?.focus(); }, []);
+  useEffect(() => {
+    const previous = document.activeElement;
+    const positions: {element: HTMLElement; top: number}[] = [];
+    for (let element = panel.current?.parentElement; element; element = element.parentElement) positions.push({element, top: element.scrollTop});
+    const top = window.scrollY;
+    panel.current?.focus();
+    return () => {
+      for (const item of positions) item.element.scrollTop = item.top;
+      window.scrollTo({top});
+      if ((previous instanceof HTMLElement || previous instanceof SVGElement) && previous.isConnected) previous.focus({preventScroll: true});
+    };
+  }, []);
   const [page, setPage] = useState<Page>();
   const [offset, setOffset] = useState(0);
   const [error, setError] = useState(false);

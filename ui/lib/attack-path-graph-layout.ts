@@ -177,7 +177,7 @@ export function layoutAttackPathGraph(model: AttackPathGraphModel, _requestedDir
   const positions = new Map<string, { x: number; y: number }>();
   let width = 0, height = 0;
   for (const node of model.nodes) {
-    const along = occupiedColumns.indexOf(columns.get(node.id)!) * (mainSize + spacing.rank);
+    const along = (hopColumns ? columns.get(node.id)! - occupiedColumns[0]! : occupiedColumns.indexOf(columns.get(node.id)!)) * (mainSize + spacing.rank);
     const across = margin + (lanes.get(node.id)! - minLane) * (crossSize + spacing.lane);
     const x = row ? along : across, y = row ? across : along;
     positions.set(node.id, { x, y });

@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_bom.graph.container import UnifiedGraph
+from agent_bom.graph.mcp_risk import apply_mcp_risk
 from agent_bom.graph.risk_context import derive_node_risk_context
 from agent_bom.graph.rollup import rollup_view
 from agent_bom.graph.rollup_node import node_aggregate, scope_findings
@@ -92,12 +93,22 @@ def demo_graph() -> dict[str, Any]:
 
 def build_fixture(data: dict[str, Any]) -> dict[str, Any]:
     graph = UnifiedGraph.from_dict(data)
+    apply_mcp_risk(graph)
     aggregates = {}
     for node_id in sorted(graph.nodes):
         aggregate = node_aggregate(graph, node_id)
         assert aggregate is not None
         aggregates[node_id] = {"semantic_layer": semantic_layer(graph.nodes[node_id]), "aggregate": aggregate.to_dict()}
     return {
+        "mcp_risk": {
+            node.id: {
+                "risk_score": node.risk_score,
+                "risk_assessment": node.risk_assessment,
+                "capability_risk": node.attributes["capability_risk"],
+            }
+            for node in graph.nodes.values()
+            if "capability_risk" in node.attributes
+        },
         "rollup": rollup_view(graph),
         "node_aggregates": aggregates,
         "scope_findings": {node_id: scope_findings(graph, node_id) for node_id in sorted(graph.nodes)},

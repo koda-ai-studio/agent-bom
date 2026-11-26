@@ -3,7 +3,7 @@ import type { LineageNodeData } from "@/components/lineage-nodes";
 import type { UnifiedGraphData } from "@/lib/graph-schema";
 import type { AttackPathGraphModel } from "@/lib/attack-path-graph-model";
 import { layoutAttackPathGraph } from "@/lib/attack-path-graph-layout";
-import { graphEdgeEvidence } from "@/lib/graph-edge-evidence";
+import { graphEdgeEvidence, graphEvidenceDash } from "@/lib/graph-edge-evidence";
 import { internetExposure, INTERNET_ANCHOR_ID, withInternetAnchor } from "@/lib/graph-internet-context";
 
 type Flow = { nodes: Node<LineageNodeData>[]; edges: Edge[] };
@@ -38,7 +38,7 @@ export function agentPathGraph(graph: UnifiedGraphData, flow: Flow, root: string
     const inverse = record.relationship === "hosted_on" && records.get(record.target)?.entity_type === "container";
     return { ...edge, source: inverse ? record.target : record.source, target: inverse ? record.source : record.target,
       sourceHandle: null, targetHandle: null, ...(inverse ? { label: "Hosts", ariaLabel: `${records.get(record.target)?.label} hosts ${records.get(record.source)?.label}; inverse of recorded hosted_on relationship` } : {}),
-      style: { ...edge.style, strokeDasharray: evidence.mode === "inferred" ? "6 3" : evidence.mode === "unknown" ? "1.5 5" : undefined },
+      style: { ...edge.style, strokeDasharray: graphEvidenceDash(evidence.mode) },
       data: { ...edge.data, originalSource: record.source, originalTarget: record.target,
         ...(inverse ? { relationshipLabel: "Hosts", inverseRecordedRelationship: true,
           hoverDescription: `Hosts · ${evidence.label}. Reading the recorded hosted_on relationship in reverse; original endpoints are retained in relationship evidence.` } : {}),
@@ -83,6 +83,7 @@ export function agentPathGraph(graph: UnifiedGraphData, flow: Flow, root: string
     if (columns.has(edge.target) && !columns.has(edge.source)) columns.set(edge.source, columns.get(edge.target)! - 1);
   }
   for (const node of nodes) if (!columns.has(node.id)) columns.set(node.id, 0);
+  for (const node of nodes) if (node.type === "findingGroupNode") columns.set(node.id, columns.get(String(node.data.displayTargetId))! + 0.5);
   const model: AttackPathGraphModel = {
     nodes: nodes.map(node => ({ id: node.id, kind: "entity", role: primary.includes(node.id) ? "path" : "branch", label: node.data.label, typeLabel: "", entityType: node.data.entityType ?? node.data.nodeType, findings: [], markers: [] })),
     edges: edges.map(edge => ({ id: edge.id, source: edge.source, target: edge.target, relationship: String(edge.data?.relationship), relationshipLabel: "", evidence: "inferred", onPath: false, bidirectional: false })),
@@ -103,10 +104,10 @@ export function agentPathGraph(graph: UnifiedGraphData, flow: Flow, root: string
       const onPath = exposure && pathPairs.has(`${edge.source}\0${edge.target}`);
       const color = privilege ? "var(--graph-edge-risk)" : onPath ? "var(--graph-edge-exposure)" : "var(--graph-edge-structure)";
       const from = layout.positions.get(edge.source)!, to = layout.positions.get(edge.target)!;
-      return { ...edge, type: "smoothstep", sourceHandle: to.y < from.y ? "scope-out-0" : to.x < from.x ? "context" : to.y > from.y ? "scope-out-2" : "scope-out-1", targetHandle: to.x < from.x ? "context" : edge.data?.relationship === "finding_group" ? null : privilege ? "scope-in-lower-left" : from.y > to.y ? "scope-in-2" : "scope-in-1",
-        ...(edge.data?.relationship === "finding_group" ? {} : { markerEnd: { type: MarkerType.ArrowClosed, color, width: 20, height: 16 } }),
+      return { ...edge, type: "smoothstep", sourceHandle: edge.data?.relationship === "finding_group" ? "context-up" : to.y < from.y ? "scope-out-0" : to.x < from.x ? "context" : to.y > from.y ? "scope-out-2" : "scope-out-1", targetHandle: to.x < from.x ? "context" : edge.data?.relationship === "finding_group" ? null : privilege ? "scope-in-lower-left" : from.y > to.y ? "scope-in-2" : "scope-in-1",
+        ...(edge.data?.relationship === "finding_group" ? {} : { markerEnd: { type: MarkerType.ArrowClosed, color, width: 13, height: 11 } }),
         style: { ...edge.style, opacity: 1, stroke: color, strokeWidth: onPath ? 2.4 : 2 },
-        data: { ...edge.data, exposurePath: onPath, directOverview: true, earlyRise: privilege && from.y > to.y, directionEmphasis: edge.data?.relationship !== "finding_group", quietLabel: !privilege, labelVisibility: privilege ? "show" : "auto" },
+        data: { ...edge.data, exposurePath: onPath, directOverview: true, earlyRise: edge.data?.relationship === "finding_group" || privilege && from.y > to.y, directionEmphasis: edge.data?.relationship !== "finding_group", quietLabel: !privilege, labelVisibility: privilege ? "show" : "auto" },
       };
     }),
   };

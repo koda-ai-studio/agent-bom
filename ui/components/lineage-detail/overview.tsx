@@ -47,8 +47,15 @@ function NodeIdentifier({ data }: { data: LineageNodeData }) {
 
 export function OverviewDetails({ data, onShowBlastRadius, blastRadiusActive = false, blastRadiusLoading = false }: LineageDetailProps) {
   const aggregate = data.findingAggregate;
+  const capability = data.attributes?.capability_risk as {score?: number; level?: string; justification?: string; basis?: string} | undefined;
   return (<>
     <PrimaryNodeDetails data={data} />
+    {capability && Number.isFinite(capability.score) && <section aria-label="Capability risk assessment" className="space-y-2">
+      <Label>Capability risk assessment</Label>
+      <Row label="Capability risk" value={`${capability.score}/10 · ${capability.level}`} />
+      <p className="text-xs text-ink-secondary">{capability.justification}</p>
+      <p className="text-xs text-ink-secondary">Based on loaded tools and credential references.</p>
+    </section>}
     {data.nodeType === "tool" && typeof data.attributes?.tool_class === "string" && <section aria-label="Recorded tool capability" className="space-y-2">
       <Label>Recorded tool capability</Label>
       <Row label="Capability" value={data.attributes.tool_class === "shell" ? "Shell command execution" : data.attributes.tool_class.replaceAll("_", " ")} />

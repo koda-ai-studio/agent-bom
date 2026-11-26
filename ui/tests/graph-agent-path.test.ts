@@ -27,6 +27,7 @@ it("ends one exposure story at real capabilities and credentials with findings a
     const group = result.nodes.find(node => node.id === `display:scope-findings:${owner}`)!;
     expect(group.data.readingFindings?.count).toBe(1);
     expect(group.position.y).toBeLessThan(pos(owner).y);
+    expect(group.position.x - pos(owner).x).toBeLessThanOrEqual((pos("server:filesystem").x - pos("agent:developer-copilot").x) / 2);
     expect(result.edges.find(edge => edge.target === group.id)).toMatchObject({source: owner, data: {exposurePath: false, traversable: false}});
   }
   for (const excluded of ["sa:jit-review", "role:prod-admin", "agent:sre-runbook"]) expect(result.nodes.some(node => node.id === excluded)).toBe(false);

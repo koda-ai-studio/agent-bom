@@ -1,7 +1,7 @@
 import type { Edge, Node } from "@xyflow/react";
 import { describe, expect, it } from "vitest";
 import type { LineageNodeData } from "@/components/lineage-nodes";
-import { allEdgesModeled, edgeFamily, edgeIsDashed } from "@/lib/graph-edge-family";
+import { edgeFamily, edgeIsDashed } from "@/lib/graph-edge-family";
 import { flowEdgeLegend } from "@/lib/graph-flow-legend";
 import { INTERNET_ANCHOR_ID } from "@/lib/graph-internet-context";
 import { semanticGraphLayout } from "@/lib/graph-semantic-layout";
@@ -16,22 +16,22 @@ describe("a view whose every link is modeled", () => {
   const nodes = [node("w", "container", { internet_exposed: true }), node("p", "package"), node("env", "environment")];
   const edges = [edge("e1", "w", "p", "contains"), edge("e2", "env", "w", "hosts")];
 
-  it("draws every link solid, the Internet anchor link included", () => {
+  it("keeps every modeled receipt dashed regardless of its neighbours", () => {
     const out = semanticGraphLayout(nodes, edges);
     expect(out.edges.some(e => e.source === INTERNET_ANCHOR_ID)).toBe(true);
-    expect(out.edges.filter(dashed)).toEqual([]);
+    expect(out.edges.filter(e => ["e1", "e2"].includes(e.id)).every(dashed)).toBe(true);
   });
 
   it("reaches the same answer when the layout runs again over its own output", () => {
     const once = semanticGraphLayout(nodes, edges);
     const twice = semanticGraphLayout(once.nodes, once.edges);
-    expect(twice.edges.filter(dashed).map(e => e.id)).toEqual([]);
-    expect(twice.edges.every(e => e.data?.uniformlyModeled === true)).toBe(true);
+    expect(twice.edges.filter(e => ["e1", "e2"].includes(e.id)).every(dashed)).toBe(true);
+    expect(twice.edges.some(e => e.data?.uniformlyModeled === true)).toBe(false);
   });
 
   it("tells the legend the links are modeled, never recorded", () => {
     const legend = flowEdgeLegend(semanticGraphLayout(nodes, edges).edges);
-    expect(legend.styles).toContain("modeled");
+    expect(legend.styles).toContain("dashed");
     expect(legend.styles).not.toContain("solid");
   });
 });
@@ -39,7 +39,6 @@ describe("a view whose every link is modeled", () => {
 describe("dashes still distinguish when they carry meaning", () => {
   it("keeps modeled links dashed beside recorded ones", () => {
     const edges = [edge("a", "x", "y", "contains"), edge("b", "y", "z", "contains", { evidenceMode: "recorded" })];
-    expect(allEdgesModeled(edges)).toBe(false);
     const out = semanticGraphLayout([node("x", "agent"), node("y", "server"), node("z", "package")], edges);
     expect(out.edges.find(e => e.id === "a") && dashed(out.edges.find(e => e.id === "a")!)).toBe(true);
     expect(dashed(out.edges.find(e => e.id === "b")!)).toBe(false);
@@ -48,7 +47,6 @@ describe("dashes still distinguish when they carry meaning", () => {
   it("never draws a blocked link solid", () => {
     const blocked = { relationship: "contains", evidenceMode: "inferred", evidenceBlocked: true, uniformlyModeled: true };
     expect(edgeIsDashed("structure", blocked)).toBe(true);
-    expect(allEdgesModeled([{ data: blocked }, { data: { relationship: "contains", evidenceMode: "inferred" } }])).toBe(false);
   });
 });
 

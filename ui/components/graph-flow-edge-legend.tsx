@@ -7,7 +7,8 @@ import { flowEdgeLegend, type FlowLineStyle } from "@/lib/graph-flow-legend";
 const STYLE_LABELS: Record<FlowLineStyle, string> = {
   solid: "Recorded relationship",
   modeled: "Links modeled from scan evidence",
-  dashed: "Modeled, or access not observed in use",
+  dashed: "Modeled relationship",
+  unknown: "Evidence unavailable",
   runtime: "Moving line: runtime receipt",
 };
 
@@ -24,17 +25,17 @@ export function GraphFlowEdgeLegend({ edges }: { edges: readonly Edge[] }) {
   const legend = useMemo(() => flowEdgeLegend(edges), [edges]);
   const exposure = useMemo(() => edges.some(edge => edge.data?.exposurePath === true), [edges]);
   if (!legend.styles.length) return null;
-  const combined = legend.relationships.length === 1 && legend.styles.length === 1;
+
   const item = "inline-flex items-center gap-1.5";
   return (
     <ul aria-label="Line legend" data-testid="graph-flow-edge-legend" className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-outline bg-surface px-3 py-2 text-xs text-ink-secondary">
       {exposure && <li className={item} data-legend-exposure-path=""><Swatch stroke="var(--graph-edge-exposure)" />Exposure path from the Internet</li>}
-      {legend.relationships.map(entry => (
-        <li key={entry.relationship} className={item}><Swatch stroke={entry.stroke} />{entry.label}{combined ? ` · ${STYLE_LABELS[legend.styles[0]!]}` : ""}</li>
+      {legend.styles.map(style => (
+        <li key={style} className={item}><Swatch dash={style === "dashed" ? "6 3" : style === "unknown" ? "1.5 5" : style === "runtime" ? "2 3" : undefined} />{STYLE_LABELS[style]}</li>
       ))}
-      {!combined && legend.styles.map(style => (
-        <li key={style} className={item}><Swatch dash={style === "dashed" ? "6 3" : style === "runtime" ? "2 3" : undefined} />{STYLE_LABELS[style]}</li>
-      ))}
+      <li className={item}>Finding count · highest severity:
+        {[["Critical", "var(--severity-ring-critical)"], ["High", "#a63e08"], ["Medium", "#806100"], ["Low", "var(--severity-ring-low)"]].map(([label, color]) => <span key={label} className={item}><span aria-hidden="true" className="inline-block h-2 w-2 rounded-full" style={{background: color}} />{label}</span>)}
+      </li>
       {legend.more > 0 && <li className="text-ink-tertiary">+{legend.more} more {legend.more === 1 ? "relationship" : "relationships"} · hover a line for its name</li>}
     </ul>
   );

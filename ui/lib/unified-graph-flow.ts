@@ -1,3 +1,4 @@
+import { graphEvidenceDash } from "@/lib/graph-edge-evidence";
 import { rankedVisiblePath } from "@/lib/graph-ranked-spine";
 import { recordSemanticLayer } from "@/lib/graph-semantic-columns";
 import { agentContextRelationshipLabel, graphAgentContext, platformAgentCount } from "@/lib/graph-agent-context";
@@ -571,7 +572,7 @@ function toFlowEdge(edge: UnifiedEdge, nodeById: Map<string, UnifiedNode>): Edge
   const evidenceMode = graphEdgeEvidenceMode(edge);
   const evidenceBlocked = graphEdgeEvidence(edge.evidence ?? {}).blocked;
   // A verb or reach score never upgrades the producer's evidence tier.
-  const dashed = evidenceBlocked || !["runtime", "recorded"].includes(evidenceMode);
+  const dash = graphEvidenceDash(evidenceMode);
   // Motion denotes a recorded runtime receipt; severity alone is not activity.
   const animated = evidenceMode === "runtime" && !evidenceBlocked;
   const marker = { type: MarkerType.ArrowClosed, color: strokeColor, width: 20, height: 16 };
@@ -604,7 +605,7 @@ function toFlowEdge(edge: UnifiedEdge, nodeById: Map<string, UnifiedNode>): Edge
         reachEdgeWidth(reachScore),
       ),
       opacity: animated ? 0.95 : 0.82,
-      strokeDasharray: dashed ? "6 3" : undefined,
+      strokeDasharray: dash,
     },
     markerEnd: marker,
     ...(edge.direction === "bidirectional" ? { markerStart: marker } : {}),

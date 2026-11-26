@@ -29,7 +29,9 @@ export function GraphFindingGroupNode({ data }: { data: LineageNodeData }) {
         <Binoculars style={{ width: `calc(var(--graph-node-icon-size, 28px) * ${COMPACT_GLYPH_SCALE})`, height: `calc(var(--graph-node-icon-size, 28px) * ${COMPACT_GLYPH_SCALE})` }} aria-hidden="true" />
       </button></GraphCountHint>
     </div>
+    <div data-graph-caption className="flex flex-col items-center">
     <span style={{ fontSize: "var(--graph-node-label-size, 14px)" }} className={`mt-[0.4em] whitespace-nowrap ${data.pathPresentation ? "font-normal" : "font-semibold"} leading-tight text-foreground`}>Findings ({count})</span>
     <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className="whitespace-nowrap leading-tight text-ink-secondary">{data.pathPresentation ? `${data.description} scope` : "Click to explore"}<span className="sr-only"> · {count} findings</span></span>
+    </div>
   </div>;
 }
