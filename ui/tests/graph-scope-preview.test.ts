@@ -56,7 +56,7 @@ describe("scope relationship preview", () => {
     expect(endpoints).toEqual([...endpoints].sort((a, b) => a - b));
     expect(endpoints[1]).toBe(0);
     expect(incoming.every(edge => edge.data?.arcDy === undefined)).toBe(true);
-    expect(incoming.map(edge => edge.data?.aggregate)).toEqual(edges);
+    expect(incoming.map(edge => edge.data)).toEqual(edges.map(aggregate => expect.objectContaining({ aggregate })));
   });
   it("does not fabricate connectivity for missing endpoints, findings-only or unlinked inventories", () => {
     expect(buildScopePreview([item("repo", "application")], [])).toBeNull();
