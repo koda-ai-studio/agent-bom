@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import type { Edge } from "@xyflow/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { GraphScopeOverview } from "@/components/graph-scope-overview";
@@ -6,7 +7,7 @@ import type { GraphRollupContainer } from "@/lib/api-types";
 
 vi.mock("@xyflow/react", () => ({
   MarkerType: { ArrowClosed: "arrowclosed" },
-  ReactFlow: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  ReactFlow: ({ children, edges, onEdgeClick }: { children: ReactNode; edges: Edge[]; onEdgeClick: (event: unknown, edge: Edge) => void }) => <div>{children}<button onClick={() => onEdgeClick(null, edges[0]!)}>Inspect connection</button></div>,
   ReactFlowProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
   Background: () => null,
 }));
@@ -26,6 +27,18 @@ const children = ["a", "b", "c"].map(id => ({ ...root, id, label: id, entity_typ
 const edges = children.map(child => ({ source: root.id, target: child.id, count: 2, relationships: ["affects"], directions: ["directed"] }));
 
 describe("scope preview navigation", () => {
+  it.each([
+    [["directed"], "→"], [["bidirectional"], "↔"], [["undirected"], "—"],
+    [[], "—"], [["directed", "undirected"], "—"],
+  ])("preserves recorded direction %j when inspecting reciprocal counts", (directions, symbol) => {
+    const recorded = edges.map(edge => ({ ...edge, directions: directions as string[] }));
+    const reverse = { ...recorded[0]!, source: "a", target: root.id, count: 3 };
+    render(<GraphScopeOverview items={[root, ...children]} edges={[...recorded, reverse]} onDrill={vi.fn()} onInvestigate={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Inspect connection" }));
+    const detail = screen.getByRole("status");
+    expect(detail).toHaveTextContent(`Recorded organization ${symbol} a: 2 recorded relationships`);
+    expect(detail).toHaveTextContent(`a ${symbol} Recorded organization: 3 recorded relationships`);
+  });
   it("identifies an account connection view and states its shared cloud once", () => {
     const accounts = [root, ...children].map(item => ({ ...item, entity_type: "account", cloud_provider: "aws" }));
     render(<GraphScopeOverview items={accounts} edges={edges} onDrill={vi.fn()} onInvestigate={vi.fn()} />);

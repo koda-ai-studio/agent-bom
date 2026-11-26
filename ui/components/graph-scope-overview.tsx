@@ -87,7 +87,11 @@ export function GraphScopeOverview(props: Props) {
               const recorded = edge.data?.aggregate as DisplayRollupEdge | undefined;
               if (!recorded) return;
               const label = (id: string) => props.items.find(item => item.id === id)?.label ?? id;
-              const direction = (row: DisplayRollupEdge, count: number) => `${label(row.source)} → ${label(row.target)}: ${count} recorded relationships · ${row.relationships.join(", ").replaceAll("_", " ")} · ${row.directions?.join(", ") || "direction not recorded"}`;
+              const direction = (row: DisplayRollupEdge, count: number) => {
+                const kinds = new Set(row.directions ?? []);
+                const symbol = kinds.size === 1 && kinds.has("directed") ? "→" : kinds.size === 1 && kinds.has("bidirectional") ? "↔" : "—";
+                return `${label(row.source)} ${symbol} ${label(row.target)}: ${count} recorded relationships · ${row.relationships.join(", ").replaceAll("_", " ")} · ${row.directions?.join(", ") || "direction not recorded"}`;
+              };
               const original = props.edges.find(row => row.source === recorded.source && row.target === recorded.target) ?? recorded;
               setEdgeDetail([direction(original, recorded.count - (recorded.reverse?.count ?? 0)), ...(recorded.reverse ? [direction(recorded.reverse, recorded.reverse.count)] : [])].join(". "));
             }}
