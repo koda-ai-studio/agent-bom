@@ -233,8 +233,10 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
       {scope ? scope.visible : typeLine(data, fullTitle)}
     </span>
     {scope && <span className="sr-only">{scope.spoken}</span>}
-    {data.scopePeers?.map(peer => <button key={peer.id} type="button" className="nodrag nopan mt-2 whitespace-nowrap rounded-full border border-outline bg-surface-elevated px-2 py-1 text-[11px] text-ink-secondary"
-      onClick={event => { event.stopPropagation(); peer.inspect(); }}>also used by: {peer.label}</button>)}
+    {!!data.scopePeers?.length && <div className="absolute bottom-full left-1/2 mb-3 flex -translate-x-1/2 flex-col gap-1">
+      {data.scopePeers.map(peer => <button key={peer.id} data-graph-caption type="button" className="nodrag nopan whitespace-nowrap rounded-full border border-outline bg-surface-elevated px-2 py-1 text-[11px] text-ink-secondary"
+        onClick={event => { event.stopPropagation(); peer.inspect(); }}>also used by: {peer.label}</button>)}
+    </div>}
     {data.seenIn?.length ? <span className="sr-only" data-seen-in>{seenInSummary(data.seenIn)}</span> : null}
     </CaptionBox>
   </div>;

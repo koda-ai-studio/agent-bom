@@ -8,6 +8,20 @@ export async function assertAgentPathStructure(page: Page) {
   await expect(canvas.locator("[data-internet-anchor]")).toHaveCount(1);
   await expect(canvas.locator('.react-flow__node[data-id="agent:sre-runbook"]')).toHaveCount(0);
   await expect(canvas.getByRole("button", { name: "also used by: SRE Runbook Agent" })).toBeVisible();
+  expect(await canvas.evaluate(element => {
+    const chip = [...element.querySelectorAll("button")].find(button => button.textContent?.startsWith("also used by:"))!.getBoundingClientRect();
+    const frame = element.getBoundingClientRect();
+    const clipped = chip.left < frame.left || chip.right > frame.right || chip.top < frame.top || chip.bottom > frame.bottom;
+    const crossed = [...element.querySelectorAll<SVGPathElement>(".react-flow__edge-path")].some(path => {
+      const length = path.getTotalLength(), matrix = path.getScreenCTM()!;
+      for (let step = 0; step <= length; step += 2) {
+        const point = path.getPointAtLength(step).matrixTransform(matrix);
+        if (point.x > chip.left && point.x < chip.right && point.y > chip.top && point.y < chip.bottom) return true;
+      }
+      return false;
+    });
+    return { clipped, crossed };
+  })).toEqual({ clipped: false, crossed: false });
   const pairs = [...spine.slice(1).map((id, index) => [spine[index]!, id]), ["sa:jit-review", "role:prod-admin"], ["role:prod-admin", "agent:developer-copilot"], ["agent:developer-copilot", "server:github"]];
   const expectedIds = [...new Set(pairs.flat())].sort();
   await expect.poll(() => canvas.locator(".react-flow__node").evaluateAll(nodes => nodes.map(node => node.getAttribute("data-id")!).sort())).toEqual(expectedIds);
