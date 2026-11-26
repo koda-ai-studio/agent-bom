@@ -10,6 +10,26 @@ const item = (id: string, entity_type = "misconfiguration", label = id): GraphRo
 });
 
 describe("scope relationship preview", () => {
+  it("gives an agent a focused access row and separates only recorded supporting context", () => {
+    const items = [item("agent", "agent"), item("role", "role"), item("policy", "policy"), item("host", "container"), item("peer", "agent")];
+    const edges = [
+      { source: "role", target: "agent", count: 1, relationships: ["can_access"], directions: ["directed"] },
+      { source: "policy", target: "agent", count: 1, relationships: ["manages"], directions: ["directed"] },
+      { source: "agent", target: "host", count: 1, relationships: ["hosted_on"], directions: ["directed"] },
+      { source: "agent", target: "peer", count: 1, relationships: ["shares_server"], directions: ["bidirectional"] },
+    ];
+    const preview = buildScopePreview(items, edges, "agent")!;
+    const at = (id: string) => preview.nodes.find(node => node.id === id)!;
+    expect(at("agent").data.readingFocus).toBe(true);
+    expect(at("role").position.y).toBe(at("agent").position.y);
+    expect(at("peer").position.y).toBe(at("agent").position.y);
+    expect(at("policy").position.y).toBeLessThan(at("agent").position.y);
+    expect(at("host").position.y).toBeLessThan(at("agent").position.y);
+    expect(preview.edges.filter(edge => edge.data?.supportingContext).map(edge => [edge.source, edge.target])).toEqual([["policy", "agent"], ["agent", "host"]]);
+    expect(preview.edges.map(edge => [edge.source, edge.target])).toEqual(edges.map(edge => [edge.source, edge.target]));
+    const mixed = buildScopePreview(items, edges.map(edge => edge.target === "host" ? { ...edge, relationships: ["hosted_on", "can_access"] } : edge), "agent")!;
+    expect(mixed.edges.find(edge => edge.target === "host")?.data?.supportingContext).toBe(false);
+  });
   it("states a shared provider once without hiding mixed or unknown provider context", () => {
     const account = (id: string, provider?: string) => ({ ...item(id, "account"), ...(provider ? { cloud_provider: provider } : {}) });
     const edges = [{ source: "a", target: "b", count: 2, relationships: ["can_access"] }];
@@ -60,7 +80,7 @@ describe("scope relationship preview", () => {
     expect(preview?.nodes.every(n => n.data.rollup === undefined)).toBe(true);
     expect(buildScopePreview(items, edges, "orphan")).toBeNull();
   });
-  it("reads what points into a scope on its left and what it points to on its right, centred on the scope's row", () => {
+  it("retains relationship direction while separating agent hosting and governance context", () => {
     const items = [item("agent", "agent"), item("role", "role"), item("policy", "policy"), item("portal", "container"), item("peer", "agent")];
     const edges: GraphRollupEdge[] = [
       { source: "role", target: "agent", count: 1, relationships: ["can_access"], directions: ["directed"] },
@@ -75,7 +95,8 @@ describe("scope relationship preview", () => {
     for (const id of ["role", "policy"]) expect(at(id).x).toBeLessThan(at("agent").x);
     // The two-way link takes the side with room: here the right, beside the scope's one outgoing link.
     for (const id of ["portal", "peer"]) expect(at(id).x).toBeGreaterThan(at("agent").x);
-    expect(at("agent").y).toBe((at("role").y + at("policy").y) / 2);
+    expect(at("agent").y).toBe(at("role").y);
+    expect(at("policy").y).toBeLessThan(at("agent").y);
     const handles = (source: string, target: string) => { const e = preview.edges.find(edge => edge.source === source && edge.target === target)!; return [e.sourceHandle, e.targetHandle]; };
     expect(handles("role", "agent")).toEqual([null, null]);
     expect(handles("agent", "portal")).toEqual([null, null]);

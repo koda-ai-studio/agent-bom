@@ -32,3 +32,13 @@ it("reads the same retained and assessed totals in correlation receipts", () => 
   expect(screen.getByTestId("graph-correlation-decision")).toHaveTextContent("71 assessed");
   expect(screen.getByTestId("graph-correlation-decision")).not.toHaveTextContent("999");
 });
+
+
+it("keeps the compact finding summary explicitly scoped while details retain path analysis totals", () => {
+  const { rerender } = render(<GraphHeadlineMetrics page={page(counts)} compact />);
+  expect(screen.getByTestId("graph-headline-metrics")).toHaveTextContent("0 findings in loaded scope");
+  expect(screen.getByTestId("graph-headline-metrics")).not.toHaveTextContent("23 attack paths");
+  rerender(<GraphHeadlineMetrics page={page(counts)} />);
+  expect(screen.getByTestId("graph-headline-metrics")).toHaveTextContent("23 attack paths");
+  expect(screen.getByTestId("graph-headline-metrics")).toHaveTextContent("71 assessed");
+});

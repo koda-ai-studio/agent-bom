@@ -17,11 +17,11 @@ export function withFindingDrilldowns(nodes: Node<LineageNodeData>[], open: (ite
 const GROUP_COLUMN_GAP = 240;
 
 /** Display-only disclosure: canonical IDs, direction and evidence stay intact. */
-export function cloudFindingDisclosure(nodes: Node<LineageNodeData>[], edges: Edge[], expanded: ReadonlySet<string>, toggle: (id: string) => void, preservePositions = false) {
+export function cloudFindingDisclosure(nodes: Node<LineageNodeData>[], edges: Edge[], expanded: ReadonlySet<string>, toggle: (id: string) => void, preservePositions = false, foldPathFindings = false) {
   const groups = new Map<string, Node<LineageNodeData>[]>();
   const visibleIds = new Set(nodes.filter(n => !n.hidden).map(n => n.id));
   const byId = new Map(nodes.map(node => [node.id, node]));
-  for (const n of nodes) if (!n.hidden && n.data.semanticPathIndex === undefined && n.data.readingOwner && visibleIds.has(n.data.readingOwner)
+  for (const n of nodes) if (!n.hidden && (foldPathFindings || n.data.semanticPathIndex === undefined) && n.data.readingOwner && visibleIds.has(n.data.readingOwner)
     && typeof (byId.get(n.data.readingOwner)?.data.findingAggregate ?? byId.get(n.data.readingOwner)?.data.rollup?.aggregate)?.issue_count === "number") {
     groups.set(n.data.readingOwner, [...(groups.get(n.data.readingOwner) ?? []), n]);
   }

@@ -64,15 +64,33 @@ export async function runGraphQualityCapture({ newCapturePage, buildScopeShowcas
       await expect(page.locator(".react-flow__node").first()).toBeVisible();
       if (viewport.width >= 640) await fitReactFlow(page);
       await page.evaluate(() => window.scrollTo(0, 0));
-      await expect(page.getByLabel("Visible relationship evidence")).toBeVisible();
+      const options = page.getByTestId("graph-options").locator(":scope > summary");
+      await options.click();
+      const evidenceBreakdown = page.getByLabel("Relationship evidence breakdown");
+      await expect(evidenceBreakdown).toBeVisible();
+      const evidence = await evidenceBreakdown.textContent();
+      await options.click();
       // Camera animation and readable glyph resizing have separate layout turns.
       await expect.poll(async () => (await page.evaluate(auditRenderedGraph, { edges: fixture.edges })).misalignedHandles,
         { timeout: 5_000, message: "Rendered relationship endpoints settle on the entity glyphs" }).toEqual([]);
       const audit = await page.evaluate(auditRenderedGraph, { edges: fixture.edges });
       await fs.writeFile(path.join(output, `${key}-geometry.json`), JSON.stringify(await page.locator(".react-flow__edge").evaluateAll(edges => edges.map(e => ({ id: e.dataset.id, path: e.querySelector(".react-flow__edge-path")?.outerHTML, markers: [...document.querySelectorAll("marker")].map(m => m.outerHTML) }))), null, 2));
       const geometry = await page.locator(".react-flow__node").evaluateAll(nodes => {
-        const rects = nodes.map(n => ({ id: n.dataset.id, r: n.getBoundingClientRect() }));
-        const overlaps = rects.flatMap((a, i) => rects.slice(i + 1).filter(b => a.r.left < b.r.right && a.r.right > b.r.left && a.r.top < b.r.bottom && a.r.bottom > b.r.top).map(b => [a.id, b.id]));
+        // A scope boundary deliberately encloses its children; its title must
+        // remain separate from cards just like any other visible label.
+        const rects = nodes.flatMap(n => {
+          const title = n.querySelector(".graph-boundary-frame-title");
+          if (!title) return [{ id: n.dataset.id, r: n.getBoundingClientRect() }];
+          const boxes = [...title.querySelectorAll("img")].map(image => image.getBoundingClientRect());
+          const walker = document.createTreeWalker(title, NodeFilter.SHOW_TEXT);
+          for (let text = walker.nextNode(); text; text = walker.nextNode()) {
+            const range = document.createRange();
+            range.selectNodeContents(text);
+            boxes.push(...range.getClientRects());
+          }
+          return boxes.filter(r => r.width && r.height).map(r => ({ id: n.dataset.id, r }));
+        });
+        const overlaps = rects.flatMap((a, i) => rects.slice(i + 1).filter(b => a.id !== b.id && a.r.left < b.r.right && a.r.right > b.r.left && a.r.top < b.r.bottom && a.r.bottom > b.r.top).map(b => [a.id, b.id]));
         const canvas = document.querySelector(".react-flow").getBoundingClientRect();
         const clipped = window.innerWidth >= 640 ? rects.filter(({ r }) => r.left < canvas.left - 2 || r.right > canvas.right + 2 || r.top < canvas.top - 2 || r.bottom > canvas.bottom + 2).map(({ id }) => id) : [];
         return { overlaps, clipped, horizontalOverflow: document.documentElement.scrollWidth > window.innerWidth };
@@ -104,10 +122,17 @@ export async function runGraphQualityCapture({ newCapturePage, buildScopeShowcas
         }
       }
       if (name === "grouped") {
-        const expand = page.getByRole("button", { name: /^Expand 90/ });
+        // Three individual packages lead the preview; the other 87 remain grouped.
+        const expand = page.getByRole("button", { name: "Expand 87 members", exact: true });
+        await expect(page.locator('.react-flow__node[data-id^="pkg:fixture-"]')).toHaveCount(3);
         await expect(expand).toBeVisible();
         await expand.click();
+        const previewCount = viewport.width < 640 ? 2 : 6;
+        await expect(page.getByRole("group", { name: "Connection preview" })).toContainText(`${previewCount} of 91 nodes in this map · ${previewCount - 1} of 90 relationships`);
+        await page.getByRole("button", { name: "Show full map (91)", exact: true }).click();
+        await options.click();
         await expect(page.getByText("Graph · 91 nodes · 90 relationships", { exact: true })).toBeVisible();
+        await options.click();
         // React Flow virtualizes offscreen children after expansion.
         await expect(expand).toHaveCount(0);
         await page.waitForTimeout(400);
@@ -131,7 +156,7 @@ export async function runGraphQualityCapture({ newCapturePage, buildScopeShowcas
           await page.screenshot({ path: path.join(output, `${key}-edge-unknown.png`) });
         }
       }
-      results.push({ key, elapsedMs: Math.round(performance.now() - started), audit, geometry, errors, evidence: await page.getByLabel("Visible relationship evidence").textContent() });
+      results.push({ key, elapsedMs: Math.round(performance.now() - started), audit, geometry, errors, evidence });
       console.log(`Graph quality capture ${key}: ${audit.renderedEdges} edges, ${audit.crossings.length} crossings`);
     } catch (error) {
       await page.screenshot({ path: path.join(output, `${key}-FAILED.png`) });
@@ -151,4 +176,27 @@ export async function assertRecordedDirections(page, edges) {
     if (edge.direction !== "undirected") await expect(drawn.locator(".react-flow__edge-path")).toHaveAttribute("marker-end", /url/);
     await drawn.evaluate(element => element.blur());
   }
+}
+
+export function scopeShowcaseHeadline(fixture, details = false) {
+  const findings = fixture.nodes.filter((item) => ["vulnerability", "misconfiguration"].includes(item.entity_type)), counts = ["critical", "high", "medium", "low"].map((sev) => [sev, findings.filter((item) => item.severity === sev).length]).filter(([, n]) => n > 0);
+  const kev = findings.filter((item) => item.entity_type === "vulnerability" && item.attributes.is_kev === true).length, paths = fixture.attack_paths.length, noun = `${findings.length === 1 ? "finding" : "findings"} in ${details ? "view" : "loaded scope"}`;
+  const sevText = counts.length === 1 && counts[0][1] === findings.length ? `${findings.length} ${counts[0][0]} ${noun}` : `${findings.length} ${noun}: ${counts.map(([sev, n]) => `${n} ${sev}`).join(", ")}`;
+  return `${sevText}${kev ? ` · ${kev} KEV-listed` : ""}${details ? ` · ${paths} ${paths === 1 ? "attack path" : "attack paths"} across the whole snapshot (deduplicated)` : ""}`;
+}
+
+/** Inspect the original finding edge after explicitly disclosing its owner badge. */
+export async function prepareFindingRelationship(p, pathCount) {
+  await p.getByRole("button", { name: "Expand 1 finding for pillow@9.0.0", exact: true }).click();
+  const options = p.getByTestId("graph-options").locator(":scope > summary");
+  await options.click();
+  await expect(p.getByTestId("graph-headline-details")).toContainText(`1 high finding in view · 1 KEV-listed · ${pathCount} attack path${pathCount === 1 ? "" : "s"} across the whole snapshot (deduplicated)`);
+  await options.click();
+  await expect(p.locator(".react-flow__node")).toHaveCount(5);
+  const finding = p.locator('.react-flow__edge[data-id="vulnerable_to:package:mcp:pillow:vulnerability:sbom:cve-2023-4863"]');
+  await finding.focus();
+  await finding.press("Space");
+  const receipt = p.getByLabel("Relationship details", { exact: true });
+  await expect(receipt).toBeVisible();
+  await expect(receipt.getByLabel("Relationship summary")).toContainText("Bundled advisory database");
 }

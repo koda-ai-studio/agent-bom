@@ -9,9 +9,9 @@ const aggregate = { issue_count: 3, finding_occurrence_count: 5, worst_severity:
   descendant_count: 9, by_type: { package: 9 }, severity_counts: { critical: 1, high: 2 },
   internet_exposed: false, exposed_count: 0, toxic_combo: false, toxic_count: 0 };
 
-it("does not suggest unknown severity or modeled evidence with a dashed identity outline", () => {
+it.each(["role", "credential", "policy", "accessPolicy"] as const)("does not suggest unknown severity or modeled evidence with a dashed %s outline", kind => {
   const Renderer = lineageNodeTypes.credentialNode;
-  const { container } = render(<ReactFlowProvider><Renderer data={{ label: "Runtime role", nodeType: "role", semanticLayout: true }} /></ReactFlowProvider>);
+  const { container } = render(<ReactFlowProvider><Renderer data={{ label: "Runtime role", nodeType: kind, semanticLayout: true }} /></ReactFlowProvider>);
   expect(container.querySelector(".graph-entity-glyph")).not.toHaveClass("border-dashed");
 });
 
@@ -178,4 +178,15 @@ it("shows administrator and critical-asset markers only for recorded verdicts", 
     expect(container.querySelector('[data-compact-marker="privilege"]')).toBeNull();
     expect(container.querySelector('[data-compact-marker="sensitive"]')).toBeNull();
   }
+});
+
+
+it("keeps the selected connection focus centred and attaches recorded markers to its glyph", () => {
+  const Renderer = lineageNodeTypes.containerNode;
+  const { container } = render(<ReactFlowProvider><Renderer data={{ label: "Selected asset", nodeType: "container", semanticLayout: true,
+    readingFocus: true, attributes: { risk_context: { crown_jewel: true } } }} /></ReactFlowProvider>);
+  const focus = container.querySelector<HTMLElement>("[data-reading-focus]")!;
+  expect(focus).not.toBeNull();
+  expect(focus.style.marginTop).toMatch(/\* -0\./);
+  expect(container.querySelector("[data-asset-markers]")).toHaveClass("top-0", "-translate-y-1/2");
 });

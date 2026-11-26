@@ -18,7 +18,7 @@ import {
   DEMO_AGENT_SPECS, SCAN_ID, SCENARIO_ID, advisory, buildBlastRadius, buildGraph, contextGraph, edge,
   demoScanAgent, graphScenario, graphScenarioComparison, node, severityId, vuln,
 } from "./product-proof-graph.mjs";
-import { assertRecordedDirections, runGraphQualityCapture } from "./graph-quality-capture.mjs";
+import { assertRecordedDirections, runGraphQualityCapture, scopeShowcaseHeadline, prepareFindingRelationship } from "./graph-quality-capture.mjs";
 import { foldPackageEvidence } from "../lib/graph-evidence-fold.ts";
 import { AGENT_ARCHITECTURE_SCREENSHOTS, captureAgentArchitecture, installAgentArchitectureRoutes } from "./product-proof-agent-architecture.mjs";
 import { captureSourceProvenance } from "./product-proof-provenance.mjs";
@@ -2724,6 +2724,10 @@ async function main() {
           const exposed = fixture.nodes.some(item => (item.attributes?.risk_context?.internet_exposed ?? item.attributes?.internet_exposed) === true);
           if (!exposed) await expect(p.locator('.react-flow__node[data-id^="display:internet:"]')).toHaveCount(0);
           await fitReactFlow(p);
+          const options = p.getByTestId("graph-options").locator(":scope > summary");
+          await options.click();
+          await expect(p.getByTestId("graph-headline-details")).toContainText(scopeShowcaseHeadline(fixture, true));
+          await options.click();
           await scrollTo(p, 0);
           if (scope === "cloud") {
             for (const caption of ["AWS IAM role", "Amazon EKS", "Amazon S3 bucket"]) {
@@ -2812,6 +2816,7 @@ async function main() {
     };
     const prepareCorrelationPath = async (proofPage) => {
       await proofPage.locator(".react-flow__node").first().waitFor({ state: "visible" });
+      await proofPage.getByRole("button", { name: "Expand findings (1 grouped)", exact: true }).click();
       await fitReactFlow(proofPage);
       // Every recorded direction is available on inspection; the Internet anchor is extra display context.
       await assertRecordedDirections(proofPage, referenceOverview.edges);
@@ -3171,18 +3176,12 @@ async function main() {
       await capture(relationshipPage,
         `/graph?capture=1&scan=${REFERENCE_CORRELATION_ID}&layers=${REFERENCE_RELATIONSHIP_LAYERS}`,
         `graph-relationship-${theme}-live.png`, async (p) => {
-          await expect(p.locator(".react-flow__node")).toHaveCount(5);
-          const finding = p.locator('.react-flow__edge[data-id="vulnerable_to:package:mcp:pillow:vulnerability:sbom:cve-2023-4863"]');
-          await finding.focus();
-          await finding.press("Space");
-          const receipt = p.getByLabel("Relationship details", { exact: true });
-          await expect(receipt).toBeVisible();
-          await expect(receipt.getByLabel("Relationship summary")).toContainText("Bundled advisory database");
+          await prepareFindingRelationship(p, referenceGraph.attack_paths.length);
           await fitReactFlow(p);
           await scrollTo(p, 0);
         }, {
           expectedText: ["Has finding", "pillow@9.0.0 is recorded as affected by CVE-2023-4863.", "Bundled advisory database", "Technical details", /Image inventory/i, /^Deployment$/im, "pinned-package.txt", "CVE-2023-4863",
-            `1 high finding in view · 1 KEV-listed · ${referenceGraph.attack_paths.length} attack path${referenceGraph.attack_paths.length === 1 ? "" : "s"} across the whole snapshot (deduplicated)`, "Path analysis complete for this snapshot", /Reference evidence lab/i],
+            "1 high finding in loaded scope · 1 KEV-listed", "Path analysis complete for this snapshot", /Reference evidence lab/i],
           expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph"],
           minGraphNodes: 5, maxGraphNodes: 5, minGraphEdges: 4, maxGraphEdges: 4,
           minGraphNodeFontPx: 12, minGraphEdgeLabelFontPx: 12,
@@ -3212,7 +3211,7 @@ async function main() {
         awaitResponses: [
           (response) => new URL(response.url()).pathname === "/v1/graph/rollup" && response.ok(),
         ],
-        expectedText: ["Investigation", "Recorded connections", "Browse all 15 nodes and scopes"],
+        expectedText: ["Investigation", "Agent connections", "4 of 4 loaded relationships for this scope", "Browse all 15 nodes and scopes"],
         expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/rollup", "/v1/graph/scenarios"],
         readySelector: '[data-testid="graph-scope-overview"]',
         assertNoHorizontalOverflow: true,
@@ -3571,12 +3570,6 @@ async function main() {
   }
 }
 
-function scopeShowcaseHeadline(fixture) {
-  const findings = fixture.nodes.filter((item) => ["vulnerability", "misconfiguration"].includes(item.entity_type)), counts = ["critical", "high", "medium", "low"].map((sev) => [sev, findings.filter((item) => item.severity === sev).length]).filter(([, n]) => n > 0);
-  const kev = findings.filter((item) => item.entity_type === "vulnerability" && item.attributes.is_kev === true).length, paths = fixture.attack_paths.length, noun = findings.length === 1 ? "finding in view" : "findings in view";
-  const sevText = counts.length === 1 && counts[0][1] === findings.length ? `${findings.length} ${counts[0][0]} ${noun}` : `${findings.length} ${noun}: ${counts.map(([sev, n]) => `${n} ${sev}`).join(", ")}`;
-  return `${sevText}${kev ? ` · ${kev} KEV-listed` : ""} · ${paths} ${paths === 1 ? "attack path" : "attack paths"} across the whole snapshot (deduplicated)`;
-}
 
 function checkAdvisoryFixtures() {
   for (const [scope] of SCOPE_SHOWCASE_PRESETS) checkScopeShowcase(buildScopeShowcase(scope), advisory, referenceKevCve);
