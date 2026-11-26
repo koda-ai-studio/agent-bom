@@ -560,6 +560,7 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     // A containing account sits before what it contains, so no link loops around a column.
     expect(await edgesAroundColumns(page)).toEqual([]);
     expect(await graphGrammarViolations(page)).toEqual({});
+    if (width >= 640) expect((await page.evaluate(auditRenderedGraph, { edges: links })).crossings).toEqual([]);
     // The provider plate must clear the name even at the expanded graph's fit zoom.
     expect(await page.locator("[data-graph-source-badge]").evaluateAll(badges => badges.flatMap(badge => {
       const a = badge.getBoundingClientRect();

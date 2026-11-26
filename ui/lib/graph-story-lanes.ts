@@ -65,13 +65,18 @@ export function storyLanePlacement(nodes: Node<LineageNodeData>[], edges: Edge[]
     }
     for (const [x, ids] of columns) {
       const used = occupied.get(x)!;
-      for (const id of ids.filter(finding).sort((a, b) => Number(primary.includes(b)) - Number(primary.includes(a)) || a.localeCompare(b))) {
+      const ownerRow = (id: string) => rows.get(String(owner(id))) ?? 0;
+      let previousOwner = -Infinity, previousRow = -Infinity;
+      // Expanding context preserves the vertical order of the recorded owners;
+      // prioritizing a finding must not route it across a sibling's connection.
+      for (const id of ids.filter(finding).sort((a, b) => ownerRow(a) - ownerRow(b) || Number(primary.includes(b)) - Number(primary.includes(a)) || a.localeCompare(b))) {
         const parentRow = rows.get(String(owner(id))) ?? 0;
         const findingRow = primary.includes(id) && spineAccess ? parentRow - 1 : parentRow;
-        const candidates = [findingRow, ...Array.from({ length: nodes.length }, (_, i) => parentRow < 0
+        const candidates = [findingRow, parentRow, ...Array.from({ length: nodes.length }, (_, i) => parentRow < 0
           ? [parentRow + i + 1, parentRow - i - 1] : [parentRow - i - 1, parentRow + i + 1]).flat()];
-        const row = candidates.find(row => !used.has(row))!;
+        const row = candidates.find(row => !used.has(row) && (parentRow <= previousOwner || row > previousRow)) ?? Math.max(...used, previousRow) + 1;
         used.add(row); rows.set(id, row);
+        previousOwner = parentRow; previousRow = Math.max(previousRow, row);
       }
     }
     const rowGap = nodes.some(node => !spine.has(node.id) && !access.has(node.id) && !finding(node.id)) ? 220 : 180;

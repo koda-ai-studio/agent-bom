@@ -190,6 +190,9 @@ it("uses available columns instead of stacking expanded findings into five rows"
   const xs = shown.map(n => n.position.x);
   expect((Math.max(...xs) - Math.min(...xs)) / (Math.max(...ys) - Math.min(...ys))).toBeGreaterThanOrEqual(3.2);
   expect(new Set(shown.map(n => `${n.position.x}:${n.position.y}`)).size).toBe(shown.length);
+  const row = (id: string) => result.nodes.find(node => node.id === id)!.position.y;
+  expect(row("worker")).toBeLessThan(row("workload"));
+  expect(row("worker-finding")).toBeLessThan(row("critical"));
   for (const edge of edges) expect(result.edges.find(e => e.id === edge.id)).toMatchObject({ source: edge.source, target: edge.target });
 });
 
