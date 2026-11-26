@@ -17,6 +17,7 @@ import path from "node:path";
 import process from "node:process";
 
 import { FIXTURE_SCAN_ID, fixtureAuditEntries, fixtureFindings, fixtureGraph, installRoutes } from "./capture-product-proof.mjs";
+import { scopeFindingsResponse } from "./product-proof-rollup.mjs";
 import { CREATED_AT } from "./product-proof-fixtures.mjs";
 import { staticDemoDataKey, staticDemoQueryKey } from "../lib/static-demo-key.mjs";
 import { installStaticDemoRoutes } from "./static-demo-routes.mjs";
@@ -92,6 +93,11 @@ async function main() {
   };
   const browser = await chromium.launch();
   const recorded = new Map();
+  const scopeKey = staticDemoDataKey("/v1/graph/scope-findings");
+  const scopes = Object.fromEntries(fixtureGraph.nodes.map(node => [node.id, scopeFindingsResponse(new URL(`/v1/graph/scope-findings?node_id=${encodeURIComponent(node.id)}&limit=100`, "http://demo"))]));
+  if (Object.values(scopes).some(scope => scope.total !== scope.findings.length)) throw new Error("Static scope finding table is incomplete");
+  recorded.set(scopeKey, JSON.stringify({ scopes }));
+  await fs.writeFile(path.join(dataDir, `${scopeKey}.json`), recorded.get(scopeKey));
   const coverage = createStaticDemoCoverage();
   const { missing, incomplete } = coverage;
   const redirects = new Map();

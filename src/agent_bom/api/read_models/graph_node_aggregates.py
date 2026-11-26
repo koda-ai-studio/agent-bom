@@ -37,4 +37,23 @@ class GraphNodeAggregatesResponse(ReadResponse):
     missing_node_ids: list[str] = Field(description="Requested ids not in the snapshot.")
 
 
-__all__ = ["GraphNodeAggregate", "GraphNodeAggregatesResponse", "GraphRollupAggregate"]
+class GraphScopeFinding(ReadModel):
+    issue_key: str
+    label: str
+    severity: str
+    node_ids: list[str]
+
+
+class GraphScopeFindingsResponse(ReadResponse):
+    scan_id: str
+    tenant_id: str
+    snapshot_generation: str
+    node_id: str
+    finding_revision: str
+    total: int
+    offset: int
+    limit: int
+    findings: list[GraphScopeFinding]
+
+
+__all__ = ["GraphNodeAggregate", "GraphNodeAggregatesResponse", "GraphRollupAggregate", "GraphScopeFinding", "GraphScopeFindingsResponse"]

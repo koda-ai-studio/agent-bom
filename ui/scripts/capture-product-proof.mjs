@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { graphNodeAggregatesResponse, nodeAggregatesFixtureIds, nodeAggregatesResponse, rollupResponse } from "./product-proof-rollup.mjs";
+import { graphNodeAggregatesResponse, nodeAggregatesFixtureIds, nodeAggregatesResponse, rollupResponse, scopeFindingsResponse } from "./product-proof-rollup.mjs";
 import { auditRenderedGraph, graphGrammarExpression, renderedRelationshipCurves, sharedRelationshipRuns } from "./graph-visual-audit.mjs";
 import { chromium, expect } from "@playwright/test";
 import { spawn, spawnSync } from "node:child_process";
@@ -1544,6 +1544,7 @@ export async function installRoutes(page, fixtureGraph = graph) {
     changed: [],
     count: 0,
   }));
+  await page.route("**/v1/graph/scope-findings?**", route => fulfill(route, scopeFindingsResponse(new URL(route.request().url()))));
   await page.route("**/v1/graph/query", (route) => {
     const request = route.request().postDataJSON();
     const roots = request.roots ?? [];
@@ -3211,7 +3212,7 @@ async function main() {
         awaitResponses: [
           (response) => new URL(response.url()).pathname === "/v1/graph/rollup" && response.ok(),
         ],
-        expectedText: ["Investigation", "Agent connections", "4 of 4 loaded relationships for this scope", "Browse all 15 nodes and scopes"],
+        expectedText: ["Investigation", "Agent connections", "Showing 6 assets · 5 original relationships", "Browse inventory"],
         expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/rollup", "/v1/graph/scenarios"],
         readySelector: '[data-testid="graph-scope-overview"]',
         assertNoHorizontalOverflow: true,

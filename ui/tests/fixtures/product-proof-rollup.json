@@ -1717,5 +1717,139 @@
         "severity": "medium"
       }
     ]
+  },
+  "scope_findings": {
+    "agent:developer-copilot": [
+      {
+        "issue_key": "occurrence:cve:urllib3",
+        "label": "CVE-2024-37891",
+        "node_ids": [
+          "cve:urllib3"
+        ],
+        "severity": "medium"
+      }
+    ],
+    "agent:finance-rag": [
+      {
+        "issue_key": "occurrence:cve:protobuf",
+        "label": "CVE-2025-4565",
+        "node_ids": [
+          "cve:protobuf"
+        ],
+        "severity": "high"
+      }
+    ],
+    "agent:sre-runbook": [
+      {
+        "issue_key": "occurrence:cve:urllib3",
+        "label": "CVE-2024-37891",
+        "node_ids": [
+          "cve:urllib3"
+        ],
+        "severity": "medium"
+      }
+    ],
+    "cluster:eks-ai": [],
+    "container:agent-gateway": [],
+    "container:copilot-portal": [],
+    "cred:aws": [],
+    "cred:github": [],
+    "cred:incident-webhook": [],
+    "cred:snowflake": [],
+    "cve:next": [
+      {
+        "issue_key": "occurrence:cve:next",
+        "label": "CVE-2025-29927",
+        "node_ids": [
+          "cve:next"
+        ],
+        "severity": "critical"
+      }
+    ],
+    "cve:protobuf": [
+      {
+        "issue_key": "occurrence:cve:protobuf",
+        "label": "CVE-2025-4565",
+        "node_ids": [
+          "cve:protobuf"
+        ],
+        "severity": "high"
+      }
+    ],
+    "cve:urllib3": [
+      {
+        "issue_key": "occurrence:cve:urllib3",
+        "label": "CVE-2024-37891",
+        "node_ids": [
+          "cve:urllib3"
+        ],
+        "severity": "medium"
+      }
+    ],
+    "dataset:finance-docs": [],
+    "env:prod-ai": [],
+    "model:gpt-prod": [],
+    "pkg:langchain": [],
+    "pkg:next": [
+      {
+        "issue_key": "occurrence:cve:next",
+        "label": "CVE-2025-29927",
+        "node_ids": [
+          "cve:next"
+        ],
+        "severity": "critical"
+      }
+    ],
+    "pkg:protobuf": [
+      {
+        "issue_key": "occurrence:cve:protobuf",
+        "label": "CVE-2025-4565",
+        "node_ids": [
+          "cve:protobuf"
+        ],
+        "severity": "high"
+      }
+    ],
+    "pkg:urllib3": [
+      {
+        "issue_key": "occurrence:cve:urllib3",
+        "label": "CVE-2024-37891",
+        "node_ids": [
+          "cve:urllib3"
+        ],
+        "severity": "medium"
+      }
+    ],
+    "policy:gateway-default-deny": [],
+    "provider:aws-prod": [],
+    "role:prod-admin": [],
+    "sa:jit-review": [],
+    "server:filesystem": [
+      {
+        "issue_key": "occurrence:cve:urllib3",
+        "label": "CVE-2024-37891",
+        "node_ids": [
+          "cve:urllib3"
+        ],
+        "severity": "medium"
+      }
+    ],
+    "server:github": [],
+    "server:slack": [],
+    "server:snowflake": [
+      {
+        "issue_key": "occurrence:cve:protobuf",
+        "label": "CVE-2025-4565",
+        "node_ids": [
+          "cve:protobuf"
+        ],
+        "severity": "high"
+      }
+    ],
+    "tool:exec": [],
+    "tool:post": [],
+    "tool:query": [],
+    "tool:repo-write": [],
+    "user:contractor": []
   }
 }

@@ -11,3 +11,14 @@ export function queryStaticNodeAggregates(table, apiPath) {
     missing_node_ids: ids.filter((id) => !rows.has(id)),
   };
 }
+
+/** Exact server-derived issue groups for the selected immutable demo scope. */
+export function queryStaticScopeFindings(table, apiPath) {
+  const params = new URL(apiPath, "http://demo").searchParams;
+  const nodeId = params.get("node_id");
+  const scope = table.scopes?.[nodeId];
+  if (!scope) throw new Error("No finding evidence was recorded for this demo scope.");
+  const offset = Math.max(0, Number(params.get("offset")) || 0);
+  const limit = Math.max(1, Math.min(100, Number(params.get("limit")) || 20));
+  return { ...scope, offset, limit, findings: scope.findings.slice(offset, offset + limit) };
+}

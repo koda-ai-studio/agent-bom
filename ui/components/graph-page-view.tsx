@@ -1,5 +1,7 @@
 "use client";
 
+import { isStaticDemo } from "@/lib/static-demo";
+
 import dynamic from "next/dynamic";
 import { useInvestigationFlowView } from "@/hooks/use-investigation-flow-view";
 import { GraphAdvancedControls } from "@/components/graph-advanced-controls";
@@ -214,7 +216,7 @@ export function GraphPageView({ page }: { page: GraphPageModel }) {
           {selectedAttackPath && selectedPathDecision && <GraphFocusedPathDecision path={selectedAttackPath} decision={selectedPathDecision} nodeById={graphNodeById}
             evidenceHopCount={selectedEvidenceHopCount} snapshotCreatedAt={activeSnapshot?.created_at ?? null} captureMode={captureMode}
             onReturn={() => { requestedAttackPathKeyRef.current = null; setSelectedAttackPathKey(null); }} />}
-          {rollupNavigationActive && !loadingRollup && <GraphRollupCountNotice metadata={rollupView?.aggregate_count_metadata} />}
+          {rollupNavigationActive && !rollupDecisionActive && !loadingRollup && <details className="text-xs text-ink-secondary"><summary>Inventory count details</summary><GraphRollupCountNotice metadata={rollupView?.aggregate_count_metadata} /></details>}
           {rollupNavigationActive && !loadingRollup && (rollupView?.mode === "drilldown" || rollupView?.mode === "rollup") && (
             <GraphRollupChildPager
               pagination={rollupView.pagination}
@@ -222,7 +224,7 @@ export function GraphPageView({ page }: { page: GraphPageModel }) {
               onPage={(offset) => setRollupChildPage({ key: rollupChildPageKey, offset, generation: rollupView?.snapshot_generation })}
             />
           )}
-          <GraphStatusBar page={page} flowView={flowView} relationshipLabels={relationshipLabels} />
+          {!rollupDecisionActive && <GraphStatusBar page={page} flowView={flowView} relationshipLabels={relationshipLabels} />}
           <GraphChangesDialog page={page} />
           {mobileListActive && (investigationMode
             ? <GraphConnectionsList rootId={investigationMode.rootId} nodes={displayNodes} edges={relationshipLabels.edges} memberNodes={flowNodeById}
@@ -276,7 +278,10 @@ export function GraphPageView({ page }: { page: GraphPageModel }) {
               />
             )
           ) : rollupDecisionActive ? (
-            <GraphScopeOverview
+            <><GraphScopeOverview
+              scanId={selectedScanId || undefined}
+              generation={rollupView?.snapshot_generation}
+              onInspectNode={(rootId, rootLabel) => { if (isStaticDemo()) { setSelectedNode(null); setSelectedNodeId(rootId); } else void loadRootInvestigation({ rootId, rootLabel, nodeLimit: 24 }); }}
               items={rollupItems}
               edges={rollupView?.edges ?? []}
               completeness={rollupView?.completeness}
@@ -286,6 +291,8 @@ export function GraphPageView({ page }: { page: GraphPageModel }) {
               estateIssueCount={estateIssueSummary?.issue_count}
               estateIssueBasis={estateIssueSummary}
             />
+            <details className="px-4 py-2 text-xs text-ink-secondary"><summary>Inventory count details</summary><GraphRollupCountNotice metadata={rollupView?.aggregate_count_metadata} /></details>
+            <GraphStatusBar page={page} flowView={flowView} relationshipLabels={relationshipLabels} /></>
           ) : displayNodes.length === 0 && scenarioElements.unconnected.length > 0 ? (
             <div className="flex h-full items-center justify-center p-6 text-sm text-ink-secondary">No connected nodes in this proposal view. Select an unconnected item to inspect its details.</div>
           ) : displayNodes.length === 0 ? (

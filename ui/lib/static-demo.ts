@@ -1,5 +1,5 @@
 import { queryStaticFindings } from "./static-demo-findings.mjs";
-import { queryStaticNodeAggregates } from "./static-demo-node-aggregates.mjs";
+import { queryStaticNodeAggregates, queryStaticScopeFindings } from "./static-demo-node-aggregates.mjs";
 import { ApiError, ApiNetworkError, classifyApiResponse } from "./api-errors";
 import { staticDemoDataKey, staticDemoQueryKey } from "./static-demo-key.mjs";
 
@@ -36,9 +36,10 @@ export async function staticDemoFetch(apiPath: string, init: RequestInit, method
   const route = apiPath.split(/[?#]/)[0];
   const findings = route === "/v1/findings";
   // Node aggregates depend on the hop list a page settles on; the demo answers any list from one table of every node.
+  const scopeFindings = route === "/v1/graph/scope-findings";
   const aggregates = route === "/v1/graph/node-aggregates";
-  const queryKey = findings || aggregates ? null : staticDemoQueryKey(apiPath);
-  const url = staticDemoDataUrl(findings || aggregates ? route : apiPath);
+  const queryKey = findings || aggregates || scopeFindings ? null : staticDemoQueryKey(apiPath);
+  const url = staticDemoDataUrl(findings || aggregates || scopeFindings ? route : apiPath);
   let res: Response;
   try {
     // An answer recorded for this exact query wins over the path's default answer.
@@ -52,6 +53,7 @@ export async function staticDemoFetch(apiPath: string, init: RequestInit, method
     throw classifyApiResponse(res, { detail: "This view has no sample data in the read-only demo." }, method);
   }
   if (findings) return new Response(JSON.stringify(queryStaticFindings(await res.json(), apiPath)), { status: 200, headers: { "Content-Type": "application/json" } });
+  if (scopeFindings) return new Response(JSON.stringify(queryStaticScopeFindings(await res.json(), apiPath)), { status: 200, headers: { "Content-Type": "application/json" } });
   if (aggregates) return new Response(JSON.stringify(queryStaticNodeAggregates(await res.json(), apiPath)), { status: 200, headers: { "Content-Type": "application/json" } });
   return res;
 }

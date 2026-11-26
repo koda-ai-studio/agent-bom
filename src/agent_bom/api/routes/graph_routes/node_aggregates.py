@@ -12,14 +12,15 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
-from agent_bom.api.graph_generation import optional_generation, verify_generation
+from agent_bom.api.finding_suppression import suppression_revision
+from agent_bom.api.graph_generation import optional_generation, pin_generation, verify_generation
 from agent_bom.api.graph_store import containment_drilldown_graph
 from agent_bom.api.read_models._base import documented
-from agent_bom.api.read_models.graph_node_aggregates import GraphNodeAggregatesResponse
+from agent_bom.api.read_models.graph_node_aggregates import GraphNodeAggregatesResponse, GraphScopeFindingsResponse
 from agent_bom.api.routes.graph_routes import _runtime
 from agent_bom.api.routes.graph_routes._admission import _GraphAdmissionRoute
 from agent_bom.api.scan_finding_read import suppressed_finding_ids
-from agent_bom.graph.rollup_node import node_aggregate
+from agent_bom.graph.rollup_node import node_aggregate, scope_findings
 from agent_bom.graph.semantic_layer import semantic_layer
 
 MAX_NODE_AGGREGATES = 25
@@ -79,3 +80,51 @@ async def get_graph_node_aggregates(
 
 
 __all__ = ["MAX_NODE_AGGREGATES", "router"]
+
+
+def _scope_findings(store, *, tenant: str, scan_id: str, node_id: str, suppressed: frozenset[str]) -> list[dict]:
+    graph = containment_drilldown_graph(store, node_id=node_id, scan_id=scan_id, tenant_id=tenant)
+    if node_id not in graph.nodes:
+        raise HTTPException(404, "Scope not found in this snapshot.")
+    return scope_findings(graph, node_id, suppressed=suppressed)
+
+
+@router.get("/graph/scope-findings", **documented(GraphScopeFindingsResponse), tags=["graph"])
+async def get_scope_findings(
+    request: Request,
+    node_id: str = Query(..., min_length=1, max_length=2048),
+    scan_id: Optional[str] = Query(None),
+    snapshot_generation: Optional[str] = Query(None, max_length=128),
+    finding_revision: Optional[str] = Query(None, max_length=128),
+    offset: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+) -> dict:
+    """Open issues on the roll-up count basis; tenant-scoped and revision-pinned pages."""
+    tenant = _runtime._tenant(request)
+    store = _runtime._get_graph_store_or_503()
+    identity = await _runtime._graph_store_call(
+        pin_generation, store, tenant=tenant, scan_id=scan_id or "", generation=snapshot_generation, offset=offset
+    )
+    revision = await _runtime._graph_store_call(suppression_revision, tenant)
+    if offset and not finding_revision:
+        raise HTTPException(422, "Continuation requires finding_revision; restart the query.")
+    if finding_revision is not None and finding_revision != revision:
+        raise HTTPException(409, "Finding suppressions changed; restart the query.")
+    suppressed = await _runtime._graph_store_call(suppressed_finding_ids, tenant)
+    rows = await _runtime._graph_store_call(
+        _scope_findings, store, tenant=tenant, scan_id=identity[0], node_id=node_id, suppressed=suppressed
+    )
+    await _runtime._graph_store_call(verify_generation, store, tenant=tenant, identity=identity, has_rows=bool(rows))
+    if revision != await _runtime._graph_store_call(suppression_revision, tenant):
+        raise HTTPException(409, "Finding suppressions changed during the read; restart the query.")
+    return {
+        "scan_id": identity[0],
+        "tenant_id": tenant,
+        "snapshot_generation": identity[1],
+        "node_id": node_id,
+        "finding_revision": revision,
+        "total": len(rows),
+        "offset": offset,
+        "limit": limit,
+        "findings": rows[offset : offset + limit],
+    }

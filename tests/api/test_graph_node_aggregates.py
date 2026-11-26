@@ -58,3 +58,33 @@ def test_request_is_bounded(shared_demo_estate_client: TestClient) -> None:
     ids = [f"n{index}" for index in range(MAX_NODE_AGGREGATES + 1)]
     response = shared_demo_estate_client.get("/v1/graph/node-aggregates", headers=VIEWER, params={"node_id": ids})
     assert response.status_code == 422
+
+
+def test_scope_findings_reconcile_exact_issue_count(shared_demo_estate_client: TestClient) -> None:
+    client = shared_demo_estate_client
+    rollup = _get(client, "/v1/graph/rollup")
+    scope = min(
+        (row for row in rollup["top_level"] if row["aggregate"]["issue_count"] > 0), key=lambda row: row["aggregate"]["issue_count"]
+    )
+    params = {"scan_id": rollup["scan_id"], "node_id": scope["id"], "limit": 2}
+    first = _get(client, "/v1/graph/scope-findings", **params)
+    assert first["total"] == scope["aggregate"]["issue_count"]
+    assert len(first["findings"]) == min(2, first["total"])
+    rows = list(first["findings"])
+    for offset in range(2, first["total"], 2):
+        page = _get(
+            client,
+            "/v1/graph/scope-findings",
+            **params,
+            offset=offset,
+            snapshot_generation=first["snapshot_generation"],
+            finding_revision=first["finding_revision"],
+        )
+        rows.extend(page["findings"])
+    assert len({row["issue_key"] for row in rows}) == first["total"]
+    assert all(row["node_ids"] and row["label"] for row in rows)
+
+
+def test_scope_findings_unknown_scope_is_not_clean(shared_demo_estate_client: TestClient) -> None:
+    response = shared_demo_estate_client.get("/v1/graph/scope-findings", headers=VIEWER, params={"node_id": "missing"})
+    assert response.status_code == 404

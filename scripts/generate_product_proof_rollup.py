@@ -21,7 +21,7 @@ from typing import Any
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.risk_context import derive_node_risk_context
 from agent_bom.graph.rollup import rollup_view
-from agent_bom.graph.rollup_node import node_aggregate
+from agent_bom.graph.rollup_node import node_aggregate, scope_findings
 from agent_bom.graph.semantic_layer import LAYER_BY_ENTITY_TYPE, semantic_layer
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -97,7 +97,11 @@ def build_fixture(data: dict[str, Any]) -> dict[str, Any]:
         aggregate = node_aggregate(graph, node_id)
         assert aggregate is not None
         aggregates[node_id] = {"semantic_layer": semantic_layer(graph.nodes[node_id]), "aggregate": aggregate.to_dict()}
-    return {"rollup": rollup_view(graph), "node_aggregates": aggregates}
+    return {
+        "rollup": rollup_view(graph),
+        "node_aggregates": aggregates,
+        "scope_findings": {node_id: scope_findings(graph, node_id) for node_id in sorted(graph.nodes)},
+    }
 
 
 def risk_contexts() -> list[dict[str, Any]]:
