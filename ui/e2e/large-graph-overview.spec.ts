@@ -989,7 +989,6 @@ test("estate map renders a recorded scan without fabricating environment metadat
   fixture.edges = fixture.nodes.slice(1).map(item => edge("agent:dependencies", item.id, "depends_on"));
   fixture.stats = { ...fixture.stats, total_nodes: fixture.nodes.length, total_edges: fixture.edges.length, severity_counts: { high: 0 }, node_types: { agent: 1, package: 701, vulnerability: 0 }, relationship_types: { uses: 0, depends_on: 701, vulnerable_to: 0, related_to: 0 } };
   const graph = artifact ? JSON.parse(await readFile(artifact, "utf8")) : fixture;
-  // The builder artifact is the stored graph; the API adds its response pagination envelope.
   const response = { ...graph, pagination: { total: graph.nodes.length, offset: 0, limit: graph.nodes.length, has_more: false } };
   await page.route("**/v1/graph?**", route => route.fulfill({ json: response }));
   await page.route("**/v1/graph/attack-paths?**", route => route.fulfill({ json: { ...response, pagination: { total: graph.attack_paths.length, offset: 0, limit: 100, has_more: false } } }));
@@ -1007,14 +1006,15 @@ test("estate map renders a recorded scan without fabricating environment metadat
   const sigma = page.getByTestId("sigma-graph-overview");
   const fitAll = page.getByRole("button", { name: "Fit all", exact: true });
   await expect.poll(async () => await sigma.isVisible() || await collapsedPackages.first().isVisible() || await fitAll.isVisible()).toBe(true);
-  // The group may be outside the initial camera and virtualized until fitted.
   if (!await sigma.isVisible()) {
     if (!await collapsedPackages.first().isVisible()) await fitAll.click();
     await expect(collapsedPackages.first()).toBeVisible();
     await collapsedPackages.first().click();
   }
   await expect(sigma).toBeVisible();
-  await expect(page.getByLabel("Loaded relationship evidence")).toContainText("the map may show a subset");
+  await page.getByTestId("graph-options").locator(":scope > summary").click();
+  await expect(page.getByLabel("Relationship evidence breakdown")).toContainText("Loaded links · the map may show a subset");
+  await page.getByTestId("graph-options").locator(":scope > summary").click();
   await expectSigmaCanvases(page);
   const readyMs = performance.now() - start;
   await sigma.getByText("Map controls", { exact: true }).click();

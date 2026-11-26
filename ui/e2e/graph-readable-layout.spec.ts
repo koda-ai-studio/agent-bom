@@ -487,12 +487,18 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     await page.goto("/graph?scan=snapshot&rollup=0&capture=1&layers=account,cluster,apiGateway,container,role,dataStore,vulnerability,misconfiguration");
     if (width < 640) await page.getByRole("group", { name: "Investigation view" }).getByRole("button", { name: "Graph", exact: true }).click();
     await page.getByRole("button", { name: "Show supporting context (3)", exact: true }).click();
-    // The selected path's terminal CVE stays on the spine; the other three findings group under their owners.
+    // Automatic overview folds all findings under their authoritative owners.
+    await expect(page.locator('[data-id="cve:next"]')).toHaveCount(0);
+    await expect.poll(async () => await page.locator('.react-flow__node:not([data-id^="display:"])').count() + await page.locator("[data-boundary-frame]").count()).toBe(7);
+    await page.getByRole("button", { name: "Expand 1 finding for checkout-api", exact: true }).click();
+    await expect(page.locator('[data-id="cve:next"]')).toHaveCount(1);
     // The supporting account remains a node connected by its recorded containment.
     await expect.poll(async () => await page.locator('.react-flow__node:not([data-id^="display:"])').count() + await page.locator("[data-boundary-frame]").count()).toBe(8);
     await expect(page.locator('[data-graph-entity="finding-group"]')).toHaveCount(0);
     // Supporting containment links remain visible with the account node.
-    if (width >= 640) await expect(page.getByLabel("Visible relationship evidence")).toContainText("Modeled 6");
+    await page.getByTestId("graph-options").locator(":scope > summary").click();
+    await expect(page.getByLabel("Relationship evidence breakdown")).toContainText("Modeled 6");
+    await page.getByTestId("graph-options").locator(":scope > summary").click();
     await settle(page);
     expect(await graphGrammarViolations(page)).toEqual({});
     if (width >= 640) await readableCloudFrame(page);
@@ -532,6 +538,7 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
       await count.click();
       await page.getByRole("button", { name: "Expand findings (2 grouped)", exact: true }).click();
       await page.getByRole("button", { name: "Collapse findings", exact: true }).click();
+      await page.getByRole("button", { name: "Expand 1 finding for checkout-api", exact: true }).click();
       await page.getByRole("heading", { name: "Investigation", exact: true }).click();
     }
     await page.getByRole("button", { name: "Expand findings (3 grouped)", exact: true }).click();
@@ -607,7 +614,7 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
       await page.screenshot({ path: info.outputPath(`cloud-finding-inspector-${theme}.png`), animations: "disabled" });
       await page.getByRole("button", { name: "Collapse findings", exact: true }).click();
       // Desktop represents the account once, as its labelled context boundary.
-    await expect.poll(async () => await page.locator('.react-flow__node:not([data-id^="display:"])').count() + await page.locator("[data-boundary-frame]").count()).toBe(8);
+      await expect.poll(async () => await page.locator('.react-flow__node:not([data-id^="display:"])').count() + await page.locator("[data-boundary-frame]").count()).toBe(7);
       await expect(page.locator('[data-graph-entity="finding-group"]')).toHaveCount(0);
       await expect(page.getByTestId("graph-entity-drawer")).toHaveCount(0);
     }
@@ -645,6 +652,9 @@ for (const theme of ["light", "dark"] as const) test(`independent environment ch
   await page.screenshot({ path: info.outputPath(`environment-drilldown-${theme}.png`), animations: "disabled" });
   await selector.selectOption({ label: "All connections" });
   await expect(page.locator('[data-id="container:serving"]')).toHaveCount(1);
+  await settle(page);
+  await expect(page.locator('[data-id="cve:torch"]')).toHaveCount(0);
+  await page.getByRole("button", { name: "Expand 1 finding for torch@2.5.1", exact: true }).click();
   await settle(page);
   const chains = [["container:serving", "pkg:torch", "cve:torch"],
     ["agent:triage", "server:tickets", "cred:tickets", "data:tickets"],
@@ -730,9 +740,15 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
       }).map(label => label.textContent);
     }));
     expect(badgeCaptionOverlaps, "finding counts clear asset names and types").toEqual([]);
-    const findingCount = page.getByRole("button", { name: "Inspect 1 finding in the scope of checkout-api", exact: true });
+    const findingCount = page.getByRole("button", { name: "Expand 1 finding for checkout-api", exact: true });
     await expect(findingCount).toBeVisible();
     await findingCount.click();
+    await expect(page.locator('[data-id="cve:next"]')).toHaveCount(1);
+    await settle(page);
+    await page.getByRole("button", { name: "Collapse 1 finding for checkout-api", exact: true }).click();
+    await expect(page.locator('[data-id="cve:next"]')).toHaveCount(0);
+    await settle(page);
+    await page.locator('[data-id="container:checkout"] .graph-entity-glyph').click();
     const drawer = page.getByTestId("graph-entity-drawer");
     await expect(drawer.getByRole("region", { name: "Finding count scope" })).toContainText("Distinct open findings");
     await drawer.getByRole("button", { name: "Close", exact: true }).click();
@@ -742,7 +758,7 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     await expect(page.getByText("prod-workloads", { exact: true })).toBeVisible();
     if (width >= 640) {
       await expect(page.locator('[data-boundary-frame]')).toHaveAttribute("data-frame-links", "2");
-      await expect(page.getByTestId("graph-viewport-scope")).toContainText("8 visible items");
+      await expect(page.getByTestId("graph-viewport-scope")).toContainText("7 visible items · 4 grouped findings");
       const bounds = await page.locator('[data-boundary-frame]').boundingBox();
       const internet = await page.locator('[data-id="display:internet"] .graph-entity-glyph').boundingBox();
       expect(internet!.x + internet!.width).toBeLessThan(bounds!.x);

@@ -219,8 +219,10 @@ test("an unmounted token is captioned, and evidence counts exclude display objec
   await serve(page, assessed, "light");
   await open(page);
   await expect(page.locator(`.react-flow__node[data-id="${nodeId(fixtures.snapshot, "service account: prod/web-sa")}"]`)).toContainText("token not mounted");
-  await expect(page.getByLabel("Visible relationship evidence").first()).toContainText("Recorded observation");
-  await expect(page.getByLabel("Visible relationship evidence").first()).not.toContainText("Mixed");
+  await page.getByTestId("graph-options").locator(":scope > summary").click();
+  await expect(page.getByLabel("Relationship evidence breakdown")).toContainText("Recorded observation");
+  await expect(page.getByLabel("Relationship evidence breakdown")).not.toContainText("Mixed");
+  await page.getByTestId("graph-options").locator(":scope > summary").click();
   // One Internet anchor, linked to each exposed entry by a display edge named for that entry.
   const ingress = nodeId(fixtures.snapshot, "ingress: prod/web");
   const internet = page.locator('.react-flow__node[data-id="display:internet"]');
