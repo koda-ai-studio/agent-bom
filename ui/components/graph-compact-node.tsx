@@ -26,7 +26,7 @@ import { compactScopeCaption } from "@/lib/graph-compact-scope";
 import { ANCHOR_GLYPH_SCALE, COMPACT_GLYPH_SCALE, PHONE_GLYPH_SCALE } from "@/lib/graph-compact-glyph";
 
 /** Presentation flags shared with the bounded story layout. */
-export type CompactNodePresentation = { scopeFindingLabel?: boolean | undefined; scopePeers?: { id: string; label: string; inspect: () => void }[] | undefined; scopePorts?: boolean | undefined; captionAbove?: boolean | undefined; phoneLinear?: boolean | undefined; roomyName?: boolean | undefined; connectedScope?: boolean | undefined; readingFocus?: boolean | undefined };
+export type CompactNodePresentation = { pathPresentation?: boolean | undefined; scopeAdmin?: {label: string; inspect: () => void} | undefined; scopeFindingLabel?: boolean | undefined; scopePeers?: { id: string; label: string; inspect: () => void }[] | undefined; scopePorts?: boolean | undefined; captionAbove?: boolean | undefined; phoneLinear?: boolean | undefined; roomyName?: boolean | undefined; connectedScope?: boolean | undefined; readingFocus?: boolean | undefined };
 
 export type CompactNodeTone = { data: LineageNodeData; borderClass: string; bgClass: string; ringClass: string; iconClass: string; source?: boolean; target?: boolean };
 
@@ -95,6 +95,8 @@ function typeLine(data: LineageNodeData, title: string): string {
   const caption = data.evidenceFlow ? mcpNodeCaption(data, title) : null;
   if (data.nodeType === "misconfiguration" && data.attributes?.finding_kind === "iac") return "IaC finding";
   // A recorded agent type (workflow, assistant, ...) says more than the generic client role.
+  if (data.pathPresentation && data.attributes?.tool_class === "shell") return "Shell command execution";
+  if (data.pathPresentation && data.entityType === "credential") return "Exposed credential reference";
   if (data.nodeType === "agent" && data.agentType) return topologyAgentTypeLabel(data.agentType);
   // Two visible containers with one name: the recorded role (image inventory or deployment) tells them apart.
   if (data.occurrenceRole) return data.occurrenceRole;
@@ -147,7 +149,7 @@ function Markers({ data }: { data: LineageNodeData }) {
         <Crown aria-hidden="true" style={{ width: "var(--graph-node-meta-size, 14px)", height: "var(--graph-node-meta-size, 14px)" }} />
       </span></GraphCountHint>}
       {(classification || critical) && <GraphCountHint text={sensitiveTitle}><span tabIndex={0} role="img" data-compact-marker="sensitive" aria-label={sensitiveTitle} className="rounded-sm bg-[var(--graph-canvas)] text-emerald-700 dark:text-emerald-300">
-        <Diamond aria-hidden="true" style={{ width: "var(--graph-node-meta-size, 14px)", height: "var(--graph-node-meta-size, 14px)" }} />
+        {critical ? <Crown aria-hidden="true" size={16} /> : <Diamond aria-hidden="true" size={16} />}
       </span></GraphCountHint>}
     </span>}
     {data.isKev && <span data-compact-marker="kev" title="Listed in the CISA Known Exploited Vulnerabilities catalog"
@@ -225,7 +227,7 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
       {held && <span data-testid="graph-held-connections" className="sr-only">{held}</span>}
     </div>
     <CaptionBox wide={data.scopePorts} above={data.captionAbove} phone={Boolean(data.phoneLayout) && !stackedOnPhone(data)}>
-    <p data-semantic-name title={fullTitle} className={`mt-[0.3em] ${data.phoneLayout && !data.phoneLinear ? NAME_CLAMP.phone : NAME_CLAMP.desktop} max-w-full font-semibold leading-[1.15] text-foreground`} style={{ fontSize: data.phoneLinear ? "var(--graph-node-label-size, 16px)" : data.phoneLayout ? "calc(var(--graph-node-label-size, 14px) * 0.88)" : "calc(var(--graph-node-label-size, 14px) * var(--graph-node-name-scale, 0.88))" }}>
+    <p data-semantic-name title={fullTitle} className={`mt-[0.3em] ${data.phoneLayout && !data.phoneLinear ? NAME_CLAMP.phone : NAME_CLAMP.desktop} max-w-full ${data.pathPresentation ? "font-normal" : "font-semibold"} leading-[1.15] text-foreground`} style={{ fontSize: data.phoneLinear ? "var(--graph-node-label-size, 16px)" : data.phoneLayout ? "calc(var(--graph-node-label-size, 14px) * 0.88)" : "calc(var(--graph-node-label-size, 14px) * var(--graph-node-name-scale, 0.88))" }}>
       <NameWords text={canvasName(preview)} hidden={canvasName(preview) !== fullTitle} />
     </p>
     {canvasName(preview) !== fullTitle && <span className="sr-only">{fullTitle}</span>}
@@ -233,8 +235,9 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
       {scope ? scope.visible : typeLine(data, fullTitle)}
     </span>
     {scope && <span className="sr-only">{scope.spoken}</span>}
-    {!!data.scopePeers?.length && <div className="absolute bottom-full left-1/2 mb-3 flex -translate-x-1/2 flex-col gap-1">
-      {data.scopePeers.map(peer => <button key={peer.id} data-graph-caption type="button" className="nodrag nopan whitespace-nowrap rounded-full border border-outline bg-surface-elevated px-2 py-1 text-[11px] text-ink-secondary"
+    {data.scopeAdmin && <button data-graph-caption type="button" className="nodrag nopan mt-1 whitespace-nowrap bg-[var(--graph-canvas)] text-[11px] text-ink-secondary" onClick={event => { event.stopPropagation(); data.scopeAdmin!.inspect(); }}>admin via {data.scopeAdmin.label}</button>}
+    {!!data.scopePeers?.length && <div className="mt-1 flex items-center flex-col gap-1">
+      {data.scopePeers.map(peer => <button key={peer.id} data-graph-caption type="button" className="nodrag nopan whitespace-nowrap bg-[var(--graph-canvas)] px-1 text-[11px] text-ink-secondary"
         onClick={event => { event.stopPropagation(); peer.inspect(); }}>also used by: {peer.label}</button>)}
     </div>}
     {data.seenIn?.length ? <span className="sr-only" data-seen-in>{seenInSummary(data.seenIn)}</span> : null}

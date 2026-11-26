@@ -11,14 +11,13 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     await expect(canvas).toBeVisible();
     if (width === 1440) {
       await expect(canvas.locator('.react-flow__node[data-id="server:filesystem"]')).toBeVisible();
-      const roleLink = canvas.locator('.react-flow__edge').filter({ has: page.locator('[data-relationship="can_access"]') });
-      await expect(roleLink.locator(".react-flow__edge-path")).toHaveAttribute("marker-end", /.+/);
+      await expect(canvas.locator('[data-relationship="can_access"]')).toHaveCount(0);
       await expect(canvas.locator('[data-relationship="shares_server"]')).toHaveCount(0);
       await expect(canvas.locator("[data-internet-anchor]")).toHaveCount(1);
-      await expect(canvas.locator(".react-flow__node")).toHaveCount(8);
-      await expect(canvas.locator(".graph-relationship-label:visible")).toHaveCount(1);
-      await expect(roleLink).toBeVisible();
-      await expect(canvas.locator(".graph-relationship-label").filter({ hasText: "Can Access" })).toBeVisible();
+      await expect(canvas.locator(".react-flow__node")).toHaveCount(9);
+      await expect(canvas.locator(".graph-relationship-label:visible")).toHaveCount(0);
+      await expect(canvas.locator('.react-flow__node[data-id="tool:exec"]')).toBeVisible();
+      await expect(canvas.locator('.react-flow__node[data-id="cred:aws"]')).toBeVisible();
       const uses = canvas.locator('.react-flow__edge').filter({ has: page.locator('[data-relationship="uses"]') }).first();
       await expect(uses.locator(".react-flow__edge-path")).toHaveCSS("stroke", theme === "dark" ? "rgb(139, 150, 170)" : "rgb(107, 119, 140)");
       await uses.focus();
@@ -33,10 +32,9 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
       await page.getByText("Exposure and tool context", { exact: true }).click();
       await expect(page.getByRole("button", { name: "Internet-exposed: copilot-portal:2.4.0" })).toBeVisible();
     } else {
-      await expect(canvas.locator("li[data-recorded-edge]")).toHaveCount(6);
-      await expect(canvas.locator("li").filter({ hasText: "prod-ai-admin" }).filter({ hasText: "Developer Copilot" })).toContainText("prod-ai-admin→Developer Copilot");
-      await expect(canvas.locator("li").filter({ hasText: "prod-ai-admin" }).filter({ hasText: "Developer Copilot" })).toContainText("Modeled");
-      await expect(canvas.locator("li").filter({ hasText: "SRE Runbook Agent" })).toContainText("filesystem MCP");
+      await expect(canvas.locator("li[data-recorded-edge]")).toHaveCount(5);
+      await expect(canvas.locator("li").filter({ hasText: "execute_command" })).toContainText("provides tool · Static / configured");
+      await expect(canvas.locator("li").filter({ hasText: "AWS_ROLE_SESSION" })).toContainText("exposes cred · Static / configured");
     }
     await page.getByText("Recorded tool control context (1)").click();
     await expect(page.getByRole("button", { name: "default-deny gateway policy", exact: true })).toBeVisible();
@@ -50,9 +48,9 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
       await page.getByText(/Relationship evidence \(/).click();
       await expect(page.getByText(/prod-ai-admin → Developer Copilot · can access/)).toBeVisible();
       await expect(page.getByText(/SRE Runbook Agent → filesystem MCP · uses/)).toBeVisible();
-      await canvas.getByRole("button", { name: "Inspect 1 finding in the scope of Developer Copilot" }).click();
+      await canvas.getByRole("button", { name: "Expand 1 finding for Developer Copilot" }).click();
     } else await canvas.getByRole("button", { name: "Open 1 finding for Developer Copilot" }).click();
-    await expect(page.getByText("Showing 7 assets · 6 recorded connections.")).toBeVisible();
+    await expect(page.getByText("Showing 6 assets · 5 recorded connections.")).toBeVisible();
     const findings = page.getByRole("region", { name: "Findings for Developer Copilot" });
     await expect(findings).toContainText("1 open issue");
     await expect(findings).toContainText("CVE-2024-37891");
@@ -68,7 +66,7 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     await page.goto(`/graph?scan=${graph.scan_id}&rollup=1`);
     if (width === 1440) await page.getByText("Exposure and tool context", { exact: true }).click();
     await page.getByText("Recorded tool control context (1)").click();
-    await page.getByRole("button", { name: "execute_command", exact: true }).click();
+    await page.locator("details").filter({ has: page.getByText("Recorded tool control context (1)", {exact: true}) }).getByRole("button", { name: "execute_command", exact: true }).click();
     await expect.poll(() => queries.at(-1)?.roots).toEqual(["tool:exec"]);
     await expect(page.getByText("default-deny gateway policy", { exact: true }).first()).toBeVisible();
     if (width === 1440) {

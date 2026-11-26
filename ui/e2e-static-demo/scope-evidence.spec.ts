@@ -20,9 +20,9 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     if (width === 1440) {
       await page.getByText(/Relationship evidence \(/).click();
       await expect(page.getByText(/prod-ai-admin → Developer Copilot · can access/)).toBeVisible();
-      await canvas.getByRole("button", { name: "Inspect 1 finding in the scope of Developer Copilot" }).click();
+      await canvas.getByRole("button", { name: "Expand 1 finding for Developer Copilot" }).click();
     } else {
-      await expect(canvas.locator("li").filter({ hasText: "prod-ai-admin" }).filter({ hasText: "Developer Copilot" })).toContainText("prod-ai-admin→Developer Copilot");
+      await expect(canvas.locator("li").filter({ hasText: "AWS_ROLE_SESSION" })).toContainText("exposes cred · Static / configured");
       await canvas.getByRole("button", { name: "Open 1 finding for Developer Copilot" }).click();
     }
     const findings = page.getByRole("region", { name: "Findings for Developer Copilot" });

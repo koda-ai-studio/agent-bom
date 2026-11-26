@@ -4,7 +4,7 @@ const SERVERS = new Set(["server", "mcp_server"]);
 const FINDINGS = new Set(["vulnerability", "misconfiguration", "finding", "iac_finding"]);
 
 /** A bounded original-edge neighborhood; only suppress a shared-server shortcut when both uses edges are present. */
-export function scopeEvidenceGraph(graph: UnifiedGraphData, root: string): UnifiedGraphData {
+export function scopeEvidenceGraph(graph: UnifiedGraphData, root: string, includeImpact = false): UnifiedGraphData {
   const byId = new Map(graph.nodes.map(node => [node.id, node]));
   const incident = graph.edges.filter(edge => edge.source === root || edge.target === root);
   const neighbors = incident.map(edge => edge.source === root ? edge.target : edge.source)
@@ -19,6 +19,13 @@ export function scopeEvidenceGraph(graph: UnifiedGraphData, root: string): Unifi
   const assumption = graph.edges.find(edge => edge.relationship === "assumes" && chosen.has(edge.target)
     && byId.get(edge.target)?.entity_type === "role" && byId.has(edge.source));
   if (assumption && chosen.size < 10) chosen.add(assumption.source);
+  if (includeImpact) {
+    const impactServer = [...servers].sort((a, b) => {
+      const shell = (id: string) => graph.edges.some(edge => edge.source === id && edge.relationship === "provides_tool" && byId.get(edge.target)?.attributes.tool_class === "shell");
+      return Number(shell(b)) - Number(shell(a)) || a.localeCompare(b);
+    })[0];
+    for (const edge of graph.edges) if (edge.source === impactServer && ["provides_tool", "exposes_cred"].includes(edge.relationship) && byId.has(edge.target)) chosen.add(edge.target);
+  }
   const edges = graph.edges.filter(edge => chosen.has(edge.source) && chosen.has(edge.target)).filter(edge => {
     if (edge.relationship !== "shares_server") return true;
     return ![...servers].some(server => [edge.source, edge.target].every(agent =>

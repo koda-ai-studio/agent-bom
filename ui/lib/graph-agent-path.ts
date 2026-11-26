@@ -11,7 +11,7 @@ const SERVER = new Set(["server", "mcp_server"]);
 
 /** A reading projection of recorded connections. Inverse hosting retains its original receipt;
  * Internet and finding groups are display context and never enter the persisted graph. */
-export function agentPathGraph(graph: UnifiedGraphData, flow: Flow, root: string, inspect: (id: string, label: string) => void): Flow {
+export function agentPathGraph(graph: UnifiedGraphData, flow: Flow, root: string, inspect: (id: string, label: string) => void, entry: "exposure" | "identity" = "exposure", selectIdentity?: () => void): Flow {
   const records = new Map(graph.nodes.map(node => [node.id, node]));
   const servers = new Set(graph.edges.filter(edge => edge.source === root && edge.relationship === "uses" && SERVER.has(records.get(edge.target)?.entity_type ?? "")).map(edge => edge.target));
   const peers = new Map<string, string[]>();
@@ -22,7 +22,11 @@ export function agentPathGraph(graph: UnifiedGraphData, flow: Flow, root: string
       peers.set(node.id, incident.map(edge => edge.target));
     }
   }
-  let nodes: Node<LineageNodeData>[] = flow.nodes.filter(node => !peers.has(node.id) && !node.data.displayOnly).map(node => ({ ...node,
+  const access = graph.edges.find(edge => edge.target === root && edge.relationship === "can_access" && records.get(edge.source)?.entity_type === "role");
+  const assumption = graph.edges.find(edge => edge.target === access?.source && edge.relationship === "assumes");
+  const identity = new Set([access?.source, assumption?.source].filter((id): id is string => !!id));
+  const hosted = new Set(graph.edges.filter(edge => edge.source === root && edge.relationship === "hosted_on").map(edge => edge.target));
+  let nodes: Node<LineageNodeData>[] = flow.nodes.filter(node => !peers.has(node.id) && !node.data.displayOnly && !(entry === "exposure" ? identity.has(node.id) : hosted.has(node.id))).map(node => ({ ...node,
     data: { ...node.data, captionAbove: false, scopePeers: [...peers].filter(([, targets]) => targets.includes(node.id)).map(([id]) => ({ id, label: records.get(id)!.label, inspect: () => inspect(id, records.get(id)!.label) })) },
   }));
   const ids = new Set(nodes.map(node => node.id));
@@ -41,7 +45,7 @@ export function agentPathGraph(graph: UnifiedGraphData, flow: Flow, root: string
         evidenceMode: evidence.mode, directOverview: true, quietLabel: record.relationship !== "can_access", labelVisibility: record.relationship === "can_access" ? "show" : "auto", directionEmphasis: true },
     };
   });
-  const contextual = withInternetAnchor(nodes, edges);
+  const contextual = entry === "exposure" ? withInternetAnchor(nodes, edges) : { nodes, edges };
   nodes = contextual.nodes; edges = contextual.edges.map(edge => edge.data?.displayOnly ? {
     ...edge, style: { ...edge.style, strokeDasharray: undefined },
     // The line discloses an explicit true node attribute, not an inferred permission or runtime receipt.
@@ -49,9 +53,17 @@ export function agentPathGraph(graph: UnifiedGraphData, flow: Flow, root: string
   } : edge);
   const byId = new Map(nodes.map(node => [node.id, node]));
   const exposedHost = edges.find(edge => edge.target === root && edge.data?.inverseRecordedRelationship && internetExposure(byId.get(edge.source)?.data.attributes) === true)?.source;
-  const rankedServers = [...servers].sort((a, b) => (byId.get(b)?.data.findingAggregate?.issue_count ?? 0) - (byId.get(a)?.data.findingAggregate?.issue_count ?? 0) || a.localeCompare(b));
-  const primary = [...(exposedHost ? [INTERNET_ANCHOR_ID, exposedHost] : internetExposure(byId.get(root)?.data.attributes) === true ? [INTERNET_ANCHOR_ID] : []), root, ...rankedServers.slice(0, 1)];
-  for (const owner of rankedServers) {
+  const hasImpact = (id: string) => graph.edges.some(edge => edge.source === id && ["provides_tool", "exposes_cred"].includes(edge.relationship));
+  const rankedServers = [...servers].sort((a, b) => Number(hasImpact(b)) - Number(hasImpact(a)) || (byId.get(b)?.data.findingAggregate?.issue_count ?? 0) - (byId.get(a)?.data.findingAggregate?.issue_count ?? 0) || a.localeCompare(b));
+  const impact = edges.filter(edge => edge.source === rankedServers[0] && ["provides_tool", "exposes_cred"].includes(String(edge.data?.relationship)));
+  const tool = impact.find(edge => records.get(edge.target)?.attributes.tool_class === "shell")?.target ?? impact[0]?.target;
+  const entryIds = entry === "identity" ? [...(assumption ? [assumption.source] : []), ...(access ? [access.source] : [])] : exposedHost ? [INTERNET_ANCHOR_ID, exposedHost] : internetExposure(byId.get(root)?.data.attributes) === true ? [INTERNET_ANCHOR_ID] : [];
+  const primary = [...entryIds, root, ...rankedServers.slice(0, 1), ...(tool ? [tool] : [])];
+  const branchLanes = new Map<string, number>();
+  for (const edge of impact) if (edge.target !== tool) branchLanes.set(edge.target, 1);
+  for (const server of rankedServers.slice(1)) branchLanes.set(server, 1);
+
+  for (const owner of [root, ...rankedServers]) {
     const asset = byId.get(owner)!, aggregate = asset.data.findingAggregate;
     if (!aggregate?.issue_count || !asset.data.onExploreFindings) continue;
     const id = `display:scope-findings:${owner}`;
@@ -63,7 +75,7 @@ export function agentPathGraph(graph: UnifiedGraphData, flow: Flow, root: string
     edges.push({ id: `${id}:disclosure`, source: owner, target: id, type: "smoothstep",
       data: { displayOnly: true, traversable: false, relationship: "finding_group", relationshipLabel: "Open scope findings", directOverview: true, quietLabel: true, directionEmphasis: false },
     });
-    if (owner === rankedServers[0]) primary.push(id);
+    branchLanes.set(id, -1);
   }
   const columns = new Map(primary.map((id, index) => [id, index]));
   for (let pass = 0; pass < nodes.length; pass++) for (const edge of edges) {
@@ -76,12 +88,14 @@ export function agentPathGraph(graph: UnifiedGraphData, flow: Flow, root: string
     edges: edges.map(edge => ({ id: edge.id, source: edge.source, target: edge.target, relationship: String(edge.data?.relationship), relationshipLabel: "", evidence: "inferred", onPath: false, bidirectional: false })),
     pathNodeIds: primary, connectedPathCount: 0, omittedConnectedPaths: 0,
   };
-  const layout = layoutAttackPathGraph(model, "LR", columns);
+  const layout = layoutAttackPathGraph(model, "LR", columns, { lanes: branchLanes, rankGap: 96 });
   const pathPairs = new Set(primary.slice(1).map((id, index) => `${primary[index]}\0${id}`));
+  for (const edge of impact) pathPairs.add(`${edge.source}\0${edge.target}`);
   const exposure = primary[0] === INTERNET_ANCHOR_ID;
   return {
     nodes: nodes.map(node => ({ ...node, position: layout.positions.get(node.id)!, style: { ...node.style, width: 152, "--graph-node-card-width": "152px" },
-      data: { ...node.data, scopePorts: true, scopeFindingLabel: node.id === root,
+      data: { ...node.data, scopePorts: true, scopeFindingLabel: false, pathPresentation: true,
+        ...(node.id === root && entry === "exposure" && access ? { scopeAdmin: { label: records.get(access.source)!.label, inspect: selectIdentity ?? (() => inspect(access.source, records.get(access.source)!.label)) } } : {}),
         readingFindingsGroup: nodes.some(group => group.type === "findingGroupNode" && group.data.displayTargetId === node.id),
         semanticLayout: true, roomyName: node.id === INTERNET_ANCHOR_ID, internetAnchored: exposure, readingFocus: node.id === root } })),
     edges: edges.map(edge => {
@@ -89,7 +103,7 @@ export function agentPathGraph(graph: UnifiedGraphData, flow: Flow, root: string
       const onPath = exposure && pathPairs.has(`${edge.source}\0${edge.target}`);
       const color = privilege ? "var(--graph-edge-risk)" : onPath ? "var(--graph-edge-exposure)" : "var(--graph-edge-structure)";
       const from = layout.positions.get(edge.source)!, to = layout.positions.get(edge.target)!;
-      return { ...edge, type: "smoothstep", sourceHandle: to.x < from.x ? "context" : to.y > from.y ? "scope-out-2" : "scope-out-1", targetHandle: to.x < from.x ? "context" : edge.data?.relationship === "finding_group" ? null : privilege ? "scope-in-lower-left" : from.y > to.y ? "scope-in-2" : "scope-in-1",
+      return { ...edge, type: "smoothstep", sourceHandle: to.y < from.y ? "scope-out-0" : to.x < from.x ? "context" : to.y > from.y ? "scope-out-2" : "scope-out-1", targetHandle: to.x < from.x ? "context" : edge.data?.relationship === "finding_group" ? null : privilege ? "scope-in-lower-left" : from.y > to.y ? "scope-in-2" : "scope-in-1",
         ...(edge.data?.relationship === "finding_group" ? {} : { markerEnd: { type: MarkerType.ArrowClosed, color, width: 20, height: 16 } }),
         style: { ...edge.style, opacity: 1, stroke: color, strokeWidth: onPath ? 2.4 : 2 },
         data: { ...edge.data, exposurePath: onPath, directOverview: true, earlyRise: privilege && from.y > to.y, directionEmphasis: edge.data?.relationship !== "finding_group", quietLabel: !privilege, labelVisibility: privilege ? "show" : "auto" },

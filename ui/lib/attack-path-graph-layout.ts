@@ -152,14 +152,21 @@ function portraitPathLayout(model: AttackPathGraphModel): AttackPathLayout {
  * Layered DAG: the selected path is one straight line, every node sits in its
  * dagre layer, and branches take lanes above and below the path.
  */
-export function layoutAttackPathGraph(model: AttackPathGraphModel, _requestedDirection: AttackPathDirection, hopColumns?: Map<string, number>): AttackPathLayout {
+export function layoutAttackPathGraph(model: AttackPathGraphModel, _requestedDirection: AttackPathDirection, hopColumns?: Map<string, number>, branches?: { lanes: Map<string, number>; rankGap?: number }): AttackPathLayout {
   if (_requestedDirection === "TB") return portraitPathLayout(model);
   // Desktop preserves the backend semantic columns.
   const direction: AttackPathDirection = "LR";
-  const spacing = SPACING[direction];
+  const spacing = { ...SPACING[direction], ...(branches?.rankGap ? {rank: branches.rankGap} : {}) };
   const columns = hopColumns ? new Map(hopColumns) : rankColumns(model);
   const lanes = assignLanes(model, columns);
   besideBranchOwners(model, columns, lanes);
+  const reserved = new Set<string>();
+  for (const [id, preferred] of branches?.lanes ?? []) {
+    if (!lanes.has(id)) continue;
+    let lane = preferred;
+    while (reserved.has(`${columns.get(id)}:${lane}`)) lane += Math.sign(preferred) || 1;
+    lanes.set(id, lane); reserved.add(`${columns.get(id)}:${lane}`);
+  }
   const occupiedColumns = [...new Set(columns.values())].sort((a, b) => a - b);
   const minLane = Math.min(0, ...lanes.values());
   const maxLane = Math.max(0, ...lanes.values());

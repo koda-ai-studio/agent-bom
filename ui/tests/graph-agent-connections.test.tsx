@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import { GraphAgentConnections } from "@/components/graph-agent-connections";
 import { api } from "@/lib/api";
@@ -25,7 +25,7 @@ it("uses the same refreshed count for the mobile badge and its disclosure", asyn
   expect(screen.getByText("Shared MCP server: filesystem MCP. Expand it to inspect tools and access evidence.")).toBeVisible();
   expect(screen.getByRole("button", { name: "Internet-exposed: copilot-portal:2.4.0" })).toBeVisible();
   fireEvent.click(screen.getByText("Recorded tool control context (1)"));
-  fireEvent.click(screen.getByRole("button", { name: "execute_command" }));
+  fireEvent.click(within(screen.getByText("Recorded tool control context (1)").closest("details")!).getByRole("button", { name: "execute_command" }));
   expect(inspect).toHaveBeenCalledWith("tool:exec", "execute_command");
   expect(screen.getByText("default-deny gateway policy")).toBeVisible();
   rerender(<GraphAgentConnections scanId={graph.scan_id} rootId={rootId} generation="refreshed" aggregate={current.aggregate}

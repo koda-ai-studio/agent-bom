@@ -14,6 +14,18 @@ test("agent entry chains stay connected and findings disclose their exact CVE", 
   await expect(findings).toContainText("CVE-2024-37891");
   await expect(findings.getByRole("button", { name: "Inspect evidence" })).toHaveCount(1);
   await findings.getByRole("button", { name: "Close findings" }).click();
+  await page.getByRole("button", { name: "admin via prod-ai-admin", exact: true }).click();
+  const canvas = page.getByTestId("graph-agent-evidence");
+  await expect(canvas.locator('[data-internet-anchor]')).toHaveCount(0);
+  await expect(canvas.locator('.react-flow__node[data-id="sa:jit-review"]')).toBeVisible();
+  await expect(canvas.locator('.react-flow__node[data-id="role:prod-admin"]')).toBeVisible();
+  const privilege = canvas.locator('[data-relationship="can_access"] .react-flow__edge-path');
+  await expect(privilege).toHaveCSS("stroke", "rgb(239, 68, 68)");
+  await expect(privilege).toHaveAttribute("marker-end", /.+/);
+  await page.getByLabel("Entry route", {exact: true}).selectOption("exposure");
+  await page.getByRole("button", { name: "Expand 1 finding for Developer Copilot", exact: true }).click();
+  await expect(page.getByRole("region", {name: "Findings for Developer Copilot"})).toContainText("CVE-2024-37891");
+  await page.getByRole("button", {name: "Close findings"}).click();
   await page.getByRole("button", { name: "Explore neighbours", exact: true }).click();
   await expect(page.getByTestId("graph-agent-evidence")).toHaveAttribute("data-layout", "neighborhood");
   await expect(page.locator('.react-flow__node[data-id="agent:sre-runbook"]')).toBeVisible();
