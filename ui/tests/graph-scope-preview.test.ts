@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildScopePreview, hasSharedScopeCycle } from "@/lib/graph-scope-preview";
 import type { GraphRollupContainer, GraphRollupEdge } from "@/lib/api-types";
+import { showsProviderMark } from "@/lib/graph-scope-context";
 
 const item = (id: string, entity_type = "misconfiguration", label = id): GraphRollupContainer => ({
   id, label, entity_type, severity: "high", is_container: false, has_children: false, direct_child_count: 0,
@@ -9,6 +10,20 @@ const item = (id: string, entity_type = "misconfiguration", label = id): GraphRo
 });
 
 describe("scope relationship preview", () => {
+  it("states a shared provider once without hiding mixed or unknown provider context", () => {
+    const account = (id: string, provider?: string) => ({ ...item(id, "account"), ...(provider ? { cloud_provider: provider } : {}) });
+    const edges = [{ source: "a", target: "b", count: 2, relationships: ["can_access"] }];
+    const same = buildScopePreview([account("a", "aws"), account("b", "aws")], edges)!;
+    expect(same.sharedProvider?.id).toBe("aws");
+    expect(same.nodes.every(node => !showsProviderMark(node.data))).toBe(true);
+    expect(same.nodes.map(node => node.data.attributes)).toEqual([expect.objectContaining({ cloud_provider: "aws" }), expect.objectContaining({ cloud_provider: "aws" })]);
+    const mixed = buildScopePreview([account("a", "aws"), account("b", "azure")], edges)!;
+    expect(mixed.sharedProvider).toBeNull();
+    expect(mixed.nodes.every(node => showsProviderMark(node.data))).toBe(true);
+    const unknown = buildScopePreview([account("a", "aws"), account("b")], edges)!;
+    expect(unknown.sharedProvider).toBeNull();
+    expect(showsProviderMark(unknown.nodes.find(node => node.id === "a")!.data)).toBe(true);
+  });
   it("draws reciprocal scope relationships once while retaining each direction's evidence", () => {
     const preview = buildScopePreview([item("account-a", "account"), item("account-b", "account")], [
       { source: "account-a", target: "account-b", count: 7, relationships: ["can_access"], directions: ["directed"] },

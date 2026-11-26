@@ -26,6 +26,13 @@ const children = ["a", "b", "c"].map(id => ({ ...root, id, label: id, entity_typ
 const edges = children.map(child => ({ source: root.id, target: child.id, count: 2, relationships: ["affects"], directions: ["directed"] }));
 
 describe("scope preview navigation", () => {
+  it("identifies an account connection view and states its shared cloud once", () => {
+    const accounts = [root, ...children].map(item => ({ ...item, entity_type: "account", cloud_provider: "aws" }));
+    render(<GraphScopeOverview items={accounts} edges={edges} onDrill={vi.fn()} onInvestigate={vi.fn()} />);
+    expect(screen.getByText("Account connections")).toBeVisible();
+    expect(screen.getByTestId("graph-preview-provider")).toHaveTextContent("AWS · shown accounts");
+    expect(screen.getByText(/Connections between assets in these account scopes/)).toBeVisible();
+  });
   it("keeps recorded scope totals visible and drills into containment without opening a neighborhood", () => {
     const drill = vi.fn(), investigate = vi.fn();
     render(<GraphScopeOverview items={[root, ...children]} edges={edges} onDrill={drill} onInvestigate={investigate} />);
