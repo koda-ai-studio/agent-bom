@@ -46,13 +46,16 @@ async function frame(page: Page) {
 
 for (const theme of ["light", "dark"]) {
   for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) {
-    test(`six scopes open whole and legible in ${theme} ${viewport.width}`, async ({ page }, info) => {
+    test(`shared quickstart scopes open readable connections with full navigation in ${theme} ${viewport.width}`, async ({ page }, info) => {
       await page.setViewportSize(viewport);
       await serve(page, theme);
       await page.goto("/security-graph?scan=quickstart&lens=lineage");
-      await expect(page.locator(".react-flow__node")).toHaveCount(6);
-      await expect(page.locator("[data-graph-adaptive-frame]")).toHaveAttribute("data-graph-camera-settled", "true");
-      await expect.poll(async () => (await frame(page)).framed, { timeout: 10_000 }).toBe(6);
+      const overview = page.getByTestId("graph-scope-overview");
+      await expect(overview).toBeVisible();
+      await expect(page.locator(".react-flow__node")).toHaveCount(4);
+      await expect(overview).toContainText("9 of 9 loaded relationships for this scope");
+      await expect(page.getByLabel("Connection scope").locator("option")).toHaveCount(6);
+      await expect.poll(async () => (await frame(page)).framed, { timeout: 10_000 }).toBe(4);
       const view = await frame(page);
       expect(view.smallest).toBeGreaterThanOrEqual(11);
       const summaries = page.locator(".graph-aggregate-label");
@@ -70,6 +73,14 @@ for (const theme of ["light", "dark"]) {
       await expect(page.getByTestId("graph-in-view")).toHaveCount(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
       await page.screenshot({ path: info.outputPath(`scope-${theme}-${viewport.width}.png`), fullPage: true });
+      await overview.getByRole("button", { name: "Browse all 6 nodes and scopes" }).click();
+      const directory = page.getByTestId("graph-rollup-decision-surface");
+      await expect(directory).toBeVisible();
+      await directory.getByRole("button", { name: "All 6", exact: true }).click();
+      await expect(directory.locator("article")).toHaveCount(6);
+      for (const item of rollup.top_level) await expect(directory.locator("article p").filter({ hasText: item.label }).first()).toBeVisible();
+      await overview.getByRole("button", { name: "Show connections" }).click();
+      await expect(page.locator(".react-flow__node")).toHaveCount(4);
     });
   }
 }
