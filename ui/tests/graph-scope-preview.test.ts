@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildScopePreview, hasSharedScopeCycle } from "@/lib/graph-scope-preview";
 import type { GraphRollupContainer, GraphRollupEdge } from "@/lib/api-types";
+import { showsProviderMark } from "@/lib/graph-scope-context";
 
 const item = (id: string, entity_type = "misconfiguration", label = id): GraphRollupContainer => ({
   id, label, entity_type, severity: "high", is_container: false, has_children: false, direct_child_count: 0,
@@ -9,6 +10,39 @@ const item = (id: string, entity_type = "misconfiguration", label = id): GraphRo
 });
 
 describe("scope relationship preview", () => {
+  it("states a shared provider once without hiding mixed or unknown provider context", () => {
+    const account = (id: string, provider?: string) => ({ ...item(id, "account"), ...(provider ? { cloud_provider: provider } : {}) });
+    const edges = [{ source: "a", target: "b", count: 2, relationships: ["can_access"] }];
+    const same = buildScopePreview([account("a", "aws"), account("b", "aws")], edges)!;
+    expect(same.sharedProvider?.id).toBe("aws");
+    expect(same.nodes.every(node => !showsProviderMark(node.data))).toBe(true);
+    expect(same.nodes.map(node => node.data.attributes)).toEqual([expect.objectContaining({ cloud_provider: "aws" }), expect.objectContaining({ cloud_provider: "aws" })]);
+    const mixed = buildScopePreview([account("a", "aws"), account("b", "azure")], edges)!;
+    expect(mixed.sharedProvider).toBeNull();
+    expect(mixed.nodes.every(node => showsProviderMark(node.data))).toBe(true);
+    const unknown = buildScopePreview([account("a", "aws"), account("b")], edges)!;
+    expect(unknown.sharedProvider).toBeNull();
+    expect(showsProviderMark(unknown.nodes.find(node => node.id === "a")!.data)).toBe(true);
+  });
+  it("draws reciprocal scope relationships once while retaining each direction's evidence", () => {
+    const preview = buildScopePreview([item("account-a", "account"), item("account-b", "account")], [
+      { source: "account-a", target: "account-b", count: 7, relationships: ["can_access"], directions: ["directed"] },
+      { source: "account-b", target: "account-a", count: 4, relationships: ["depends_on"], directions: ["directed"] },
+    ])!;
+    expect(preview.edges).toHaveLength(1);
+    expect(preview.shownRelationships).toBe(11);
+    expect(preview.edges[0]?.data).toMatchObject({ labelVisibility: "auto", quietLabel: true,
+      aggregate: { count: 11, reverse: { source: "account-b", target: "account-a", count: 4 } } });
+  });
+  it("retains backend issue counts when the preview uses compact asset captions", () => {
+    const org = { ...item("org", "org"), has_children: true, is_container: true,
+      aggregate: { ...item("org").aggregate, descendant_count: 5578, issue_count: 1923 } };
+    const preview = buildScopePreview([org, item("source", "source_file")], [
+      { source: "org", target: "source", count: 2, relationships: ["affects"] },
+    ])!;
+    expect(preview.nodes.find(node => node.id === "org")?.data.findingAggregate).toEqual(org.aggregate);
+    expect(preview.edges.map(edge => [edge.source, edge.target])).toEqual([["org", "source"]]);
+  });
   it("shows named diverse findings around their recorded owner, with honest bounded totals", () => {
     const items = [item("repo", "application"), item("a", "misconfiguration", "Open port"),
       item("b", "misconfiguration", "Open port"), item("c", "misconfiguration", "Run as root"), item("d", "misconfiguration", "Secret in source"), item("orphan")];

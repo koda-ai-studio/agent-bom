@@ -31,6 +31,12 @@ it("keeps count inspection usable when older responses omit the histogram and oc
   expect(getByRole("region", { name: "Finding count scope" })).toHaveTextContent("Finding occurrencesNot available");
 });
 
+it("does not present a missing scope issue total as zero", () => {
+  const { getByRole } = render(<OverviewDetails data={{ label: "app", nodeType: "container",
+    findingAggregate: { ...aggregate, issue_count: undefined } }} onClose={() => {}} />);
+  expect(getByRole("region", { name: "Finding count scope" })).toHaveTextContent("Distinct open findingsNot available");
+});
+
 it("keeps the authoritative finding count available to collapse expanded findings", () => {
   const Renderer = lineageNodeTypes.containerNode;
   const toggle = vi.fn();

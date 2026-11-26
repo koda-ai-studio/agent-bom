@@ -237,7 +237,7 @@ export function GraphPageView({ page }: { page: GraphPageModel }) {
             selectedId={selectedNodeId}
             onSelect={node => onNodeClick({} as React.MouseEvent, node)}
           />
-          {!captureMode && !webgl && <GraphInViewHint edges={{ drawn: flowView.quieted.drawn, total: flowView.quieted.total, held: flowView.quieted.held, allShown: flowView.allEdgesShown, onToggle: flowView.setAllEdgesShown }} />}
+          {!captureMode && !webgl && !rollupDecisionActive && <GraphInViewHint edges={{ drawn: flowView.quieted.drawn, total: flowView.quieted.total, held: flowView.quieted.held, allShown: flowView.allEdgesShown, onToggle: flowView.setAllEdgesShown }} />}
           <div className={`relative min-h-0 min-w-0 flex-1 ${webgl ? "flex flex-col" : ""}`}>
           <GraphProjectionNotice coverage={(rollupCanvasOwnsPresentation ? rollupView : graphData)?.collection_coverage} onRetry={retryGraph} />
           {graphPanelError && graphData && !loadingGraph && (

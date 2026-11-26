@@ -1,7 +1,9 @@
 import type { GraphRollupContainer, GraphRollupEdge } from "@/lib/api-types";
-import { buildRollupFlowGraph } from "@/lib/graph-rollup-view";
+import type { Edge } from "@xyflow/react";
+import { buildRollupFlowGraph, mergeReciprocalRollupEdges } from "@/lib/graph-rollup-view";
 import { linkEndFans } from "@/lib/graph-compact-fan";
 import { severityRank } from "@/lib/severity";
+import { entitySource } from "@/lib/agent-source";
 
 const FINDINGS = new Set(["misconfiguration", "vulnerability", "finding", "iac_finding"]);
 
@@ -81,7 +83,9 @@ export function buildScopePreview(items: GraphRollupContainer[], edges: GraphRol
   const chosen = [...sides.left, ...sides.right];
   const ids = new Set(chosen.map(item => item.id));
   const selectedLinks = links.filter(edge => ids.has(edge.source === root.id ? edge.target : edge.source));
-  const flow = buildRollupFlowGraph([root, ...chosen], { edges: selectedLinks });
+  const flow = buildRollupFlowGraph([root, ...chosen], { edges: mergeReciprocalRollupEdges(selectedLinks) });
+  const providers = flow.nodes.map(node => entitySource(node.data));
+  const sharedProvider = providers[0] && providers.every(provider => provider?.id === providers[0]!.id) ? providers[0] : null;
   const rows = Math.max(sides.left.length, sides.right.length);
   const reach = sides.left.length && sides.right.length ? SCOPE_PREVIEW_REACH.both : SCOPE_PREVIEW_REACH.one;
   const rootX = sides.left.length ? reach : 0;
@@ -94,20 +98,21 @@ export function buildScopePreview(items: GraphRollupContainer[], edges: GraphRol
   };
   const nodes = flow.nodes.map(node => ({ ...node,
     position: place(node.id),
-    data: { ...node.data, rollup: undefined, rollupCompact: false, highlighted: false,
+    data: { ...node.data, findingAggregate: node.data.rollup?.aggregate, rollup: undefined, rollupCompact: false, highlighted: false,
+      ...(sharedProvider ? { scopeContext: { provider: sharedProvider.id, environment: node.data.scopeContext?.environment ?? null } } : {}),
       attributes: { ...node.data.attributes, rollup_is_container: false },
     },
   }));
   // The preview has its own positions; routing from the full map is no longer valid.
   const fans = linkEndFans(flow.edges, new Map(nodes.map(node => [node.id, node.position])));
-  return { root, roots, nodes, rows,
-    edges: flow.edges.map(edge => ({ ...edge,
+  return { root, roots, nodes, rows, sharedProvider,
+    edges: flow.edges.map((edge): Edge => ({ ...edge,
       // Each link joins the facing sides of its two cards; context handles face the other way without reversing the
       // stored relationship direction.
       ...(left.has(edge.source) || left.has(edge.target)
         ? { sourceHandle: edge.source === root.id ? "context" : null, targetHandle: edge.target === root.id ? null : "context" }
         : { sourceHandle: edge.source === root.id ? null : "context", targetHandle: edge.target === root.id ? "context" : null }),
-      data: { ...edge.data, arcDy: undefined, passesBehind: undefined, sourceFan: 0, targetFan: 0, ...fans.get(edge.id), quietLabel: true, boundedOverview: true },
+      data: { ...edge.data, arcDy: undefined, passesBehind: undefined, sourceFan: 0, targetFan: 0, ...fans.get(edge.id), labelVisibility: "auto", quietLabel: true, boundedOverview: true },
     })),
     availableRelationships: links.reduce((sum, edge) => sum + edge.count, 0),
     shownRelationships: selectedLinks.reduce((sum, edge) => sum + edge.count, 0),

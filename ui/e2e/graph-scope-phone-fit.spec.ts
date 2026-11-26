@@ -61,17 +61,16 @@ for (const theme of ["light", "dark"]) {
       const view = await frame(page);
       expect(view.smallest).toBeGreaterThanOrEqual(11);
       const summaries = page.locator(".graph-aggregate-label");
-      await expect(summaries).toHaveCount(2);
-      await expect(summaries).toHaveText(["4 relationships", "4 relationships"]);
-      await expect.poll(() => summaries.evaluateAll(labels => {
-        const boxes = labels.map(label => label.getBoundingClientRect());
-        const overlaps = (a: DOMRect, b: DOMRect) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
-        const captions = [...document.querySelectorAll("[data-graph-entity] > *")].map(node => node.getBoundingClientRect());
-        return boxes.flatMap((box, index) => [
-          ...boxes.slice(index + 1).filter(other => overlaps(box, other)).map(() => "count labels overlap"),
-          ...captions.filter(other => overlaps(box, other)).map(() => "count label overlaps a card"),
-        ]);
-      }), { timeout: 3000 }).toEqual([]);
+      await expect(summaries).toHaveCount(0);
+      const inspected = [];
+      for (const edge of await page.locator(".react-flow__edge").all()) {
+        await edge.focus();
+        await expect(summaries).toHaveCount(1);
+        inspected.push(await summaries.innerText());
+      }
+      expect(inspected.sort()).toEqual(["1 relationship", "4 relationships", "4 relationships"]);
+      await page.getByLabel("Connection scope").focus();
+      await expect(summaries).toHaveCount(0);
       await expect(page.getByTestId("graph-in-view")).toHaveCount(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
       if (viewport.width >= 640) expect(await page.locator(".react-flow__edge-path").evaluateAll(paths => {

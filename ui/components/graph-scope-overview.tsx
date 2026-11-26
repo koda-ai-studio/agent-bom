@@ -1,9 +1,9 @@
 "use client";
 
-import { Background, ReactFlow, ReactFlowProvider } from "@xyflow/react";
+import { Background, ReactFlow, ReactFlowProvider, type Node } from "@xyflow/react";
 import { useMemo, useState, type ComponentProps, type CSSProperties } from "react";
 import { GraphRollupDecisionSurface } from "@/components/graph-rollup-decision-surface";
-import { lineageNodeTypes } from "@/components/lineage-nodes";
+import { lineageNodeTypes, type LineageNodeData } from "@/components/lineage-nodes";
 import { relationshipEdgeTypes } from "@/components/relationship-edge";
 import { buildScopePreview } from "@/lib/graph-scope-preview";
 import { useNarrowViewport } from "@/hooks/use-narrow-viewport";
@@ -12,6 +12,9 @@ import { legibleZoomForText } from "@/lib/graph-adaptive-frame";
 import { LegibleFitControls } from "@/components/graph-legible-controls";
 import { GraphFlowEdgeLegend } from "@/components/graph-flow-edge-legend";
 import { SCOPE_PREVIEW_ROW } from "@/lib/graph-scope-preview";
+import type { DisplayRollupEdge } from "@/lib/graph-rollup-view";
+import { phoneStoryLayout } from "@/lib/graph-phone-story";
+import { GraphProviderMark } from "@/components/graph-provider-mark";
 
 type Props = ComponentProps<typeof GraphRollupDecisionSurface>;
 
@@ -31,10 +34,24 @@ export function GraphScopeOverview(props: Props) {
   const narrow = useNarrowViewport();
   const preview = useMemo(() => buildScopePreview(props.items, props.edges, rootId) ?? buildScopePreview(props.items, props.edges), [props.items, props.edges, rootId]);
   if (!preview || props.edges.length < 3) return <GraphRollupDecisionSurface {...props} />;
+  const scope = preview.root;
+  const nodes: Node<LineageNodeData>[] = preview.nodes.map((node, index) => ({ ...node,
+    style: { ...node.style, "--graph-node-name-scale": 1 },
+    ...(narrow ? { position: { x: 0, y: index * 230 } } : {}),
+    data: { ...node.data, onExploreFindings: () => {
+      const item = props.items.find(item => item.id === node.id);
+      if (item) { if (item.has_children) props.onDrill(item); else props.onInvestigate(item); }
+    } },
+  }));
+  const flow = narrow ? phoneStoryLayout(nodes, preview.edges) : { nodes, edges: preview.edges };
   return <section data-testid="graph-scope-overview" className="overflow-hidden rounded-2xl bg-surface">
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline px-4 py-3">
       <div className="flex min-w-0 flex-wrap items-center gap-3">
-        <span className="text-sm font-semibold text-foreground">Recorded connections</span>
+        <span className="text-sm font-semibold text-foreground">{scope.entity_type === "account" ? "Account connections" : scope.entity_type === "org" ? "Organization connections" : "Recorded connections"}</span>
+        {!showList && preview.sharedProvider && <span data-testid="graph-preview-provider" className="inline-flex items-center gap-2 text-sm text-ink-secondary">
+          <GraphProviderMark source={preview.sharedProvider} className="h-6 w-6" />
+          {preview.sharedProvider.label} · shown {preview.nodes.every(node => node.data.entityType === "account") ? "accounts" : "nodes"}
+        </span>}
         {!showList && <label className="min-w-0 text-sm"><span className="sr-only">Connection scope</span>
           <select value={preview.root.id} onChange={event => { setRootId(event.target.value); setEdgeDetail(undefined); }} className="max-w-[min(440px,70vw)] rounded-lg border border-outline bg-surface px-3 py-2 text-foreground">
             {preview.roots.map(root => <option key={root.id} value={root.id}>{root.label}</option>)}
@@ -42,11 +59,17 @@ export function GraphScopeOverview(props: Props) {
         </label>}
       </div>
       <div className="flex flex-wrap items-center gap-2">
+        {!showList && scope.has_children && <button type="button" className="graph-page-action" onClick={() => props.onDrill(scope)}>Open scope</button>}
         {!showList && <button type="button" className="graph-page-action" onClick={() => props.onInvestigate(preview.root)}>Inspect this scope</button>}
         <button type="button" className="graph-page-action" onClick={() => setShowList(value => !value)}>{showList ? "Show connections" : `Browse all ${props.items.length} nodes and scopes`}</button>
       </div>
     </div>
     {showList ? <GraphRollupDecisionSurface {...props} /> : <>
+      {scope.has_children && <p data-testid="graph-preview-scope-counts" className="px-4 pt-3 text-sm text-ink-secondary">
+        {scope.aggregate.descendant_count.toLocaleString()} contained nodes · {scope.direct_child_count.toLocaleString()} direct children
+        {typeof scope.aggregate.issue_count === "number" && <> · {scope.aggregate.issue_count.toLocaleString()} open issues</>}
+      </p>}
+      {scope.entity_type === "account" && <p className="px-4 pt-2 text-xs text-ink-secondary">Connections between assets in these account scopes, not account ownership.</p>}
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 pt-3 text-xs text-ink-secondary">
         <span>{preview.shownRelationships} of {preview.availableRelationships} loaded relationships for this scope{props.completeness?.truncated ? " · partial inventory" : ""}</span>
       </div>
@@ -54,16 +77,27 @@ export function GraphScopeOverview(props: Props) {
       <ReactFlowProvider key={`${preview.root.id}:${narrow}`}>
         {/* The frame is as tall as the drawn scope at full size, within the room left in the window, so a short scope
             does not sit in an empty canvas. */}
-        <div style={{ height: narrow ? preview.nodes.length * 230 : `clamp(280px, min(calc(100dvh - 380px), ${scopeFrameHeight(preview.rows)}px), 560px)` }} data-testid="graph-scope-connections">
-          <ReactFlow nodes={narrow ? preview.nodes.map((node, index) => ({ ...node, position: { x: 0, y: index * 230 } })) : preview.nodes}
-            style={{ "--graph-node-meta-size": "14px" } as CSSProperties}
-            edges={narrow ? preview.edges.map(edge => ({ ...edge, sourceHandle: null, targetHandle: "context" })) : preview.edges} nodeTypes={lineageNodeTypes} edgeTypes={relationshipEdgeTypes}
+        <div style={{ height: narrow ? Math.max(...flow.nodes.map(node => node.position.y)) + 160 : `clamp(280px, min(calc(100dvh - 380px), ${scopeFrameHeight(preview.rows)}px), 560px)` }} data-testid="graph-scope-connections">
+          <ReactFlow nodes={flow.nodes}
+            style={{ "--graph-node-meta-size": "14px", "--graph-node-label-size": "18px", "--graph-node-glyph-size": "68px", "--graph-node-icon-size": "32px" } as CSSProperties}
+            edges={flow.edges} nodeTypes={lineageNodeTypes} edgeTypes={relationshipEdgeTypes}
             fitView fitViewOptions={SCOPE_FIT} minZoom={0.35} maxZoom={1.5}
             nodesDraggable={false} nodesConnectable={false} proOptions={{ hideAttribution: true }}
-            onEdgeClick={(_, edge) => { const recorded = props.edges.find(row => row.source === edge.source && row.target === edge.target); if (recorded) setEdgeDetail(`${recorded.count} recorded relationship${recorded.count === 1 ? "" : "s"}: ${recorded.relationships.join(", ").replaceAll("_", " ")} · ${recorded.directions?.join(", ") || "direction not recorded"}.`); }}
+            onEdgeClick={(_, edge) => {
+              const recorded = edge.data?.aggregate as DisplayRollupEdge | undefined;
+              if (!recorded) return;
+              const label = (id: string) => props.items.find(item => item.id === id)?.label ?? id;
+              const direction = (row: DisplayRollupEdge, count: number) => {
+                const kinds = new Set(row.directions ?? []);
+                const symbol = kinds.size === 1 && kinds.has("directed") ? "→" : kinds.size === 1 && kinds.has("bidirectional") ? "↔" : "—";
+                return `${label(row.source)} ${symbol} ${label(row.target)}: ${count} recorded relationships · ${row.relationships.join(", ").replaceAll("_", " ")} · ${row.directions?.join(", ") || "direction not recorded"}`;
+              };
+              const original = props.edges.find(row => row.source === recorded.source && row.target === recorded.target) ?? recorded;
+              setEdgeDetail([direction(original, recorded.count - (recorded.reverse?.count ?? 0)), ...(recorded.reverse ? [direction(recorded.reverse, recorded.reverse.count)] : [])].join(". "));
+            }}
             onNodeClick={(_, node) => { const item = props.items.find(item => item.id === node.id); if (item) props.onInvestigate(item); }}>
             <Background color="var(--border-subtle)" gap={20} size={1} />
-            <LegibleFitControls floor={SCOPE_FIT.minZoom} fitOptions={SCOPE_FIT} showInteractive={false} className={CONTROLS_CLASS} />
+            <LegibleFitControls position={narrow ? "top-right" : "bottom-left"} floor={SCOPE_FIT.minZoom} fitOptions={SCOPE_FIT} showInteractive={false} className={CONTROLS_CLASS} />
           </ReactFlow>
         </div>
       </ReactFlowProvider>

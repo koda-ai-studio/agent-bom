@@ -26,6 +26,18 @@ it("keeps an explicitly investigated path named and directed", () => {
   expect(queryByText(/Has Permission/)).toBeVisible();
 });
 
+it("discloses quiet aggregate counts on inspection and preserves ordinary roll-up summaries", () => {
+  const data = { ...props.data, aggregate: { count: 54 }, quietLabel: true };
+  const { container, queryByText, rerender } = render(<svg><CompactRelationshipEdge {...props} data={data} /></svg>);
+  expect(queryByText("54 relationships")).not.toBeInTheDocument();
+  fireEvent.mouseEnter(container.querySelector("svg > g")!);
+  expect(queryByText("54 relationships")).toBeVisible();
+  fireEvent.mouseLeave(container.querySelector("svg > g")!);
+  expect(queryByText("54 relationships")).not.toBeInTheDocument();
+  rerender(<svg><CompactRelationshipEdge {...props} data={{ ...data, quietLabel: false }} /></svg>);
+  expect(queryByText("54 relationships")).toBeVisible();
+});
+
 it("shows recorded direction on a compact flow before inspection without adding resting labels", () => {
   const { getByTestId, queryByText } = render(<svg><CompactRelationshipEdge {...props} data={{ ...props.data, semanticLayout: true }} /></svg>);
   expect(getByTestId("edge")).toHaveAttribute("marker-end", "url(#target)");
