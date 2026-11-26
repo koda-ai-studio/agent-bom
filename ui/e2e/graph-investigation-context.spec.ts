@@ -20,7 +20,7 @@ test("agent entry chains stay connected and findings disclose their exact CVE", 
   await expect(canvas.locator('.react-flow__node[data-id="sa:jit-review"]')).toBeVisible();
   await expect(canvas.locator('.react-flow__node[data-id="role:prod-admin"]')).toBeVisible();
   const privilege = canvas.locator('[data-relationship="can_access"] .react-flow__edge-path');
-  await expect(privilege).toHaveCSS("stroke", "rgb(239, 68, 68)");
+  expect(await privilege.evaluate(element => (element as SVGElement).style.stroke)).toBe("var(--graph-edge-risk)");
   await expect(privilege).toHaveAttribute("marker-end", /.+/);
   await page.getByLabel("Entry route", {exact: true}).selectOption("exposure");
   await page.getByRole("button", { name: "Expand 1 finding for Developer Copilot", exact: true }).click();
