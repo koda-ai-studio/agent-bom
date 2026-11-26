@@ -3212,9 +3212,10 @@ async function main() {
         awaitResponses: [
           (response) => new URL(response.url()).pathname === "/v1/graph/rollup" && response.ok(),
         ],
-        expectedText: ["Investigation", "Agent connections", "Showing 7 assets · 6 recorded connections", "Browse inventory"],
+        expectedText: ["Investigation", "Agent connections", "Showing 6 assets · 5 recorded connections", "Browse inventory", "execute_command", "AWS_ROLE_SESSION"],
         expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/rollup", "/v1/graph/scenarios"],
         readySelector: '[data-testid="graph-scope-overview"]',
+        minGraphNodes: 9, maxGraphNodes: 9, minGraphEdges: 8, maxGraphEdges: 8,
         assertNoHorizontalOverflow: true,
       },
     );
