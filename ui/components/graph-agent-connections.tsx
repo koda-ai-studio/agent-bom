@@ -95,7 +95,7 @@ export function GraphAgentConnections({ scanId, rootId, generation, onInspect, o
   const visibleIds = new Set(flow.edges.filter(edge => !edge.data?.displayOnly).map(edge => edge.id));
   const visibleEdges = neighbors || !pathAvailable ? graph.edges : graph.edges.filter(edge => visibleIds.has(edge.id));
   const assetCount = flow.nodes.filter(node => !node.data.displayOnly).length;
-  const connectionList = narrow || flow.nodes.length > 14 || (neighbors && (graph.nodes.length > 7 || graph.edges.length > 7 || flow.nodes.some(node => node.position.y > 400)));
+  const connectionList = narrow || flow.nodes.length > 14 || ((neighbors || !pathAvailable) && (graph.nodes.length > 7 || graph.edges.length > 7 || flow.nodes.some(node => node.position.y > 400)));
   return <>
     <div className="flex flex-wrap items-center justify-between gap-2 px-4 pt-3"><p className="text-xs text-ink-secondary">Showing {assetCount} assets · {visibleEdges.length} recorded connections{(response && ("truncated" in response ? response.truncated : response.completeness?.truncated)) ? " · partial neighborhood" : ""}.</p>
       {!neighbors && pathAvailable && <label className="text-xs text-ink-secondary">Entry route <select aria-label="Entry route" className="ml-2 rounded border border-outline bg-surface px-2 py-1" value={selectedEntry} onChange={event => setEntry(event.target.value as "exposure" | "identity")}>
