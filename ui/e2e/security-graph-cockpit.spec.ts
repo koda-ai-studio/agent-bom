@@ -2064,12 +2064,17 @@ for (const theme of ["light", "dark"] as const) {
     const productionScope = page.locator('.react-flow__node[data-id="account:production"]');
     await expect(productionScope).toContainText("900");
     await expect(productionScope).toContainText("Critical · highest severity");
+    await expect(page.locator(".graph-aggregate-label")).toHaveCount(0);
+    const connection = page.locator(".react-flow__edge").first();
+    await connection.focus();
     await expect(page.locator(".graph-aggregate-label")).toHaveText("35 relationships");
+    await connection.evaluate(element => (element as HTMLElement).blur());
+    await expect(page.locator(".graph-aggregate-label")).toHaveCount(0);
     await page.waitForLoadState("networkidle");
     await page.screenshot({ path: testInfo.outputPath(`scope-overview-${theme}.png`), fullPage: true });
     await productionScope.click();
     await expect(page.getByTestId("graph-entity-drawer")).toBeVisible();
-    await expect(page.getByRole("complementary", { name: "Scope details" })).toContainText("Severity of contained entities");
+    await expect(page.getByRole("complementary", { name: "Scope details" })).toContainText("Open issues by severity");
     await expect(page.getByRole("button", { name: "Show blast radius" })).toHaveCount(0);
     expect(drilled).toEqual([]);
     await expect(page.locator('.react-flow__node[data-id="account:production"]')).toBeVisible();
