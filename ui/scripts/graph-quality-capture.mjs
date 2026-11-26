@@ -122,10 +122,17 @@ export async function runGraphQualityCapture({ newCapturePage, buildScopeShowcas
         }
       }
       if (name === "grouped") {
-        const expand = page.getByRole("button", { name: /^Expand 90/ });
+        // Three individual packages lead the preview; the other 87 remain grouped.
+        const expand = page.getByRole("button", { name: "Expand 87 members", exact: true });
+        await expect(page.locator('.react-flow__node[data-id^="pkg:fixture-"]')).toHaveCount(3);
         await expect(expand).toBeVisible();
         await expand.click();
+        const previewCount = viewport.width < 640 ? 2 : 6;
+        await expect(page.getByRole("group", { name: "Connection preview" })).toContainText(`${previewCount} of 91 nodes in this map · ${previewCount - 1} of 90 relationships`);
+        await page.getByRole("button", { name: "Show full map (91)", exact: true }).click();
+        await options.click();
         await expect(page.getByText("Graph · 91 nodes · 90 relationships", { exact: true })).toBeVisible();
+        await options.click();
         // React Flow virtualizes offscreen children after expansion.
         await expect(expand).toHaveCount(0);
         await page.waitForTimeout(400);
