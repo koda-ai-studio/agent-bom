@@ -54,6 +54,7 @@ jobs:
           echo "${HELM_SHA256}  ${RUNNER_TEMP}/${HELM_ARCHIVE}" | sha256sum -c -
           tar -xzf "${RUNNER_TEMP}/${HELM_ARCHIVE}" -C "$RUNNER_TEMP"
           sudo mv "${RUNNER_TEMP}/linux-amd64/helm" /usr/local/bin/helm
+          python3 -m pip install --upgrade 'pip>=26.2.2'
           python3 -m pip install --disable-pip-version-check 'PyYAML==6.0.3'
 
       - name: Preserve references from every published chart

@@ -24,6 +24,8 @@ if __package__:
 else:
     from ci_shard_balance import balance_shards as _balance
 
+WORKFLOW_CONTRACTS = frozenset({"test_deployment.py", "test_ca_incident_tool_floors.py"})
+
 AUTHORIZATION_SOURCES = frozenset(
     {
         "src/agent_bom/rbac.py",
@@ -530,7 +532,7 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
                 }
             )
         if normalized.parent == Path(".github/workflows") and normalized.suffix in {".yml", ".yaml"}:
-            selected.update(candidate for candidate in available if candidate.name == "test_deployment.py")
+            selected.update(candidate for candidate in available if candidate.name in WORKFLOW_CONTRACTS)
         if (
             normalized.as_posix().startswith("src/agent_bom/")
             or normalized.as_posix().startswith("docs/PRODUCT_METRICS.")
