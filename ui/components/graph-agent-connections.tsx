@@ -15,6 +15,7 @@ import { createExpandedGraphFilters } from "@/components/lineage-filter";
 import { useNarrowViewport } from "@/hooks/use-narrow-viewport";
 import { LegibleFitControls } from "@/components/graph-legible-controls";
 import { CONTROLS_CLASS } from "@/lib/graph-utils";
+import { GraphScopeContext } from "@/components/graph-scope-context";
 import { graphEdgeEvidence } from "@/lib/graph-edge-evidence";
 
 export function GraphAgentConnections({ scanId, rootId, generation, onInspect, onFindings, aggregate, onUnavailable }: {
@@ -29,7 +30,7 @@ export function GraphAgentConnections({ scanId, rootId, generation, onInspect, o
   useEffect(() => {
     const controller = new AbortController();
     setResponse(undefined); setError(false);
-    const read = isStaticDemo() ? api.getGraph({ scanId, limit: 200 }) : api.queryGraph({ roots: [rootId], scan_id: scanId, snapshot_generation: generation, direction: "both", max_depth: 2,
+    const read = isStaticDemo() ? api.getGraph({ scanId, limit: 200 }) : api.queryGraph({ roots: [rootId], scan_id: scanId, snapshot_generation: generation, direction: "both", max_depth: 3,
       max_nodes: 64, max_edges: 128, timeout_ms: 2500, traversable_only: false, include_roots: true, include_attack_paths: false },
     { signal: controller.signal });
     read.then(value => { if (!controller.signal.aborted) {
@@ -59,10 +60,15 @@ export function GraphAgentConnections({ scanId, rootId, generation, onInspect, o
       data: { ...node.data, semanticLayout: true, readingFocus: node.id === rootId,
       ...((records.get(node.id)?.aggregate ?? (node.id === rootId ? aggregate : undefined)) ? { findingAggregate: records.get(node.id)?.aggregate ?? aggregate, onExploreFindings: () => onFindings(node.id, node.data.label, records.get(node.id)?.aggregate ?? aggregate) } : {}) } }));
     const positions = new Map(nodes.map(node => [node.id, node.position]));
-    const edges = base.edges.map(edge => ({ ...edge, type: "smoothstep",
+    const edges = base.edges.map(edge => {
+      const risk = edge.data?.relationship === "can_access";
+      const color = risk ? "var(--graph-edge-risk)" : "var(--graph-edge-structure)";
+      return { ...edge, type: "smoothstep",
+      ...(typeof edge.markerEnd === "object" ? { markerEnd: { ...edge.markerEnd, color } } : {}),
+      ...(typeof edge.markerStart === "object" ? { markerStart: { ...edge.markerStart, color } } : {}),
       ...(positions.get(edge.source)!.x > positions.get(edge.target)!.x ? { sourceHandle: "context", targetHandle: "context" } : {}),
-      style: { ...edge.style, opacity: 1, strokeWidth: 2 },
-      data: { ...edge.data, directionEmphasis: true, labelVisibility: "show", quietLabel: false, boundedOverview: true, stackedQualifier: true } }));
+      style: { ...edge.style, opacity: 1, strokeWidth: 2, stroke: color },
+      data: { ...edge.data, directionEmphasis: true, labelVisibility: risk ? "show" : "auto", quietLabel: !risk, directOverview: true } }; });
     return { nodes, edges };
   }, [graph, rootId, aggregate, onFindings, records]);
   if (error) return <div role="alert" className="p-4 text-sm">Recorded connections could not be loaded. <button className="underline" onClick={() => setRetry(n => n + 1)}>Retry connections</button></div>;
@@ -71,7 +77,8 @@ export function GraphAgentConnections({ scanId, rootId, generation, onInspect, o
   const rootAggregate = records.get(rootId)?.aggregate ?? aggregate;
   const connectionList = narrow || graph.nodes.length > 6 || graph.edges.length > 6 || flow.nodes.some(node => node.position.y > 400);
   return <>
-    <p className="px-4 pt-3 text-xs text-ink-secondary">Showing {graph.nodes.length} assets · {graph.edges.length} original relationships{(response && ("truncated" in response ? response.truncated : response.completeness?.truncated)) ? " · partial neighborhood" : ""}. Shared infrastructure does not establish successful lateral access.</p>
+    <p className="px-4 pt-3 text-xs text-ink-secondary">Showing {graph.nodes.length} assets · {graph.edges.length} original relationships{(response && ("truncated" in response ? response.truncated : response.completeness?.truncated)) ? " · partial neighborhood" : ""}.</p>
+    <GraphScopeContext graph={response!} selected={graph} onInspect={onInspect} />
     {connectionList ? <section data-testid="graph-agent-evidence" aria-label="Directed agent connections" className="px-4 py-3 text-sm">
       {!!rootAggregate.issue_count && <button className="graph-page-action mb-3" onClick={() => onFindings(rootId, labels.get(rootId) ?? rootId, rootAggregate)}>Open {rootAggregate.issue_count} {rootAggregate.issue_count === 1 ? "finding" : "findings"} for {labels.get(rootId)}</button>}
       <ul className="divide-y divide-outline">{graph.edges.map(edge => <li key={edge.id} className="py-3" data-recorded-edge={edge.id}>
@@ -89,6 +96,7 @@ export function GraphAgentConnections({ scanId, rootId, generation, onInspect, o
         <Background gap={20} size={1} /><LegibleFitControls className={CONTROLS_CLASS} floor={0.65} showInteractive={false} />
       </ReactFlow>
     </div></ReactFlowProvider>}
+    {!connectionList && <p className="px-4 py-2 text-xs text-ink-secondary">Dashed links: modeled or access not observed · Solid links: recorded evidence. Focus or hover a link for its relationship.</p>}
     {!connectionList && <details className="border-t border-outline px-4 py-2 text-xs"><summary className="cursor-pointer">Relationship evidence ({graph.edges.length})</summary>
       <ul className="mt-2 divide-y divide-outline">{graph.edges.map(edge => <li key={edge.id} className="py-2">
         {labels.get(edge.source)} {edge.direction === "bidirectional" ? "↔" : edge.direction === "directed" ? "→" : "—"} {labels.get(edge.target)} · {edge.relationship.replaceAll("_", " ")} · {graphEdgeEvidence(edge.evidence ?? {}).label}

@@ -17,9 +17,15 @@ it("uses the same refreshed count for the mobile badge and its disclosure", asyn
   const current = fixture.node_aggregates[rootId];
   vi.mocked(api.queryGraph).mockResolvedValue(graph);
   vi.mocked(useGraphNodeAggregates).mockReturnValue(new Map([[rootId, { node_id: rootId, ...current }]]));
-  const findings = vi.fn();
+  const findings = vi.fn(); const inspect = vi.fn();
   render(<GraphAgentConnections scanId={graph.scan_id} rootId={rootId} aggregate={{ ...current.aggregate, issue_count: 0 }}
-    onInspect={vi.fn()} onFindings={findings} onUnavailable={vi.fn()} />);
+    onInspect={inspect} onFindings={findings} onUnavailable={vi.fn()} />);
   fireEvent.click(await screen.findByRole("button", { name: "Open 1 finding for Developer Copilot" }));
   expect(findings).toHaveBeenCalledWith(rootId, "Developer Copilot", current.aggregate);
+  expect(screen.getByText("Shared MCP server: filesystem MCP. Expand it to inspect tools and access evidence.")).toBeVisible();
+  expect(screen.getByRole("button", { name: "Internet-exposed: copilot-portal:2.4.0" })).toBeVisible();
+  fireEvent.click(screen.getByText("Recorded tool control context (1)"));
+  fireEvent.click(screen.getByRole("button", { name: "execute_command" }));
+  expect(inspect).toHaveBeenCalledWith("tool:exec", "execute_command");
+  expect(screen.getByText("default-deny gateway policy")).toBeVisible();
 });
