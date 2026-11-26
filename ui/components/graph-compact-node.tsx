@@ -229,7 +229,7 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
       <NameWords text={canvasName(preview)} hidden={canvasName(preview) !== fullTitle} />
     </p>
     {canvasName(preview) !== fullTitle && <span className="sr-only">{fullTitle}</span>}
-    <span data-graph-caption data-entity-role className="block max-w-full truncate leading-[1.15] text-ink-secondary" style={META}>
+    <span data-graph-caption data-entity-role className={`block max-w-full truncate leading-[1.15] text-ink-secondary ${data.scopePorts ? "mx-auto w-fit" : ""}`} style={META}>
       {scope ? scope.visible : typeLine(data, fullTitle)}
     </span>
     {scope && <span className="sr-only">{scope.spoken}</span>}

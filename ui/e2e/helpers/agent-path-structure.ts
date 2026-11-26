@@ -12,11 +12,12 @@ export async function assertAgentPathStructure(page: Page) {
     const chip = [...element.querySelectorAll("button")].find(button => button.textContent?.startsWith("also used by:"))!.getBoundingClientRect();
     const frame = element.getBoundingClientRect();
     const clipped = chip.left < frame.left || chip.right > frame.right || chip.top < frame.top || chip.bottom > frame.bottom;
+    const captions = [...element.querySelectorAll("[data-graph-caption]")].map(caption => caption.getBoundingClientRect());
     const crossed = [...element.querySelectorAll<SVGPathElement>(".react-flow__edge-path")].some(path => {
       const length = path.getTotalLength(), matrix = path.getScreenCTM()!;
       for (let step = 0; step <= length; step += 2) {
         const point = path.getPointAtLength(step).matrixTransform(matrix);
-        if (point.x > chip.left && point.x < chip.right && point.y > chip.top && point.y < chip.bottom) return true;
+        if (captions.some(box => point.x > box.left && point.x < box.right && point.y > box.top && point.y < box.bottom)) return true;
       }
       return false;
     });
