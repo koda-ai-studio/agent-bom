@@ -10,6 +10,16 @@ const graphPage = ["app/graph/graph-page-client.tsx", "hooks/use-graph-page-data
 const exposurePath = fs.readFileSync(path.join(process.cwd(), "components", "exposure-path-command-center.tsx"), "utf8");
 
 describe("product proof capture contract", () => {
+  it("expects recorded evidence for the explicitly simulated configuration mesh", async () => {
+    const { buildGraph } = await import("../scripts/product-proof-graph.mjs");
+    const links = buildGraph().edges.filter(edge => ["uses", "hosted_on"].includes(edge.relationship)
+      && ["container:copilot-portal", "server:github", "server:filesystem"].includes(edge.target));
+    expect(links).toHaveLength(4);
+    for (const link of links) expect(link.evidence).toMatchObject({ tier: "static_scan", simulated: true, source: "synthetic-config-scan" });
+    const start = source.indexOf('"mesh-live.png", async');
+    const capture = source.slice(start, source.indexOf("await capture(", start + 1));
+    expect(capture).toContain('/Recorded relationship/i');
+  });
   it("pins the optional advice status instead of querying an absent API", () => {
     expect(source).toContain('await page.route("**/v1/ai/status"');
     expect(source).toContain('schema_version: "ai.status.v1"');

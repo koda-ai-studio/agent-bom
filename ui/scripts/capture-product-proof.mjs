@@ -3070,8 +3070,8 @@ async function main() {
         "Developer Copilot",
         "SRE Runbook Agent",
         "filesystem MCP",
-        // The line legend's dash entry says the links are modeled.
-        /modeled/i,
+        // These mesh links carry explicitly simulated static configuration evidence.
+        /Recorded relationship/i,
       ],
       expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/query"],
       minGraphNodes: 5,
