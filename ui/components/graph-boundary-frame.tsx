@@ -13,7 +13,7 @@ export function GraphBoundaryFrame({ data }: { data: LineageNodeData }) {
   const size = 18 / Math.max(zoom, 0.16);
   return (
     <div data-boundary-frame={data.frameFor} data-frame-links={data.frameLinks ?? 0} className="graph-boundary-frame pointer-events-none h-full w-full rounded-2xl border">
-      <div className="graph-boundary-frame-title flex items-center" style={{ fontSize: size, gap: size * 0.6, top: size * 0.8, left: size, right: size }}>
+      <div className="graph-boundary-frame-title flex items-center" style={{ fontSize: size, gap: size * 0.6, top: size * 0.8, left: data.phoneLinear ? size * 4.5 : size, right: size }}>
         {provider && <GraphProviderMark source={provider} attributes={data.attributes} className="graph-provider-mark-frame" style={{ width: size * 1.7, height: size * 1.7 }} />}
         <div className="min-w-0 leading-tight">
           <span className="graph-boundary-frame-name block truncate" title={data.label}>{data.label}</span>

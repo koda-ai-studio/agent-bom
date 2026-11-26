@@ -78,6 +78,11 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     await expect(page.locator('[data-compact-marker="privilege"]')).toBeVisible();
     await expect(page.locator('[data-compact-marker="sensitive"]')).toBeVisible();
     await stable(page);
+    if (width === 390) {
+      const title = await page.locator(".graph-boundary-frame-title").boundingBox();
+      const entry = await page.locator('.react-flow__node[data-id="gateway"] .graph-entity-glyph').boundingBox();
+      expect(title!.x).toBeGreaterThan(entry!.x + entry!.width / 2 + 8);
+    }
     if (width === 1440) for (const id of ["gateway", "app", "role", "bucket"]) await expect(page.locator(`.react-flow__node[data-id="${id}"] .graph-entity-glyph`)).toBeInViewport({ ratio: 0.999 });
     if (width === 1440) await expect(page.locator("[data-internet-anchor]")).toBeInViewport({ ratio: 0.999 });
     expect(await page.locator(".graph-entity-glyph").evaluateAll((glyphs, desktop) => glyphs.every(glyph => {
@@ -90,6 +95,8 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     await expect(page.locator('.react-flow__node[data-id="cve"]')).toBeVisible();
     await expect(page.locator('.react-flow__edge[data-id="app:vulnerable_to:cve"]')).toHaveCount(1);
     await stable(page);
+    await page.mouse.move(1, 1);
+    await page.keyboard.press("Escape");
     await page.screenshot({ path: info.outputPath(`cloud-expanded-${theme}-${width}.png`), fullPage: width === 390 });
     await page.getByRole("button", { name: "Collapse 1 finding for checkout-api", exact: true }).click();
     await expect(page.locator('.react-flow__node[data-id="cve"]')).toHaveCount(0);
