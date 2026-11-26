@@ -116,7 +116,7 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     if (width === 1440) {
       await expect(canvas.locator("[data-reading-focus]")).toHaveCount(1);
       await expect(canvas.locator(".react-flow__edge")).toHaveCount(agent.edges.length);
-      await expect(canvas.locator(".graph-relationship-label:visible")).toHaveCount(agent.edges.length);
+      await expect(canvas.locator(".graph-relationship-label:visible")).toHaveCount(agent.edges.filter(edge => edge.relationship === "can_access").length);
       await expect(canvas.locator(".react-flow__node")).toHaveCount(5);
       await expect(canvas.locator("[data-internet-anchor]")).toHaveCount(0);
       await stable(page);

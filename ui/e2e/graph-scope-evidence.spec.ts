@@ -57,15 +57,31 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
       await expect(canvas.locator('[data-relationship="shares_server"]')).toHaveCount(0);
       await expect(canvas.locator("[data-internet-anchor]")).toHaveCount(0);
       await expect(canvas.locator(".react-flow__node")).toHaveCount(6);
-      await expect(canvas.locator(".graph-relationship-label:visible")).toHaveCount(5);
+      await expect(canvas.locator(".graph-relationship-label:visible")).toHaveCount(1);
       await expect(roleLink).toBeVisible();
-      await expect(canvas.locator(".graph-relationship-label").filter({ hasText: "Can Access" })).toContainText("modeled");
+      await expect(canvas.locator(".graph-relationship-label").filter({ hasText: "Can Access" })).toBeVisible();
+      const uses = canvas.locator('.react-flow__edge').filter({ has: page.locator('[data-relationship="uses"]') }).first();
+      await expect(uses.locator(".react-flow__edge-path")).toHaveCSS("stroke", theme === "dark" ? "rgb(139, 150, 170)" : "rgb(107, 119, 140)");
+      await uses.focus();
+      await expect(canvas.locator(".graph-relationship-label").filter({ hasText: "Uses" })).toBeVisible();
+      await uses.evaluate(element => (element as HTMLElement).blur());
+      for (const path of await canvas.locator('.react-flow__edge-path').all()) {
+        const d = await path.getAttribute('d');
+        expect(d).toMatch(/^M.*C/);
+        expect(d).not.toMatch(/[LQ]/);
+      }
+      await expect(page.getByRole("button", { name: "Internet-exposed: copilot-portal:2.4.0" })).toBeVisible();
     } else {
       await expect(canvas.locator("li[data-recorded-edge]")).toHaveCount(5);
       await expect(canvas.locator("li").filter({ hasText: "prod-ai-admin" })).toContainText("prod-ai-admin→Developer Copilot");
       await expect(canvas.locator("li").filter({ hasText: "prod-ai-admin" })).toContainText("Modeled");
       await expect(canvas.locator("li").filter({ hasText: "SRE Runbook Agent" })).toContainText("filesystem MCP");
     }
+    await page.getByText("Recorded tool control context (1)").click();
+    await expect(page.getByRole("button", { name: "default-deny gateway policy", exact: true })).toBeVisible();
+    await expect(page.locator("li").filter({ has: page.getByRole("button", { name: "default-deny gateway policy", exact: true }) })).toHaveText("default-deny gateway policy → manages → execute_command");
+    await page.screenshot({ path: info.outputPath(`tool-control-${theme}-${width}.png`), fullPage: true });
+    await page.getByText("Recorded tool control context (1)").click();
     await page.waitForLoadState("networkidle");
     await page.screenshot({ path: info.outputPath(`agent-first-${theme}-${width}.png`), fullPage: true });
     if (width === 1440) {
@@ -86,6 +102,12 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     await expect(page.getByText("execute_command", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("AWS_ROLE_SESSION", { exact: true }).first()).toBeVisible();
     await page.screenshot({ path: info.outputPath(`server-expanded-${theme}-${width}.png`), fullPage: true });
+    await page.goto(`/graph?scan=${graph.scan_id}&rollup=1`);
+    await page.getByText("Recorded tool control context (1)").click();
+    await page.getByRole("button", { name: "execute_command", exact: true }).click();
+    await expect.poll(() => queries.at(-1)?.roots).toEqual(["tool:exec"]);
+    await expect(page.getByText("default-deny gateway policy", { exact: true }).first()).toBeVisible();
+    await page.screenshot({ path: info.outputPath(`tool-expanded-${theme}-${width}.png`), fullPage: true });
     expect(errors).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
