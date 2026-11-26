@@ -129,6 +129,9 @@ export function hopsAreConnected(graphEdges, hops) {
     graphEdges.some((item) => item.source === source && item.target === hops[index + 1]));
 }
 
+// Synthetic configuration records exercise static-scan presentation; these are not live scan receipts.
+const SAMPLE_CONFIG_EVIDENCE = { tier: "static_scan", source: "synthetic-config-scan", simulated: true };
+
 export function buildGraph() {
   const nodes = [
     node("provider:aws-prod", "provider", "AWS prod account", "medium", 5.4, { environment: "prod", owner: "cloud-platform" }),
@@ -175,10 +178,10 @@ export function buildGraph() {
     edge("user:contractor", "sa:jit-review", "acted_as"),
     edge("sa:jit-review", "role:prod-admin", "assumes"),
     edge("role:prod-admin", "agent:developer-copilot", "can_access"),
-    edge("agent:developer-copilot", "container:copilot-portal", "hosted_on"),
-    edge("agent:developer-copilot", "server:github", "uses"),
-    edge("agent:developer-copilot", "server:filesystem", "uses"),
-    edge("agent:sre-runbook", "server:filesystem", "uses"),
+    edge("agent:developer-copilot", "container:copilot-portal", "hosted_on", 1, SAMPLE_CONFIG_EVIDENCE),
+    edge("agent:developer-copilot", "server:github", "uses", 1, SAMPLE_CONFIG_EVIDENCE),
+    edge("agent:developer-copilot", "server:filesystem", "uses", 1, SAMPLE_CONFIG_EVIDENCE),
+    edge("agent:sre-runbook", "server:filesystem", "uses", 1, SAMPLE_CONFIG_EVIDENCE),
     edge("agent:sre-runbook", "server:slack", "uses"),
     edge("agent:finance-rag", "server:snowflake", "uses"),
     edge("agent:finance-rag", "server:slack", "uses"),

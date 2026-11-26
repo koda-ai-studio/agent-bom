@@ -26,7 +26,7 @@ import { compactScopeCaption } from "@/lib/graph-compact-scope";
 import { ANCHOR_GLYPH_SCALE, COMPACT_GLYPH_SCALE, PHONE_GLYPH_SCALE } from "@/lib/graph-compact-glyph";
 
 /** Presentation flags shared with the bounded story layout. */
-export type CompactNodePresentation = { phoneLinear?: boolean | undefined; roomyName?: boolean | undefined; connectedScope?: boolean | undefined; readingFocus?: boolean | undefined };
+export type CompactNodePresentation = { scopePeers?: { id: string; label: string; inspect: () => void }[] | undefined; scopePorts?: boolean | undefined; captionAbove?: boolean | undefined; phoneLinear?: boolean | undefined; roomyName?: boolean | undefined; connectedScope?: boolean | undefined; readingFocus?: boolean | undefined };
 
 export type CompactNodeTone = { data: LineageNodeData; borderClass: string; bgClass: string; ringClass: string; iconClass: string; source?: boolean; target?: boolean };
 
@@ -52,12 +52,14 @@ export function canvasName(name: string): string {
 }
 
 /** On a phone the caption is one column beside the glyph; on a desktop its lines sit directly under it. */
-function CaptionBox({ phone, children }: { phone: boolean; children: ReactNode }) {
+function CaptionBox({ phone, above, children }: { phone: boolean; above?: boolean | undefined; children: ReactNode }) {
+  if (above) return <div className="mb-2">{children}</div>;
   return phone ? <div className="min-w-0 flex-1">{children}</div> : <>{children}</>;
 }
 
 /** Desktop: glyph above a centred caption. Phone: the caption beside the glyph, facing away from the centre line. */
 function phoneLayoutClass(data: LineageNodeData): string {
+  if (data.captionAbove) return "mx-auto w-fit flex-col-reverse items-center text-center";
   // A finding id never truncates: on a phone it reads under its glyph, across the card's full width.
   if (!data.phoneLayout || stackedOnPhone(data)) return "mx-auto w-fit flex-col items-center text-center";
   return data.phoneSide === "left" ? "w-full flex-row-reverse items-center gap-1.5 text-right" : "w-full flex-row items-center gap-1.5 text-left";
@@ -111,6 +113,8 @@ export function CompactHandles({ data, source, target }: { data: LineageNodeData
     <Handle type="target" id="context" position={Position.Right} className={HANDLE} />
     {/* The Internet arrow's own entry on the upper left, when another link also enters this node. */}
     <Handle type="target" id="above" position={Position.Left} style={{ top: "18%" }} className={HANDLE} />
+    {data.scopePorts && [25, 50, 75].map((top, index) => <Handle key={top} type="source" id={`scope-out-${index}`} position={Position.Right} style={{ top: `${top}%` }} className={HANDLE} />)}
+    {data.scopePorts && [25, 50, 75].map((top, index) => <Handle key={top} type="target" id={`scope-in-${index}`} position={Position.Left} style={{ top: `${top}%` }} className={HANDLE} />)}
     {phone && <>
       <Handle type="source" id="phone-up" position={Position.Top} className={HANDLE} />
       <Handle type="target" id="phone-down" position={Position.Bottom} className={HANDLE} />
@@ -218,7 +222,7 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
       <FindingDisclosure data={data} />
       {held && <span data-testid="graph-held-connections" className="sr-only">{held}</span>}
     </div>
-    <CaptionBox phone={Boolean(data.phoneLayout) && !stackedOnPhone(data)}>
+    <CaptionBox above={data.captionAbove} phone={Boolean(data.phoneLayout) && !stackedOnPhone(data)}>
     <p data-semantic-name title={fullTitle} className={`mt-[0.3em] ${data.phoneLayout && !data.phoneLinear ? NAME_CLAMP.phone : NAME_CLAMP.desktop} max-w-full font-semibold leading-[1.15] text-foreground`} style={{ fontSize: data.phoneLinear ? "var(--graph-node-label-size, 16px)" : data.phoneLayout ? "calc(var(--graph-node-label-size, 14px) * 0.88)" : "calc(var(--graph-node-label-size, 14px) * var(--graph-node-name-scale, 0.88))" }}>
       <NameWords text={canvasName(preview)} hidden={canvasName(preview) !== fullTitle} />
     </p>
@@ -227,6 +231,8 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
       {scope ? scope.visible : typeLine(data, fullTitle)}
     </span>
     {scope && <span className="sr-only">{scope.spoken}</span>}
+    {data.scopePeers?.map(peer => <button key={peer.id} type="button" className="nodrag nopan mt-2 max-w-full text-xs text-ink-secondary underline underline-offset-2"
+      onClick={event => { event.stopPropagation(); peer.inspect(); }}>also used by: {peer.label}</button>)}
     {data.seenIn?.length ? <span className="sr-only" data-seen-in>{seenInSummary(data.seenIn)}</span> : null}
     </CaptionBox>
   </div>;

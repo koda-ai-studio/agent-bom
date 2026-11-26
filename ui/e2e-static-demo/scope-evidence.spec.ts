@@ -22,7 +22,7 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
       await expect(page.getByText(/prod-ai-admin → Developer Copilot · can access/)).toBeVisible();
       await canvas.getByRole("button", { name: "Inspect 1 finding in the scope of Developer Copilot" }).click();
     } else {
-      await expect(canvas.locator("li").filter({ hasText: "prod-ai-admin" })).toContainText("prod-ai-admin→Developer Copilot");
+      await expect(canvas.locator("li").filter({ hasText: "prod-ai-admin" }).filter({ hasText: "Developer Copilot" })).toContainText("prod-ai-admin→Developer Copilot");
       await canvas.getByRole("button", { name: "Open 1 finding for Developer Copilot" }).click();
     }
     const findings = page.getByRole("region", { name: "Findings for Developer Copilot" });

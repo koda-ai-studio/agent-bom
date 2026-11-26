@@ -4,7 +4,7 @@ exports[`lineage inspector rendering before extraction > preserves all tabs in d
 
 exports[`lineage inspector rendering before extraction > preserves all tabs in docked mode > Impact 1`] = `"a93e0121e366f87d81099a38d5599739e73a74bde9891f998c04a73319995af1"`;
 
-exports[`lineage inspector rendering before extraction > preserves all tabs in docked mode > Overview 1`] = `"cb166eeb8c28f3ae8772217a6fd99b783784d8f358adf4f66feb1a888ca44a6c"`;
+exports[`lineage inspector rendering before extraction > preserves all tabs in docked mode > Overview 1`] = `"fb4237b1f347a1603244183bf0500b1ca2523f2e60bb66110223d26666a839b3"`;
 
 exports[`lineage inspector rendering before extraction > preserves all tabs in docked mode > Relationships 1`] = `"a0b40f7bf5d10889866c5bc3f3ea7a3aee3aa20fee2434484492c2374a33fb2e"`;
 
@@ -12,7 +12,7 @@ exports[`lineage inspector rendering before extraction > preserves all tabs in i
 
 exports[`lineage inspector rendering before extraction > preserves all tabs in inline mode > Impact 1`] = `"34461126f5adc5ef91055a16a38ff2da1a0899ecf3bd61551fa7aa82f09ba92d"`;
 
-exports[`lineage inspector rendering before extraction > preserves all tabs in inline mode > Overview 1`] = `"f182867e79cab278005f47c025681f8a257da22d8f60b203e724b9115bdca052"`;
+exports[`lineage inspector rendering before extraction > preserves all tabs in inline mode > Overview 1`] = `"9f8b5913e8393b5eb972dca1c7fec8c10ae954af62373a187ed77df380cd4f73"`;
 
 exports[`lineage inspector rendering before extraction > preserves all tabs in inline mode > Relationships 1`] = `"7e2555fe9a474c835f64e007e338c944b5951f79ad3eefa00670242e1bed08a8"`;
 
@@ -20,86 +20,86 @@ exports[`lineage inspector rendering before extraction > preserves all tabs in o
 
 exports[`lineage inspector rendering before extraction > preserves all tabs in overlay mode > Impact 1`] = `"7221325ee8303a5d7a0bf264798b4472743fc2e805b4bce80b009c8bc0b13e86"`;
 
-exports[`lineage inspector rendering before extraction > preserves all tabs in overlay mode > Overview 1`] = `"4bbdddecb9af8d8e39b57586fccca61bcc860e25e3ac229054a36f47c20769e7"`;
+exports[`lineage inspector rendering before extraction > preserves all tabs in overlay mode > Overview 1`] = `"cf45bde6ad408961f1dffc3e02681b031db5284f111ef589c7a02cbc08f99b73"`;
 
 exports[`lineage inspector rendering before extraction > preserves all tabs in overlay mode > Relationships 1`] = `"297d960cefc116415fdd22b2d418b3112d2b6c4ffdbe96859f796dd4c59e6775"`;
 
-exports[`lineage inspector rendering before extraction > preserves the accessGrant overview DOM 1`] = `"ab168567bef3a0ee9c3e5cd1ee9491ad6ead5cc1d8ec72811432362d9df173a1"`;
+exports[`lineage inspector rendering before extraction > preserves the accessGrant overview DOM 1`] = `"8f579c41d50be62e0a7b6d7fd0d49177439dda7d37fdb48b71f566624c11a0e6"`;
 
-exports[`lineage inspector rendering before extraction > preserves the accessPolicy overview DOM 1`] = `"486c4a1485af631d238396a1b862a05b30d75c83a06ae55ea72fff95151329af"`;
+exports[`lineage inspector rendering before extraction > preserves the accessPolicy overview DOM 1`] = `"c11522a3521fe1008386ce611ed807d7a221a19c9fe58dec7ba4294f6919ca54"`;
 
-exports[`lineage inspector rendering before extraction > preserves the account overview DOM 1`] = `"83d197153f8f694b94a7a4ba1bd5c12bd0c22244eda5c177f0bbb8457c6b8634"`;
+exports[`lineage inspector rendering before extraction > preserves the account overview DOM 1`] = `"765bc2fd7759ede08498aa73148b128b70234ce3d886a1b9229d00b0d3f0994c"`;
 
-exports[`lineage inspector rendering before extraction > preserves the agent overview DOM 1`] = `"53f765d27118c987a955961ad41fd5ec1b7687e9f2b0cf10fc61934b366e13ad"`;
+exports[`lineage inspector rendering before extraction > preserves the agent overview DOM 1`] = `"019b804d71cf77509e12d054c1fa076d337aa6322ffdbc5912f810a10ab3886c"`;
 
-exports[`lineage inspector rendering before extraction > preserves the apiGateway overview DOM 1`] = `"d27b9b0f5d3d1525f888294c6036a68f2cd8ecec6fc5928af1cbd0a536a0a457"`;
+exports[`lineage inspector rendering before extraction > preserves the apiGateway overview DOM 1`] = `"949635765bc92f39f56b54641c1c45455e47146adccb335e35b0986ee84725bb"`;
 
-exports[`lineage inspector rendering before extraction > preserves the blueprint overview DOM 1`] = `"f9dd44ddc3a3933418a58c9e95cf7c6a37a380cc6c66d4596ce5fddecd739f9e"`;
+exports[`lineage inspector rendering before extraction > preserves the blueprint overview DOM 1`] = `"9a1dcce764d9337a5bc7a52c2d321e66dd07be65f2635707141305d6f5a80643"`;
 
-exports[`lineage inspector rendering before extraction > preserves the ciJob overview DOM 1`] = `"84a9847bd795184db5b6b7e317ea21a2b38582fa89ddbda3032d3df657e9664f"`;
+exports[`lineage inspector rendering before extraction > preserves the ciJob overview DOM 1`] = `"1f0b38c67ef03d80942a175e05eb332f2386676474a0452e044defccecc0e1d7"`;
 
-exports[`lineage inspector rendering before extraction > preserves the cloudResource overview DOM 1`] = `"22446a06acd961bd910d51fd00196b1e6292bceb71a19f8f7e2d1f0f778d8b11"`;
+exports[`lineage inspector rendering before extraction > preserves the cloudResource overview DOM 1`] = `"cc3347a536115b4f3d92b4d4784e0de1c549b91f68a41b63b73f197f8ceab53e"`;
 
-exports[`lineage inspector rendering before extraction > preserves the cluster overview DOM 1`] = `"5b304d59646560b795b2c7e64c21318b6d687d262b391198adac5fb4287ce5ee"`;
+exports[`lineage inspector rendering before extraction > preserves the cluster overview DOM 1`] = `"75ba2f5770fe456b138791e396cfa8f49b7effffaf122514004d8230600568cc"`;
 
-exports[`lineage inspector rendering before extraction > preserves the codeModule overview DOM 1`] = `"f12debf45ae71d367f2ff4eee095c3655ed9980b10cc8bd152dfa98f936af9f0"`;
+exports[`lineage inspector rendering before extraction > preserves the codeModule overview DOM 1`] = `"56bac45a717d191ac49f9f56b6e71e90cd17c24c5e137799e2b818f504fb1a15"`;
 
-exports[`lineage inspector rendering before extraction > preserves the configFile overview DOM 1`] = `"e18646d6c1b69b426bcf8c8c3914db3c37b884cb9b6a24f81ba081d29a2fe49f"`;
+exports[`lineage inspector rendering before extraction > preserves the configFile overview DOM 1`] = `"73fdb7c7841449b652fe3448ae2bc6d7daafe6dff4f86adc4fbdf5a799223b9c"`;
 
-exports[`lineage inspector rendering before extraction > preserves the container overview DOM 1`] = `"994e3ab9c29b0d3a84f45e0d71c69f929016e2ad78de9de7eef867ab25b6f10f"`;
+exports[`lineage inspector rendering before extraction > preserves the container overview DOM 1`] = `"1a1b11477eabbd7d3fe98f585aa6c2386cac2e889c568c1663ffbdcde3797525"`;
 
-exports[`lineage inspector rendering before extraction > preserves the credential overview DOM 1`] = `"271814f2a2d0d15ee76183a660790908422462a7b5676c0ada1a3a76bb584e5b"`;
+exports[`lineage inspector rendering before extraction > preserves the credential overview DOM 1`] = `"d18130a8da8862f25d3b59311db97b67a3d5b2471700ec090c017339c713f15c"`;
 
-exports[`lineage inspector rendering before extraction > preserves the dataStore overview DOM 1`] = `"57df62980d69565767de314d8fc3e97ad20ac9ded480a9b28fbb5ef1e9503975"`;
+exports[`lineage inspector rendering before extraction > preserves the dataStore overview DOM 1`] = `"d0a4e0fad2aea0d8304a7f847a094e3187c03f5cc889a199c06233c914f97ca5"`;
 
-exports[`lineage inspector rendering before extraction > preserves the dataset overview DOM 1`] = `"4bfecfd9f09f4b6627978af159968c4a3bd9ce1a7596c7773ebbc034bfa91212"`;
+exports[`lineage inspector rendering before extraction > preserves the dataset overview DOM 1`] = `"1af22faf41a7c347baf4c744232f70330f9902af975f1fdd52317d6d4bacec9c"`;
 
-exports[`lineage inspector rendering before extraction > preserves the directory overview DOM 1`] = `"d7569903e7ece93c9b10cbbf661630d9c789a35e1f3f14462826117218e8a5bd"`;
+exports[`lineage inspector rendering before extraction > preserves the directory overview DOM 1`] = `"198101627180403afaff90ccbf60636e1467f3b5904bedbb98a18fe857f3cc07"`;
 
-exports[`lineage inspector rendering before extraction > preserves the driftIncident overview DOM 1`] = `"f7aacd908c77826430574b8ea5b82fdc829ab07e95ab055095c546d7457b9ab4"`;
+exports[`lineage inspector rendering before extraction > preserves the driftIncident overview DOM 1`] = `"cdac72a799548bee79d000cd3419c8dbb66dbf1f7a943d35246a4ca5503d0781"`;
 
-exports[`lineage inspector rendering before extraction > preserves the environment overview DOM 1`] = `"e6066a6d1b292fd13ca5d691458c699c7b74081e6e02e8e8d02558b793820769"`;
+exports[`lineage inspector rendering before extraction > preserves the environment overview DOM 1`] = `"0f2988da1b313351cd4961dd984748a8d6e0901dbe51f85b6ce1fe080527a25b"`;
 
-exports[`lineage inspector rendering before extraction > preserves the evalSuite overview DOM 1`] = `"e74da4b7188eb056f188b1da52ef02e6016a26aae0046771a8d739c925fa4f5d"`;
+exports[`lineage inspector rendering before extraction > preserves the evalSuite overview DOM 1`] = `"ef5d348c5a6349b8384101c9e1ebb7bbecad73394d58e2d788fc35ee617b3dbe"`;
 
-exports[`lineage inspector rendering before extraction > preserves the federatedIdentity overview DOM 1`] = `"82f2cae6af4cc1d30171fb317f82156a454a0cfd3e99ac656b5f997e2d77c531"`;
+exports[`lineage inspector rendering before extraction > preserves the federatedIdentity overview DOM 1`] = `"937e0c5e9f61485244703cbefce1bbc1e62aba5405f6c62f84afd40a819ea7f3"`;
 
-exports[`lineage inspector rendering before extraction > preserves the fleet overview DOM 1`] = `"bc57840695b9a5788758836524315458e30f3b63473bbf362e3d96a0183de813"`;
+exports[`lineage inspector rendering before extraction > preserves the fleet overview DOM 1`] = `"b4b85c5d629d0f6de4c1e82021b22a68d44d7d2fddb5ad31fe4c7415cedc2541"`;
 
-exports[`lineage inspector rendering before extraction > preserves the framework overview DOM 1`] = `"40635e3a202e7d35e7455646b79804729feed397d5150aa58a09fced42f9f77f"`;
+exports[`lineage inspector rendering before extraction > preserves the framework overview DOM 1`] = `"f632aa77b5535cdaecc635c9c60229254035e1d20daa6a86ea508df97078c2f7"`;
 
-exports[`lineage inspector rendering before extraction > preserves the group overview DOM 1`] = `"2712dce735cc5bfa85adc049d5e45bef5e16b90c83ae43be1e71ebfcaa94ba08"`;
+exports[`lineage inspector rendering before extraction > preserves the group overview DOM 1`] = `"2859d791020e8148d1a8ffbbbf2166fc87f086c3f3de94df1b1e46281f984a02"`;
 
-exports[`lineage inspector rendering before extraction > preserves the managedIdentity overview DOM 1`] = `"9f9e546b0d87f091f1271c186fac9704260c9c6b832b84a99a4ebfd697753e25"`;
+exports[`lineage inspector rendering before extraction > preserves the managedIdentity overview DOM 1`] = `"e3c9babfde99ff7bc51933067b7be1da391e14590533e8e161b92c89b7bb1bf5"`;
 
-exports[`lineage inspector rendering before extraction > preserves the misconfiguration overview DOM 1`] = `"10afa853ffac263acf5a5c61b945cfc44063056781f67c5e43b3b871de198b6b"`;
+exports[`lineage inspector rendering before extraction > preserves the misconfiguration overview DOM 1`] = `"2ae55fbd7ee7d5d8ee1ed88d777e8e1c63d0528b113f3024416a1fc43d5ad59a"`;
 
-exports[`lineage inspector rendering before extraction > preserves the model overview DOM 1`] = `"c65184157b6772b7ffe936f4661b37d5d3f7359f0c54081370dee7e3f8b517ce"`;
+exports[`lineage inspector rendering before extraction > preserves the model overview DOM 1`] = `"e208047fb125f72d99a4e51d313227adc08abb6ef9fc24b3f5ef989aabe4e5ba"`;
 
-exports[`lineage inspector rendering before extraction > preserves the org overview DOM 1`] = `"c446c4d61d424ce1e739084926ca66a2bb18f02771b97e747990d0b1d0428e80"`;
+exports[`lineage inspector rendering before extraction > preserves the org overview DOM 1`] = `"ebc08a232560e0761aa4059f02b8a8c3195fc45cf21fb69e83d4451414f9c0d8"`;
 
-exports[`lineage inspector rendering before extraction > preserves the package overview DOM 1`] = `"30a908d6201faae9ca85b616610b723ce5df04a8fd6e31c78e373c5f8fa24034"`;
+exports[`lineage inspector rendering before extraction > preserves the package overview DOM 1`] = `"fccd71df189bd0e1ba7cf632a1748104c180e9294915adcbadc826c24fa0b1e7"`;
 
-exports[`lineage inspector rendering before extraction > preserves the policy overview DOM 1`] = `"4d224cbffcced0c16ffca7aa621ffaba07c8ee4527a0b91a1c217ec2c5938854"`;
+exports[`lineage inspector rendering before extraction > preserves the policy overview DOM 1`] = `"54ad5e67459a4f168f28c92e712bf823305f53975f2c0149f2aa139928fc03b0"`;
 
-exports[`lineage inspector rendering before extraction > preserves the provider overview DOM 1`] = `"63c717eb29dfbabf6e2ee6e7d9dd5e7a25ca0805fe9a02f8f37c060649342eb4"`;
+exports[`lineage inspector rendering before extraction > preserves the provider overview DOM 1`] = `"d23ba090bcb7d5a7d087b3f52c57c33554ee7ff29d911205fa55bc867d045511"`;
 
-exports[`lineage inspector rendering before extraction > preserves the role overview DOM 1`] = `"e1952d4063399e09de40b1d05759e71b0433a288b9e1231c9a82b3b39fce52e2"`;
+exports[`lineage inspector rendering before extraction > preserves the role overview DOM 1`] = `"29600dfc2c29622ab239d45d8c001c67ff08bd0e96b224ef28aa02647ca560a0"`;
 
-exports[`lineage inspector rendering before extraction > preserves the server overview DOM 1`] = `"d576a899a5bb6220bd8aab38696eb8d840e9d4edf1e4b8bdd2e8d20d777394aa"`;
+exports[`lineage inspector rendering before extraction > preserves the server overview DOM 1`] = `"91dffc564a70c8396857e2acb9f34fa05bb367b3d5905a2c58c147a08b0a1bbf"`;
 
-exports[`lineage inspector rendering before extraction > preserves the serviceAccount overview DOM 1`] = `"f656d3efed0b2efb165d0a6befa29dbd3a58ca6359401acae15bb3a1e8edf5aa"`;
+exports[`lineage inspector rendering before extraction > preserves the serviceAccount overview DOM 1`] = `"ea31682cc4d430f297cad9c993b88085b9de9043691c28b5b040c691cadfc344"`;
 
-exports[`lineage inspector rendering before extraction > preserves the servicePrincipal overview DOM 1`] = `"dcee46f1f6debfd599d79991f29ec143ceaa9f8cb4944b1087d1f328af79c3cb"`;
+exports[`lineage inspector rendering before extraction > preserves the servicePrincipal overview DOM 1`] = `"741068a79c7dff3ab2011ffdd6e482165b52b5526e891ef7940a1ae5a8cbc31b"`;
 
-exports[`lineage inspector rendering before extraction > preserves the sharedServer overview DOM 1`] = `"0d9e768e089732bc1cfe00a0b61752ca58e4aa72405702769638a681f0d6a928"`;
+exports[`lineage inspector rendering before extraction > preserves the sharedServer overview DOM 1`] = `"53b92f35aee3ef394e64a8f2e6dbf33980065729244aa031ee2551972c9c6049"`;
 
-exports[`lineage inspector rendering before extraction > preserves the sourceFile overview DOM 1`] = `"9f053ff5518e585b22c3a3aa14b6f2cda9b3c7d1447189325bc13f3f656e5e3d"`;
+exports[`lineage inspector rendering before extraction > preserves the sourceFile overview DOM 1`] = `"79f8b725c703eec6f03808c8facf5a4ea81be74684c91d4880cc8af63d276c40"`;
 
-exports[`lineage inspector rendering before extraction > preserves the tool overview DOM 1`] = `"67ee070d13c763e770b1ebd7332f3c4b663fac1577c275fc72a62f4acb35d045"`;
+exports[`lineage inspector rendering before extraction > preserves the tool overview DOM 1`] = `"cb6bdac7f14c8eac53c753dd178fe21bf3689af09918b5f85bcf8eb77428ae98"`;
 
-exports[`lineage inspector rendering before extraction > preserves the toolCall overview DOM 1`] = `"b8b38ccf9d42eec4ce3470b9c6d93943967c8cf119d00d6df8326cb27130d0d3"`;
+exports[`lineage inspector rendering before extraction > preserves the toolCall overview DOM 1`] = `"0d6120199f37f18b58ac91e51fd11ce2704a7cfd8745c4962fe867921aec14db"`;
 
-exports[`lineage inspector rendering before extraction > preserves the user overview DOM 1`] = `"1978152bec8d4cbacfb00d98f45c4784bb396ddf76bb00426751276189d80d65"`;
+exports[`lineage inspector rendering before extraction > preserves the user overview DOM 1`] = `"6629508c90c96a49881511c992cdffad1f7a11d36ecb3d53cd6760aaad4e4e18"`;
 
-exports[`lineage inspector rendering before extraction > preserves the vulnerability overview DOM 1`] = `"5979eeb40250de4b109a640c9afdce5f648752b8ff3c260bd14572465ffec404"`;
+exports[`lineage inspector rendering before extraction > preserves the vulnerability overview DOM 1`] = `"48633f609767275b24aff1128f8183fcc6b11e7db3fc9ee8d5f08a4bdeb880c5"`;

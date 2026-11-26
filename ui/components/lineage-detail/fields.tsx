@@ -1,3 +1,4 @@
+import { graphTimestamp } from "@/lib/graph-timestamp";
 import type { ReactNode } from "react";
 import Link from "next/link";
 
@@ -106,9 +107,7 @@ export function Row({
 }
 
 export function shortDate(value: string): string {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleString();
+  return graphTimestamp(value);
 }
 
 export function formatValue(value: unknown): string {
@@ -129,4 +128,3 @@ export function prettifyKey(value: string): string {
     .replace(/_/g, " ")
     .replace(/\b\w/g, (match) => match.toUpperCase());
 }
-

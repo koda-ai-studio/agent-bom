@@ -49,6 +49,11 @@ export function OverviewDetails({ data, onShowBlastRadius, blastRadiusActive = f
   const aggregate = data.findingAggregate;
   return (<>
     <PrimaryNodeDetails data={data} />
+    {data.nodeType === "tool" && typeof data.attributes?.tool_class === "string" && <section aria-label="Recorded tool capability" className="space-y-2">
+      <Label>Recorded tool capability</Label>
+      <Row label="Capability" value={data.attributes.tool_class === "shell" ? "Shell command execution" : data.attributes.tool_class.replaceAll("_", " ")} />
+      {Array.isArray(data.attributes.capabilities) && <Row label="Operations" value={data.attributes.capabilities.filter((value): value is string => typeof value === "string").join(", ")} />}
+    </section>}
     {aggregate && <section aria-label="Finding count scope" className="space-y-2 rounded-lg border border-outline p-3 text-xs">
       <Label>Finding count scope</Label>
       <p className="text-ink-secondary">This asset and its containment scope in the selected snapshot. Counts can overlap between assets and are not estate totals.</p>

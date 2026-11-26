@@ -3,6 +3,18 @@ import { auditRenderedGraph } from "../scripts/graph-visual-audit.mjs";
 import { test, expect, type Page } from "@playwright/test";
 import { ownedFindingAggregates, routeNodeAggregates, withSemanticLayer } from "./helpers/graph-rollup-mocks";
 import { graphGrammarViolations } from "./helpers/graph-grammar";
+import { installAgentScopeFixture } from "./helpers/agent-scope-fixture";
+import { assertAgentPathStructure } from "./helpers/agent-path-structure";
+
+for (const theme of ["light", "dark"]) test(`agent path has no crossings or caption collisions ${theme}`, async ({ page }, info) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.addInitScript(theme => localStorage.setItem("agent-bom-theme", theme), theme);
+  const { graph } = await installAgentScopeFixture(page);
+  await page.goto(`/graph?scan=${graph.scan_id}&rollup=1`);
+  await assertAgentPathStructure(page);
+  await page.getByTestId("graph-agent-evidence").screenshot({ path: info.outputPath(`agent-path-canvas-${theme}.png`) });
+  await page.screenshot({ path: info.outputPath(`agent-path-${theme}.png`), fullPage: true });
+});
 
 const stamp = "2026-10-15T00:00:00Z";
 // Nodes as the API serves them: each carries the backend legend layer for its kind.

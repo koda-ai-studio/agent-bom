@@ -152,12 +152,12 @@ function portraitPathLayout(model: AttackPathGraphModel): AttackPathLayout {
  * Layered DAG: the selected path is one straight line, every node sits in its
  * dagre layer, and branches take lanes above and below the path.
  */
-export function layoutAttackPathGraph(model: AttackPathGraphModel, _requestedDirection: AttackPathDirection): AttackPathLayout {
+export function layoutAttackPathGraph(model: AttackPathGraphModel, _requestedDirection: AttackPathDirection, hopColumns?: Map<string, number>): AttackPathLayout {
   if (_requestedDirection === "TB") return portraitPathLayout(model);
   // Desktop preserves the backend semantic columns.
   const direction: AttackPathDirection = "LR";
   const spacing = SPACING[direction];
-  const columns = rankColumns(model);
+  const columns = hopColumns ? new Map(hopColumns) : rankColumns(model);
   const lanes = assignLanes(model, columns);
   besideBranchOwners(model, columns, lanes);
   const occupiedColumns = [...new Set(columns.values())].sort((a, b) => a - b);

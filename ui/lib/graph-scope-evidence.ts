@@ -15,6 +15,10 @@ export function scopeEvidenceGraph(graph: UnifiedGraphData, root: string): Unifi
     if (chosen.size >= 10) break;
     if (edge.relationship === "uses" && servers.has(edge.target) && byId.get(edge.source)?.entity_type === "agent") chosen.add(edge.source);
   }
+  // Include one recorded assumption hop into an access-granting role.
+  const assumption = graph.edges.find(edge => edge.relationship === "assumes" && chosen.has(edge.target)
+    && byId.get(edge.target)?.entity_type === "role" && byId.has(edge.source));
+  if (assumption && chosen.size < 10) chosen.add(assumption.source);
   const edges = graph.edges.filter(edge => chosen.has(edge.source) && chosen.has(edge.target)).filter(edge => {
     if (edge.relationship !== "shares_server") return true;
     return ![...servers].some(server => [edge.source, edge.target].every(agent =>

@@ -9,6 +9,7 @@ describe("recorded agent neighborhood", () => {
     const graph = scopeEvidenceGraph(original, "agent:developer-copilot");
     expect(graph.nodes.map(node => node.id)).toContain("server:filesystem");
     expect(graph.edges).toEqual(expect.arrayContaining([
+      expect.objectContaining({ source: "sa:jit-review", target: "role:prod-admin", relationship: "assumes" }),
       expect.objectContaining({ source: "role:prod-admin", target: "agent:developer-copilot", relationship: "can_access" }),
       expect.objectContaining({ source: "agent:developer-copilot", target: "server:filesystem", relationship: "uses" }),
       expect.objectContaining({ source: "agent:sre-runbook", target: "server:filesystem", relationship: "uses" }),
