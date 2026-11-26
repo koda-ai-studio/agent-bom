@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { auditRenderedGraph } from "../scripts/graph-visual-audit.mjs";
 import { test, expect, type Page } from "@playwright/test";
 import { ownedFindingAggregates, routeNodeAggregates, withSemanticLayer } from "./helpers/graph-rollup-mocks";
 import { graphGrammarViolations } from "./helpers/graph-grammar";
@@ -762,5 +763,47 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     expect(await cardOverlaps(page)).toEqual([]);
     expect(await edgesThroughNodes(page)).toEqual([]);
     await page.screenshot({ path: info.outputPath(`story-context-${theme}-${width}.png`), animations: "disabled" });
+  });
+}
+
+for (const theme of ["light", "dark"] as const) {
+  test(`repository lineage converges without crossed branches ${theme}`, async ({ page }, info) => {
+    await page.addInitScript(t => localStorage.setItem("agent-bom-theme", t), theme);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const { buildScopeShowcase } = await import("../scripts/product-proof-scope-showcase.mjs");
+    const catalog = JSON.parse(await readFile("fixtures/gallery-advisories.json", "utf8"));
+    const showcase = buildScopeShowcase("repository", {
+      base: { scan_id: "snapshot" },
+      node: (id: string, type: string, label: string, severity: string, risk_score: number, attributes: Record<string, unknown>) => ({ ...node(id, type, label), severity, risk_score, attributes }),
+      edge: (source: string, target: string, relationship: string, weight: number, evidence: Record<string, unknown>) => ({ ...edge(source, target, relationship), weight, evidence: { tier: "modeled_infrastructure", source: "gallery-fixture", ...evidence } }),
+      advisory: (id: string) => catalog.advisories.find((item: { canonical_id: string; id: string }) => item.canonical_id === id || item.id === id),
+      referenceCve: { label: "unused", attributes: {} },
+    });
+    await fixture(page, showcase.nodes, showcase.edges, false, { stats: showcase.stats, attack_paths: showcase.attack_paths });
+    await routeNodeAggregates(page, ownedFindingAggregates(showcase.nodes, showcase.edges));
+    await page.goto("/graph?lens=estate&rollup=0&scan=snapshot&capture=1");
+    await page.getByRole("button", { name: "View & layers", exact: true }).click();
+    await page.getByRole("button", { name: "Repository", exact: true }).click();
+    await page.getByRole("button", { name: "View & layers", exact: true }).click();
+    const flow = page.getByRole("combobox", { name: "Follow a connected flow" });
+    if (await flow.count()) await flow.selectOption({ label: "All connections" });
+    const supporting = page.getByRole("button", { name: /^Show supporting context/ });
+    if (await supporting.count()) await supporting.click();
+    const findings = page.getByRole("button", { name: /^Expand findings/ });
+    if (await findings.count()) await findings.click();
+    await expect(page.locator('.react-flow__node:not([data-id^="display:"])')).toHaveCount(showcase.nodes.length);
+    await page.getByRole("button", { name: "Fit all", exact: true }).click();
+    await settle(page);
+    await page.screenshot({ path: info.outputPath(`repository-${theme}.png`), animations: "disabled" });
+    const audit = await page.evaluate(auditRenderedGraph, { edges: showcase.edges });
+    expect(audit.renderedEdges).toBe(showcase.edges.length);
+    expect(audit.crossings).toEqual([]);
+    expect(await edgesThroughNodes(page)).toEqual([]);
+    expect(await cardOverlaps(page)).toEqual([]);
+    const centers = await page.evaluate(() => ["display:internet", "container:api"].map(id => {
+      const rect = document.querySelector(`[data-id="${id}"] .graph-entity-glyph`)!.getBoundingClientRect();
+      return rect.y + rect.height / 2;
+    }));
+    expect(Math.abs(centers[0]! - centers[1]!)).toBeLessThan(1);
   });
 }

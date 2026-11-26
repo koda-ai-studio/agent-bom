@@ -4,6 +4,7 @@
  * ranks come from the caller's backend-derived keys, never from entity types. */
 
 import { blockedLinkCount, type CaptionText, fitZoom, glyphsOnCurve, linkArcs } from "@/lib/graph-compact-arcs";
+import { orderedRankStarts } from "@/lib/graph-compact-order";
 
 // Cards grow in layout units as Fit all zooms out; these gaps keep the separation
 // pass's clear space (24 units) at the zooms graphs of this size fit at, so it does not move placed cards.
@@ -374,22 +375,32 @@ function refinePlacement(ids: readonly string[], links: readonly Link[], positio
     relevel(map);
     return map;
   };
-  const starts = [positions, ...Array.from({ length: RESTARTS }, (_, seed) => flips(seed))];
+  const ordered = orderedRankStarts(positions, links, spine).map(map => {
+    const xs = new Set([...map.values()].map(point => point.x));
+    for (const x of xs) {
+      const items = ids.filter(id => map.get(id)!.x === x).sort((a, b) => map.get(a)!.y - map.get(b)!.y)
+        .map(id => ({ id, desired: map.get(id)!.y, fixed: spine.has(id), below: tall(id) }));
+      for (const [id, y] of packRank(items, COMPACT_ROW_GAP, true)) map.set(id, { x, y });
+    }
+    relevel(map);
+    return map;
+  });
+  const starts = [...ordered, positions, ...Array.from({ length: RESTARTS }, (_, seed) => flips(seed))];
   // A restart never begins taller than the sweep's own layout plus one row; moves are bounded by the zoom budget.
   const heightOf = (map: ReadonlyMap<string, Point>) => { const ys = ids.map(id => map.get(id)!.y); return Math.max(...ys) - Math.min(...ys); };
   const maxSpan = heightOf(positions) + COMPACT_ROW_GAP;
-  // Restarts run only while every link so far still lacks a clear curve.
-  let best: { copy: Map<string, Point>; cost: number } | null = null;
+  // Clear captions alone are insufficient: a converging branch can still cut
+  // across a separate dependency chain. Keep searching within the same budget.
+  let best = { copy: new Map(positions), cost: placementCost(links, positions, caption, zoom) };
   for (const [i, start] of starts.entries()) {
-    if (i > 0 && (!rowsClear(ids, start, tall) || heightOf(start) > maxSpan)) continue;
+    if (start !== positions && (!rowsClear(ids, start, tall) || heightOf(start) > maxSpan)) continue;
     // A start may spend at most half of what is left, so a greedy search that stalls cannot starve the restarts.
     const share = { left: i < starts.length - 1 ? Math.ceil(budget.left / 2) : budget.left }, granted = share.left;
     const copy = new Map(start), cost = refineRows(ids, links, copy, spine, caption, zoom, levelLeaf, tall, share, relevel);
     budget.left -= granted - Math.max(0, share.left);
-    if (!best || cost < best.cost - 1e-6) best = { copy, cost };
-    if (best.cost < 1000 || budget.left <= 0) break;
+    if (cost < best.cost - 1e-6) best = { copy, cost };
+    if (best.cost < 40 || budget.left <= 0) break;
   }
-  if (!best) return;
   for (const [id, p] of best.copy) positions.set(id, p);
 }
 

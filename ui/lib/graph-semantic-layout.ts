@@ -218,6 +218,7 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
   // The Internet arrow takes the glyph's upper left when another link also enters that node, so the two
   // arrowheads never land on one point; nothing hangs above a glyph, so the entry clears every caption.
   const sharedInternetEntry = (edge: Edge) => !arrange && edge.source === INTERNET_ANCHOR_ID
+    && positions.get(edge.source)?.y !== positions.get(edge.target)?.y
     && drawn.some(other => other.target === edge.target && other.source !== INTERNET_ANCHOR_ID);
   // The exposure chain is coloured even when a pinned path leads the layout from elsewhere.
   const exposureChain = primary[0] === INTERNET_ANCHOR_ID ? primary : exposureSpine(visible, drawn);
@@ -228,12 +229,9 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
   const anchorAt = positions.get(INTERNET_ANCHOR_ID);
   const entryAt = positions.get(drawn.find(edge => edge.source === INTERNET_ANCHOR_ID)?.target ?? "");
   // Without a boundary it takes the free slot one column before that asset, so its arrow stays short.
-  // When other links already enter that asset from the left, it takes the slot a row above instead, clear of them.
-  const entryId = drawn.find(edge => edge.source === INTERNET_ANCHOR_ID)?.target ?? "";
-  // Only links arriving from the left compete for that slot; one entering from the right leaves it free.
-  const crowdedEntry = drawn.some(edge => edge.target === entryId && edge.source !== INTERNET_ANCHOR_ID
-    && (positions.get(edge.source)?.x ?? Infinity) < (entryAt?.x ?? -Infinity));
-  const slot = entryAt ? { x: entryAt.x - SEMANTIC_COLUMN_GAP, y: entryAt.y - (crowdedEntry ? SEMANTIC_ROW_GAP : 0) } : null;
+  // Other inputs converge at the entry; they do not move Internet off its
+  // exposure row. The occupancy check still protects a real upstream asset.
+  const slot = entryAt ? { x: entryAt.x - SEMANTIC_COLUMN_GAP, y: entryAt.y } : null;
   const besideEntry = !frame && anchorAt && slot && ![...positions].some(([id, at]) => id !== INTERNET_ANCHOR_ID
     && Math.abs(at.x - slot.x) < SEMANTIC_COLUMN_GAP / 2 && Math.abs(at.y - slot.y) < SEMANTIC_ROW_GAP / 2) ? slot : null;
   const outside = arrange ? null : frame && anchorAt && entryAt ? { x: frame.position.x - SEMANTIC_COLUMN_GAP * 0.6 - COMPACT_NODE_WIDTH / 2, y: entryAt.y } : besideEntry;

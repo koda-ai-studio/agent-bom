@@ -9,6 +9,7 @@
 - Account boundaries use larger provider-labelled titles and clearer outlines. Recorded conflicting account IDs prevent a partial view from wrapping foreign assets into one account context.
 - Finding badges retain backend scope counts through expansion and link to scope details; distinct issues, occurrences and descendant entities stay separately labelled. Summary graph responses preserve compact normalized risk markers and account identity. Fitting an ordinary focused graph preserves its detail drawer.
 - Compact identity glyphs use solid outlines so their asset type does not imply unknown severity or modeled evidence.
+- Repository branches that converge on a workload are ordered together without interleaving separate source dependencies. Internet remains level with its exposed entry when that slot is clear.
 
 ### Added
 - Sensitive-data markers use recorded classifications; asset names never establish sensitivity.
