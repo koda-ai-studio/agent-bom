@@ -184,3 +184,19 @@ export function scopeShowcaseHeadline(fixture, details = false) {
   const sevText = counts.length === 1 && counts[0][1] === findings.length ? `${findings.length} ${counts[0][0]} ${noun}` : `${findings.length} ${noun}: ${counts.map(([sev, n]) => `${n} ${sev}`).join(", ")}`;
   return `${sevText}${kev ? ` · ${kev} KEV-listed` : ""}${details ? ` · ${paths} ${paths === 1 ? "attack path" : "attack paths"} across the whole snapshot (deduplicated)` : ""}`;
 }
+
+/** Inspect the original finding edge after explicitly disclosing its owner badge. */
+export async function prepareFindingRelationship(p, pathCount) {
+  await p.getByRole("button", { name: "Expand 1 finding for pillow@9.0.0", exact: true }).click();
+  const options = p.getByTestId("graph-options").locator(":scope > summary");
+  await options.click();
+  await expect(p.getByTestId("graph-headline-details")).toContainText(`1 high finding in view · 1 KEV-listed · ${pathCount} attack path${pathCount === 1 ? "" : "s"} across the whole snapshot (deduplicated)`);
+  await options.click();
+  await expect(p.locator(".react-flow__node")).toHaveCount(5);
+  const finding = p.locator('.react-flow__edge[data-id="vulnerable_to:package:mcp:pillow:vulnerability:sbom:cve-2023-4863"]');
+  await finding.focus();
+  await finding.press("Space");
+  const receipt = p.getByLabel("Relationship details", { exact: true });
+  await expect(receipt).toBeVisible();
+  await expect(receipt.getByLabel("Relationship summary")).toContainText("Bundled advisory database");
+}

@@ -18,7 +18,7 @@ import {
   DEMO_AGENT_SPECS, SCAN_ID, SCENARIO_ID, advisory, buildBlastRadius, buildGraph, contextGraph, edge,
   demoScanAgent, graphScenario, graphScenarioComparison, node, severityId, vuln,
 } from "./product-proof-graph.mjs";
-import { assertRecordedDirections, runGraphQualityCapture, scopeShowcaseHeadline } from "./graph-quality-capture.mjs";
+import { assertRecordedDirections, runGraphQualityCapture, scopeShowcaseHeadline, prepareFindingRelationship } from "./graph-quality-capture.mjs";
 import { foldPackageEvidence } from "../lib/graph-evidence-fold.ts";
 import { AGENT_ARCHITECTURE_SCREENSHOTS, captureAgentArchitecture, installAgentArchitectureRoutes } from "./product-proof-agent-architecture.mjs";
 import { captureSourceProvenance } from "./product-proof-provenance.mjs";
@@ -3176,18 +3176,12 @@ async function main() {
       await capture(relationshipPage,
         `/graph?capture=1&scan=${REFERENCE_CORRELATION_ID}&layers=${REFERENCE_RELATIONSHIP_LAYERS}`,
         `graph-relationship-${theme}-live.png`, async (p) => {
-          await expect(p.locator(".react-flow__node")).toHaveCount(5);
-          const finding = p.locator('.react-flow__edge[data-id="vulnerable_to:package:mcp:pillow:vulnerability:sbom:cve-2023-4863"]');
-          await finding.focus();
-          await finding.press("Space");
-          const receipt = p.getByLabel("Relationship details", { exact: true });
-          await expect(receipt).toBeVisible();
-          await expect(receipt.getByLabel("Relationship summary")).toContainText("Bundled advisory database");
+          await prepareFindingRelationship(p, referenceGraph.attack_paths.length);
           await fitReactFlow(p);
           await scrollTo(p, 0);
         }, {
           expectedText: ["Has finding", "pillow@9.0.0 is recorded as affected by CVE-2023-4863.", "Bundled advisory database", "Technical details", /Image inventory/i, /^Deployment$/im, "pinned-package.txt", "CVE-2023-4863",
-            `1 high finding in view · 1 KEV-listed · ${referenceGraph.attack_paths.length} attack path${referenceGraph.attack_paths.length === 1 ? "" : "s"} across the whole snapshot (deduplicated)`, "Path analysis complete for this snapshot", /Reference evidence lab/i],
+            "1 high finding in loaded scope · 1 KEV-listed", "Path analysis complete for this snapshot", /Reference evidence lab/i],
           expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph"],
           minGraphNodes: 5, maxGraphNodes: 5, minGraphEdges: 4, maxGraphEdges: 4,
           minGraphNodeFontPx: 12, minGraphEdgeLabelFontPx: 12,
