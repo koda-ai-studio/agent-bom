@@ -29,6 +29,7 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     await expect(canvas.locator(".react-flow__edge")).toHaveCount(3);
     await expect(overview).toContainText("3 of 14 loaded relationships");
     await page.waitForLoadState("networkidle");
+    await expect(canvas.locator(".graph-relationship-label:visible")).toHaveCount(0);
     expect(await canvas.locator(".react-flow__node").evaluateAll(nodes => nodes.every(node => {
       const box = node.getBoundingClientRect(), frame = node.closest(".react-flow")!.getBoundingClientRect();
       const label = node.querySelector("p")!;
@@ -82,6 +83,7 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     await expect(page.getByTestId("graph-preview-scope-counts")).toContainText("12 contained nodes · 2 direct children · 5 open issues");
     await expect(canvas.locator("[data-finding-disclosure]")).toHaveCount(4);
     await expect(page.getByTestId("graph-edge-note")).toHaveCount(0);
+    await expect(canvas.locator(".graph-relationship-label:visible")).toHaveCount(0);
     await expect(canvas.locator(".react-flow__node")).toHaveCount(4);
     await expect(canvas.locator(".react-flow__edge")).toHaveCount(3);
     await expect(overview).toContainText("12 of 12 loaded relationships");

@@ -12,6 +12,7 @@ import { legibleZoomForText } from "@/lib/graph-adaptive-frame";
 import { LegibleFitControls } from "@/components/graph-legible-controls";
 import { GraphFlowEdgeLegend } from "@/components/graph-flow-edge-legend";
 import { SCOPE_PREVIEW_ROW } from "@/lib/graph-scope-preview";
+import type { DisplayRollupEdge } from "@/lib/graph-rollup-view";
 
 type Props = ComponentProps<typeof GraphRollupDecisionSurface>;
 
@@ -73,7 +74,14 @@ export function GraphScopeOverview(props: Props) {
             edges={narrow ? preview.edges.map(edge => ({ ...edge, sourceHandle: null, targetHandle: "context" })) : preview.edges} nodeTypes={lineageNodeTypes} edgeTypes={relationshipEdgeTypes}
             fitView fitViewOptions={SCOPE_FIT} minZoom={0.35} maxZoom={1.5}
             nodesDraggable={false} nodesConnectable={false} proOptions={{ hideAttribution: true }}
-            onEdgeClick={(_, edge) => { const recorded = props.edges.find(row => row.source === edge.source && row.target === edge.target); if (recorded) setEdgeDetail(`${recorded.count} recorded relationship${recorded.count === 1 ? "" : "s"}: ${recorded.relationships.join(", ").replaceAll("_", " ")} · ${recorded.directions?.join(", ") || "direction not recorded"}.`); }}
+            onEdgeClick={(_, edge) => {
+              const recorded = edge.data?.aggregate as DisplayRollupEdge | undefined;
+              if (!recorded) return;
+              const label = (id: string) => props.items.find(item => item.id === id)?.label ?? id;
+              const direction = (row: DisplayRollupEdge, count: number) => `${label(row.source)} → ${label(row.target)}: ${count} recorded relationships · ${row.relationships.join(", ").replaceAll("_", " ")} · ${row.directions?.join(", ") || "direction not recorded"}`;
+              const original = props.edges.find(row => row.source === recorded.source && row.target === recorded.target) ?? recorded;
+              setEdgeDetail([direction(original, recorded.count - (recorded.reverse?.count ?? 0)), ...(recorded.reverse ? [direction(recorded.reverse, recorded.reverse.count)] : [])].join(". "));
+            }}
             onNodeClick={(_, node) => { const item = props.items.find(item => item.id === node.id); if (item) props.onInvestigate(item); }}>
             <Background color="var(--border-subtle)" gap={20} size={1} />
             <LegibleFitControls floor={SCOPE_FIT.minZoom} fitOptions={SCOPE_FIT} showInteractive={false} className={CONTROLS_CLASS} />

@@ -9,6 +9,16 @@ const item = (id: string, entity_type = "misconfiguration", label = id): GraphRo
 });
 
 describe("scope relationship preview", () => {
+  it("draws reciprocal scope relationships once while retaining each direction's evidence", () => {
+    const preview = buildScopePreview([item("account-a", "account"), item("account-b", "account")], [
+      { source: "account-a", target: "account-b", count: 7, relationships: ["can_access"], directions: ["directed"] },
+      { source: "account-b", target: "account-a", count: 4, relationships: ["depends_on"], directions: ["directed"] },
+    ])!;
+    expect(preview.edges).toHaveLength(1);
+    expect(preview.shownRelationships).toBe(11);
+    expect(preview.edges[0]?.data).toMatchObject({ labelVisibility: "auto", quietLabel: true,
+      aggregate: { count: 11, reverse: { source: "account-b", target: "account-a", count: 4 } } });
+  });
   it("retains backend issue counts when the preview uses compact asset captions", () => {
     const org = { ...item("org", "org"), has_children: true, is_container: true,
       aggregate: { ...item("org").aggregate, descendant_count: 5578, issue_count: 1923 } };
