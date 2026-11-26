@@ -94,7 +94,7 @@ export type LineageNodeData = CompactNodePresentation & {
   agentContext?: AgentContext | undefined;
   dimensions?: import("@/lib/graph-schema").NodeDimensions | undefined;
   semanticLayer?: string | null | undefined;
-  findingAggregate?: import("@/lib/graph-node-aggregates").GraphNodeAggregate["aggregate"] | undefined;
+  findingAggregate?: import("@/lib/api-types").GraphRollupAggregate | undefined;
   semanticLayerIssue?: string | undefined;
   imageSubrow?: boolean | undefined;
   evidenceSources?: string[] | undefined;

@@ -1,9 +1,9 @@
 "use client";
 
-import { Background, ReactFlow, ReactFlowProvider } from "@xyflow/react";
+import { Background, ReactFlow, ReactFlowProvider, type Node } from "@xyflow/react";
 import { useMemo, useState, type ComponentProps, type CSSProperties } from "react";
 import { GraphRollupDecisionSurface } from "@/components/graph-rollup-decision-surface";
-import { lineageNodeTypes } from "@/components/lineage-nodes";
+import { lineageNodeTypes, type LineageNodeData } from "@/components/lineage-nodes";
 import { relationshipEdgeTypes } from "@/components/relationship-edge";
 import { buildScopePreview } from "@/lib/graph-scope-preview";
 import { useNarrowViewport } from "@/hooks/use-narrow-viewport";
@@ -13,6 +13,7 @@ import { LegibleFitControls } from "@/components/graph-legible-controls";
 import { GraphFlowEdgeLegend } from "@/components/graph-flow-edge-legend";
 import { SCOPE_PREVIEW_ROW } from "@/lib/graph-scope-preview";
 import type { DisplayRollupEdge } from "@/lib/graph-rollup-view";
+import { phoneStoryLayout } from "@/lib/graph-phone-story";
 
 type Props = ComponentProps<typeof GraphRollupDecisionSurface>;
 
@@ -33,13 +34,14 @@ export function GraphScopeOverview(props: Props) {
   const preview = useMemo(() => buildScopePreview(props.items, props.edges, rootId) ?? buildScopePreview(props.items, props.edges), [props.items, props.edges, rootId]);
   if (!preview || props.edges.length < 3) return <GraphRollupDecisionSurface {...props} />;
   const scope = preview.root;
-  const nodes = preview.nodes.map((node, index) => ({ ...node,
+  const nodes: Node<LineageNodeData>[] = preview.nodes.map((node, index) => ({ ...node,
     ...(narrow ? { position: { x: 0, y: index * 230 } } : {}),
     data: { ...node.data, onExploreFindings: () => {
       const item = props.items.find(item => item.id === node.id);
       if (item) { if (item.has_children) props.onDrill(item); else props.onInvestigate(item); }
     } },
   }));
+  const flow = narrow ? phoneStoryLayout(nodes, preview.edges) : { nodes, edges: preview.edges };
   return <section data-testid="graph-scope-overview" className="overflow-hidden rounded-2xl bg-surface">
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline px-4 py-3">
       <div className="flex min-w-0 flex-wrap items-center gap-3">
@@ -68,12 +70,10 @@ export function GraphScopeOverview(props: Props) {
       <ReactFlowProvider key={`${preview.root.id}:${narrow}`}>
         {/* The frame is as tall as the drawn scope at full size, within the room left in the window, so a short scope
             does not sit in an empty canvas. */}
-        <div style={{ height: narrow ? preview.nodes.length * 230 : `clamp(280px, min(calc(100dvh - 380px), ${scopeFrameHeight(preview.rows)}px), 560px)` }} data-testid="graph-scope-connections">
-          <ReactFlow nodes={nodes}
+        <div style={{ height: narrow ? Math.max(...flow.nodes.map(node => node.position.y)) + 160 : `clamp(280px, min(calc(100dvh - 380px), ${scopeFrameHeight(preview.rows)}px), 560px)` }} data-testid="graph-scope-connections">
+          <ReactFlow nodes={flow.nodes}
             style={{ "--graph-node-meta-size": "14px" } as CSSProperties}
-            edges={narrow ? preview.edges.map(edge => ({ ...edge, sourceHandle: null, targetHandle: "context",
-              data: { ...edge.data, phoneLayout: true, phoneLinear: true },
-            })) : preview.edges} nodeTypes={lineageNodeTypes} edgeTypes={relationshipEdgeTypes}
+            edges={flow.edges} nodeTypes={lineageNodeTypes} edgeTypes={relationshipEdgeTypes}
             fitView fitViewOptions={SCOPE_FIT} minZoom={0.35} maxZoom={1.5}
             nodesDraggable={false} nodesConnectable={false} proOptions={{ hideAttribution: true }}
             onEdgeClick={(_, edge) => {

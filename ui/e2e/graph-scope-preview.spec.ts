@@ -40,6 +40,15 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
       const zoom = box.width / (node as HTMLElement).offsetWidth;
       return box.left >= frame.left && box.right <= frame.right && box.top >= frame.top && box.bottom <= frame.bottom && parseFloat(getComputedStyle(label).fontSize) * zoom >= 12;
     }))).toBe(true);
+    if (width === 390) expect(await canvas.evaluate(frame => {
+      const captions = [...frame.querySelectorAll("[data-semantic-name]")].map(label => label.getBoundingClientRect());
+      return [...frame.querySelectorAll<SVGPathElement>(".react-flow__edge-path")].every(path => {
+        const transform = path.getScreenCTM()!;
+        return Array.from({ length: 41 }, (_, index) => path.getPointAtLength(path.getTotalLength() * index / 40))
+          .map(point => new DOMPoint(point.x, point.y).matrixTransform(transform))
+          .every(point => captions.every(box => point.x < box.left || point.x > box.right || point.y < box.top || point.y > box.bottom));
+      });
+    })).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect(await canvas.locator(".react-flow__node").evaluateAll(nodes => nodes.every(node => {
       const box = node.getBoundingClientRect(), frame = node.closest("[data-graph-adaptive-frame]")!.getBoundingClientRect();
@@ -107,6 +116,15 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
       const zoom = box.width / (node as HTMLElement).offsetWidth;
       return box.left >= frame.left && box.right <= frame.right && box.top >= frame.top && box.bottom <= frame.bottom && parseFloat(getComputedStyle(label).fontSize) * zoom >= 12;
     }))).toBe(true);
+    if (width === 390) expect(await canvas.evaluate(frame => {
+      const captions = [...frame.querySelectorAll("[data-semantic-name]")].map(label => label.getBoundingClientRect());
+      return [...frame.querySelectorAll<SVGPathElement>(".react-flow__edge-path")].every(path => {
+        const transform = path.getScreenCTM()!;
+        return Array.from({ length: 41 }, (_, index) => path.getPointAtLength(path.getTotalLength() * index / 40))
+          .map(point => new DOMPoint(point.x, point.y).matrixTransform(transform))
+          .every(point => captions.every(box => point.x < box.left || point.x > box.right || point.y < box.top || point.y > box.bottom));
+      });
+    })).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect(await canvas.locator(".react-flow__node").evaluateAll(nodes => nodes.every(node => {
       const box = node.getBoundingClientRect(), frame = node.closest("[data-graph-adaptive-frame]")!.getBoundingClientRect();

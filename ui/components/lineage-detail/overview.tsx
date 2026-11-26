@@ -52,7 +52,7 @@ export function OverviewDetails({ data, onShowBlastRadius, blastRadiusActive = f
     {aggregate && <section aria-label="Finding count scope" className="space-y-2 rounded-lg border border-outline p-3 text-xs">
       <Label>Finding count scope</Label>
       <p className="text-ink-secondary">This asset and its containment scope in the selected snapshot. Counts can overlap between assets and are not estate totals.</p>
-      <Row label="Distinct open findings" value={aggregate.issue_count} />
+      <Row label="Distinct open findings" value={aggregate.issue_count ?? "Not available"} />
       <Row label="Finding occurrences" value={aggregate.finding_occurrence_count ?? "Not available"} />
       <Row label="Descendant entities" value={aggregate.descendant_count ?? "Not available"} />
       <p className="text-ink-secondary">{["critical", "high", "medium", "low", "none", "unknown"].filter(level => (aggregate.severity_counts?.[level] ?? 0) > 0).map(level => `${level}: ${aggregate.severity_counts[level]}`).join(" · ")}</p>
