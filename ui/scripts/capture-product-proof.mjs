@@ -3211,7 +3211,7 @@ async function main() {
         awaitResponses: [
           (response) => new URL(response.url()).pathname === "/v1/graph/rollup" && response.ok(),
         ],
-        expectedText: ["Investigation", "Recorded connections", "Browse all 15 nodes and scopes"],
+        expectedText: ["Investigation", "Agent connections", "4 of 4 loaded relationships for this scope", "Browse all 15 nodes and scopes"],
         expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/rollup", "/v1/graph/scenarios"],
         readySelector: '[data-testid="graph-scope-overview"]',
         assertNoHorizontalOverflow: true,
