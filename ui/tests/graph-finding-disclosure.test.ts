@@ -10,6 +10,17 @@ const nodes: Node<LineageNodeData>[] = [
   { id: "finding", position: { x: 600, y: 0 }, data: { nodeType: "misconfiguration", label: "WAF missing", semanticLayer: "finding", readingFinding: true, readingOwner: "owner", severity: "high" } },
 ];
 const edges: Edge[] = [{ id: "affects", source: "finding", target: "owner", data: { relationship: "affects", evidenceMode: "inferred" } }];
+it("folds a primary finding only in the automatic overview, retaining its canonical path evidence", () => {
+  const primary = nodes.map(node => node.id === "finding" ? { ...node, data: { ...node.data, semanticPathIndex: 3 } } : node);
+  const selectedPath = cloudFindingDisclosure(primary, edges, new Set(), () => {}, true);
+  expect(selectedPath.groupedIds.size).toBe(0);
+  const overview = cloudFindingDisclosure(primary, edges, new Set(), () => {}, true, true);
+  expect(overview.nodes.find(node => node.id === "finding")).toMatchObject({ hidden: true, data: { semanticPathIndex: 3 } });
+  expect(overview.nodes.find(node => node.id === "owner")?.data.readingFindings?.count).toBe(7);
+  const expanded = cloudFindingDisclosure(primary, edges, new Set(["owner"]), () => {}, true, true);
+  expect(expanded.nodes.find(node => node.id === "finding")?.hidden).toBe(false);
+  expect(expanded.edges[0]).toMatchObject(edges[0]!);
+});
 it("collapses only uniquely owned findings and preserves records, count and severity", () => {
   const result = cloudFindingDisclosure(nodes, edges, new Set(), () => {});
   expect(result.nodes.find(n => n.id === "finding")!.hidden).toBe(true);
