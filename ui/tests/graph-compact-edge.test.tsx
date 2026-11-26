@@ -32,6 +32,11 @@ it("shows recorded direction on a compact flow before inspection without adding 
   expect(queryByText(/Has Permission/)).not.toBeInTheDocument();
 });
 
+it("never presents an undirected relationship as an access direction, including on inspection", () => {
+  const { getByTestId } = render(<svg><CompactRelationshipEdge {...props} selected data={{ ...props.data, semanticLayout: true, direction: "undirected" }} /></svg>);
+  expect(getByTestId("edge")).not.toHaveAttribute("marker-end");
+});
+
 
 it("keeps a single-column phone context curve within its caption-free side margin", () => {
   const curve = compactEdgeCurve({ sourceX: 100, targetX: 100, sourceY: 0, targetY: 600, sourcePosition: Position.Left, targetPosition: Position.Left, data: { phoneLayout: true, phoneLinear: true } });
