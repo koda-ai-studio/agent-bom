@@ -50,6 +50,20 @@ function sideOf(root: string, neighbour: string, links: readonly GraphRollupEdge
   return "either";
 }
 
+/** Separate hosting/governance from an agent's operational neighbours. A mixed
+ * aggregate remains prominent: one contextual relationship cannot quiet access. */
+function agentContext(root: GraphRollupContainer, links: GraphRollupEdge[], chosen: GraphRollupContainer[]) {
+  const context = new Set<string>();
+  if (!["agent", "server", "mcp_server"].includes(root.entity_type)) return context;
+  const supporting = new Set(["hosted_on", "hosts", "governs", "manages", "applies_to"]);
+  for (const item of chosen) {
+    const between = links.filter(edge => edge.source === item.id || edge.target === item.id);
+    if (between.length && between.every(edge => edge.relationships.length > 0 && edge.relationships.every(relation => supporting.has(relation)))) context.add(item.id);
+  }
+  // With no operational neighbours there is no main row to distinguish.
+  return context.size < chosen.length ? context : new Set<string>();
+}
+
 /** A bounded selection of recorded links, never a synthesized attack path. */
 export function buildScopePreview(items: GraphRollupContainer[], edges: GraphRollupEdge[], rootId?: string) {
   const byId = new Map(items.map(item => [item.id, item]));
@@ -73,7 +87,10 @@ export function buildScopePreview(items: GraphRollupContainer[], edges: GraphRol
     labels.add(key); return true;
   });
   const sides = { left: [] as GraphRollupContainer[], right: [] as GraphRollupContainer[] };
-  for (const item of [...diverse, ...neighbors.filter(item => !diverse.includes(item))]) {
+  const supportingIds = agentContext(root, links, neighbors);
+  const ordered = [...diverse, ...neighbors.filter(item => !diverse.includes(item))]
+    .sort((a, b) => Number(supportingIds.has(a.id)) - Number(supportingIds.has(b.id)));
+  for (const item of ordered) {
     const side = sideOf(root.id, item.id, links);
     const target = side === "either" ? (sides.right.length <= sides.left.length ? "right" : "left") : side;
     const fallback = target === "left" ? "right" : "left";
@@ -86,19 +103,26 @@ export function buildScopePreview(items: GraphRollupContainer[], edges: GraphRol
   const flow = buildRollupFlowGraph([root, ...chosen], { edges: mergeReciprocalRollupEdges(selectedLinks) });
   const providers = flow.nodes.map(node => entitySource(node.data));
   const sharedProvider = providers[0] && providers.every(provider => provider?.id === providers[0]!.id) ? providers[0] : null;
-  const rows = Math.max(sides.left.length, sides.right.length);
+  const context = agentContext(root, selectedLinks, chosen);
+  const contextRows = Math.max(...[sides.left, sides.right].map(side => side.filter(item => context.has(item.id)).length));
+  const mainRows = Math.max(...[sides.left, sides.right].map(side => side.filter(item => !context.has(item.id)).length));
+  const rows = context.size ? contextRows + mainRows : Math.max(sides.left.length, sides.right.length);
   const reach = sides.left.length && sides.right.length ? SCOPE_PREVIEW_REACH.both : SCOPE_PREVIEW_REACH.one;
   const rootX = sides.left.length ? reach : 0;
   const left = new Set(sides.left.map(item => item.id));
   // Each side is centred on the scope's row.
   const place = (id: string) => {
-    if (id === root.id) return { x: rootX, y: (rows - 1) * SCOPE_PREVIEW_ROW / 2 };
+    const mainY = context.size ? contextRows * SCOPE_PREVIEW_ROW : (rows - 1) * SCOPE_PREVIEW_ROW / 2;
+    if (id === root.id) return { x: rootX, y: mainY };
     const side = left.has(id) ? sides.left : sides.right;
-    return { x: left.has(id) ? 0 : rootX + reach, y: (side.findIndex(item => item.id === id) + (rows - side.length) / 2) * SCOPE_PREVIEW_ROW };
+    const peers = context.size ? side.filter(item => context.has(item.id) === context.has(id)) : side;
+    const offset = context.size ? context.has(id) ? 0 : contextRows : (rows - side.length) / 2;
+    return { x: left.has(id) ? 0 : rootX + reach, y: (peers.findIndex(item => item.id === id) + offset) * SCOPE_PREVIEW_ROW };
   };
   const nodes = flow.nodes.map(node => ({ ...node,
     position: place(node.id),
-    data: { ...node.data, findingAggregate: node.data.rollup?.aggregate, rollup: undefined, rollupCompact: false, highlighted: false,
+    ...(node.id === root.id ? { ariaLabel: `${node.data.label}, selected connection focus` } : {}),
+    data: { ...node.data, findingAggregate: node.data.rollup?.aggregate, rollup: undefined, rollupCompact: false, highlighted: false, readingFocus: node.id === root.id,
       ...(sharedProvider ? { scopeContext: { provider: sharedProvider.id, environment: node.data.scopeContext?.environment ?? null } } : {}),
       attributes: { ...node.data.attributes, rollup_is_container: false },
     },
@@ -112,7 +136,7 @@ export function buildScopePreview(items: GraphRollupContainer[], edges: GraphRol
       ...(left.has(edge.source) || left.has(edge.target)
         ? { sourceHandle: edge.source === root.id ? "context" : null, targetHandle: edge.target === root.id ? null : "context" }
         : { sourceHandle: edge.source === root.id ? null : "context", targetHandle: edge.target === root.id ? "context" : null }),
-      data: { ...edge.data, arcDy: undefined, passesBehind: undefined, sourceFan: 0, targetFan: 0, ...fans.get(edge.id), labelVisibility: "auto", quietLabel: true, boundedOverview: true },
+      data: { ...edge.data, arcDy: undefined, passesBehind: undefined, sourceFan: 0, targetFan: 0, ...fans.get(edge.id), labelVisibility: "auto", quietLabel: true, boundedOverview: true, supportingContext: context.has(edge.source) || context.has(edge.target) },
     })),
     availableRelationships: links.reduce((sum, edge) => sum + edge.count, 0),
     shownRelationships: selectedLinks.reduce((sum, edge) => sum + edge.count, 0),

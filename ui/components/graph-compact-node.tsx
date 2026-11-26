@@ -26,7 +26,7 @@ import { compactScopeCaption } from "@/lib/graph-compact-scope";
 import { ANCHOR_GLYPH_SCALE, COMPACT_GLYPH_SCALE, PHONE_GLYPH_SCALE } from "@/lib/graph-compact-glyph";
 
 /** Presentation flags shared with the bounded story layout. */
-export type CompactNodePresentation = { phoneLinear?: boolean | undefined; roomyName?: boolean | undefined; connectedScope?: boolean | undefined };
+export type CompactNodePresentation = { phoneLinear?: boolean | undefined; roomyName?: boolean | undefined; connectedScope?: boolean | undefined; readingFocus?: boolean | undefined };
 
 export type CompactNodeTone = { data: LineageNodeData; borderClass: string; bgClass: string; ringClass: string; iconClass: string; source?: boolean; target?: boolean };
 
@@ -136,7 +136,7 @@ function Markers({ data }: { data: LineageNodeData }) {
   // A drawn Internet anchor already says this; the dot stays for views without the anchor.
   const exposed = !data.displayOnly && !data.internetAnchored && internetExposure(data.attributes) === true;
   return <>
-    {(admin || classification || critical) && <span className="absolute bottom-full left-1/2 mb-1 flex -translate-x-1/2 gap-1">
+    {(admin || classification || critical) && <span data-asset-markers className="absolute top-0 left-1/2 flex -translate-x-1/2 -translate-y-1/2 gap-1 rounded bg-[var(--graph-canvas)] px-0.5">
       {admin && <GraphCountHint text="Recorded administrator privileges"><span tabIndex={0} role="img" data-compact-marker="privilege" aria-label="Recorded administrator privileges" className="rounded-sm bg-[var(--graph-canvas)] text-violet-600 dark:text-violet-300">
         <Crown aria-hidden="true" style={{ width: "var(--graph-node-meta-size, 14px)", height: "var(--graph-node-meta-size, 14px)" }} />
       </span></GraphCountHint>}
@@ -164,7 +164,7 @@ function FindingDisclosure({ data }: { data: LineageNodeData }) {
   const action = findings ? findings.expanded ? "Collapse" : "Expand" : "Inspect";
   const label = findings ? `${action} ${count} finding${plural} for ${data.label}` : `Inspect ${count} finding${plural} in the scope of ${data.label}`;
   return <span className={data.phoneLayout ? "absolute -bottom-2 left-1/2 -translate-x-1/2" : "absolute -bottom-1 -right-3"}>
-    <GraphCountHint text={`${data.label}: ${count} distinct open finding${plural} in this asset's containment scope${severity ? ` · highest severity: ${severity}` : " · severity not rated"}. ${findings ? "Expand or collapse the loaded findings; primary path findings remain visible." : "Inspect the asset for scope and relationship details."}`}>
+    <GraphCountHint text={`${data.label}: ${count} distinct open finding${plural} in this asset's containment scope${severity ? ` · highest severity: ${severity}` : " · severity not rated"}. ${findings ? "Expand or collapse the loaded findings; selected attack paths retain their steps." : "Inspect the asset for scope and relationship details."}`}>
       <button type="button" data-finding-disclosure data-finding-count-source="rollup" data-finding-count-severity={severity} aria-expanded={findings?.expanded} title="" aria-label={label}
         onClick={event => { event.stopPropagation(); toggle(); }}
         className="nodrag nopan rounded-full border border-outline-strong bg-surface-elevated px-1.5 font-semibold leading-snug text-foreground" style={META}>
@@ -195,7 +195,7 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
   const { badges, ring } = nodeBadges(data);
   const anchor = isInternetAnchor(data);
   const outline = ["role", "credential"].includes(data.nodeType) ? borderClass.replace(/\bborder-dashed\b/g, "") : borderClass;
-  const glyph = anchor ? ANCHOR_GLYPH : data.phoneLayout ? PHONE_GLYPH : GLYPH, icon = data.phoneLayout ? PHONE_ICON : ICON;
+  const glyph = anchor ? ANCHOR_GLYPH : data.phoneLayout ? PHONE_GLYPH : data.readingFocus ? glyphSize(1) : GLYPH, icon = data.phoneLayout ? PHONE_ICON : ICON;
   const fullTitle = typeof data.attributes?.display_title === "string" && data.attributes.display_title.trim() ? data.attributes.display_title : data.label;
   // A prose finding draws its short preview; the full title stays in the tooltip, drawer and assistive text.
   const preview = ["misconfiguration", "vulnerability"].includes(data.nodeType) ? prosePreview(fullTitle, data.roomyName && (!data.phoneLayout || data.phoneLinear)) : fullTitle;
@@ -203,10 +203,10 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
   const held = data.heldConnections ? `${data.heldConnections} more ${data.heldConnections === 1 ? "connection" : "connections"} not drawn` : undefined;
   const tooltip = [graphNodeTooltip(data), data.evidenceFlowContext, ring?.description, held, data.seenIn?.length ? seenInSummary(data.seenIn) : undefined,
     ...(data.readingConnections ?? []).map(summary => `${summary.relationship === "hosts" ? "Hosts" : "Contains"} ${summary.label} in this view`)].filter(Boolean).join(" · ");
-  return <div title={tooltip} data-graph-entity="true" data-compact-node data-evidence-flow={data.evidenceFlow || undefined} data-finding-owner={data.readingOwner}
+  return <div title={tooltip} data-graph-entity="true" data-compact-node data-evidence-flow={data.evidenceFlow || undefined} data-finding-owner={data.readingOwner} data-reading-focus={data.readingFocus || undefined}
     data-rollup-container={data.attributes?.rollup_is_container === true ? "true" : undefined}
-    style={{ maxWidth: "var(--graph-node-card-width, 200px)", marginTop: anchor && data.roomyName && !data.phoneLayout ? glyphSize(-(ANCHOR_GLYPH_SCALE - COMPACT_GLYPH_SCALE) / 2) : undefined }} className={`relative flex transition-opacity ${data.dimmed ? "opacity-25" : ""} ${phoneLayoutClass(data)}`}>
-    <div ref={glyphRef} data-severity-ring={severity} data-internet-anchor={anchor || undefined} style={{ width: glyph, height: glyph }}
+    style={{ maxWidth: "var(--graph-node-card-width, 200px)", marginTop: anchor && data.roomyName && !data.phoneLayout ? glyphSize(-(ANCHOR_GLYPH_SCALE - COMPACT_GLYPH_SCALE) / 2) : data.readingFocus && !data.phoneLayout ? glyphSize(-(1 - COMPACT_GLYPH_SCALE) / 2) : undefined }} className={`relative flex transition-opacity ${data.dimmed ? "opacity-25" : ""} ${phoneLayoutClass(data)}`}>
+    <div ref={glyphRef} data-severity-ring={severity} data-internet-anchor={anchor || undefined} style={{ width: glyph, height: glyph, outline: data.readingFocus ? "2px solid var(--border-strong)" : undefined, outlineOffset: data.readingFocus ? 5 : undefined }}
       className={`graph-entity-glyph relative flex shrink-0 items-center justify-center rounded-full ${iconClass} ${anchor ? "border-0 bg-transparent" : `border-2 ${outline} ${bgClass}`} ${data.highlighted && !anchor ? `ring-2 ring-offset-2 ring-offset-[var(--graph-canvas)] ${ringClass}` : ""}`}>
       {severity && <span className="sr-only" data-finding-severity={severity}>{`${severity} severity`}</span>}
       <CompactHandles data={data} source={source} target={target} />

@@ -127,7 +127,7 @@ export function CompactRelationshipEdge(props: EdgeProps) {
   const exposure = props.data?.exposurePath === true;
   const showDirection = props.data?.direction !== "undirected" && (inspecting || props.data?.directionEmphasis === true || props.data?.pathLabel === true
     || props.data?.semanticLayout === true && !aggregate);
-  const style = { stroke: edgeFamilyColor(exposure ? "exposure" : family), strokeWidth: spine ? EDGE_STROKE.path : inspecting ? EDGE_STROKE.inspect : EDGE_STROKE.rest, opacity: spine || inspecting ? 1 : stubbed || props.data?.passesBehind ? 0.4 : 0.95,
+  const style = { stroke: edgeFamilyColor(exposure ? "exposure" : family), strokeWidth: spine ? EDGE_STROKE.path : inspecting ? EDGE_STROKE.inspect : EDGE_STROKE.rest, opacity: spine || inspecting ? 1 : stubbed || props.data?.passesBehind ? 0.4 : props.data?.supportingContext ? 0.55 : 0.95,
     strokeDasharray: edgeIsDashed(family, props.data) ? "6 4" : undefined, fill: "none" };
   return <g ref={ref} data-relationship={relationship || undefined} data-edge-family={family} data-edge-stub={stubbed || undefined} data-label-disclosure={relationship === "vulnerable_to" ? "on-demand" : undefined} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
     {typeof props.data?.hoverDescription === "string" && <title>{props.data.hoverDescription}</title>}

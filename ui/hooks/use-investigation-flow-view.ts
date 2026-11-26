@@ -14,6 +14,7 @@ import { hopColumnLayout } from "@/lib/graph-hop-columns";
 import { setLayoutFrame } from "@/lib/graph-compact-arcs";
 import { PREVIEW_LAYOUT } from "@/lib/graph-preview-layout";
 import { separateCards } from "@/lib/graph-card-separation";
+import { withFindingOwners } from "@/lib/graph-flow-model";
 import { quietContextEdges, withHeldConnections } from "@/lib/graph-edge-quieting";
 
 const WIDE_CARD = { "--graph-node-card-width": "300px" } as React.CSSProperties;
@@ -77,10 +78,17 @@ export function useInvestigationFlowView({ presentation, edges, loaded, narrowVi
     }
     return investigationFlow(presentation.nodes, edges, kind, narrowViewport, frame);
   }, [active, previewActive, previewRootId, presentation.nodes, edges, kind, narrowViewport, frame]);
-  const supporting = useGraphStoryContext(flow.nodes, flow.edges, active && !previewActive && kind === "auto" && !presentation.hasSavedState && !presentation.restoredSavedState, `${presentation.storageKey}:${kind}`, selectedNodeId, selectedRelationshipId, clearSelection);
-  const disclosed = useCloudFindingDisclosure(supporting.nodes, supporting.edges, selectedNodeId, `${presentation.storageKey}:${kind}`,
+  // Saving the first fitted camera is not an operator-authored layout. Only
+  // restored views or actual position overrides suppress automatic disclosure.
+  const supporting = useGraphStoryContext(flow.nodes, flow.edges, active && !previewActive && kind === "auto" && !presentation.restoredSavedState, `${presentation.storageKey}:${kind}`, selectedNodeId, selectedRelationshipId, clearSelection);
+  // An overview discloses findings from the affected asset. Explicit path and
+  // vulnerability investigations keep their steps and manual layouts intact.
+  const foldPathFindings = active && kind === "auto" && !previewActive && !presentation.restoredSavedState;
+  const findingNodes = useMemo(() => foldPathFindings ? withFindingOwners(supporting.nodes, supporting.edges) : supporting.nodes,
+    [supporting.nodes, supporting.edges, foldPathFindings]);
+  const disclosed = useCloudFindingDisclosure(findingNodes, supporting.edges, selectedNodeId, `${presentation.storageKey}:${kind}`,
     // The flow's own layout reflows around the groups; only preview and operator placements are kept.
-    previewActive || presentation.editing || presentation.hasSavedState || presentation.restoredSavedState);
+    previewActive || presentation.editing || presentation.hasPositionOverrides || presentation.restoredSavedState, foldPathFindings);
   const [allEdgesShown, setAllEdgesShown] = useState(false);
   const annotated = useMemo(() => withHeldConnections(disclosed.nodes, disclosed.edges, allEdgesShown || presentation.editing), [disclosed.nodes, disclosed.edges, allEdgesShown, presentation.editing]);
   const measuredRaw = useDisplayNodeMeasurements(annotated, presentation.onNodesChange);
@@ -111,9 +119,9 @@ export function useInvestigationFlowView({ presentation, edges, loaded, narrowVi
   }, [clearSelection, previewActive, resetCamera, setPreviewExpanded]);
 
   const toggleFindingGroups = useCallback(() => {
-    if (!disclosed.collapsed && selectionHiddenByCollapse(flow.nodes, selectedNodeId)) clearSelection();
+    if (!disclosed.collapsed && selectionHiddenByCollapse(findingNodes, selectedNodeId)) clearSelection();
     disclosed.toggleAll();
-  }, [clearSelection, disclosed, flow.nodes, selectedNodeId]);
+  }, [clearSelection, disclosed, findingNodes, selectedNodeId]);
 
   const inspectDisplayEdge = useCallback((edge: Edge) => {
     if (edge.data?.relationship === "finding_group") {
@@ -131,7 +139,7 @@ export function useInvestigationFlowView({ presentation, edges, loaded, narrowVi
 
   const navigationIds = useMemo(() => {
     const positioned = [...disclosed.nodes.filter(node => !node.hidden)].sort((a, b) => a.position.x - b.position.x || a.position.y - b.position.y).map(node => node.id);
-    if (flow.applied) return [...new Set([...flow.primaryPath, ...positioned])];
+    if (flow.applied) return [...new Set([...flow.primaryPath.filter(id => positioned.includes(id)), ...positioned])];
     return disclosed.available ? positioned : undefined;
   }, [disclosed.available, disclosed.nodes, flow.applied, flow.primaryPath]);
 

@@ -92,19 +92,18 @@ export function GraphStatusBar({ page, flowView, relationshipLabels }: Props) {
     displayNodes, scenarioElements, investigationContext, selectedContextGroup, contextElements, selectContextGroup, legendItems,
   } = page;
   const webgl = graphRenderer.kind === "webgl";
-  const inlineChanges = (!narrowViewport && !webgl) || viewingCurrentEstate;
+  const inlineChanges = viewingCurrentEstate;
   const flowControl = flowView.control && <GraphFlowControl {...flowView.control} compact={narrowViewport} />;
   const scopeEvidence = (props: { compact?: boolean; label?: string }) => <GraphScopeEvidence edges={webgl ? relationshipLabels.edges : flowView.canonicalEdges} scope={webgl ? "loaded" : "visible"} inline {...props} />;
   if (firstFramePending) return null;
   if (!(showViewportScope || showChangesEntry || showScopeEvidence || showContextControls || showLegend || mobileListAvailable)) return null;
   return <div data-testid="graph-status-bar" className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-outline px-3 py-1.5 max-sm:gap-x-1 max-sm:px-0 max-sm:py-0.5">
-    {!narrowViewport && <GraphHeadlineMetrics page={page} supportingFolded={flowView.supporting.focused || flowView.supporting.available && !flowView.supporting.expanded} />}
+    {!narrowViewport && <GraphHeadlineMetrics compact page={page} supportingFolded={flowView.supporting.focused || flowView.supporting.available && !flowView.supporting.expanded} />}
     {narrowViewport && <GraphViewSwitch page={page} />}
     {!webgl && flowControl}
     {!narrowViewport && <GraphViewportCounts page={page} flowView={flowView} />}
     {!narrowViewport && <GraphConnectionPreview page={page} />}
     {inlineChanges && !narrowViewport && <GraphChangesSummary page={page} />}
-    {!narrowViewport && showScopeEvidence && scopeEvidence({ compact: true })}
     {showContextControls && investigationContext && <GraphInvestigationContextControls inline
       groups={investigationContext.groups} selected={selectedContextGroup}
       visibleNodes={displayNodes.length} loadedNodes={scenarioElements.nodes.length}
@@ -112,7 +111,7 @@ export function GraphStatusBar({ page, flowView, relationshipLabels }: Props) {
     <details className="ml-auto text-xs open:w-full" data-testid="graph-options">
       <summary className="graph-page-action graph-action-compact ml-auto w-fit cursor-pointer max-sm:min-h-11">Graph options</summary>
       <div className="mt-2 flex w-full flex-wrap items-start gap-3 rounded-xl border border-outline bg-surface p-3">
-        {narrowViewport && <GraphHeadlineMetrics page={page} supportingFolded={flowView.supporting.available && !flowView.supporting.expanded} />}
+        <GraphHeadlineMetrics details={!narrowViewport} page={page} supportingFolded={flowView.supporting.focused || flowView.supporting.available && !flowView.supporting.expanded} />
         {narrowViewport && flowView.control?.disabledReason && <p role="status" data-testid="graph-flow-status" className="text-ink-secondary">{flowView.control.disabledReason}</p>}
         {webgl && flowControl}
         {!inlineChanges && <GraphChangesSummary page={page} />}

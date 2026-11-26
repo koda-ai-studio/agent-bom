@@ -65,14 +65,15 @@ export function GraphScopeOverview(props: Props) {
       </div>
     </div>
     {showList ? <GraphRollupDecisionSurface {...props} /> : <>
-      {scope.has_children && <p data-testid="graph-preview-scope-counts" className="px-4 pt-3 text-sm text-ink-secondary">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 pt-3 text-xs text-ink-secondary">
+      {scope.has_children && <p data-testid="graph-preview-scope-counts">
         {scope.aggregate.descendant_count.toLocaleString()} contained nodes · {scope.direct_child_count.toLocaleString()} direct children
         {typeof scope.aggregate.issue_count === "number" && <> · {scope.aggregate.issue_count.toLocaleString()} open issues</>}
       </p>}
-      {scope.entity_type === "account" && <p className="px-4 pt-2 text-xs text-ink-secondary">Connections between assets in these account scopes, not account ownership.</p>}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-4 pt-3 text-xs text-ink-secondary">
+
         <span>{preview.shownRelationships} of {preview.availableRelationships} loaded relationships for this scope{props.completeness?.truncated ? " · partial inventory" : ""}</span>
       </div>
+      {scope.entity_type === "account" && <p className="px-4 pt-1 text-xs text-ink-secondary">Connections between assets in these account scopes, not account ownership.</p>}
       {edgeDetail && <p role="status" className="px-4 pt-3 text-sm text-ink-secondary">{edgeDetail}</p>}
       <ReactFlowProvider key={`${preview.root.id}:${narrow}`}>
         {/* The frame is as tall as the drawn scope at full size, within the room left in the window, so a short scope
