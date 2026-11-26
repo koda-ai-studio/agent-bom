@@ -228,13 +228,11 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
   // The Internet stands outside the boundary, level with the first asset it reaches, so its arrow enters from the left.
   const anchorAt = positions.get(INTERNET_ANCHOR_ID);
   const entryAt = positions.get(drawn.find(edge => edge.source === INTERNET_ANCHOR_ID)?.target ?? "");
-  // Without a boundary it takes the free slot one column before that asset, so its arrow stays short.
-  // Other inputs converge at the entry; they do not move Internet off its
-  // exposure row. The occupancy check still protects a real upstream asset.
-  const slot = entryAt ? { x: entryAt.x - SEMANTIC_COLUMN_GAP, y: entryAt.y } : null;
-  const besideEntry = !frame && anchorAt && slot && ![...positions].some(([id, at]) => id !== INTERNET_ANCHOR_ID
-    && Math.abs(at.x - slot.x) < SEMANTIC_COLUMN_GAP / 2 && Math.abs(at.y - slot.y) < SEMANTIC_ROW_GAP / 2) ? slot : null;
-  const outside = arrange ? null : frame && anchorAt && entryAt ? { x: frame.position.x - SEMANTIC_COLUMN_GAP * 0.6 - COMPACT_NODE_WIDTH / 2, y: entryAt.y } : besideEntry;
+  // Without a boundary, keep the caption-aware rank position used by routing.
+  // Moving the larger Internet glyph afterward can overlap a workload's card
+  // and force the measured-card pass to push that workload off the path.
+  const outside = !arrange && frame && anchorAt && entryAt
+    ? { x: frame.position.x - SEMANTIC_COLUMN_GAP * 0.6 - COMPACT_NODE_WIDTH / 2, y: entryAt.y } : null;
   return {
     nodes: [...(frame ? [frame] : []), ...nodes.map(node => {
       const box = boxes.get(node.id) ?? cardWidth(node, node.id), placed = node.id === INTERNET_ANCHOR_ID && outside ? outside : positions.get(node.id);
