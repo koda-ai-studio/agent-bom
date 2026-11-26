@@ -50,6 +50,7 @@ export function GraphAgentConnections({ scanId, rootId, generation, onInspect, o
     return scopeEvidenceGraph({ ...data, ...(snapshot_generation ? { snapshot_generation } : {}) }, rootId);
   }, [response, rootId]);
   const records = useGraphNodeAggregates(scanId, graph?.nodes.map(node => node.id) ?? [], generation);
+  const pathAvailable = graph?.edges.some(edge => edge.source === rootId && edge.relationship === "uses" && graph.nodes.some(node => node.id === edge.target && ["server", "mcp_server"].includes(node.entity_type))) ?? false;
   const flow = useMemo<{ nodes: Node<LineageNodeData>[]; edges: Edge[] } | null>(() => {
     if (!graph) return null;
     const filters = createExpandedGraphFilters();
@@ -76,13 +77,13 @@ export function GraphAgentConnections({ scanId, rootId, generation, onInspect, o
       ...(ancestors.some(node => node.id === edge.source) ? { sourceHandle: "context" } : {}),
       style: { ...edge.style, opacity: 1, strokeWidth: 2, stroke: color },
       data: { ...edge.data, directionEmphasis: true, labelVisibility: risk ? "show" : "auto", quietLabel: !risk, directOverview: true } }; });
-    if (!neighbors) return agentPathGraph(graph, { nodes, edges }, rootId, onInspect);
+    if (!neighbors && pathAvailable) return agentPathGraph(graph, { nodes, edges }, rootId, onInspect);
     const context = withInternetAnchor(nodes, edges);
     return {
       nodes: context.nodes.map(node => node.id === INTERNET_ANCHOR_ID ? { ...node, position: { x: 360, y: -35 }, style: { width: 220 }, data: { ...node.data, semanticLayout: true } } : { ...node, data: { ...node.data, internetAnchored: context.nodes.length > nodes.length } }),
       edges: context.edges.map(edge => edge.data?.displayOnly ? { ...edge, targetHandle: "above", style: { ...edge.style, stroke: "var(--graph-edge-exposure)" }, data: { ...edge.data, directOverview: true, directionEmphasis: true, labelVisibility: "hide" } } : edge),
     };
-  }, [graph, rootId, aggregate, onFindings, onInspect, records, neighbors]);
+  }, [graph, rootId, aggregate, onFindings, onInspect, records, neighbors, pathAvailable]);
   if (error) return <div role="alert" className="p-4 text-sm">Recorded connections could not be loaded. <button className="underline" onClick={() => setRetry(n => n + 1)}>Retry connections</button></div>;
   if (!graph || !flow) return <p role="status" className="p-4">Loading recorded connections…</p>;
   const labels = new Map(graph.nodes.map(node => [node.id, node.label]));
@@ -90,8 +91,8 @@ export function GraphAgentConnections({ scanId, rootId, generation, onInspect, o
   const connectionList = narrow || graph.nodes.length > 7 || graph.edges.length > 7 || flow.nodes.some(node => node.position.y > 400);
   return <>
     <div className="flex flex-wrap items-center justify-between gap-2 px-4 pt-3"><p className="text-xs text-ink-secondary">Showing {graph.nodes.length} assets · {graph.edges.length} recorded connections{(response && ("truncated" in response ? response.truncated : response.completeness?.truncated)) ? " · partial neighborhood" : ""}.</p>
-      {!narrow && <button className="text-xs underline underline-offset-4" aria-pressed={neighbors} onClick={() => setNeighbors(value => !value)}>{neighbors ? "Show path layout" : "Explore neighbours"}</button>}</div>
-    <GraphScopeContext graph={response!} selected={graph} onInspect={onInspect} />
+      {!narrow && pathAvailable && <button className="text-xs underline underline-offset-4" aria-pressed={neighbors} onClick={() => setNeighbors(value => !value)}>{neighbors ? "Show path layout" : "Explore neighbours"}</button>}</div>
+    <GraphScopeContext graph={response!} selected={graph} onInspect={onInspect} compact={!narrow && !neighbors && pathAvailable} />
     {connectionList ? <section data-testid="graph-agent-evidence" aria-label="Directed agent connections" className="px-4 py-3 text-sm">
       {!!rootAggregate.issue_count && <button className="graph-page-action mb-3" onClick={() => onFindings(rootId, labels.get(rootId) ?? rootId, rootAggregate)}>Open {rootAggregate.issue_count} {rootAggregate.issue_count === 1 ? "finding" : "findings"} for {labels.get(rootId)}</button>}
       <ul className="divide-y divide-outline">{graph.edges.map(edge => <li key={edge.id} className="py-3" data-recorded-edge={edge.id}>
@@ -102,7 +103,7 @@ export function GraphAgentConnections({ scanId, rootId, generation, onInspect, o
       </li>)}</ul>
       <div className="flex flex-wrap gap-2 border-t border-outline pt-3">{graph.nodes.filter(node => node.id !== rootId && (records.get(node.id)?.aggregate.issue_count ?? 0) > 0).map(node =>
         <button key={node.id} className="graph-page-action text-xs" onClick={() => onFindings(node.id, node.label, records.get(node.id)!.aggregate)}>{node.label} · {records.get(node.id)!.aggregate.issue_count} {records.get(node.id)!.aggregate.issue_count === 1 ? "finding" : "findings"}</button>)}</div>
-    </section> : <ReactFlowProvider key={`${rootId}:${narrow}:${neighbors}`}><div data-testid="graph-agent-evidence" data-layout={neighbors ? "neighborhood" : "path"} style={{ height: Math.max(420, ...flow.nodes.map(node => node.position.y + 180)) }}>
+    </section> : <ReactFlowProvider key={`${rootId}:${narrow}:${neighbors}`}><div data-testid="graph-agent-evidence" data-layout={neighbors || !pathAvailable ? "neighborhood" : "path"} style={{ height: Math.max(390, ...flow.nodes.map(node => node.position.y + 180)) }}>
       <GraphEdgeFocusBoundary><ReactFlow style={{ "--graph-node-label-size": "18px", "--graph-node-meta-size": "14px", "--graph-node-glyph-size": "76px", "--graph-node-icon-size": "36px" } as CSSProperties} nodes={flow.nodes} edges={flow.edges} nodeTypes={lineageNodeTypes} edgeTypes={relationshipEdgeTypes}
         fitView fitViewOptions={{ padding: 0.15, minZoom: 0.65, maxZoom: 1 }} minZoom={0.35} nodesDraggable={false} nodesConnectable={false}
         proOptions={{ hideAttribution: true }} onNodeClick={(_, node) => { if (!node.data.displayOnly) onInspect(node.id, node.data.label); }}>

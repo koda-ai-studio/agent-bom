@@ -34,6 +34,26 @@ export async function assertAgentPathStructure(page: Page) {
   }
   await expect(canvas.locator(".graph-relationship-label:visible")).toHaveCount(1);
   await expect(canvas.locator(".graph-relationship-label:visible")).toContainText("Can Access");
+  const agent = canvas.locator('.react-flow__node[data-id="agent:developer-copilot"]');
+  await expect(agent.locator("[data-finding-disclosure]")).toHaveText("1in scope");
+  await expect(canvas.locator('.react-flow__node[data-id="server:filesystem"] [data-finding-disclosure]')).toHaveCount(0);
+  expect(await agent.evaluate(node => {
+    const badge = node.querySelector("[data-finding-disclosure]")!.getBoundingClientRect();
+    const name = node.querySelector("[data-semantic-name]")!.getBoundingClientRect();
+    return badge.bottom < name.top;
+  })).toBe(true);
+  for (const id of ["container:copilot-portal", "server:github"]) {
+    const name = canvas.locator(`.react-flow__node[data-id="${id}"] [data-semantic-name]`);
+    expect(await name.evaluate(node => node.getBoundingClientRect().height)).toBeLessThan(25);
+  }
+  const incoming = [edges[1]!.id, edges[5]!.id];
+  expect(await canvas.evaluate((element, ids) => {
+    const ends = ids.map(id => {
+      const path = element.querySelector<SVGPathElement>(`[data-id="${CSS.escape(id)}"] .react-flow__edge-path`)!;
+      return path.getPointAtLength(path.getTotalLength()).matrixTransform(path.getScreenCTM()!);
+    });
+    return Math.hypot(ends[0]!.x - ends[1]!.x, ends[0]!.y - ends[1]!.y);
+  }, incoming)).toBeGreaterThan(20);
   await expect.poll(async () => (await page.evaluate(auditRenderedGraph, { edges })).crossings).toEqual([]);
   await expect.poll(async () => ((await page.evaluate(graphGrammarExpression())) as Record<string, string[]>).throughCaptions ?? []).toEqual([]);
 }

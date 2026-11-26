@@ -81,13 +81,15 @@ export function agentPathGraph(graph: UnifiedGraphData, flow: Flow, root: string
   const exposure = primary[0] === INTERNET_ANCHOR_ID;
   return {
     nodes: nodes.map(node => ({ ...node, position: layout.positions.get(node.id)!, style: { ...node.style, width: 152, "--graph-node-card-width": "152px" },
-      data: { ...node.data, scopePorts: true, semanticLayout: true, roomyName: node.id === INTERNET_ANCHOR_ID, internetAnchored: exposure, readingFocus: node.id === root } })),
+      data: { ...node.data, scopePorts: true, scopeFindingLabel: node.id === root,
+        readingFindingsGroup: nodes.some(group => group.type === "findingGroupNode" && group.data.displayTargetId === node.id),
+        semanticLayout: true, roomyName: node.id === INTERNET_ANCHOR_ID, internetAnchored: exposure, readingFocus: node.id === root } })),
     edges: edges.map(edge => {
       const privilege = edge.data?.relationship === "can_access";
       const onPath = exposure && pathPairs.has(`${edge.source}\0${edge.target}`);
       const color = privilege ? "var(--graph-edge-risk)" : onPath ? "var(--graph-edge-exposure)" : "var(--graph-edge-structure)";
       const from = layout.positions.get(edge.source)!, to = layout.positions.get(edge.target)!;
-      return { ...edge, type: "smoothstep", sourceHandle: to.x < from.x ? "context" : to.y > from.y ? "scope-out-2" : "scope-out-1", targetHandle: to.x < from.x ? "context" : edge.data?.relationship === "finding_group" ? null : from.y > to.y ? "scope-in-2" : "scope-in-1",
+      return { ...edge, type: "smoothstep", sourceHandle: to.x < from.x ? "context" : to.y > from.y ? "scope-out-2" : "scope-out-1", targetHandle: to.x < from.x ? "context" : edge.data?.relationship === "finding_group" ? null : privilege ? "scope-in-lower-left" : from.y > to.y ? "scope-in-2" : "scope-in-1",
         ...(edge.data?.relationship === "finding_group" ? {} : { markerEnd: { type: MarkerType.ArrowClosed, color, width: 20, height: 16 } }),
         style: { ...edge.style, opacity: 1, stroke: color, strokeWidth: onPath ? 2.4 : 2 },
         data: { ...edge.data, exposurePath: onPath, directOverview: true, directionEmphasis: edge.data?.relationship !== "finding_group", quietLabel: !privilege, labelVisibility: privilege ? "show" : "auto" },

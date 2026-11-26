@@ -5,8 +5,9 @@ import type { UnifiedGraphData } from "@/lib/graph-schema";
 import { internetExposure } from "@/lib/graph-internet-context";
 
 /** Additional recorded context, separate from the bounded overview's asset/edge totals. */
-export function GraphScopeContext({ graph, selected, onInspect }: {
+export function GraphScopeContext({ graph, selected, onInspect, compact = false }: {
   graph: UnifiedGraphResponse | GraphQueryResponse; selected: UnifiedGraphData;
+  compact?: boolean;
   onInspect: (id: string, label: string) => void;
 }) {
   const nodes = new Map(graph.nodes.map(node => [node.id, node]));
@@ -15,7 +16,7 @@ export function GraphScopeContext({ graph, selected, onInspect }: {
   const tools = new Set(graph.edges.filter(edge => edge.relationship === "provides_tool" && servers.some(server => server.id === edge.source)).map(edge => edge.target));
   const controls = graph.edges.filter(edge => nodes.get(edge.source)?.entity_type === "policy" && tools.has(edge.target));
   const exposed = selected.nodes.filter(node => internetExposure(node.attributes) === true);
-  return <div className="px-4 pt-2 text-xs text-ink-secondary">
+  const content = <>
     {shared.map(server => <p key={server.id}>Shared MCP server: {server.label}. Expand it to inspect tools and access evidence.</p>)}
     {exposed.map(node => <button key={node.id} className="mt-2 block underline underline-offset-4" onClick={() => onInspect(node.id, node.label)}>Internet-exposed: {node.label}</button>)}
     {controls.length > 0 && <details className="mt-2"><summary className="cursor-pointer">Recorded tool control context ({controls.length})</summary>
@@ -26,5 +27,6 @@ export function GraphScopeContext({ graph, selected, onInspect }: {
         <button className="underline" onClick={() => onInspect(edge.target, nodes.get(edge.target)!.label)}>{nodes.get(edge.target)?.label}</button>
       </li>)}</ul>
     </details>}
-  </div>;
+  </>;
+  return <div className="px-4 py-2 text-xs text-ink-secondary">{compact ? <details><summary className="cursor-pointer">Exposure and tool context</summary><div className="pt-2">{content}</div></details> : content}</div>;
 }

@@ -26,7 +26,7 @@ import { compactScopeCaption } from "@/lib/graph-compact-scope";
 import { ANCHOR_GLYPH_SCALE, COMPACT_GLYPH_SCALE, PHONE_GLYPH_SCALE } from "@/lib/graph-compact-glyph";
 
 /** Presentation flags shared with the bounded story layout. */
-export type CompactNodePresentation = { scopePeers?: { id: string; label: string; inspect: () => void }[] | undefined; scopePorts?: boolean | undefined; captionAbove?: boolean | undefined; phoneLinear?: boolean | undefined; roomyName?: boolean | undefined; connectedScope?: boolean | undefined; readingFocus?: boolean | undefined };
+export type CompactNodePresentation = { scopeFindingLabel?: boolean | undefined; scopePeers?: { id: string; label: string; inspect: () => void }[] | undefined; scopePorts?: boolean | undefined; captionAbove?: boolean | undefined; phoneLinear?: boolean | undefined; roomyName?: boolean | undefined; connectedScope?: boolean | undefined; readingFocus?: boolean | undefined };
 
 export type CompactNodeTone = { data: LineageNodeData; borderClass: string; bgClass: string; ringClass: string; iconClass: string; source?: boolean; target?: boolean };
 
@@ -52,8 +52,9 @@ export function canvasName(name: string): string {
 }
 
 /** On a phone the caption is one column beside the glyph; on a desktop its lines sit directly under it. */
-function CaptionBox({ phone, above, children }: { phone: boolean; above?: boolean | undefined; children: ReactNode }) {
+function CaptionBox({ phone, above, wide, children }: { phone: boolean; above?: boolean | undefined; wide?: boolean | undefined; children: ReactNode }) {
   if (above) return <div className="mb-2">{children}</div>;
+  if (wide) return <div className="w-[220px] max-w-none">{children}</div>;
   return phone ? <div className="min-w-0 flex-1">{children}</div> : <>{children}</>;
 }
 
@@ -115,6 +116,7 @@ export function CompactHandles({ data, source, target }: { data: LineageNodeData
     <Handle type="target" id="above" position={Position.Left} style={{ top: "18%" }} className={HANDLE} />
     {data.scopePorts && [25, 50, 75].map((top, index) => <Handle key={top} type="source" id={`scope-out-${index}`} position={Position.Right} style={{ top: `${top}%` }} className={HANDLE} />)}
     {data.scopePorts && [25, 50, 75].map((top, index) => <Handle key={top} type="target" id={`scope-in-${index}`} position={Position.Left} style={{ top: `${top}%` }} className={HANDLE} />)}
+    {data.scopePorts && <Handle type="target" id="scope-in-lower-left" position={Position.Left} style={{ top: "90%" }} className={HANDLE} />}
     {phone && <>
       <Handle type="source" id="phone-up" position={Position.Top} className={HANDLE} />
       <Handle type="target" id="phone-down" position={Position.Bottom} className={HANDLE} />
@@ -167,12 +169,12 @@ function FindingDisclosure({ data }: { data: LineageNodeData }) {
   const severity = ["critical", "high", "medium", "low"].includes(rating ?? "") ? rating : undefined;
   const action = findings ? findings.expanded ? "Collapse" : "Expand" : "Inspect";
   const label = findings ? `${action} ${count} finding${plural} for ${data.label}` : `Inspect ${count} finding${plural} in the scope of ${data.label}`;
-  return <span className={data.phoneLayout ? "absolute -bottom-2 left-1/2 -translate-x-1/2" : "absolute -bottom-1 -right-3"}>
+  return <span className={data.scopePorts ? "absolute -top-3 -right-4" : data.phoneLayout ? "absolute -bottom-2 left-1/2 -translate-x-1/2" : "absolute -bottom-1 -right-3"}>
     <GraphCountHint text={`${data.label}: ${count} distinct open finding${plural} in this asset's containment scope${severity ? ` · highest severity: ${severity}` : " · severity not rated"}. ${findings ? "Expand or collapse the loaded findings; selected attack paths retain their steps." : "Inspect the asset for scope and relationship details."}`}>
       <button type="button" data-finding-disclosure data-finding-count-source="rollup" data-finding-count-severity={severity} aria-expanded={findings?.expanded} title="" aria-label={label}
         onClick={event => { event.stopPropagation(); toggle(); }}
         className="nodrag nopan rounded-full border border-outline-strong bg-surface-elevated px-1.5 font-semibold leading-snug text-foreground" style={META}>
-        {count}<span className="sr-only"> findings</span>
+        {count}{data.scopeFindingLabel ? <span className="ml-1 whitespace-nowrap">in scope</span> : <span className="sr-only"> findings</span>}
       </button>
     </GraphCountHint>
   </span>;
@@ -222,7 +224,7 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
       <FindingDisclosure data={data} />
       {held && <span data-testid="graph-held-connections" className="sr-only">{held}</span>}
     </div>
-    <CaptionBox above={data.captionAbove} phone={Boolean(data.phoneLayout) && !stackedOnPhone(data)}>
+    <CaptionBox wide={data.scopePorts} above={data.captionAbove} phone={Boolean(data.phoneLayout) && !stackedOnPhone(data)}>
     <p data-semantic-name title={fullTitle} className={`mt-[0.3em] ${data.phoneLayout && !data.phoneLinear ? NAME_CLAMP.phone : NAME_CLAMP.desktop} max-w-full font-semibold leading-[1.15] text-foreground`} style={{ fontSize: data.phoneLinear ? "var(--graph-node-label-size, 16px)" : data.phoneLayout ? "calc(var(--graph-node-label-size, 14px) * 0.88)" : "calc(var(--graph-node-label-size, 14px) * var(--graph-node-name-scale, 0.88))" }}>
       <NameWords text={canvasName(preview)} hidden={canvasName(preview) !== fullTitle} />
     </p>
@@ -231,7 +233,7 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
       {scope ? scope.visible : typeLine(data, fullTitle)}
     </span>
     {scope && <span className="sr-only">{scope.spoken}</span>}
-    {data.scopePeers?.map(peer => <button key={peer.id} type="button" className="nodrag nopan mt-2 max-w-full text-xs text-ink-secondary underline underline-offset-2"
+    {data.scopePeers?.map(peer => <button key={peer.id} type="button" className="nodrag nopan mt-2 whitespace-nowrap rounded-full border border-outline bg-surface-elevated px-2 py-1 text-[11px] text-ink-secondary"
       onClick={event => { event.stopPropagation(); peer.inspect(); }}>also used by: {peer.label}</button>)}
     {data.seenIn?.length ? <span className="sr-only" data-seen-in>{seenInSummary(data.seenIn)}</span> : null}
     </CaptionBox>

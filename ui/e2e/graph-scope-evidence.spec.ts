@@ -30,6 +30,7 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
         expect(d).toMatch(/^M.*C/);
         expect(d).not.toMatch(/[LQ]/);
       }
+      await page.getByText("Exposure and tool context", { exact: true }).click();
       await expect(page.getByRole("button", { name: "Internet-exposed: copilot-portal:2.4.0" })).toBeVisible();
     } else {
       await expect(canvas.locator("li[data-recorded-edge]")).toHaveCount(6);
@@ -43,6 +44,7 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     await page.screenshot({ path: info.outputPath(`tool-control-${theme}-${width}.png`), fullPage: true });
     await page.getByText("Recorded tool control context (1)").click();
     await page.waitForLoadState("networkidle");
+    if (width === 1440) await page.getByText("Exposure and tool context", { exact: true }).click();
     await page.screenshot({ path: info.outputPath(`agent-first-${theme}-${width}.png`), fullPage: true });
     if (width === 1440) {
       await page.getByText(/Relationship evidence \(/).click();
@@ -64,6 +66,7 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     await expect(page.getByText("AWS_ROLE_SESSION", { exact: true }).first()).toBeVisible();
     await page.screenshot({ path: info.outputPath(`server-expanded-${theme}-${width}.png`), fullPage: true });
     await page.goto(`/graph?scan=${graph.scan_id}&rollup=1`);
+    if (width === 1440) await page.getByText("Exposure and tool context", { exact: true }).click();
     await page.getByText("Recorded tool control context (1)").click();
     await page.getByRole("button", { name: "execute_command", exact: true }).click();
     await expect.poll(() => queries.at(-1)?.roots).toEqual(["tool:exec"]);
