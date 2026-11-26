@@ -14,6 +14,7 @@ import urllib.parse
 import urllib.request
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
+from pathlib import Path
 
 _SEMVER_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 _ALLOWED_FLOATING_TAGS = frozenset({"latest"})
@@ -259,6 +260,41 @@ def settle_deletions(
     raise RuntimeError(f"{plan.repository}: deletion verification failed: {sorted(outstanding)}")
 
 
+def load_protected_images(path: Path | None, repositories: list[str]) -> dict[str, list[str]]:
+    """An explicit receipt is fail-closed; a missing file never means no references."""
+    if path is None:
+        if any(repository.startswith("agentbom/agent-bom") for repository in repositories):
+            raise ValueError("Published chart image references are required for release-image retention")
+        return {}
+    try:
+        if path.stat().st_size > 2 * 1024 * 1024:
+            raise ValueError("Protected image receipt exceeds the size limit")
+        receipt = json.loads(path.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError("Could not read the protected image receipt") from exc
+    if not isinstance(receipt, dict) or receipt.get("schema_version") != 1 or not receipt.get("charts"):
+        raise ValueError("Incomplete protected image receipt")
+    images = receipt.get("images")
+    if not isinstance(images, dict):
+        raise ValueError("Protected image receipt has no image references")
+    charts = receipt["charts"]
+    if not isinstance(charts, list):
+        raise ValueError("Protected image receipt has no chart list")
+    collected: dict[str, set[str]] = {}
+    for chart in charts:
+        if not isinstance(chart, dict) or not isinstance(chart.get("version"), str) or not isinstance(chart.get("images"), dict):
+            raise ValueError("Protected image receipt has an invalid chart")
+        for repository, tags in chart["images"].items():
+            if not isinstance(tags, list) or not tags or any(not isinstance(tag, str) or not _SEMVER_RE.fullmatch(tag) for tag in tags):
+                raise ValueError("Protected image receipt has invalid chart image tags")
+            collected.setdefault(repository, set()).update(tags)
+    if images != {repository: sorted(tags) for repository, tags in sorted(collected.items())}:
+        raise ValueError("Protected image references do not match the complete chart list")
+    if any(repository not in collected for repository in repositories):
+        raise ValueError("Protected image receipt has missing repository tags")
+    return images
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repository", action="append", required=True)
@@ -269,6 +305,7 @@ def _parser() -> argparse.ArgumentParser:
         default=[],
         help="tag that must survive retention regardless of rank (repeatable)",
     )
+    parser.add_argument("--protected-images-file", type=Path, help="complete published Helm image-reference receipt")
     parser.add_argument("--expected-delete-count", type=int)
     parser.add_argument("--dry-run", action="store_true")
     return parser
@@ -283,9 +320,12 @@ def main(argv: list[str] | None = None, *, sleep: Callable[[float], None] = time
         return 2
 
     try:
+        protected = load_protected_images(args.protected_images_file, args.repository)
         client = DockerHubClient(username, password)
         plans = [
-            plan_cleanup(repository, client.list_tags(repository), args.keep_count, protect=args.protect_tag)
+            plan_cleanup(
+                repository, client.list_tags(repository), args.keep_count, protect=(*args.protect_tag, *protected.get(repository, ()))
+            )
             for repository in args.repository
         ]
         delete_count = sum(len(plan.delete) for plan in plans)

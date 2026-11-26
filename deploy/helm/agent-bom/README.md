@@ -164,6 +164,32 @@ helm upgrade agent-bom agent-bom/agent-bom \
 `collectorImage` mirrors the `image`/`uiImage`/`runtimeImage` block convention; a
 blank `collectorImage.tag` falls back to `image.tag`.
 
+## Published chart image retention
+
+Release image cleanup preserves every API, UI, and collector tag referenced by
+any published chart in `oci://ghcr.io/koda-ai-studio/charts/agent-bom`, in addition
+to the recent-image retention window. Disabled component defaults are included;
+the chart version is not assumed to be the image version.
+
+With Helm and the project's Python dependencies installed, inspect the public
+chart references without Docker Hub write credentials:
+
+```bash
+python scripts/helm_image_retention.py --output /tmp/agent-bom-helm-images.json
+```
+
+The resulting JSON lists each published chart and its image tags. The
+`Docker Hub Tag Cleanup` workflow generates this receipt before planning any
+deletions, preserves it as a workflow artifact, and stops without deleting when
+chart discovery or validation fails. For an operator review, dispatch that
+workflow with its default `dry_run=true` and inspect the `KEEP`/`DELETE` plan.
+
+Retention does not restore previously deleted images. If an indexed chart's
+image is missing, verify its original release manifest digest and registry
+availability before a maintainer restores that exact manifest; do not rebuild
+an old version under an existing release tag. Verify the restored tag resolves
+to the original digest before asking the registry catalog to rescan it.
+
 ## Key values
 
 | Value | Default | Description |
