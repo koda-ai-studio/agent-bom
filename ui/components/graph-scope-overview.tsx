@@ -71,7 +71,9 @@ export function GraphScopeOverview(props: Props) {
         <div style={{ height: narrow ? preview.nodes.length * 230 : `clamp(280px, min(calc(100dvh - 380px), ${scopeFrameHeight(preview.rows)}px), 560px)` }} data-testid="graph-scope-connections">
           <ReactFlow nodes={nodes}
             style={{ "--graph-node-meta-size": "14px" } as CSSProperties}
-            edges={narrow ? preview.edges.map(edge => ({ ...edge, sourceHandle: null, targetHandle: "context" })) : preview.edges} nodeTypes={lineageNodeTypes} edgeTypes={relationshipEdgeTypes}
+            edges={narrow ? preview.edges.map(edge => ({ ...edge, sourceHandle: null, targetHandle: "context",
+              data: { ...edge.data, phoneLayout: true, phoneLinear: true },
+            })) : preview.edges} nodeTypes={lineageNodeTypes} edgeTypes={relationshipEdgeTypes}
             fitView fitViewOptions={SCOPE_FIT} minZoom={0.35} maxZoom={1.5}
             nodesDraggable={false} nodesConnectable={false} proOptions={{ hideAttribution: true }}
             onEdgeClick={(_, edge) => {
