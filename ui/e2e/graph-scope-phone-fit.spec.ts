@@ -54,6 +54,7 @@ for (const theme of ["light", "dark"]) {
       await page.goto("/security-graph?scan=quickstart&lens=lineage");
       const overview = page.getByTestId("graph-scope-overview");
       await expect(overview).toBeVisible();
+      await expect(overview.getByRole("alert")).toContainText("Showing recorded scope aggregates, not direct asset links");
       await expect(page.locator(".react-flow__node")).toHaveCount(4);
       await expect(overview).toContainText("9 of 9 loaded relationships for this scope");
       await expect(page.getByLabel("Connection scope").locator("option")).toHaveCount(6);

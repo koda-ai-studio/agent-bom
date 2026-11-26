@@ -27,6 +27,8 @@ for (const theme of ["light", "dark"] as const) {
       } }));
       await page.goto(`/graph?scan=${scanId}&rollup=1`);
       const notice = page.getByText(/This level: 1 unique descendant · 2 scope memberships/);
+      await expect(notice).not.toBeVisible();
+      await page.getByText("Inventory count details", { exact: true }).click();
       await expect(notice).toBeVisible();
       const controls = page.getByTestId("graph-view-controls");
       await controls.getByRole("button", { name: "View & layers" }).click();
@@ -40,6 +42,8 @@ for (const theme of ["light", "dark"] as const) {
       await expect(notice).not.toBeVisible();
       await expect(controls.getByLabel("Active graph filters")).toContainText("0/");
       await controls.getByRole("button", { name: "Reset view" }).click();
+      await expect(notice).not.toBeVisible();
+      await page.getByText("Inventory count details", { exact: true }).click();
       await expect(notice).toBeVisible();
     });
   }
