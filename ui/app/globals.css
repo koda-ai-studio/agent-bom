@@ -966,15 +966,21 @@ main > div {
 /* Compact canvas: one line colour per relationship family. */
 :root { --graph-edge-structure: #8b96aa; --graph-edge-access: #b69cf5; --graph-edge-data: #45c4f5; --graph-edge-exposure: #f5b942; --graph-edge-risk: #ff6b7a; }
 [data-theme="light"] { --graph-edge-structure: #6b778c; --graph-edge-access: #7c3aed; --graph-edge-data: #0284c7; --graph-edge-exposure: #c76a06; --graph-edge-risk: #d21f3c; }
-/* An environment drawn as a boundary around the cards it holds; the Internet sits outside it. */
-.graph-boundary-frame { border-color: color-mix(in srgb, var(--text-secondary) 38%, transparent); background: color-mix(in srgb, var(--text-secondary) 5%, transparent); }
+
+/* Compact outlines carry the glyph's readable ink on a white canvas. */
+[data-theme="light"] [data-compact-node] > .graph-entity-glyph:not([data-severity-ring]) { border-color: currentColor; }
+[data-finding-count-severity] { border-color: var(--graph-count-tone); background: color-mix(in srgb, var(--graph-count-tone) 45%, var(--graph-canvas)); }
+[data-theme="light"] [data-finding-count-severity] { color: white; border-color: var(--graph-count-tone); background: var(--graph-count-tone); }
+[data-finding-count-severity="critical"] { --graph-count-tone: var(--severity-ring-critical); }
+[data-finding-count-severity="high"] { --graph-count-tone: #a63e08; }
+[data-finding-count-severity="medium"] { --graph-count-tone: #806100; }
+[data-finding-count-severity="low"] { --graph-count-tone: var(--severity-ring-low); }
+/* Environment captions preserve ownership context without enclosing the reading path in a panel. */
+.graph-boundary-frame { border-color: color-mix(in srgb, var(--border-strong) 70%, transparent); background: color-mix(in srgb, var(--surface-panel) 24%, transparent); }
 .graph-boundary-frame-title { position: absolute; }
 .graph-boundary-frame-name { color: var(--foreground); font-weight: 600; }
 .graph-boundary-frame-kind { color: var(--text-secondary); }
 .graph-provider-mark-frame { position: relative; }
-/* A small map names each link at rest, on the line itself, on a canvas-coloured plate. */
-.graph-resting-verb { color: var(--text-secondary); background: var(--graph-canvas); padding: 1px 6px; border-radius: 6px; font-weight: 500; line-height: 1.3; }
-.graph-resting-verb[data-exposure-path="true"] { color: var(--graph-edge-exposure); }
 .react-flow { background-color: var(--graph-canvas); }
 /* Scenario cards share width with the decision panel; keep metadata legible. */
 .scenario-context-canvas .react-flow__node :is(span, p, .text-xs) { font-size: max(16px, var(--graph-node-meta-size, 16px), 1em); }

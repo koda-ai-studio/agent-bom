@@ -1,8 +1,57 @@
-import { expect, it } from "vitest";
-import { render } from "@testing-library/react";
+import { expect, it, vi } from "vitest";
+import { fireEvent, render } from "@testing-library/react";
 import { ReactFlowProvider } from "@xyflow/react";
 import { lineageNodeTypes } from "@/components/lineage-nodes";
 import { canvasName, nameBreaks, prosePreview } from "@/components/graph-compact-node";
+import { OverviewDetails } from "@/components/lineage-detail/overview";
+
+const aggregate = { issue_count: 3, finding_occurrence_count: 5, worst_severity: "critical", worst_severity_rank: 5,
+  descendant_count: 9, by_type: { package: 9 }, severity_counts: { critical: 1, high: 2 },
+  internet_exposed: false, exposed_count: 0, toxic_combo: false, toxic_count: 0 };
+
+it("does not suggest unknown severity or modeled evidence with a dashed identity outline", () => {
+  const Renderer = lineageNodeTypes.credentialNode;
+  const { container } = render(<ReactFlowProvider><Renderer data={{ label: "Runtime role", nodeType: "role", semanticLayout: true }} /></ReactFlowProvider>);
+  expect(container.querySelector(".graph-entity-glyph")).not.toHaveClass("border-dashed");
+});
+
+it("explains a scope count without confusing distinct issues, occurrences, or descendant entities", () => {
+  const { getByRole } = render(<OverviewDetails data={{ label: "app", nodeType: "container", findingAggregate: aggregate }} onClose={() => {}} />);
+  const summary = getByRole("region", { name: "Finding count scope" });
+  expect(summary).toHaveTextContent("Distinct open findings3");
+  expect(summary).toHaveTextContent("Finding occurrences5");
+  expect(summary).toHaveTextContent("Descendant entities9");
+  expect(summary).toHaveTextContent("critical: 1");
+  expect(summary).toHaveTextContent("high: 2");
+});
+
+it("keeps count inspection usable when older responses omit the histogram and occurrence count", () => {
+  const incomplete = { ...aggregate, severity_counts: undefined, finding_occurrence_count: undefined } as unknown as typeof aggregate;
+  const { getByRole } = render(<OverviewDetails data={{ label: "app", nodeType: "container", findingAggregate: incomplete }} onClose={() => {}} />);
+  expect(getByRole("region", { name: "Finding count scope" })).toHaveTextContent("Finding occurrencesNot available");
+});
+
+it("keeps the authoritative finding count available to collapse expanded findings", () => {
+  const Renderer = lineageNodeTypes.containerNode;
+  const toggle = vi.fn();
+  const { getByRole } = render(<ReactFlowProvider><Renderer data={{ label: "app", nodeType: "container", semanticLayout: true,
+    readingFindings: { count: 7, severity: "critical", expanded: true, toggle } }} /></ReactFlowProvider>);
+  const button = getByRole("button", { name: "Collapse 7 findings for app" });
+  expect(button).toHaveAttribute("aria-expanded", "true");
+  fireEvent.click(button);
+  expect(toggle).toHaveBeenCalledOnce();
+});
+
+it("shows the backend scope count even when its primary finding remains on the path", () => {
+  const Renderer = lineageNodeTypes.containerNode;
+  const inspect = vi.fn();
+  const { getByRole } = render(<ReactFlowProvider><Renderer data={{ label: "app", nodeType: "container", semanticLayout: true,
+    findingAggregate: aggregate, onExploreFindings: inspect }} /></ReactFlowProvider>);
+  const button = getByRole("button", { name: "Inspect 3 findings in the scope of app" });
+  expect(button).not.toHaveAttribute("aria-expanded");
+  fireEvent.click(button);
+  expect(inspect).toHaveBeenCalledOnce();
+});
 
 it("keeps names whole and shortens only image digests", () => {
   expect(canvasName("Reference Evidence Workload")).toBe("Reference Evidence Workload");
@@ -82,4 +131,45 @@ it("names a container's recorded role in its type line when two visible containe
   const { container } = render(<ReactFlowProvider><Renderer data={{ label: "reference-evidence-api", nodeType: "container", entityType: "container", semanticLayout: true,
     occurrenceRole: "Image inventory", attributes: {} }} /></ReactFlowProvider>);
   expect(container.querySelector("[data-entity-role]")?.textContent).toBe("Image inventory");
+});
+
+it("marks recorded sensitive data without inferring it from an asset name", () => {
+  const Renderer = lineageNodeTypes.dataStoreNode;
+  const { container, rerender } = render(<ReactFlowProvider><Renderer data={{ label: "Archive", nodeType: "dataStore", semanticLayout: true,
+    attributes: { data_sensitivity: "PII", data_classification: "restricted" } }} /></ReactFlowProvider>);
+  expect(container.querySelector('[data-compact-marker="sensitive"]')).toHaveAccessibleName("Recorded data classification: PII, restricted");
+  for (const attributes of [{}, { data_classification: "public" }, { data_sensitivity: "unknown" }, { data_sensitivity: false }]) {
+    rerender(<ReactFlowProvider><Renderer data={{ label: "customer-pii-bucket", nodeType: "dataStore", semanticLayout: true, attributes }} /></ReactFlowProvider>);
+    expect(container.querySelector('[data-compact-marker="sensitive"]')).toBeNull();
+  }
+});
+
+
+it("uses the reserved caption room for a complete short finding title", () => {
+  const Renderer = lineageNodeTypes.vulnNode;
+  const label = "Public API stage has no WAF association";
+  const { container } = render(<ReactFlowProvider><Renderer data={{ label, nodeType: "misconfiguration", semanticLayout: true, roomyName: true }} /></ReactFlowProvider>);
+  expect(container.querySelector("[data-semantic-name]")?.textContent).toBe(label);
+});
+
+
+it("uses one wide phone caption column beside finding glyphs", () => {
+  const Renderer = lineageNodeTypes.vulnNode;
+  const { container } = render(<ReactFlowProvider><Renderer data={{ label: "CVE-2025-29927", nodeType: "vulnerability", semanticLayout: true, phoneLayout: true, phoneLinear: true, phoneSide: "right", roomyName: true }} /></ReactFlowProvider>);
+  expect(container.querySelector("[data-compact-node]")).toHaveClass("flex-row");
+  expect(container.querySelector("[data-semantic-name]")?.textContent).toBe("CVE-2025-29927");
+});
+
+
+it("shows administrator and critical-asset markers only for recorded verdicts", () => {
+  const Renderer = lineageNodeTypes.dataStoreNode;
+  const draw = (attributes: Record<string, unknown>) => <ReactFlowProvider><Renderer data={{ label: "admin-critical-pii", nodeType: "dataStore", semanticLayout: true, attributes }} /></ReactFlowProvider>;
+  const { container, rerender } = render(draw({ risk_context: { is_admin: true, crown_jewel: true, data_sensitivity: "regulated" } }));
+  expect(container.querySelector('[data-compact-marker="privilege"]')).toHaveAccessibleName("Recorded administrator privileges");
+  expect(container.querySelector('[data-compact-marker="sensitive"]')).toHaveAccessibleName("Recorded critical asset · data classification: regulated");
+  for (const attributes of [{}, { is_admin: "true" }, { privilege_level: "unknown" }, { is_admin: true, risk_context: { is_admin: false, crown_jewel: false } }, { is_admin: true, risk_context: { is_admin: null } }]) {
+    rerender(draw(attributes));
+    expect(container.querySelector('[data-compact-marker="privilege"]')).toBeNull();
+    expect(container.querySelector('[data-compact-marker="sensitive"]')).toBeNull();
+  }
 });

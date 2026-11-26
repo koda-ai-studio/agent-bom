@@ -141,3 +141,14 @@ export async function runGraphQualityCapture({ newCapturePage, buildScopeShowcas
   }
   await fs.writeFile(path.join(output, "rendered-audit.json"), JSON.stringify(results, null, 2));
 }
+
+/** Quiet overview links retain every recorded direction for keyboard inspection. */
+export async function assertRecordedDirections(page, edges) {
+  await expect(page.locator('.react-flow__edge:not([data-id^="display:"])')).toHaveCount(edges.length);
+  for (const edge of edges) {
+    const drawn = page.locator(`.react-flow__edge[data-id="${edge.id}"]`);
+    await drawn.focus();
+    if (edge.direction !== "undirected") await expect(drawn.locator(".react-flow__edge-path")).toHaveAttribute("marker-end", /url/);
+    await drawn.evaluate(element => element.blur());
+  }
+}

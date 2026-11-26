@@ -152,7 +152,12 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
           // scope changes instead of restarting on virtualization updates.
           if ((fitted && pass > 0 && stable) || pass === 3) {
             // The rest of the flow lies below its path, so open with the path at the top rather than centred.
-            if (legiblePath && fitIds) {
+            if (portrait && nodes.every(node => node.data.phoneLinear === true)) {
+              // A long phone story scrolls down from its first node. Centering
+              // the full measured column wastes the first screen above it.
+              const viewport = getViewport();
+              void setViewport({ ...viewport, y: PHONE_CONTROLS_PX - after.y * viewport.zoom });
+            } else if (legiblePath && fitIds) {
               const viewport = getViewport();
               // A map read at a fixed zoom also starts at its left edge, so no column space is wasted.
               const x = primaryZoom ? PRIMARY_PATH_LEFT_MARGIN - after.x * viewport.zoom : viewport.x;

@@ -3,8 +3,18 @@ import { captionGeometry } from "@/lib/graph-caption-geometry";
 import { CAPTION_GEOMETRY_SOURCE, graphGrammarExpression } from "../scripts/graph-visual-audit.mjs";
 import { captionExtent } from "@/lib/graph-compact-arcs";
 import { nameBreaks } from "@/lib/graph-name-breaks";
+import { readableGraphNodeStyle } from "@/lib/graph-node-dimensions";
 
 describe("one caption geometry for layout, routing and the gate", () => {
+  it("reserves the actual enlarged story type instead of routing through its label", () => {
+    const extent = captionExtent({ name: "CVE-2025-32434", typeLine: "critical · Finding", nameScale: 1, readableStory: true }, 300, 1);
+    expect(extent.lines[0]!.right - extent.lines[0]!.left).toBeCloseTo(14 * 16 * 0.54 + 8);
+    expect(extent.lines[0]!.bottom - extent.lines[0]!.top).toBeCloseTo(16 * 1.15);
+    expect(extent.lines[1]!.bottom - extent.lines[1]!.top).toBeCloseTo(13 * 1.15);
+    const style = readableGraphNodeStyle(1, true, true, 12, true) as Record<string, string>;
+    expect(extent.lines[0]!.bottom - extent.lines[0]!.top).toBeCloseTo(parseFloat(style["--graph-node-label-size"]!) * 1.15);
+    expect(extent.lines[1]!.bottom - extent.lines[1]!.top).toBeCloseTo(parseFloat(style["--graph-node-meta-size"]!) * 1.15);
+  });
   it("injects the module's own source into the browser gate", () => {
     expect(CAPTION_GEOMETRY_SOURCE).toBe(captionGeometry.toString());
     expect(graphGrammarExpression({ margin: 12 })).toContain(`(${captionGeometry.toString()})`);

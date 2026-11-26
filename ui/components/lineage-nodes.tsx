@@ -4,7 +4,7 @@ import { GraphAttributeBadges } from "@/components/graph-attribute-badges";
 import { SegmentedLabel } from "@/components/graph-segmented-label";
 import { canvasCaption } from "@/lib/graph-canvas-caption";
 import { GraphFindingGroupNode } from "@/components/graph-finding-group-node";
-import { CompactGraphNode } from "@/components/graph-compact-node";
+import { CompactGraphNode, type CompactNodePresentation } from "@/components/graph-compact-node";
 import { CompactClusterNode } from "@/components/graph-compact-cluster";
 import { agentExecutionCaption, type AgentContext } from "@/lib/graph-agent-context";
 import { topologyAgentTypeLabel } from "@/lib/agent-topology-graph";
@@ -47,7 +47,7 @@ export type { EntityIcon, LineageNodeType };
 
 export type RuntimeEvidenceTier = "static_scan" | "runtime_observed" | "runtime_blocked";
 
-export type LineageNodeData = {
+export type LineageNodeData = CompactNodePresentation & {
   label: string;
   /** On a boundary frame: the environment node it stands for. */
   frameFor?: string | undefined;
@@ -283,7 +283,7 @@ function DetailNodeCard({
             <Handle type="target" id={`phone-${position}`} position={position} className="!h-1 !w-1 !border-0 !bg-transparent" />
           </span>)}
         </>}
-        {data.readingFindings && !data.readingFindingsGroup && !data.readingFindings.expanded && <span className="absolute -left-5 -top-3"><GraphCountHint text={`${data.label}: ${data.readingFindings.count} linked finding${data.readingFindings.count === 1 ? "" : "s"}${data.readingFindings.severity ? ` · highest severity: ${data.readingFindings.severity}` : " · severity not rated"}. Click to ${data.readingFindings.expanded ? "collapse" : "expand"}.`}><button type="button" data-finding-disclosure
+        {data.readingFindings && !data.readingFindingsGroup && <span className="absolute -left-5 -top-3"><GraphCountHint text={`${data.label}: ${data.readingFindings.count} distinct open finding${data.readingFindings.count === 1 ? "" : "s"} in this asset's containment scope${data.readingFindings.severity ? ` · highest severity: ${data.readingFindings.severity}` : " · severity not rated"}. Click to ${data.readingFindings.expanded ? "collapse" : "expand"} loaded findings.`}><button type="button" data-finding-disclosure
           aria-label={`${data.readingFindings.expanded ? "Collapse" : "Expand"} ${data.readingFindings.count} finding${data.readingFindings.count === 1 ? "" : "s"} for ${data.label}`}
           aria-expanded={data.readingFindings.expanded}
           title=""

@@ -1,3 +1,4 @@
+import { storyLanePlacement } from "@/lib/graph-story-lanes";
 import { assetKindLabel, assetServiceLabel } from "@/lib/asset-icon-registry";
 import { COMPACT_GLYPH_SCALE } from "@/lib/graph-compact-glyph";
 import type { Edge, Node } from "@xyflow/react";
@@ -15,13 +16,13 @@ import { enclosingEnvironment, exposureSpine, withoutFrames } from "@/lib/graph-
 import { MarkerType } from "@xyflow/react";
 
 const DENSE_MAP_NODES = 24;
-/** A map this small names every relationship and its direction at rest, as one reads a diagram. */
-const RESTING_VERB_MAX_NODES = 16;
+/** Small maps retain direction markers for hover, focus and explicit path inspection. */
+const DIRECTION_MARKER_MAX_NODES = 16;
 /** Clear space between a boundary frame and the cards inside it, and the room its title takes above them. */
 const FRAME_PAD = 56;
 const FRAME_TITLE = 72;
 /** Height a card occupies under its position: glyph plus a caption of up to two lines. */
-const CARD_HEIGHT = 150;
+const CARD_HEIGHT = 240;
 /** A map past one readable page has a tangle to quiet; smaller maps draw every connection. */
 const QUIET_MIN_NODES = DENSE_MAP_NODES + 1;
 export const SEMANTIC_COLUMN_GAP = COMPACT_RANK_GAP;
@@ -126,21 +127,21 @@ function ownerAdjacent(visible: Node<LineageNodeData>[], edges: Edge[], columns:
 }
 
 /** The name a card draws: a prose finding shows its preview, an image its short digest. */
-function shownName(node: Node<LineageNodeData> | undefined, id: string): string {
+function shownName(node: Node<LineageNodeData> | undefined, id: string, roomy = false): string {
   const label = node?.data.label ?? id;
-  return canvasName(node && semanticLayer(node) === "finding" ? prosePreview(label) : label);
+  return canvasName(node && semanticLayer(node) === "finding" ? prosePreview(label, roomy) : label);
 }
 
 /** Layout units one character of a name takes at the largest size the canvas draws it (the label ceiling). */
-const CEILING_CHAR_UNITS = 36 * 0.88 * 0.6;
+const CEILING_CHAR_UNITS = 36 * 0.6;
 /** Identifier-like names (a CVE or GHSA id, a package) never end in an ellipsis: their box widens to fit
  * about 22 characters at any zoom. Names with spaces wrap inside the compact box instead. */
 const IDENTIFIER_BOX_MAX = 440;
-function cardWidth(node: Node<LineageNodeData> | undefined, id: string): number {
+function cardWidth(node: Node<LineageNodeData> | undefined, id: string, nameScale = 0.88): number {
   if (!node || !["finding", "package"].includes(semanticLayer(node) ?? "")) return COMPACT_NODE_WIDTH;
   const name = shownName(node, id);
   if (name.includes(" ")) return COMPACT_NODE_WIDTH;
-  return Math.round(Math.min(IDENTIFIER_BOX_MAX, Math.max(COMPACT_NODE_WIDTH, name.length * CEILING_CHAR_UNITS + 16)));
+  return Math.round(Math.min(IDENTIFIER_BOX_MAX, Math.max(COMPACT_NODE_WIDTH, name.length * CEILING_CHAR_UNITS * nameScale + 16)));
 }
 
 /** A card whose name wraps to two lines at the largest label size is about 206 units tall; with the clear space
@@ -148,9 +149,9 @@ function cardWidth(node: Node<LineageNodeData> | undefined, id: string): number 
 /** Room under a two-line name: 236 layout units at the original 0.7 glyph, growing with the glyph so a larger
  * circle pushes its caption down without the caption reaching the card below. */
 const TALL_CARD_ROOM = Math.ceil(236 + (COMPACT_GLYPH_SCALE - 0.7) * 200);
-function twoLineName(node: Node<LineageNodeData> | undefined, id: string): boolean {
+function twoLineName(node: Node<LineageNodeData> | undefined, id: string, nameScale = 0.88): boolean {
   // Wrap as the card does: between words, and inside an ordinary word after a hyphen or underscore.
-  return captionGeometry({ name: shownName(node, id), box: cardWidth(node, id), nameChar: CEILING_CHAR_UNITS }).nameLines.length > 1;
+  return captionGeometry({ name: shownName(node, id), box: cardWidth(node, id, nameScale), nameChar: CEILING_CHAR_UNITS * nameScale }).nameLines.length > 1;
 }
 
 /** The last few placements, by graph signature. Results are never mutated after layout. */
@@ -170,7 +171,7 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
   ({ nodes, edges } = withInternetAnchor(nodes, edges));
   // On an exposure map, an environment or account holding everything drawn is a boundary around it, not a root
   // competing with the Internet; a map without the Internet keeps the scope as its first card.
-  const frameOf = nodes.some(node => node.id === INTERNET_ANCHOR_ID && !node.hidden) ? enclosingEnvironment(nodes, edges) : null;
+  const frameOf = nodes.some(node => !node.hidden && (node.id === INTERNET_ANCHOR_ID || node.data.connectedScope)) ? enclosingEnvironment(nodes, edges) : null;
   if (frameOf) {
     nodes = nodes.map(node => node.id === frameOf.id ? { ...node, hidden: true, data: { ...node.data, framed: true } } : node);
     edges = edges.map(edge => !edge.hidden && (edge.source === frameOf.id || edge.target === frameOf.id) ? { ...edge, hidden: true, data: { ...edge.data, framed: true } } : edge);
@@ -191,63 +192,54 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
   const owners = contextOwners(visible, edges, onPath);
   const images = workloadImageContext(visible, edges);
   for (const [id, owner] of images.owners) if (!onPath.has(id)) owners.set(id, owner);
+  const arrange = storyLanePlacement(visible, drawn, primary);
+  const readableStory = visible.some(node => node.data.connectedScope === true);
+  const nameScale = arrange || readableStory ? 1 : 0.88;
   const base = { ids: visible.map(node => node.id), links: drawn, column: (id: string) => columns.get(id) ?? 0, containment,
     // Findings, and the group that folds an asset's findings, sit level with the asset they were found on.
     // A group whose asset is on the spine would sit on the spine's own row and block it, so it fans off the row instead.
     levelLeaf: (id: string) => { const found = byId.get(id); return Boolean(found) && (semanticLayer(found!) === "finding"
       || (found!.type === "findingGroupNode" && !onPath.has(String(found!.data.displayTargetId ?? "")))); },
-    spine: primary, attached: attachedRanks(visible, drawn, columns) };
-  const boxes = new Map(visible.map(node => [node.id, cardWidth(node, node.id)]));
+    spine: primary, attached: attachedRanks(visible, drawn, columns), arrange };
+  const boxes = new Map(visible.map(node => [node.id, Math.max(arrange || readableStory ? 300 : 0, cardWidth(node, node.id, nameScale))]));
   // Placement depends only on the graph's structure and its captions; a re-render that changes nothing else reuses it.
   const signature = JSON.stringify([visible.map(node => [node.id, node.type, node.data.label, node.data.semanticLayer, node.data.readingLabel,
     node.data.displayTargetId, node.data.readingFindings?.count, internetExposure(node.data.attributes)]),
-    drawn.map(edge => [edge.id, edge.source, edge.target, edge.data?.relationship]), primary, layoutFrameKey()]);
+    drawn.map(edge => [edge.id, edge.source, edge.target, edge.data?.relationship, edge.data?.traversable]), primary, nameScale, readableStory, layoutFrameKey()]);
   const { positions, arcs, behind } = LAYOUT_CACHE.get(signature) ?? remember(signature, compactLayout({ ...base,
     caption: id => { const found = byId.get(id);
-      if (found?.type === "findingGroupNode") return { name: `Findings (${found.data.readingFindings?.count ?? 0})`, typeLine: "Click to explore" };
-      return { name: shownName(found, id), typeLine: String(found?.data.readingLabel ?? found?.data.entityType ?? ""), box: boxes.get(id) ?? cardWidth(found, id) }; },
-    width: id => boxes.get(id) ?? cardWidth(byId.get(id), id), tall: id => twoLineName(byId.get(id), id) ? TALL_CARD_ROOM : undefined }));
+      if (found?.type === "findingGroupNode") return { name: `Findings (${found.data.readingFindings?.count ?? 0})`, typeLine: "Click to explore", nameScale, readableStory };
+      return { name: shownName(found, id, Boolean(arrange)), nameScale, readableStory, typeLine: String(found?.data.readingLabel ?? found?.data.entityType ?? ""), box: boxes.get(id) ?? cardWidth(found, id, nameScale) }; },
+    width: id => boxes.get(id) ?? cardWidth(byId.get(id), id, nameScale), tall: id => twoLineName(byId.get(id), id, nameScale) ? TALL_CARD_ROOM : undefined }));
   const pathPairs = new Set(primary.slice(1).map((id, index) => `${primary[index]}\u0000${id}`));
   const fans = linkEndFans(drawn, positions);
   const modeledOnly = allEdgesModeled(drawn);
   const anchored = new Set(drawn.filter(edge => edge.source === INTERNET_ANCHOR_ID).map(edge => edge.target));
   // The Internet arrow takes the glyph's upper left when another link also enters that node, so the two
   // arrowheads never land on one point; nothing hangs above a glyph, so the entry clears every caption.
-  const sharedInternetEntry = (edge: Edge) => edge.source === INTERNET_ANCHOR_ID
+  const sharedInternetEntry = (edge: Edge) => !arrange && edge.source === INTERNET_ANCHOR_ID
+    && positions.get(edge.source)?.y !== positions.get(edge.target)?.y
     && drawn.some(other => other.target === edge.target && other.source !== INTERNET_ANCHOR_ID);
   // The exposure chain is coloured even when a pinned path leads the layout from elsewhere.
   const exposureChain = primary[0] === INTERNET_ANCHOR_ID ? primary : exposureSpine(visible, drawn);
   const exposurePairs = new Set(exposureChain.slice(1).map((id, index) => `${exposureChain[index]}\u0000${id}`));
-  const resting = visible.length <= RESTING_VERB_MAX_NODES;
+  const resting = visible.length <= DIRECTION_MARKER_MAX_NODES;
   const frame = frameOf ? boundaryFrame(frameOf, visible, positions, boxes, edges.filter(edge => edge.data?.framed === true).length) : null;
   // The Internet stands outside the boundary, level with the first asset it reaches, so its arrow enters from the left.
   const anchorAt = positions.get(INTERNET_ANCHOR_ID);
   const entryAt = positions.get(drawn.find(edge => edge.source === INTERNET_ANCHOR_ID)?.target ?? "");
-  // Without a boundary it takes the free slot one column before that asset, so its arrow stays short.
-  // When other links already enter that asset from the left, it takes the slot a row above instead, clear of them.
-  const entryId = drawn.find(edge => edge.source === INTERNET_ANCHOR_ID)?.target ?? "";
-  // Only links arriving from the left compete for that slot; one entering from the right leaves it free.
-  const crowdedEntry = drawn.some(edge => edge.target === entryId && edge.source !== INTERNET_ANCHOR_ID
-    && (positions.get(edge.source)?.x ?? Infinity) < (entryAt?.x ?? -Infinity));
-  const slot = entryAt ? { x: entryAt.x - SEMANTIC_COLUMN_GAP, y: entryAt.y - (crowdedEntry ? SEMANTIC_ROW_GAP : 0) } : null;
-  const besideEntry = !frame && anchorAt && slot && ![...positions].some(([id, at]) => id !== INTERNET_ANCHOR_ID
-    && Math.abs(at.x - slot.x) < SEMANTIC_COLUMN_GAP / 2 && Math.abs(at.y - slot.y) < SEMANTIC_ROW_GAP / 2) ? slot : null;
-  const outside = frame && anchorAt && entryAt ? { x: frame.position.x - SEMANTIC_COLUMN_GAP * 0.6 - COMPACT_NODE_WIDTH / 2, y: entryAt.y } : besideEntry;
-  const placedAt = (id: string) => id === INTERNET_ANCHOR_ID && outside ? outside : positions.get(id);
-  // A verb rests only on a level link, or a long gently sloped one; on a steep link it would sit on a caption.
-  const readsAtRest = (edge: Edge) => {
-    const a = placedAt(edge.source), b = placedAt(edge.target);
-    if (!a || !b) return false;
-    const dx = Math.abs(b.x - a.x), dy = Math.abs(b.y - a.y);
-    return dy <= 8 || (dx >= SEMANTIC_COLUMN_GAP * 1.5 && dy <= dx * 0.35);
-  };
+  // Without a boundary, keep the caption-aware rank position used by routing.
+  // Moving the larger Internet glyph afterward can overlap a workload's card
+  // and force the measured-card pass to push that workload off the path.
+  const outside = !arrange && frame && anchorAt && entryAt
+    ? { x: frame.position.x - SEMANTIC_COLUMN_GAP * 0.6 - COMPACT_NODE_WIDTH / 2, y: entryAt.y } : null;
   return {
     nodes: [...(frame ? [frame] : []), ...nodes.map(node => {
-      const box = boxes.get(node.id) ?? cardWidth(node, node.id), placed = node.id === INTERNET_ANCHOR_ID && outside ? outside : positions.get(node.id);
+      const box = boxes.get(node.id) ?? cardWidth(node, node.id, nameScale), placed = node.id === INTERNET_ANCHOR_ID && outside ? outside : positions.get(node.id);
       // A wider caption box stays centred on its rank, so its glyph lines up with the others.
       return { ...node, position: placed ? { x: placed.x - (box - COMPACT_NODE_WIDTH) / 2, y: placed.y } : node.position,
-      style: { ...node.style, width: box, "--graph-node-card-width": `${box}px` },
-      data: { ...node.data, evidenceFlow: true, semanticLayout: true,
+      style: { ...node.style, width: box, "--graph-node-name-scale": nameScale, "--graph-node-card-width": `${box}px` },
+      data: { ...node.data, evidenceFlow: true, semanticLayout: true, roomyName: Boolean(arrange) || readableStory,
         ...(onPath.has(node.id) ? { semanticPathIndex: primary.indexOf(node.id) } : {}), renderBand: dense ? node.data.renderBand : "detail" as const,
         readingLabel: node.data.readingLabel ?? assetServiceLabel({ nodeType: node.data.nodeType, entityType: node.data.entityType, attributes: node.data.attributes, provider: node.data.dimensions?.cloud_provider }) ?? assetKindLabel({ nodeType: node.data.nodeType, entityType: node.data.entityType, attributes: node.data.attributes }),
         readingFinding: semanticLayer(node) === "finding",
@@ -269,7 +261,7 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
       // the selected path and every short forward link stay drawn.
       const roundabout = Boolean(from && to) && (reverse || Math.abs(to!.x - from!.x) > SEMANTIC_COLUMN_GAP * 1.5 || Math.abs(to!.y - from!.y) > SEMANTIC_ROW_GAP);
       const quietUntilFocus = visible.length >= QUIET_MIN_NODES && roundabout && !pathPairs.has(`${edge.source}\u0000${edge.target}`);
-      const onExposure = exposurePairs.has(`${edge.source}\u0000${edge.target}`);
+      const onExposure = edge.data?.rankedPathWitness !== false && (edge.data?.traversable !== false || edge.source === INTERNET_ANCHOR_ID && edge.data?.displayOnly === true) && exposurePairs.has(`${edge.source}\u0000${edge.target}`);
       const color = edgeFamilyColor(onExposure ? "exposure" : edgeFamily(String(edge.data?.relationship ?? "")));
       const marker = (value: Edge["markerEnd"]) => value && typeof value === "object" ? { ...value, color, width: 14, height: 14 } : value;
       // A small map shows which way every link runs; a larger one keeps the arrows its data recorded.
@@ -280,8 +272,8 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
         ...(edge.markerStart ? { markerStart: marker(edge.markerStart)! } : {}), sourceHandle: reverse ? "context" : null,
         targetHandle: reverse || sameRank ? "context" : sharedInternetEntry(edge) ? "above" : null,
         data: { ...edge.data, ...(uniformlyModeled ? { uniformlyModeled } : {}), semanticLayout: true, individualLabel: true, arcDy: outside && edge.source === INTERNET_ANCHOR_ID ? undefined : arcs.get(edge.id), ...fans.get(edge.id), ...(quietUntilFocus ? { quietUntilFocus } : {}), passesBehind: behind.has(edge.id) || undefined, quietLabel: edge.data?.isClusterEdge !== true,
-          pathEmphasis: pathPairs.has(`${edge.source}\u0000${edge.target}`) || edge.data?.pathEmphasis === true,
-          ...(onExposure ? { exposurePath: true } : {}), ...(resting && readsAtRest(edge) ? { restingVerb: true } : {}) } };
+          pathEmphasis: edge.data?.rankedPathWitness !== false && edge.data?.traversable !== false && (pathPairs.has(`${edge.source}\u0000${edge.target}`) || edge.data?.pathEmphasis === true),
+          ...(onExposure ? { exposurePath: true } : {}) } };
     }),
   };
 }

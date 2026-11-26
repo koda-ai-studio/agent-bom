@@ -18,18 +18,18 @@ const SMALL_DRAWN = { glyph: 66, icon: 32 } as const;
 const CEILING = { glyph: 128, icon: 56, label: 36, roomyLabel: 36, meta: 32, roomyMeta: 32 } as const;
 
 /** Bounded investigations reserve more metadata space when Fit all lowers zoom. */
-export function readableGraphNodeStyle(zoom: number, boundedContext = false, roomyCaptions = boundedContext, nodeCount = Number.POSITIVE_INFINITY): CSSProperties {
+export function readableGraphNodeStyle(zoom: number, boundedContext = false, roomyCaptions = boundedContext, nodeCount = Number.POSITIVE_INFINITY, readableStory = false): CSSProperties {
   const scale = Math.max(Number.isFinite(zoom) ? zoom : 1, 0.16);
   const units = (drawn: number, ceiling: number) => `${Math.min(ceiling, drawn / scale)}px`;
   const shape = nodeCount <= SMALL_GRAPH_NODES ? SMALL_DRAWN : DRAWN;
   return {
     "--graph-node-card-width": roomyCaptions ? `clamp(220px, 30vw, ${PREVIEW_CARD_MAX_WIDTH}px)` : "220px",
-    "--graph-node-label-size": units(DRAWN.label, roomyCaptions ? CEILING.roomyLabel : CEILING.label),
+    "--graph-node-label-size": units(readableStory ? 16 : DRAWN.label, roomyCaptions ? CEILING.roomyLabel : CEILING.label),
     "--graph-node-glyph-size": units(shape.glyph, CEILING.glyph),
     "--graph-node-icon-size": units(shape.icon, CEILING.icon),
     "--graph-context-glyph-size": units(48, 120),
     "--graph-context-icon-size": units(24, 60),
-    "--graph-node-meta-size": units(DRAWN.meta, roomyCaptions ? CEILING.roomyMeta : CEILING.meta),
+    "--graph-node-meta-size": units(readableStory ? 13 : DRAWN.meta, roomyCaptions ? CEILING.roomyMeta : CEILING.meta),
     "--graph-group-label-size": `${Math.min(75, Math.max(18, 12 / scale))}px`,
   } as CSSProperties;
 }

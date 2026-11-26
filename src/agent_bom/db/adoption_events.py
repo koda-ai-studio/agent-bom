@@ -76,6 +76,7 @@ class AdoptionEventStore:
                 ci_provider TEXT,
                 recorded_at TEXT NOT NULL
             );
+            CREATE INDEX IF NOT EXISTS adoption_event_outcomes ON adoption_events(event, outcome);
             CREATE UNIQUE INDEX IF NOT EXISTS adoption_milestone_once
             ON adoption_events(event) WHERE event IN ('repeat_use', 'ci_adopted', 'control_plane_adopted');
             """
@@ -122,10 +123,14 @@ class AdoptionEventStore:
         if not self.enabled:
             return False
         with self._lock, self._connect() as conn:
-            scan_count_before = int(conn.execute("SELECT COUNT(*) FROM adoption_events WHERE event = 'scan_completed'").fetchone()[0])
             recorded = self._insert(conn, event, values)
-            if event == "scan_completed":
-                if scan_count_before >= 1:
+            if event == "scan_completed" and values["outcome"] == "complete":
+                # Read after the insert acquires the database writer lock: concurrent
+                # processes cannot both mistake their successful scan for the first.
+                repeated = conn.execute(
+                    "SELECT 1 FROM adoption_events WHERE event = 'scan_completed' AND outcome = 'complete' LIMIT 1 OFFSET 1"
+                ).fetchone()
+                if repeated is not None:
                     self._insert(conn, "repeat_use", {name: None for name in _DIMENSIONS})
                 if values["channel"] in {"ci", "github_action"}:
                     self._insert(conn, "ci_adopted", {name: None for name in _DIMENSIONS})
@@ -144,7 +149,15 @@ class AdoptionEventStore:
         return [dict(row) for row in rows]
 
     def summary(self) -> dict[str, object]:
-        counts = Counter(str(row["event"]) for row in self.events())
+        counts: Counter[str] = Counter()
+        if self.enabled and self.db_path.exists():
+            with self._lock, self._connect() as conn:
+                counts.update(
+                    {
+                        str(row["event"]): int(row["total"])
+                        for row in conn.execute("SELECT event, COUNT(*) AS total FROM adoption_events GROUP BY event")
+                    }
+                )
 
         def _transition(numerator_event: str, denominator_event: str) -> dict[str, int | float | None]:
             numerator = counts[numerator_event]

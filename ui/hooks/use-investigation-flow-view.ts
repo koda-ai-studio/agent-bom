@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useStore, type Edge, type Node, type NodeChange } from "@xyflow/react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { automaticFlowLabel } from "@/components/graph-flow-control";
+import { useGraphStoryContext } from "@/hooks/use-graph-story-context";
 import { useCloudFindingDisclosure } from "@/hooks/use-cloud-finding-disclosure";
 import { useDisplayNodeMeasurements } from "@/hooks/use-display-node-measurements";
 import { flowAvailability, flowFromParam, flowUnavailableReason, investigationFlow, type FlowResult, type InvestigationFlow, type SpecificFlow } from "@/lib/graph-investigation-flow";
@@ -60,6 +61,7 @@ export function useInvestigationFlowView({ presentation, edges, loaded, narrowVi
       : presentation.hasPositionOverrides ? "Your saved layout is showing. Reset it under Layout to use a flow." : undefined;
   const active = !otherSurface && !pausedReason;
   const [receiptId, setReceiptId] = useState<string | null>(null);
+  const closeReceipt = useCallback(() => setReceiptId(null), []);
 
   const previewRootId = connectionPreview?.root.id;
   // Placement is computed for the canvas actually on screen, re-placed when its size bucket changes.
@@ -75,7 +77,8 @@ export function useInvestigationFlowView({ presentation, edges, loaded, narrowVi
     }
     return investigationFlow(presentation.nodes, edges, kind, narrowViewport, frame);
   }, [active, previewActive, previewRootId, presentation.nodes, edges, kind, narrowViewport, frame]);
-  const disclosed = useCloudFindingDisclosure(flow.nodes, flow.edges, selectedNodeId, `${presentation.storageKey}:${kind}`,
+  const supporting = useGraphStoryContext(flow.nodes, flow.edges, active && !previewActive && kind === "auto" && !presentation.hasSavedState && !presentation.restoredSavedState, `${presentation.storageKey}:${kind}`, selectedNodeId, selectedRelationshipId, clearSelection);
+  const disclosed = useCloudFindingDisclosure(supporting.nodes, supporting.edges, selectedNodeId, `${presentation.storageKey}:${kind}`,
     // The flow's own layout reflows around the groups; only preview and operator placements are kept.
     previewActive || presentation.editing || presentation.hasSavedState || presentation.restoredSavedState);
   const [allEdgesShown, setAllEdgesShown] = useState(false);
@@ -133,12 +136,12 @@ export function useInvestigationFlowView({ presentation, edges, loaded, narrowVi
   }, [disclosed.available, disclosed.nodes, flow.applied, flow.primaryPath]);
 
   return {
-    kind, flow, disclosed, measured, active, previewActive, navigationIds, quieted, allEdgesShown, setAllEdgesShown, toggleFindingGroups, selectFlow, inspectDisplayEdge, inspectDisplayNode,
+    kind, flow, disclosed, supporting, measured, active, previewActive, navigationIds, quieted, allEdgesShown, setAllEdgesShown, toggleFindingGroups, selectFlow, inspectDisplayEdge, inspectDisplayNode,
     cardStyle: flow.applied && !narrowViewport ? WIDE_CARD : undefined,
     primaryZoom: flow.scenario === "connections" && flow.applied ? GRAPH_CARD_ZOOM : undefined,
     anchorId: flow.primaryPath[0] ?? (active ? flow.nodes.find(node => !node.hidden && node.position.x === 0 && node.position.y === 0)?.id : undefined),
     receipt: receiptId ? disclosed.edges.find(edge => edge.id === receiptId) ?? null : null,
-    closeReceipt: () => setReceiptId(null),
+    closeReceipt,
     control: otherSurface ? null : {
       value: kind, available, onChange: selectFlow,
       automaticLabel: automaticFlowLabel({ applied: flow.applied, scenario: flow.scenario, preview: previewActive }),
@@ -146,6 +149,6 @@ export function useInvestigationFlowView({ presentation, edges, loaded, narrowVi
       note: kind !== "auto" && !flow.applied ? flow.reason : undefined,
     },
     canonicalEdges: disclosed.edges.filter(edge => !edge.hidden && !edge.data?.displayOnly),
-    canonicalVisibleNodes: disclosed.nodes.filter(node => !node.hidden && !node.data.displayOnly).length,
+    canonicalVisibleNodes: disclosed.nodes.filter(node => !node.hidden && (!node.data.displayOnly || node.type === "boundaryFrame")).length,
   };
 }

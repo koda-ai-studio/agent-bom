@@ -7,6 +7,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useReactFlow, useNodesInitialized, useViewport } from "@xyflow/react";
 import { type DriftScrubberPair } from "@/components/graph-drift-timeline";
 import { ROLLUP_DECISION_THRESHOLD } from "@/components/graph-rollup-decision-surface";
+import { hasSharedScopeCycle } from "@/lib/graph-scope-preview";
 import { ASSET_DRIFT_GRAPH_SCOPE_PARAM, DEFAULT_FILTERS, createAssetLifecycleDriftGraphFilters, createCanvasLensGraphFilters, graphScopePresetForFilters, type FilterState } from "@/components/lineage-filter";
 import { type LineageNodeData } from "@/components/lineage-nodes";
 import { type UnifiedNode } from "@/lib/graph-schema";
@@ -664,15 +665,9 @@ export function useGraphPageData() {
     };
   }, [activeScopePreset]);
 
-  const attackPaths = useMemo(
-    () =>
-      [...(mergedGraphData?.attack_paths ?? [])].sort(
-        (left, right) =>
-          right.composite_risk - left.composite_risk ||
-          right.hops.length - left.hops.length,
-      ),
-    [mergedGraphData?.attack_paths],
-  );
+  // The server ranks evidence, exploitation and exposure before composite risk.
+  // Re-sorting here would disagree with the queue and the default canvas story.
+  const attackPaths = useMemo(() => mergedGraphData?.attack_paths ?? [], [mergedGraphData?.attack_paths]);
 
   // Attack-path focus is opt-in (#3932). Auto-selecting the top-ranked path on
   // load filtered the canvas down to a single chain, and when that chain's
@@ -764,8 +759,9 @@ export function useGraphPageData() {
         : (rollupView?.top_level ?? []),
     [rollupView],
   );
+  const sharedScopeOverview = useMemo(() => hasSharedScopeCycle(rollupItems, rollupView?.edges ?? []), [rollupItems, rollupView?.edges]);
   const rollupDecisionAvailable =
-    rollupNavigationActive && (rollupItems.length > ROLLUP_DECISION_THRESHOLD || rollupSummaryRequested || rollupMapIllegible);
+    rollupNavigationActive && (rollupItems.length > ROLLUP_DECISION_THRESHOLD || sharedScopeOverview || rollupSummaryRequested || rollupMapIllegible);
   const rollupDecisionActive = rollupDecisionAvailable && !rollupMapExpanded;
 
   useEffect(() => {

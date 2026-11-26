@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildScopePreview } from "@/lib/graph-scope-preview";
+import { buildScopePreview, hasSharedScopeCycle } from "@/lib/graph-scope-preview";
 import type { GraphRollupContainer, GraphRollupEdge } from "@/lib/api-types";
 
 const item = (id: string, entity_type = "misconfiguration", label = id): GraphRollupContainer => ({
@@ -46,6 +46,18 @@ describe("scope relationship preview", () => {
     expect(handles("role", "agent")).toEqual([null, null]);
     expect(handles("agent", "portal")).toEqual([null, null]);
   });
+  it("routes preview links using displayed rows after labels reorder the source map", () => {
+    const items = [item("client", "agent", "Cursor Workspace"), item("provider", "provider", "Bundled sample"),
+      item("project", "directory", "Project root"), item("sample", "directory", "sample")];
+    const edges = items.slice(1).map(n => ({ source: n.id, target: "client", count: 4, relationships: ["depends_on"], directions: ["directed"] }));
+    const preview = buildScopePreview(items, edges, "client")!;
+    const incoming = [...preview.edges].sort((a, b) => preview.nodes.find(n => n.id === a.source)!.position.y - preview.nodes.find(n => n.id === b.source)!.position.y);
+    const endpoints = incoming.map(edge => Number(edge.data?.targetFan ?? 0));
+    expect(endpoints).toEqual([...endpoints].sort((a, b) => a - b));
+    expect(endpoints[1]).toBe(0);
+    expect(incoming.every(edge => edge.data?.arcDy === undefined)).toBe(true);
+    expect(incoming.map(edge => edge.data)).toEqual(edges.map(aggregate => expect.objectContaining({ aggregate })));
+  });
   it("does not fabricate connectivity for missing endpoints, findings-only or unlinked inventories", () => {
     expect(buildScopePreview([item("repo", "application")], [])).toBeNull();
     expect(buildScopePreview([item("a"), item("b")], [{ source: "a", target: "b", count: 1, relationships: ["related_to"] }])).toBeNull();
@@ -57,5 +69,17 @@ describe("scope relationship preview", () => {
       item("c", "misconfiguration", "Unpinned server version"), item("d", "misconfiguration", "Wildcard permissions")];
     const edges = items.slice(1).map(n => ({ source: n.id, target: "root", count: 1, relationships: ["affects"] }));
     expect(buildScopePreview(items, edges)?.nodes.map(n => n.id)).toEqual(["root", "a", "c", "d"]);
+  });
+});
+
+describe("shared scope overview", () => {
+  const scopes = ["a", "b", "agent", "package"].map(id => item(id, "application"));
+  const links = [["a", "agent"], ["b", "agent"], ["a", "package"], ["b", "package"]].map(([source, target]) => ({ source: source!, target: target!, count: 4, relationships: ["depends_on"] }));
+  it("recognizes shared branches without calling the directed relationships a cyclic attack path", () => {
+    expect(hasSharedScopeCycle(scopes, links)).toBe(true);
+    expect(hasSharedScopeCycle(scopes, links.slice(0, 3))).toBe(false);
+  });
+  it("ignores duplicate pairs, self links and endpoints outside the loaded scope", () => {
+    expect(hasSharedScopeCycle(scopes, [...links.slice(0, 3), links[0]!, { ...links[0]!, source: "agent", target: "a" }, { ...links[0]!, source: "missing" }, { ...links[0]!, target: "a" }])).toBe(false);
   });
 });

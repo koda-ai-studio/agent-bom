@@ -1,8 +1,34 @@
 import type { GraphRollupContainer, GraphRollupEdge } from "@/lib/api-types";
 import { buildRollupFlowGraph } from "@/lib/graph-rollup-view";
+import { linkEndFans } from "@/lib/graph-compact-fan";
 import { severityRank } from "@/lib/severity";
 
 const FINDINGS = new Set(["misconfiguration", "vulnerability", "finding", "iac_finding"]);
+
+/** Shared aggregate branches need a focused connection overview, even with few scopes.
+ * This checks undirected layout topology, not directed reachability or attack paths. */
+export function hasSharedScopeCycle(items: readonly GraphRollupContainer[], edges: readonly GraphRollupEdge[]): boolean {
+  if (items.length < 4) return false;
+  const parent = new Map(items.map(item => [item.id, item.id]));
+  const pairs = new Set<string>();
+  const root = (id: string): string => {
+    while (parent.get(id) !== id) {
+      parent.set(id, parent.get(parent.get(id)!)!);
+      id = parent.get(id)!;
+    }
+    return id;
+  };
+  for (const { source, target } of edges) {
+    if (source === target || !parent.has(source) || !parent.has(target)) continue;
+    const pair = JSON.stringify([source, target].sort());
+    if (pairs.has(pair)) continue;
+    pairs.add(pair);
+    const a = root(source), b = root(target);
+    if (a === b) return true;
+    parent.set(a, b);
+  }
+  return false;
+}
 
 /** Vertical distance between the scope's neighbour cards. */
 export const SCOPE_PREVIEW_ROW = 150;
@@ -72,6 +98,8 @@ export function buildScopePreview(items: GraphRollupContainer[], edges: GraphRol
       attributes: { ...node.data.attributes, rollup_is_container: false },
     },
   }));
+  // The preview has its own positions; routing from the full map is no longer valid.
+  const fans = linkEndFans(flow.edges, new Map(nodes.map(node => [node.id, node.position])));
   return { root, roots, nodes, rows,
     edges: flow.edges.map(edge => ({ ...edge,
       // Each link joins the facing sides of its two cards; context handles face the other way without reversing the
@@ -79,7 +107,7 @@ export function buildScopePreview(items: GraphRollupContainer[], edges: GraphRol
       ...(left.has(edge.source) || left.has(edge.target)
         ? { sourceHandle: edge.source === root.id ? "context" : null, targetHandle: edge.target === root.id ? null : "context" }
         : { sourceHandle: edge.source === root.id ? null : "context", targetHandle: edge.target === root.id ? "context" : null }),
-      data: { ...edge.data, quietLabel: true, boundedOverview: true },
+      data: { ...edge.data, arcDy: undefined, passesBehind: undefined, sourceFan: 0, targetFan: 0, ...fans.get(edge.id), quietLabel: true, boundedOverview: true },
     })),
     availableRelationships: links.reduce((sum, edge) => sum + edge.count, 0),
     shownRelationships: selectedLinks.reduce((sum, edge) => sum + edge.count, 0),

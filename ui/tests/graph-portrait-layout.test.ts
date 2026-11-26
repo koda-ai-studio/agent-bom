@@ -2,6 +2,35 @@ import { expect, it } from "vitest";
 import type { Node, Edge } from "@xyflow/react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { graphPortraitLayout } from "@/lib/graph-portrait-layout";
+import { semanticGraphLayout } from "@/lib/graph-semantic-layout";
+import { INTERNET_ANCHOR_ID } from "@/lib/graph-internet-context";
+
+it("keeps a bounded phone account as context rather than a trailing node with returning containment lines", () => {
+  const nodes: Node<LineageNodeData>[] = [
+    { id: "account", position: { x: 0, y: 0 }, data: { label: "Production", nodeType: "account", semanticLayer: "scope" } },
+    { id: "workload", position: { x: 0, y: 0 }, data: { label: "Checkout", nodeType: "container", semanticLayer: "infra", connectedScope: true, attributes: { internet_exposed: true } } },
+    { id: "finding", position: { x: 0, y: 0 }, data: { label: "CVE-2025-29927", nodeType: "vulnerability", semanticLayer: "finding", severity: "critical" } },
+  ];
+  const edges: Edge[] = [
+    { id: "contains", source: "account", target: "workload", data: { relationship: "contains" } },
+    { id: "finding", source: "workload", target: "finding", data: { relationship: "vulnerable_to" } },
+  ];
+  const desktop = semanticGraphLayout(nodes, edges);
+  const result = graphPortraitLayout(desktop.nodes, desktop.edges);
+  const frame = result.nodes.find(n => n.type === "boundaryFrame");
+  expect(frame?.data).toMatchObject({ phoneLayout: true, phoneLinear: true });
+  expect(frame).toBeDefined();
+  expect(result.nodes.find(n => n.id === "account")?.hidden).toBe(true);
+  expect(result.edges.find(e => e.id === "contains")?.hidden).toBe(true);
+  const internet = result.nodes.find(n => n.id === INTERNET_ANCHOR_ID)!;
+  expect(internet.position.y + 100).toBeLessThan(frame!.position.y);
+  for (const n of result.nodes.filter(n => !n.hidden && n.type !== "boundaryFrame" && n.id !== INTERNET_ANCHOR_ID)) {
+    expect(n.position.y).toBeGreaterThan(frame!.position.y + 40);
+    expect(n.position.y + 80).toBeLessThan(frame!.position.y + Number(frame!.style!.height));
+  }
+  expect(result.edges.map(e => [e.id, e.source, e.target])).toEqual(desktop.edges.map(e => [e.id, e.source, e.target]));
+  expect(graphPortraitLayout(result.nodes, result.edges).nodes.map(n => [n.id, n.position, n.hidden])).toEqual(result.nodes.map(n => [n.id, n.position, n.hidden]));
+});
 
 it("keeps the supplied spine connected vertically with its context beside the recorded owner", () => {
   const nodes: Node<LineageNodeData>[] = ["entry", "server", "asset"].map((id, index) => ({ id, position: { x: index * 380, y: 0 },
@@ -73,4 +102,20 @@ it("puts a branch that skips a stacked finding on the side away from it, leaving
   expect(result.edges.find(e => e.id === "checkout-role")).toMatchObject({ sourceHandle: "phone-left", targetHandle: "phone-right" });
   // The spine's own hop is unchanged: straight down to the finding under its asset.
   expect(result.edges.find(e => e.id === "checkout-cve")).toMatchObject({ sourceHandle: null, targetHandle: null });
+});
+
+
+it("keeps a bounded phone story consecutive with context links on the glyph side", () => {
+  const nodes: Node<LineageNodeData>[] = ["internet", "gateway", "workload", "finding"].map((id, index) => ({ id, position: { x: index * 480, y: 0 },
+    data: { label: id, nodeType: "server", roomyName: true, semanticPathIndex: index } }));
+  nodes.push({ id: "account", position: { x: 480, y: -260 }, data: { label: "prod-workloads", nodeType: "account", roomyName: true } });
+  const edges: Edge[] = [["internet", "gateway"], ["gateway", "workload"], ["workload", "finding"], ["account", "gateway"], ["account", "workload"]]
+    .map(([source, target]) => ({ id: `${source}-${target}`, source: source!, target: target! }));
+  const original = structuredClone({ nodes, edges });
+  const result = graphPortraitLayout(nodes, edges);
+  expect([...result.nodes].sort((a, b) => a.position.y - b.position.y).slice(0, 4).map(n => n.id)).toEqual(["internet", "gateway", "workload", "finding"]);
+  expect(result.nodes.every(n => n.data.phoneLinear && Number(n.style?.width) >= 260)).toBe(true);
+  expect(result.edges.find(e => e.id === "account-gateway")).toMatchObject({ sourceHandle: "phone-left", targetHandle: "phone-left" });
+  expect(result.edges.map(e => [e.id, e.source, e.target])).toEqual(edges.map(e => [e.id, e.source, e.target]));
+  expect({ nodes, edges }).toEqual(original);
 });

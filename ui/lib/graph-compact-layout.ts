@@ -4,6 +4,7 @@
  * ranks come from the caller's backend-derived keys, never from entity types. */
 
 import { blockedLinkCount, type CaptionText, fitZoom, glyphsOnCurve, linkArcs } from "@/lib/graph-compact-arcs";
+import { orderedRankStarts } from "@/lib/graph-compact-order";
 
 // Cards grow in layout units as Fit all zooms out; these gaps keep the separation
 // pass's clear space (24 units) at the zooms graphs of this size fit at, so it does not move placed cards.
@@ -97,6 +98,8 @@ export type CompactInput = {
   width?: (id: string) => number;
   /** Room a card needs under its row when its caption is taller than one row gap allows. */
   tall?: (id: string) => number | undefined;
+  /** Optional semantic story lanes, applied before routing and kept fixed. */
+  arrange?: ((positions: Map<string, Point>) => void) | undefined;
 };
 
 function rankKeys({ ids, links, column, attached, containment }: CompactInput) {
@@ -252,18 +255,22 @@ export function compactLayout(input: CompactInput): { positions: Map<string, Poi
   levelLeaves(ids, positions, leaf, neighbours, onSpine, tall);
   // Captions are judged at a fixed zoom a little below the one the starting layout fits at, and the search may not
   // grow the layout past it: what it makes drawable stays drawable at the zoom Fit all then picks.
-  const zoom = ids.length <= REFINE_CARDS ? fitZoom(positions, COMPACT_NODE_WIDTH) * ZOOM_BUDGET : undefined;
+  let zoom = ids.length <= REFINE_CARDS ? fitZoom(positions, COMPACT_NODE_WIDTH) * ZOOM_BUDGET : undefined;
   if (input.caption && zoom !== undefined) {
     // Findings stay level with their asset inside the search: every candidate is re-levelled before it is scored.
     const relevel = (map: Map<string, Point>) => levelLeaves(ids, map, leaf, neighbours, onSpine, tall);
     refinePlacement(ids, links, positions, onSpine, input.caption, input.levelLeaf, tall, zoom, relevel);
     relevel(positions);
   }
-  clearLevelLinks(ids, links, positions, tall, onSpine);
+  if (input.arrange) {
+    input.arrange(positions);
+    zoom = fitZoom(positions, COMPACT_NODE_WIDTH) * ZOOM_BUDGET;
+  }
+  else clearLevelLinks(ids, links, positions, tall, onSpine);
   let { arcs, behind } = linkArcs(links, positions, input.caption, COMPACT_NODE_WIDTH, zoom);
   // A link no curve can clear would be drawn through a glyph, which reads as a false route: move the card in its way
   // off the curve (never a spine hop or one of the link's ends) and draw again.
-  for (let pass = 0; pass < 3 && behind.size && ids.length <= REFINE_CARDS; pass++) {
+  for (let pass = 0; pass < 3 && behind.size && ids.length <= REFINE_CARDS && !input.arrange; pass++) {
     const moved = clearGlyphs(links.filter(link => link.id && behind.has(link.id)), ids, links, positions, tall, onSpine, input.caption, zoom);
     if (!moved) break;
     ({ arcs, behind } = linkArcs(links, positions, input.caption, COMPACT_NODE_WIDTH, zoom));
@@ -310,20 +317,26 @@ function boxedPeerLinks(drawn: readonly Link[], positions: ReadonlyMap<string, P
   }).length;
 }
 
-/** Placement cost: a link that cannot be drawn as a plain curve clear of every caption costs most,
- * then crossings between links, then how far links climb or fall. */
-function placementCost(links: readonly Link[], positions: ReadonlyMap<string, Point>, caption: (id: string) => CaptionText, zoom: number): number {
+/** Crossings between links with no shared endpoint. */
+function placementCrossings(links: readonly Link[], positions: ReadonlyMap<string, Point>): number {
   const drawn = links.filter(link => positions.has(link.source) && positions.has(link.target) && link.source !== link.target);
-  let crossings = 0, climb = 0;
+  let crossings = 0;
   drawn.forEach((link, i) => {
     const a = positions.get(link.source)!, b = positions.get(link.target)!;
-    climb += Math.abs(a.y - b.y) / COMPACT_ROW_GAP;
     for (const other of drawn.slice(i + 1)) {
       if ([other.source, other.target].some(id => id === link.source || id === link.target)) continue;
       if (segmentsCross(a, b, positions.get(other.source)!, positions.get(other.target)!)) crossings++;
     }
   });
-  return (blockedLinkCount(drawn, positions, caption, COMPACT_NODE_WIDTH, zoom) + boxedPeerLinks(drawn, positions)) * 1000 + crossings * 40 + climb * 4;
+  return crossings;
+}
+
+/** Caption obstacles cost most, then crossings, then vertical travel. */
+function placementCost(links: readonly Link[], positions: ReadonlyMap<string, Point>, caption: (id: string) => CaptionText, zoom: number): number {
+  const drawn = links.filter(link => positions.has(link.source) && positions.has(link.target) && link.source !== link.target);
+  const climb = drawn.reduce((sum, link) => sum + Math.abs(positions.get(link.source)!.y - positions.get(link.target)!.y) / COMPACT_ROW_GAP, 0);
+  return (blockedLinkCount(drawn, positions, caption, COMPACT_NODE_WIDTH, zoom) + boxedPeerLinks(drawn, positions)) * 1000
+    + placementCrossings(drawn, positions) * 40 + climb * 4;
 }
 
 /** A card with the run of single-link cards leading into it from the left (an entry chain such as
@@ -368,22 +381,37 @@ function refinePlacement(ids: readonly string[], links: readonly Link[], positio
     relevel(map);
     return map;
   };
-  const starts = [positions, ...Array.from({ length: RESTARTS }, (_, seed) => flips(seed))];
+  // Several build/configuration inputs converging on one deployed asset need
+  // coordinated lineage ordering. Other topologies keep their established
+  // placement so changing a caption cannot reshuffle unrelated branches.
+  const configuration = links.filter(link => link.data?.relationship === "configures");
+  const converging = configuration.some(link => configuration.some(other => other.source !== link.source && other.target === link.target));
+  const ordered = (converging ? orderedRankStarts(positions, links, spine) : []).map(map => {
+    const xs = new Set([...map.values()].map(point => point.x));
+    for (const x of xs) {
+      const items = ids.filter(id => map.get(id)!.x === x).sort((a, b) => map.get(a)!.y - map.get(b)!.y)
+        .map(id => ({ id, desired: map.get(id)!.y, fixed: spine.has(id), below: tall(id) }));
+      for (const [id, y] of packRank(items, COMPACT_ROW_GAP, true)) map.set(id, { x, y });
+    }
+    relevel(map);
+    return map;
+  });
+  const starts = [positions, ...ordered, ...Array.from({ length: RESTARTS }, (_, seed) => flips(seed))];
   // A restart never begins taller than the sweep's own layout plus one row; moves are bounded by the zoom budget.
   const heightOf = (map: ReadonlyMap<string, Point>) => { const ys = ids.map(id => map.get(id)!.y); return Math.max(...ys) - Math.min(...ys); };
   const maxSpan = heightOf(positions) + COMPACT_ROW_GAP;
-  // Restarts run only while every link so far still lacks a clear curve.
-  let best: { copy: Map<string, Point>; cost: number } | null = null;
+  // Clear captions alone are insufficient: a converging branch can still cut
+  // across a separate dependency chain. Keep searching within the same budget.
+  let best = { copy: new Map(positions), cost: placementCost(links, positions, caption, zoom) };
   for (const [i, start] of starts.entries()) {
-    if (i > 0 && (!rowsClear(ids, start, tall) || heightOf(start) > maxSpan)) continue;
+    if (start !== positions && (!rowsClear(ids, start, tall) || heightOf(start) > maxSpan)) continue;
     // A start may spend at most half of what is left, so a greedy search that stalls cannot starve the restarts.
     const share = { left: i < starts.length - 1 ? Math.ceil(budget.left / 2) : budget.left }, granted = share.left;
     const copy = new Map(start), cost = refineRows(ids, links, copy, spine, caption, zoom, levelLeaf, tall, share, relevel);
     budget.left -= granted - Math.max(0, share.left);
-    if (!best || cost < best.cost - 1e-6) best = { copy, cost };
-    if (best.cost < 1000 || budget.left <= 0) break;
+    if (cost < best.cost - 1e-6) best = { copy, cost };
+    if (best.cost < 1000 && (!converging || placementCrossings(links, best.copy) === 0) || budget.left <= 0) break;
   }
-  if (!best) return;
   for (const [id, p] of best.copy) positions.set(id, p);
 }
 

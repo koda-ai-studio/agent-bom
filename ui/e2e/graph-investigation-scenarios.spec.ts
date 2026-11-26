@@ -56,8 +56,12 @@ for (const theme of ["light", "dark"]) test(`distinct flows, finding drilldown a
   await expect(page.locator('.react-flow__node[data-id="display:internet"]')).toBeVisible();
   await expect(page.locator('.react-flow__edge[data-id="display:internet:endpoint"]')).toHaveCount(1);
   await expect(page.locator('.react-flow__node[data-id="deployment"]')).toBeVisible();
-  // With no pinned path the view follows the exposure chain to its finding, so the CVE ends the amber path.
+  // These relationships explicitly disallow traversal. The finding remains
+  // inspectable from its owner, without becoming an inferred exposure hop.
+  await expect(page.locator('.react-flow__node[data-id="CVE-2099-0001"]')).toHaveCount(0);
+  await page.getByRole("button", { name: "Expand 1 finding for pod", exact: true }).click();
   await expect(page.locator('.react-flow__node[data-id="CVE-2099-0001"]')).toBeVisible();
+  await expect(page.locator('.react-flow__edge[data-id="pod:vulnerable_to:CVE-2099-0001"] [data-edge-family]')).toHaveAttribute("data-edge-family", "risk");
   await expect(page.locator('.react-flow__edge[data-id="display:internet:endpoint"] [data-edge-family]')).toHaveCount(1);
   // The account holding the estate is drawn as its boundary.
   await expect(page.locator('[data-boundary-frame="account"]')).toBeVisible();

@@ -22,7 +22,7 @@ export function exposureSpine(nodes: readonly Node<LineageNodeData>[], edges: re
   if (!byId.has(INTERNET_ANCHOR_ID)) return [];
   const next = new Map<string, string[]>();
   for (const edge of edges) {
-    if (edge.hidden || edge.source === edge.target || !byId.has(edge.source) || !byId.has(edge.target)) continue;
+    if (edge.hidden || (edge.data?.traversable === false && !(edge.source === INTERNET_ANCHOR_ID && edge.data?.displayOnly === true)) || edge.source === edge.target || !byId.has(edge.source) || !byId.has(edge.target)) continue;
     if (BACKWARD.has(String(edge.data?.relationship ?? ""))) continue;
     next.set(edge.source, [...(next.get(edge.source) ?? []), edge.target].sort());
   }
@@ -53,21 +53,33 @@ export function exposureSpine(nodes: readonly Node<LineageNodeData>[], edges: re
   return best;
 }
 
-/** The one environment every other drawn node belongs to: drawn as a boundary around them, not as a root. */
+/** One recorded scope and its connected investigation context. The boundary
+ * groups context; it does not infer ownership or turn access into containment. */
 export function enclosingEnvironment(nodes: readonly Node<LineageNodeData>[], edges: readonly Edge[]): Node<LineageNodeData> | null {
   const visible = nodes.filter(node => !node.hidden && node.id !== INTERNET_ANCHOR_ID);
   // An environment or a cloud account: scopes a security map draws as a boundary.
   const scope = (value: unknown) => value === "environment" || value === "account";
   const environments = visible.filter(node => node.type === "environmentNode" || scope(node.data.nodeType) || scope(node.data.entityType));
   if (environments.length !== 1) return null;
+  // A partial view can omit a foreign account's root while retaining its assets.
+  // Recorded account identity still prevents a misleading single-account frame.
+  const accountIds = new Set(visible.flatMap(node => {
+    const value = node.data.attributes?.account_id;
+    return typeof value === "string" && value.trim() ? [value.trim()] : [];
+  }));
+  if (accountIds.size > 1) return null;
   const environment = environments[0]!;
+  const children = edges.filter(edge => !edge.hidden && edge.source === environment.id);
+  if (!children.length || children.some(edge => !["contains", "hosts"].includes(String(edge.data?.relationship)))) return null;
+  if (edges.some(edge => !edge.hidden && edge.data?.relationship === "cross_account_trust")) return null;
   // It must be the only root: nothing but the Internet leads into it, and every other node is connected to it.
   if (edges.some(edge => !edge.hidden && edge.target === environment.id && edge.source !== INTERNET_ANCHOR_ID)) return null;
   const reached = new Set([environment.id]);
   const queue = [environment.id];
   while (queue.length) {
     const id = queue.shift()!;
-    // Membership follows links either way: a finding that affects a role belongs to the role's account.
+    // Related context includes reverse finding links. This is connectivity,
+    // not an account-membership claim; those relationships remain unchanged.
     for (const edge of edges) {
       if (edge.hidden || edge.source === INTERNET_ANCHOR_ID) continue;
       const other = edge.source === id ? edge.target : edge.target === id ? edge.source : null;

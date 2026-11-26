@@ -28,6 +28,18 @@ function fixture() {
 
 afterEach(() => { document.body.innerHTML = ""; vi.unstubAllGlobals(); });
 
+it("does not move captions that use their own placement coordinates", () => {
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => { callback(0); return 1; });
+  vi.stubGlobal("CSS", { escape: (value: string) => value });
+  const labels = fixture();
+  delete labels[1]!.dataset.labelX;
+  delete labels[1]!.dataset.labelY;
+  labels[1]!.style.transform = "translate(40px, 50px)";
+  scheduleRelationshipLabelLayout(labels[0]!);
+  expect(labels[1]!.style.transform).toBe("translate(40px, 50px)");
+  expect(labels[0]!.style.transform).not.toContain("NaN");
+});
+
 it("batches the canvas and moves captions along their paths clear of nodes and each other", () => {
   const callbacks: FrameRequestCallback[] = [];
   vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => callbacks.push(callback));

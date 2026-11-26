@@ -18,7 +18,7 @@ import {
   DEMO_AGENT_SPECS, SCAN_ID, SCENARIO_ID, advisory, buildBlastRadius, buildGraph, contextGraph, edge,
   demoScanAgent, graphScenario, graphScenarioComparison, node, severityId, vuln,
 } from "./product-proof-graph.mjs";
-import { runGraphQualityCapture } from "./graph-quality-capture.mjs";
+import { assertRecordedDirections, runGraphQualityCapture } from "./graph-quality-capture.mjs";
 import { foldPackageEvidence } from "../lib/graph-evidence-fold.ts";
 import { AGENT_ARCHITECTURE_SCREENSHOTS, captureAgentArchitecture, installAgentArchitectureRoutes } from "./product-proof-agent-architecture.mjs";
 import { captureSourceProvenance } from "./product-proof-provenance.mjs";
@@ -102,7 +102,7 @@ const referenceGraph = REFERENCE_LAB.capture_fixture.graph;
 const CANVAS_NODE_TYPE = { source_file: "sourceFile", config_file: "configFile" };
 const referenceOverview = foldPackageEvidence(
   referenceGraph.nodes.map(node => ({ id: node.id, position: { x: 0, y: 0 }, data: { label: node.label, nodeType: CANVAS_NODE_TYPE[node.entity_type] ?? node.entity_type } })),
-  referenceGraph.edges.map(edge => ({ id: `${edge.source}->${edge.target}:${edge.relationship}`, source: edge.source, target: edge.target, data: { relationship: edge.relationship } })),
+  referenceGraph.edges.map(edge => ({ id: edge.id || `${edge.source}:${edge.relationship}:${edge.target}`, source: edge.source, target: edge.target, data: { relationship: edge.relationship } })),
 );
 const referenceSnapshots = [
   {
@@ -2709,6 +2709,11 @@ async function main() {
           await view.click();
           await expect(view).toHaveAttribute("aria-pressed", "true");
           await p.getByRole("button", { name: "View & layers", exact: true }).click();
+          // This showcase records the full scope, including supporting containment.
+          const flowSelector = p.getByRole("combobox", { name: "Follow a connected flow" });
+          if (await flowSelector.count()) await flowSelector.selectOption({ label: "All connections" });
+          const expandContext = p.getByRole("button", { name: /^Show supporting context/ });
+          if (await expandContext.count()) await expandContext.click();
           // Findings fold only under an owner with a backend aggregate; the showcase draws every one.
           const expandFindings = p.getByRole("button", { name: /^Expand findings/ });
           if (await expandFindings.count()) await expandFindings.click();
@@ -2808,8 +2813,8 @@ async function main() {
     const prepareCorrelationPath = async (proofPage) => {
       await proofPage.locator(".react-flow__node").first().waitFor({ state: "visible" });
       await fitReactFlow(proofPage);
-      // Every relationship the overview draws has its direction; the Internet anchor's display link is extra context.
-      await expect(proofPage.locator('.react-flow__edge:not([data-id^="display:"]) .react-flow__edge-path[marker-end]')).toHaveCount(referenceOverview.edges.length);
+      // Every recorded direction is available on inspection; the Internet anchor is extra display context.
+      await assertRecordedDirections(proofPage, referenceOverview.edges);
       await expect(proofPage.locator(".graph-relationship-label")).toHaveCount(0);
       await scrollTo(proofPage, 0);
     };

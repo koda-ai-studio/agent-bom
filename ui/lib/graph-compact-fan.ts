@@ -31,8 +31,12 @@ export function linkEndFans(links: readonly FanLink[], positions: ReadonlyMap<st
     if (group.length < 2) continue;
     const step = Math.min(FAN_STEP, FAN_SPAN / (group.length - 1));
     const far = ({ link, end }: { link: FanLink; end: "source" | "target" }) => positions.get(end === "source" ? link.target : link.source)!;
-    group.sort((a, b) => far(a).y - far(b).y || far(a).x - far(b).x || a.link.id.localeCompare(b.link.id) || a.end.localeCompare(b.end))
-      .forEach((item, index) => out.set(item.link.id, { ...out.get(item.link.id), [`${item.end}Fan`]: (index - (group.length - 1) / 2) * step }));
+    group.sort((a, b) => far(a).y - far(b).y || far(a).x - far(b).x || a.link.id.localeCompare(b.link.id) || a.end.localeCompare(b.end));
+    const level = group.filter(item => far(item).y === positions.get(item.link[item.end])!.y);
+    // A single level continuation owns the center. Branches fan around it;
+    // parallel relationships still get distinct ends when several are level.
+    const center = level.length === 1 ? group.indexOf(level[0]!) : (group.length - 1) / 2;
+    group.forEach((item, index) => out.set(item.link.id, { ...out.get(item.link.id), [`${item.end}Fan`]: (index - center) * step }));
   }
   return out;
 }

@@ -3,10 +3,11 @@ import type { LineageNodeData } from "@/components/lineage-nodes";
 import { mixedEvidenceFlow } from "@/lib/graph-mixed-flow";
 import type { GraphRollupContainer } from "@/lib/api-contracts/graph-views";
 
-export function withFindingDrilldowns(nodes: Node<LineageNodeData>[], open: (item: GraphRollupContainer) => void) {
+export function withFindingDrilldowns(nodes: Node<LineageNodeData>[], open: (item: GraphRollupContainer) => void, inspect?: (node: Node<LineageNodeData>) => void) {
   return nodes.map(node => {
     const rollup = node.data.rollup;
-    if (!rollup?.has_children) return node;
+    if (!rollup?.has_children) return inspect && !node.data.displayOnly && !["vulnerability", "misconfiguration"].includes(node.data.nodeType)
+      ? { ...node, data: { ...node.data, onExploreFindings: () => inspect(node) } } : node;
     const explore = () => open(rollup);
     return { ...node, data: { ...node.data, onExploreFindings: explore,
       ...(node.data.readingFindings ? { readingFindings: { ...node.data.readingFindings, toggle: explore } } : {}) } };
@@ -30,7 +31,7 @@ export function cloudFindingDisclosure(nodes: Node<LineageNodeData>[], edges: Ed
     const findings = groups.get(n.id);
     const severity = (n.data.findingAggregate ?? n.data.rollup?.aggregate)?.worst_severity;
     return { ...n, hidden: n.hidden || Boolean(groupedIds.has(n.id) && n.data.readingOwner && !expanded.has(n.data.readingOwner)),
-      data: { ...n.data, ...(findings ? { readingFindingsGroup: !expanded.has(n.id), readingFindings: { count: (n.data.findingAggregate ?? n.data.rollup!.aggregate).issue_count!, expanded: expanded.has(n.id), severity, toggle: () => toggle(n.id) } } : {}) } };
+      data: { ...n.data, ...(findings ? { readingFindingsGroup: !expanded.has(n.id) && (n.data.findingAggregate ?? n.data.rollup!.aggregate).issue_count! > 1, readingFindings: { count: (n.data.findingAggregate ?? n.data.rollup!.aggregate).issue_count!, expanded: expanded.has(n.id), severity, toggle: () => toggle(n.id) } } : {}) } };
   });
   const hidden = new Set(mapped.filter(n => n.hidden).map(n => n.id));
   const mappedEdges = edges.map(e => ({ ...e, hidden: e.hidden || hidden.has(e.source) || hidden.has(e.target) }));
@@ -42,6 +43,7 @@ export function cloudFindingDisclosure(nodes: Node<LineageNodeData>[], edges: Ed
     let id = `display:findings:${owner}`;
     while (nodes.some(n => n.id === id) || groupNodes.some(n => n.id === id)) id += ":group";
     const count = (asset.data.findingAggregate ?? asset.data.rollup!.aggregate).issue_count!;
+    if (count === 1) continue; // The owner badge is the complete disclosure for a single contextual finding.
     const grouped = `${count} finding${count === 1 ? "" : "s"}`;
     groupNodes.push({ id, initialWidth: 200, initialHeight: 120, draggable: false, type: "findingGroupNode", position: { x: asset.position.x + GROUP_COLUMN_GAP, y: asset.position.y }, ariaLabel: `Findings for ${asset.data.label}: ${count}`,
       data: { label: "Findings", nodeType: "misconfiguration", displayOnly: true, displayTargetId: owner,

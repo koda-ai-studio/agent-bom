@@ -31,6 +31,32 @@ from tests.test_graph_api import _RecordingGraphStore
 UI = pathlib.Path(__file__).resolve().parents[2] / "ui"
 
 
+def test_summary_preserves_normalized_risk_markers_and_account_identity_without_bulk_evidence() -> None:
+    from agent_bom.api.routes.graph_routes.lean_view import lean_projection
+    from agent_bom.graph.risk_context import derive_node_risk_context
+
+    attributes = {"is_admin": True, "data_sensitivity": "restricted", "account_id": "123456789012"}
+    context = derive_node_risk_context("data_store", attributes, scan_id="scan", data_sources=["inventory"])
+    assert context and context["is_admin"] is True and context["crown_jewel"] is True
+    node = {"id": "data:archive", "attributes": {**attributes, "risk_context": context}}
+    slim = lean_projection({"nodes": [node], "edges": []})["nodes"][0]["attributes"]
+    assert slim["account_id"] == attributes["account_id"]
+    for key in ("is_admin", "crown_jewel", "data_sensitivity"):
+        assert slim["risk_context"][key] == context[key]
+    assert "reasons" not in slim["risk_context"]  # Full evidence remains on node detail.
+    assert node["attributes"]["risk_context"]["reasons"]
+
+
+@pytest.mark.parametrize("verdict", [False, None, "true"])
+def test_summary_does_not_promote_unknown_or_negative_risk_verdicts(verdict) -> None:
+    from agent_bom.api.routes.graph_routes.lean_view import lean_projection
+
+    node = {"id": "asset", "attributes": {"risk_context": {"is_admin": verdict, "crown_jewel": verdict}}}
+    slim = lean_projection({"nodes": [node]})["nodes"][0]["attributes"]
+    assert slim.get("risk_context", {}).get("is_admin") == verdict
+    assert slim.get("risk_context", {}).get("crown_jewel") is not True
+
+
 @pytest.fixture
 def recording_graph_store(monkeypatch):
     from agent_bom.cloud import runtime_workload_evidence_store as runtime_evidence

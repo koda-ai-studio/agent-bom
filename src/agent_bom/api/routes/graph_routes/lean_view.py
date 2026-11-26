@@ -56,6 +56,8 @@ LEAN_NODE_ATTRIBUTES = (
     "cloud_provider",
     "environment",
     "region",
+    "account_id",
+    "risk_context",
     # Canonical internet exposure; ``_lean_node`` folds in the risk-context verdict.
     "internet_exposed",
 )
@@ -113,6 +115,20 @@ def _lean_node(node: dict[str, Any]) -> dict[str, Any]:
     slim["attributes"] = (
         {key: value for key, value in attributes.items() if key in _LEAN_ATTRIBUTE_SET} if isinstance(attributes, dict) else {}
     )
+    context = slim["attributes"].get("risk_context")
+    if isinstance(context, dict):
+        # Preserve canonical verdicts; an absent value remains unknown. Reasons
+        # and source receipts are fetched from node detail rather than repeated
+        # on every map node. Never derive a new verdict in a display projection.
+        slim["attributes"]["risk_context"] = {
+            key: context[key]
+            for key in ("is_admin", "data_sensitivity", "crown_jewel")
+            if context.get(key) is not None and (key != "crown_jewel" or context[key] is True)
+        }
+        if not slim["attributes"]["risk_context"]:
+            # No established marker. Negative criticality has no glyph, and
+            # retaining an empty object on every inventory node wastes the map budget.
+            slim["attributes"].pop("risk_context")
     exposure = _exposure_verdict(attributes) if isinstance(attributes, dict) else None
     if exposure is not None:
         slim["attributes"]["internet_exposed"] = exposure
