@@ -163,7 +163,7 @@ function FindingDisclosure({ data }: { data: LineageNodeData }) {
   const severity = ["critical", "high", "medium", "low"].includes(rating ?? "") ? rating : undefined;
   const action = findings ? findings.expanded ? "Collapse" : "Expand" : "Inspect";
   const label = findings ? `${action} ${count} finding${plural} for ${data.label}` : `Inspect ${count} finding${plural} in the scope of ${data.label}`;
-  return <span className="absolute -bottom-1 -right-3">
+  return <span className={data.phoneLayout ? "absolute -bottom-2 left-1/2 -translate-x-1/2" : "absolute -bottom-1 -right-3"}>
     <GraphCountHint text={`${data.label}: ${count} distinct open finding${plural} in this asset's containment scope${severity ? ` · highest severity: ${severity}` : " · severity not rated"}. ${findings ? "Expand or collapse the loaded findings; primary path findings remain visible." : "Inspect the asset for scope and relationship details."}`}>
       <button type="button" data-finding-disclosure data-finding-count-source="rollup" data-finding-count-severity={severity} aria-expanded={findings?.expanded} title="" aria-label={label}
         onClick={event => { event.stopPropagation(); toggle(); }}

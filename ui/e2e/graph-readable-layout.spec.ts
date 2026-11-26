@@ -719,6 +719,15 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
       expect(straight, "same-row Internet entry stays straight").toBeLessThan(1);
     }
     await page.screenshot({ path: info.outputPath(`story-first-${theme}-${width}.png`), animations: "disabled" });
+    const badgeCaptionOverlaps = await page.locator('[data-compact-node]').evaluateAll(cards => cards.flatMap(card => {
+      const badge = card.querySelector('[data-finding-disclosure]')?.getBoundingClientRect();
+      if (!badge) return [];
+      return [...card.querySelectorAll('[data-semantic-name], [data-graph-caption]')].filter(label => {
+        const box = label.getBoundingClientRect();
+        return badge.left < box.right && badge.right > box.left && badge.top < box.bottom && badge.bottom > box.top;
+      }).map(label => label.textContent);
+    }));
+    expect(badgeCaptionOverlaps, "finding counts clear asset names and types").toEqual([]);
     const findingCount = page.getByRole("button", { name: "Inspect 1 finding in the scope of checkout-api", exact: true });
     await expect(findingCount).toBeVisible();
     await findingCount.click();
