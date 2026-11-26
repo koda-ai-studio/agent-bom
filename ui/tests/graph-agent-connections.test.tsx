@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import { GraphAgentConnections } from "@/components/graph-agent-connections";
 import { api } from "@/lib/api";
@@ -18,7 +18,7 @@ it("uses the same refreshed count for the mobile badge and its disclosure", asyn
   vi.mocked(api.queryGraph).mockResolvedValue(graph);
   vi.mocked(useGraphNodeAggregates).mockReturnValue(new Map([[rootId, { node_id: rootId, ...current }]]));
   const findings = vi.fn(); const inspect = vi.fn();
-  render(<GraphAgentConnections scanId={graph.scan_id} rootId={rootId} aggregate={{ ...current.aggregate, issue_count: 0 }}
+  const { rerender } = render(<GraphAgentConnections scanId={graph.scan_id} rootId={rootId} aggregate={{ ...current.aggregate, issue_count: 0 }}
     onInspect={inspect} onFindings={findings} onUnavailable={vi.fn()} />);
   fireEvent.click(await screen.findByRole("button", { name: "Open 1 finding for Developer Copilot" }));
   expect(findings).toHaveBeenCalledWith(rootId, "Developer Copilot", current.aggregate);
@@ -28,4 +28,8 @@ it("uses the same refreshed count for the mobile badge and its disclosure", asyn
   fireEvent.click(screen.getByRole("button", { name: "execute_command" }));
   expect(inspect).toHaveBeenCalledWith("tool:exec", "execute_command");
   expect(screen.getByText("default-deny gateway policy")).toBeVisible();
+  rerender(<GraphAgentConnections scanId={graph.scan_id} rootId={rootId} generation="refreshed" aggregate={current.aggregate}
+    onInspect={inspect} onFindings={findings} onUnavailable={vi.fn()} />);
+  await waitFor(() => expect(api.queryGraph).toHaveBeenCalledTimes(2));
+  expect(await screen.findByRole("button", { name: "default-deny gateway policy" })).toBeVisible();
 });

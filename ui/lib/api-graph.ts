@@ -174,8 +174,8 @@ export const graphApi = {
     limit?: number | undefined;
     snapshotGeneration?: string | undefined;
     cursor?: string | undefined;
-    /** `canvas`: the graph page's projection; selection refetches the full node. */
-    view?: "canvas" | undefined;
+    /** `canvas`: compact page projection; `full`: retained relationship evidence. */
+    view?: "canvas" | "full" | undefined;
   }) => {
     const params = new URLSearchParams();
     if (filters?.scanId) params.set("scan_id", filters.scanId);

@@ -133,7 +133,10 @@ export function RelationshipEdge(props: EdgeProps) {
     width: node.measured?.width ?? node.width ?? 240,
     height: node.measured?.height ?? node.height ?? 180,
   })), [nodes]);
-  const [path, routeX, routeY] = props.data?.directOverview ? getBezierPath(props) : relationshipPath(props, obstacles, props.data?.phoneLayout ? undefined : portLane);
+  // Rise beside the upstream node before approaching a wide target caption.
+  const earlyRise: [string, number, number] = [`M${props.sourceX},${props.sourceY} C${props.sourceX + 8},${props.sourceY} ${props.sourceX + 8},${props.targetY} ${props.targetX},${props.targetY}`,
+    props.sourceX + 6 + (props.targetX - props.sourceX) / 8, (props.sourceY + props.targetY) / 2];
+  const [path, routeX, routeY] = props.data?.earlyRise ? earlyRise : props.data?.directOverview ? getBezierPath(props) : relationshipPath(props, obstacles, props.data?.phoneLayout ? undefined : portLane);
   const anchor = props.data?.labelAnchor === "source" || props.data?.labelAnchor === "target" ? anchoredLabelPoint(props, props.data.labelAnchor) : null;
   const x = anchor?.x ?? routeX, y = anchor?.y ?? routeY;
   useLayoutEffect(() => { scheduleRelationshipLabelLayout(labelRef.current); }, [path, zoom, label, x, y, visibility, inspecting]);

@@ -30,11 +30,13 @@ export function GraphAgentConnections({ scanId, rootId, generation, onInspect, o
   const [error, setError] = useState(false);
   const [retry, setRetry] = useState(0);
   const [neighbors, setNeighbors] = useState(false);
+  const [contextOpen, setContextOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const narrow = useNarrowViewport();
   useEffect(() => {
     const controller = new AbortController();
     setResponse(undefined); setError(false);
-    const read = isStaticDemo() ? api.getGraph({ scanId, limit: 200 }) : api.queryGraph({ roots: [rootId], scan_id: scanId, snapshot_generation: generation, direction: "both", max_depth: 3,
+    const read = isStaticDemo() ? api.getGraph({ scanId, limit: 200, view: "full" }) : api.queryGraph({ roots: [rootId], scan_id: scanId, snapshot_generation: generation, direction: "both", max_depth: 3,
       max_nodes: 64, max_edges: 128, timeout_ms: 2500, traversable_only: false, include_roots: true, include_attack_paths: false },
     { signal: controller.signal });
     read.then(value => { if (!controller.signal.aborted) {
@@ -92,7 +94,8 @@ export function GraphAgentConnections({ scanId, rootId, generation, onInspect, o
   return <>
     <div className="flex flex-wrap items-center justify-between gap-2 px-4 pt-3"><p className="text-xs text-ink-secondary">Showing {graph.nodes.length} assets · {graph.edges.length} recorded connections{(response && ("truncated" in response ? response.truncated : response.completeness?.truncated)) ? " · partial neighborhood" : ""}.</p>
       {!narrow && pathAvailable && <button className="text-xs underline underline-offset-4" aria-pressed={neighbors} onClick={() => setNeighbors(value => !value)}>{neighbors ? "Show path layout" : "Explore neighbours"}</button>}</div>
-    <GraphScopeContext graph={response!} selected={graph} onInspect={onInspect} compact={!narrow && !neighbors && pathAvailable} />
+    <GraphScopeContext graph={response!} selected={graph} onInspect={onInspect} compact={!narrow && !neighbors && pathAvailable}
+      contextOpen={contextOpen} toolsOpen={toolsOpen} onContextToggle={() => setContextOpen(value => !value)} onToolsToggle={() => setToolsOpen(value => !value)} />
     {connectionList ? <section data-testid="graph-agent-evidence" aria-label="Directed agent connections" className="px-4 py-3 text-sm">
       {!!rootAggregate.issue_count && <button className="graph-page-action mb-3" onClick={() => onFindings(rootId, labels.get(rootId) ?? rootId, rootAggregate)}>Open {rootAggregate.issue_count} {rootAggregate.issue_count === 1 ? "finding" : "findings"} for {labels.get(rootId)}</button>}
       <ul className="divide-y divide-outline">{graph.edges.map(edge => <li key={edge.id} className="py-3" data-recorded-edge={edge.id}>

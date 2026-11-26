@@ -92,7 +92,7 @@ export function agentPathGraph(graph: UnifiedGraphData, flow: Flow, root: string
       return { ...edge, type: "smoothstep", sourceHandle: to.x < from.x ? "context" : to.y > from.y ? "scope-out-2" : "scope-out-1", targetHandle: to.x < from.x ? "context" : edge.data?.relationship === "finding_group" ? null : privilege ? "scope-in-lower-left" : from.y > to.y ? "scope-in-2" : "scope-in-1",
         ...(edge.data?.relationship === "finding_group" ? {} : { markerEnd: { type: MarkerType.ArrowClosed, color, width: 20, height: 16 } }),
         style: { ...edge.style, opacity: 1, stroke: color, strokeWidth: onPath ? 2.4 : 2 },
-        data: { ...edge.data, exposurePath: onPath, directOverview: true, directionEmphasis: edge.data?.relationship !== "finding_group", quietLabel: !privilege, labelVisibility: privilege ? "show" : "auto" },
+        data: { ...edge.data, exposurePath: onPath, directOverview: true, earlyRise: privilege && from.y > to.y, directionEmphasis: edge.data?.relationship !== "finding_group", quietLabel: !privilege, labelVisibility: privilege ? "show" : "auto" },
       };
     }),
   };
