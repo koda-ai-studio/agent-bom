@@ -133,15 +133,15 @@ function shownName(node: Node<LineageNodeData> | undefined, id: string, roomy = 
 }
 
 /** Layout units one character of a name takes at the largest size the canvas draws it (the label ceiling). */
-const CEILING_CHAR_UNITS = 36 * 0.88 * 0.6;
+const CEILING_CHAR_UNITS = 36 * 0.6;
 /** Identifier-like names (a CVE or GHSA id, a package) never end in an ellipsis: their box widens to fit
  * about 22 characters at any zoom. Names with spaces wrap inside the compact box instead. */
 const IDENTIFIER_BOX_MAX = 440;
-function cardWidth(node: Node<LineageNodeData> | undefined, id: string): number {
+function cardWidth(node: Node<LineageNodeData> | undefined, id: string, nameScale = 0.88): number {
   if (!node || !["finding", "package"].includes(semanticLayer(node) ?? "")) return COMPACT_NODE_WIDTH;
   const name = shownName(node, id);
   if (name.includes(" ")) return COMPACT_NODE_WIDTH;
-  return Math.round(Math.min(IDENTIFIER_BOX_MAX, Math.max(COMPACT_NODE_WIDTH, name.length * CEILING_CHAR_UNITS + 16)));
+  return Math.round(Math.min(IDENTIFIER_BOX_MAX, Math.max(COMPACT_NODE_WIDTH, name.length * CEILING_CHAR_UNITS * nameScale + 16)));
 }
 
 /** A card whose name wraps to two lines at the largest label size is about 206 units tall; with the clear space
@@ -149,9 +149,9 @@ function cardWidth(node: Node<LineageNodeData> | undefined, id: string): number 
 /** Room under a two-line name: 236 layout units at the original 0.7 glyph, growing with the glyph so a larger
  * circle pushes its caption down without the caption reaching the card below. */
 const TALL_CARD_ROOM = Math.ceil(236 + (COMPACT_GLYPH_SCALE - 0.7) * 200);
-function twoLineName(node: Node<LineageNodeData> | undefined, id: string): boolean {
+function twoLineName(node: Node<LineageNodeData> | undefined, id: string, nameScale = 0.88): boolean {
   // Wrap as the card does: between words, and inside an ordinary word after a hyphen or underscore.
-  return captionGeometry({ name: shownName(node, id), box: cardWidth(node, id), nameChar: CEILING_CHAR_UNITS }).nameLines.length > 1;
+  return captionGeometry({ name: shownName(node, id), box: cardWidth(node, id, nameScale), nameChar: CEILING_CHAR_UNITS * nameScale }).nameLines.length > 1;
 }
 
 /** The last few placements, by graph signature. Results are never mutated after layout. */
@@ -201,7 +201,7 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
     levelLeaf: (id: string) => { const found = byId.get(id); return Boolean(found) && (semanticLayer(found!) === "finding"
       || (found!.type === "findingGroupNode" && !onPath.has(String(found!.data.displayTargetId ?? "")))); },
     spine: primary, attached: attachedRanks(visible, drawn, columns), arrange };
-  const boxes = new Map(visible.map(node => [node.id, Math.max(arrange || readableStory ? 300 : 0, cardWidth(node, node.id))]));
+  const boxes = new Map(visible.map(node => [node.id, Math.max(arrange || readableStory ? 300 : 0, cardWidth(node, node.id, nameScale))]));
   // Placement depends only on the graph's structure and its captions; a re-render that changes nothing else reuses it.
   const signature = JSON.stringify([visible.map(node => [node.id, node.type, node.data.label, node.data.semanticLayer, node.data.readingLabel,
     node.data.displayTargetId, node.data.readingFindings?.count, internetExposure(node.data.attributes)]),
@@ -209,8 +209,8 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
   const { positions, arcs, behind } = LAYOUT_CACHE.get(signature) ?? remember(signature, compactLayout({ ...base,
     caption: id => { const found = byId.get(id);
       if (found?.type === "findingGroupNode") return { name: `Findings (${found.data.readingFindings?.count ?? 0})`, typeLine: "Click to explore", nameScale, readableStory };
-      return { name: shownName(found, id, Boolean(arrange)), nameScale, readableStory, typeLine: String(found?.data.readingLabel ?? found?.data.entityType ?? ""), box: boxes.get(id) ?? cardWidth(found, id) }; },
-    width: id => boxes.get(id) ?? cardWidth(byId.get(id), id), tall: id => twoLineName(byId.get(id), id) ? TALL_CARD_ROOM : undefined }));
+      return { name: shownName(found, id, Boolean(arrange)), nameScale, readableStory, typeLine: String(found?.data.readingLabel ?? found?.data.entityType ?? ""), box: boxes.get(id) ?? cardWidth(found, id, nameScale) }; },
+    width: id => boxes.get(id) ?? cardWidth(byId.get(id), id, nameScale), tall: id => twoLineName(byId.get(id), id, nameScale) ? TALL_CARD_ROOM : undefined }));
   const pathPairs = new Set(primary.slice(1).map((id, index) => `${primary[index]}\u0000${id}`));
   const fans = linkEndFans(drawn, positions);
   const modeledOnly = allEdgesModeled(drawn);
@@ -235,7 +235,7 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
     ? { x: frame.position.x - SEMANTIC_COLUMN_GAP * 0.6 - COMPACT_NODE_WIDTH / 2, y: entryAt.y } : null;
   return {
     nodes: [...(frame ? [frame] : []), ...nodes.map(node => {
-      const box = boxes.get(node.id) ?? cardWidth(node, node.id), placed = node.id === INTERNET_ANCHOR_ID && outside ? outside : positions.get(node.id);
+      const box = boxes.get(node.id) ?? cardWidth(node, node.id, nameScale), placed = node.id === INTERNET_ANCHOR_ID && outside ? outside : positions.get(node.id);
       // A wider caption box stays centred on its rank, so its glyph lines up with the others.
       return { ...node, position: placed ? { x: placed.x - (box - COMPACT_NODE_WIDTH) / 2, y: placed.y } : node.position,
       style: { ...node.style, width: box, "--graph-node-name-scale": nameScale, "--graph-node-card-width": `${box}px` },

@@ -798,6 +798,7 @@ for (const theme of ["light", "dark"] as const) {
     const audit = await page.evaluate(auditRenderedGraph, { edges: showcase.edges });
     expect(audit.renderedEdges).toBe(showcase.edges.length);
     expect(audit.crossings).toEqual([]);
+    expect(await graphGrammarViolations(page)).toEqual({});
     expect(await edgesThroughNodes(page)).toEqual([]);
     expect(await cardOverlaps(page)).toEqual([]);
     const centers = await page.evaluate(() => ["display:internet", "container:api"].map(id => {
