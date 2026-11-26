@@ -98,10 +98,11 @@ it("uses an unboxed finding glyph and puts its type below the name", () => {
   expect(name.textContent).toBe("Public API stage has no WAF association");
 });
 
-it("keeps visible child counts in the tooltip and removes a finding count once expanded", () => {
+it("keeps visible child counts in the tooltip and a collapse control once findings expand", () => {
   const root = renderNode("containerNode", { label: "workload", nodeType: "container", readingConnections: [{ relationship: "hosts", label: "2 applications", targets: ["a", "b"] }],
     readingFindings: { count: 1, expanded: true, toggle: () => {} } });
   expect(root.querySelector("[data-graph-entity]")?.getAttribute("title")).toContain("Hosts 2 applications in this view");
   expect(root.querySelector("[data-asset-connections]")).toBeNull();
-  expect(root.querySelector("[data-finding-disclosure]")).toBeNull();
+  expect(root.querySelector("[data-finding-disclosure]")).toHaveAttribute("aria-expanded", "true");
+  expect(root.querySelector("[data-finding-disclosure]")).toHaveAccessibleName("Collapse 1 finding for workload");
 });

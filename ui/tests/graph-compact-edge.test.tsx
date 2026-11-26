@@ -26,6 +26,12 @@ it("keeps an explicitly investigated path named and directed", () => {
   expect(queryByText(/Has Permission/)).toBeVisible();
 });
 
+it("shows recorded direction on a compact flow before inspection without adding resting labels", () => {
+  const { getByTestId, queryByText } = render(<svg><CompactRelationshipEdge {...props} data={{ ...props.data, semanticLayout: true }} /></svg>);
+  expect(getByTestId("edge")).toHaveAttribute("marker-end", "url(#target)");
+  expect(queryByText(/Has Permission/)).not.toBeInTheDocument();
+});
+
 
 it("keeps a single-column phone context curve within its caption-free side margin", () => {
   const curve = compactEdgeCurve({ sourceX: 100, targetX: 100, sourceY: 0, targetY: 600, sourcePosition: Position.Left, targetPosition: Position.Left, data: { phoneLayout: true, phoneLinear: true } });

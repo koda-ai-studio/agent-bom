@@ -9,6 +9,12 @@ const aggregate = { issue_count: 3, finding_occurrence_count: 5, worst_severity:
   descendant_count: 9, by_type: { package: 9 }, severity_counts: { critical: 1, high: 2 },
   internet_exposed: false, exposed_count: 0, toxic_combo: false, toxic_count: 0 };
 
+it("does not suggest unknown severity or modeled evidence with a dashed identity outline", () => {
+  const Renderer = lineageNodeTypes.credentialNode;
+  const { container } = render(<ReactFlowProvider><Renderer data={{ label: "Runtime role", nodeType: "role", semanticLayout: true }} /></ReactFlowProvider>);
+  expect(container.querySelector(".graph-entity-glyph")).not.toHaveClass("border-dashed");
+});
+
 it("explains a scope count without confusing distinct issues, occurrences, or descendant entities", () => {
   const { getByRole } = render(<OverviewDetails data={{ label: "app", nodeType: "container", findingAggregate: aggregate }} onClose={() => {}} />);
   const summary = getByRole("region", { name: "Finding count scope" });

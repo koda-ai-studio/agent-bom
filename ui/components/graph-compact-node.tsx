@@ -194,6 +194,7 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
   const severity = findingSeverity(data);
   const { badges, ring } = nodeBadges(data);
   const anchor = isInternetAnchor(data);
+  const outline = ["role", "credential"].includes(data.nodeType) ? borderClass.replace(/\bborder-dashed\b/g, "") : borderClass;
   const glyph = anchor ? ANCHOR_GLYPH : data.phoneLayout ? PHONE_GLYPH : GLYPH, icon = data.phoneLayout ? PHONE_ICON : ICON;
   const fullTitle = typeof data.attributes?.display_title === "string" && data.attributes.display_title.trim() ? data.attributes.display_title : data.label;
   // A prose finding draws its short preview; the full title stays in the tooltip, drawer and assistive text.
@@ -206,7 +207,7 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
     data-rollup-container={data.attributes?.rollup_is_container === true ? "true" : undefined}
     style={{ maxWidth: "var(--graph-node-card-width, 200px)", marginTop: anchor && data.roomyName && !data.phoneLayout ? glyphSize(-(ANCHOR_GLYPH_SCALE - COMPACT_GLYPH_SCALE) / 2) : undefined }} className={`relative flex transition-opacity ${data.dimmed ? "opacity-25" : ""} ${phoneLayoutClass(data)}`}>
     <div ref={glyphRef} data-severity-ring={severity} data-internet-anchor={anchor || undefined} style={{ width: glyph, height: glyph }}
-      className={`graph-entity-glyph relative flex shrink-0 items-center justify-center rounded-full ${iconClass} ${anchor ? "border-0 bg-transparent" : `border-2 ${borderClass} ${bgClass}`} ${data.highlighted && !anchor ? `ring-2 ring-offset-2 ring-offset-[var(--graph-canvas)] ${ringClass}` : ""}`}>
+      className={`graph-entity-glyph relative flex shrink-0 items-center justify-center rounded-full ${iconClass} ${anchor ? "border-0 bg-transparent" : `border-2 ${outline} ${bgClass}`} ${data.highlighted && !anchor ? `ring-2 ring-offset-2 ring-offset-[var(--graph-canvas)] ${ringClass}` : ""}`}>
       {severity && <span className="sr-only" data-finding-severity={severity}>{`${severity} severity`}</span>}
       <CompactHandles data={data} source={source} target={target} />
       {anchor ? <GraphInternetGlobe />
