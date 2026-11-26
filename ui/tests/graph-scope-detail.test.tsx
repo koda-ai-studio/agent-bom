@@ -17,6 +17,8 @@ describe("scope inspector", () => {
     expect(screen.getByText("42")).toBeVisible();
     expect(screen.getByRole("region", { name: "Scope composition" })).toHaveTextContent("Package40Server2");
     expect(screen.getByRole("region", { name: "Recorded severity" })).toHaveTextContent("No severity 41");
+    expect(screen.getByRole("heading", { name: "Open issues by severity" })).toBeVisible();
+    expect(screen.queryByText("Severity of contained entities")).not.toBeInTheDocument();
     expect(screen.getByText("3 entities recorded as internet exposed.")).toBeVisible();
     expect(screen.queryByText(/blast radius/i)).not.toBeInTheDocument();
     expect(open).not.toHaveBeenCalled();

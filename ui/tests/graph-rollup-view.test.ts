@@ -1,4 +1,5 @@
 import { SEMANTIC_ROW_GAP } from "@/lib/graph-semantic-layout";
+import { graphPortraitLayout } from "@/lib/graph-portrait-layout";
 import { describe, expect, it } from "vitest";
 
 import type { GraphRollupContainer } from "@/lib/api-types";
@@ -159,6 +160,17 @@ describe("mergeReciprocalRollupEdges", () => {
 });
 
 describe("scope cards on a phone", () => {
+  it("gives independent organization rollups a full caption column without changing their counts or links", () => {
+    const containers = [sampleContainer({ id: "org:a", label: "Production organization A", entity_type: "org" }),
+      sampleContainer({ id: "org:b", label: "Production organization B", entity_type: "org" })];
+    const graph = buildRollupFlowGraph(containers, { columns: 1 });
+    const portrait = graphPortraitLayout(graph.nodes, graph.edges);
+    expect(portrait.nodes.every(node => Number(node.style?.width) >= 280)).toBe(true);
+    expect(portrait.nodes.map(node => node.data.rollup)).toEqual(graph.nodes.map(node => node.data.rollup));
+    expect(portrait.edges).toEqual([]);
+    expect(new Set(portrait.nodes.map(node => node.position.x)).size).toBe(1);
+    expect(portrait.nodes.every(node => node.data.phoneLinear)).toBe(true);
+  });
   it("stacks a small scope overview in one column so every card can be framed at reading size", () => {
     expect(phoneStacksScopes(true, 6)).toBe(true);
     expect(phoneStacksScopes(true, PHONE_STACKED_SCOPE_LIMIT + 1)).toBe(false);

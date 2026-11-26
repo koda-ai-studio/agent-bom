@@ -34,7 +34,7 @@ export function GraphScopeDetail({ item, onClose, onOpenScope, onInspectRelation
     <section aria-label="Scope composition"><h4 className="mb-2 text-xs font-semibold text-ink-secondary">Entity types</h4>
       <dl className="space-y-2">{Object.entries(aggregate?.by_type ?? {}).sort((a, b) => b[1] - a[1]).map(([type, count]) => <div key={type} className="flex justify-between gap-3"><dt>{scopeTypeLabel(type)}</dt><dd className="tabular-nums">{count.toLocaleString()}</dd></div>)}</dl>
     </section>
-    <section aria-label="Recorded severity"><h4 className="mb-2 text-xs font-semibold text-ink-secondary">Severity of contained entities</h4>
+    <section aria-label="Recorded severity"><h4 className="mb-2 text-xs font-semibold text-ink-secondary">Open issues by severity</h4>
       <div className="flex flex-wrap gap-2">{Object.entries(aggregate?.severity_counts ?? {}).map(([severity, count]) => <span key={severity} className="rounded-md border border-outline px-2 py-1 text-xs">{severity === "none" ? "No severity" : scopeTypeLabel(severity)} <strong className="ml-1 tabular-nums">{count.toLocaleString()}</strong></span>)}</div>
       {!!aggregate?.exposed_count && <p className="mt-3 text-xs text-ink-secondary">{aggregate.exposed_count.toLocaleString()} entities recorded as internet exposed.</p>}
       {!!aggregate?.toxic_count && <p className="mt-2 text-xs text-ink-secondary">{aggregate.toxic_count.toLocaleString()} entities with compound risk signals.</p>}
