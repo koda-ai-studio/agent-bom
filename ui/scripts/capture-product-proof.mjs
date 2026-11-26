@@ -18,7 +18,7 @@ import {
   DEMO_AGENT_SPECS, SCAN_ID, SCENARIO_ID, advisory, buildBlastRadius, buildGraph, contextGraph, edge,
   demoScanAgent, graphScenario, graphScenarioComparison, node, severityId, vuln,
 } from "./product-proof-graph.mjs";
-import { assertRecordedDirections, runGraphQualityCapture } from "./graph-quality-capture.mjs";
+import { assertRecordedDirections, runGraphQualityCapture, scopeShowcaseHeadline } from "./graph-quality-capture.mjs";
 import { foldPackageEvidence } from "../lib/graph-evidence-fold.ts";
 import { AGENT_ARCHITECTURE_SCREENSHOTS, captureAgentArchitecture, installAgentArchitectureRoutes } from "./product-proof-agent-architecture.mjs";
 import { captureSourceProvenance } from "./product-proof-provenance.mjs";
@@ -2724,6 +2724,10 @@ async function main() {
           const exposed = fixture.nodes.some(item => (item.attributes?.risk_context?.internet_exposed ?? item.attributes?.internet_exposed) === true);
           if (!exposed) await expect(p.locator('.react-flow__node[data-id^="display:internet:"]')).toHaveCount(0);
           await fitReactFlow(p);
+          const options = p.getByTestId("graph-options").locator(":scope > summary");
+          await options.click();
+          await expect(p.getByTestId("graph-headline-details")).toContainText(scopeShowcaseHeadline(fixture, true));
+          await options.click();
           await scrollTo(p, 0);
           if (scope === "cloud") {
             for (const caption of ["AWS IAM role", "Amazon EKS", "Amazon S3 bucket"]) {
@@ -3571,12 +3575,6 @@ async function main() {
   }
 }
 
-function scopeShowcaseHeadline(fixture) {
-  const findings = fixture.nodes.filter((item) => ["vulnerability", "misconfiguration"].includes(item.entity_type)), counts = ["critical", "high", "medium", "low"].map((sev) => [sev, findings.filter((item) => item.severity === sev).length]).filter(([, n]) => n > 0);
-  const kev = findings.filter((item) => item.entity_type === "vulnerability" && item.attributes.is_kev === true).length, paths = fixture.attack_paths.length, noun = findings.length === 1 ? "finding in view" : "findings in view";
-  const sevText = counts.length === 1 && counts[0][1] === findings.length ? `${findings.length} ${counts[0][0]} ${noun}` : `${findings.length} ${noun}: ${counts.map(([sev, n]) => `${n} ${sev}`).join(", ")}`;
-  return `${sevText}${kev ? ` · ${kev} KEV-listed` : ""} · ${paths} ${paths === 1 ? "attack path" : "attack paths"} across the whole snapshot (deduplicated)`;
-}
 
 function checkAdvisoryFixtures() {
   for (const [scope] of SCOPE_SHOWCASE_PRESETS) checkScopeShowcase(buildScopeShowcase(scope), advisory, referenceKevCve);
