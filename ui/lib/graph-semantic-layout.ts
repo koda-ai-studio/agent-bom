@@ -263,7 +263,7 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
       const quietUntilFocus = visible.length >= QUIET_MIN_NODES && roundabout && !pathPairs.has(`${edge.source}\u0000${edge.target}`);
       const onExposure = edge.data?.rankedPathWitness !== false && (edge.data?.traversable !== false || edge.source === INTERNET_ANCHOR_ID && edge.data?.displayOnly === true) && exposurePairs.has(`${edge.source}\u0000${edge.target}`);
       const color = edgeFamilyColor(onExposure ? "exposure" : edgeFamily(String(edge.data?.relationship ?? "")));
-      const marker = (value: Edge["markerEnd"]) => value && typeof value === "object" ? { ...value, color, width: 14, height: 14 } : value;
+      const marker = (value: Edge["markerEnd"]) => value && typeof value === "object" ? { ...value, color, width: value.width ?? 24, height: value.height ?? 20 } : value;
       // A small map shows which way every link runs; a larger one keeps the arrows its data recorded.
       // An aggregate or folded link may stand for several directions; it keeps only the arrow its data recorded.
       const directional = !edge.data?.aggregate && edge.data?.isClusterEdge !== true && typeof edge.data?.relationship === "string";

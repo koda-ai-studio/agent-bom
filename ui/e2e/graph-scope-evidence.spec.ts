@@ -74,7 +74,16 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     if (width === 1440) {
       await expect(page.getByText("Shell command execution", { exact: true })).toBeVisible();
       await expect(page.getByText("2026-06-03 20:30 UTC", { exact: true }).first()).toBeVisible();
-      for (const path of await page.locator(".react-flow__edge-path").all()) await expect(path).toHaveAttribute("marker-end", /.+/);
+      for (const path of await page.locator(".react-flow__edge-path").all()) {
+        await expect(path).toHaveAttribute("marker-end", /.+/);
+        expect(await path.evaluate(element => {
+          const reference = element.getAttribute("marker-end")!.replace(/^url\(['"]?#/, "").replace(/['"]?\)$/, "");
+          const marker = document.getElementById(reference) as unknown as SVGMarkerElement;
+          const shape = marker.querySelector<SVGGraphicsElement>("polyline")!;
+          const scale = (element as SVGPathElement).getScreenCTM()!.a;
+          return shape.getBBox().width / marker.viewBox.baseVal.width * marker.markerWidth.baseVal.value * scale;
+        })).toBeGreaterThanOrEqual(5.5);
+      }
     }
     await page.screenshot({ path: info.outputPath(`tool-expanded-${theme}-${width}.png`), fullPage: true });
     expect(errors).toEqual([]);
