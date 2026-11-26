@@ -63,9 +63,19 @@ export function auditRenderedGraph({ edges }) {
     };
   });
   const glyphs = new Map([...document.querySelectorAll(".react-flow__node")].map(node => [node.getAttribute("data-id"), node.querySelector(".graph-entity-glyph")?.getBoundingClientRect()]));
-  const misalignedHandles = curves.flatMap(({ edge, points }) => [[edge.source, points[0]], [edge.target, points.at(-1)]].flatMap(([id, point]) => {
+  const misalignedHandles = curves.flatMap(({ edge, points }) => [
+    [edge.source, points[0]], [edge.target, points.at(-1)],
+  ].flatMap(([id, point]) => {
     const glyph = glyphs.get(id);
-    return glyph && Math.abs(point.y - (glyph.top + glyph.height / 2)) > 2 ? [{ edge: edge.id, node: id, offset: point.y - (glyph.top + glyph.height / 2) }] : [];
+    if (!glyph) return [];
+    // Phone links enter top/bottom; multiple desktop links fan along a side.
+    // Require attachment to the glyph rim, not an arbitrary centerline.
+    const left = glyph.left, right = left + glyph.width, top = glyph.top, bottom = top + glyph.height;
+    const offset = Math.min(
+      Math.hypot(Math.max(left - point.x, 0, point.x - right), Math.min(Math.abs(point.y - top), Math.abs(point.y - bottom))),
+      Math.hypot(Math.max(top - point.y, 0, point.y - bottom), Math.min(Math.abs(point.x - left), Math.abs(point.x - right))),
+    );
+    return offset > 2 ? [{ edge: edge.id, node: id, offset }] : [];
   }));
   return { renderedEdges: curves.length, crossings, logos, misalignedHandles };
 }

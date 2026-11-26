@@ -64,15 +64,33 @@ export async function runGraphQualityCapture({ newCapturePage, buildScopeShowcas
       await expect(page.locator(".react-flow__node").first()).toBeVisible();
       if (viewport.width >= 640) await fitReactFlow(page);
       await page.evaluate(() => window.scrollTo(0, 0));
-      await expect(page.getByLabel("Visible relationship evidence")).toBeVisible();
+      const options = page.getByTestId("graph-options").locator(":scope > summary");
+      await options.click();
+      const evidenceBreakdown = page.getByLabel("Relationship evidence breakdown");
+      await expect(evidenceBreakdown).toBeVisible();
+      const evidence = await evidenceBreakdown.textContent();
+      await options.click();
       // Camera animation and readable glyph resizing have separate layout turns.
       await expect.poll(async () => (await page.evaluate(auditRenderedGraph, { edges: fixture.edges })).misalignedHandles,
         { timeout: 5_000, message: "Rendered relationship endpoints settle on the entity glyphs" }).toEqual([]);
       const audit = await page.evaluate(auditRenderedGraph, { edges: fixture.edges });
       await fs.writeFile(path.join(output, `${key}-geometry.json`), JSON.stringify(await page.locator(".react-flow__edge").evaluateAll(edges => edges.map(e => ({ id: e.dataset.id, path: e.querySelector(".react-flow__edge-path")?.outerHTML, markers: [...document.querySelectorAll("marker")].map(m => m.outerHTML) }))), null, 2));
       const geometry = await page.locator(".react-flow__node").evaluateAll(nodes => {
-        const rects = nodes.map(n => ({ id: n.dataset.id, r: n.getBoundingClientRect() }));
-        const overlaps = rects.flatMap((a, i) => rects.slice(i + 1).filter(b => a.r.left < b.r.right && a.r.right > b.r.left && a.r.top < b.r.bottom && a.r.bottom > b.r.top).map(b => [a.id, b.id]));
+        // A scope boundary deliberately encloses its children; its title must
+        // remain separate from cards just like any other visible label.
+        const rects = nodes.flatMap(n => {
+          const title = n.querySelector(".graph-boundary-frame-title");
+          if (!title) return [{ id: n.dataset.id, r: n.getBoundingClientRect() }];
+          const boxes = [...title.querySelectorAll("img")].map(image => image.getBoundingClientRect());
+          const walker = document.createTreeWalker(title, NodeFilter.SHOW_TEXT);
+          for (let text = walker.nextNode(); text; text = walker.nextNode()) {
+            const range = document.createRange();
+            range.selectNodeContents(text);
+            boxes.push(...range.getClientRects());
+          }
+          return boxes.filter(r => r.width && r.height).map(r => ({ id: n.dataset.id, r }));
+        });
+        const overlaps = rects.flatMap((a, i) => rects.slice(i + 1).filter(b => a.id !== b.id && a.r.left < b.r.right && a.r.right > b.r.left && a.r.top < b.r.bottom && a.r.bottom > b.r.top).map(b => [a.id, b.id]));
         const canvas = document.querySelector(".react-flow").getBoundingClientRect();
         const clipped = window.innerWidth >= 640 ? rects.filter(({ r }) => r.left < canvas.left - 2 || r.right > canvas.right + 2 || r.top < canvas.top - 2 || r.bottom > canvas.bottom + 2).map(({ id }) => id) : [];
         return { overlaps, clipped, horizontalOverflow: document.documentElement.scrollWidth > window.innerWidth };
@@ -131,7 +149,7 @@ export async function runGraphQualityCapture({ newCapturePage, buildScopeShowcas
           await page.screenshot({ path: path.join(output, `${key}-edge-unknown.png`) });
         }
       }
-      results.push({ key, elapsedMs: Math.round(performance.now() - started), audit, geometry, errors, evidence: await page.getByLabel("Visible relationship evidence").textContent() });
+      results.push({ key, elapsedMs: Math.round(performance.now() - started), audit, geometry, errors, evidence });
       console.log(`Graph quality capture ${key}: ${audit.renderedEdges} edges, ${audit.crossings.length} crossings`);
     } catch (error) {
       await page.screenshot({ path: path.join(output, `${key}-FAILED.png`) });
