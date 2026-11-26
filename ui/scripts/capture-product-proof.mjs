@@ -3206,6 +3206,11 @@ async function main() {
         // ranked overview: the riskiest scope's recorded connections, with every scope one click away.
         await canvasPage.locator('[data-testid="graph-scope-overview"]').waitFor({ state: "visible", timeout: 30_000 });
         await canvasPage.locator('[data-testid="graph-scope-overview"] .react-flow__node').first().waitFor({ state: "visible", timeout: 30_000 });
+        const pathCanvas = canvasPage.getByTestId("graph-agent-evidence");
+        await expect(pathCanvas.locator(".react-flow__node")).toHaveCount(9);
+        await expect(pathCanvas.locator(".react-flow__edge")).toHaveCount(8);
+        await expect(pathCanvas.locator('[data-id="display:internet"]')).toHaveCount(1);
+        await expect(pathCanvas.locator('.react-flow__node[data-id^="display:scope-findings:"]')).toHaveCount(2);
         await canvasPage.waitForTimeout(500);
       },
       {
@@ -3215,7 +3220,7 @@ async function main() {
         expectedText: ["Investigation", "Agent connections", "Showing 6 assets · 5 recorded connections", "Browse inventory", "execute_command", "AWS_ROLE_SESSION"],
         expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/rollup", "/v1/graph/scenarios"],
         readySelector: '[data-testid="graph-scope-overview"]',
-        minGraphNodes: 9, maxGraphNodes: 9, minGraphEdges: 8, maxGraphEdges: 8,
+        minGraphNodes: 6, maxGraphNodes: 6, minGraphEdges: 5, maxGraphEdges: 5,
         assertNoHorizontalOverflow: true,
       },
     );
