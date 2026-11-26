@@ -53,7 +53,8 @@ export function GraphAgentConnections({ scanId, rootId, generation, onInspect, o
     return scopeEvidenceGraph({ ...data, ...(snapshot_generation ? { snapshot_generation } : {}) }, rootId, !neighbors);
   }, [response, rootId, neighbors]);
   const records = useGraphNodeAggregates(scanId, graph?.nodes.map(node => node.id) ?? [], generation);
-  const pathAvailable = graph?.edges.some(edge => edge.source === rootId && edge.relationship === "uses" && graph.nodes.some(node => node.id === edge.target && ["server", "mcp_server"].includes(node.entity_type))) ?? false;
+  const serverBranches = graph?.edges.filter(edge => edge.source === rootId && edge.relationship === "uses" && graph.nodes.some(node => node.id === edge.target && ["server", "mcp_server"].includes(node.entity_type))).length ?? 0;
+  const pathAvailable = serverBranches > 0 && serverBranches <= 3;
   const selectedEntry = entry === "identity" && graph?.edges.some(edge => edge.target === rootId && edge.relationship === "can_access") ? "identity" : "exposure";
   const flow = useMemo<{ nodes: Node<LineageNodeData>[]; edges: Edge[] } | null>(() => {
     if (!graph) return null;
