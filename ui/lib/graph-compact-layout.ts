@@ -317,20 +317,26 @@ function boxedPeerLinks(drawn: readonly Link[], positions: ReadonlyMap<string, P
   }).length;
 }
 
-/** Placement cost: a link that cannot be drawn as a plain curve clear of every caption costs most,
- * then crossings between links, then how far links climb or fall. */
-function placementCost(links: readonly Link[], positions: ReadonlyMap<string, Point>, caption: (id: string) => CaptionText, zoom: number): number {
+/** Crossings between links with no shared endpoint. */
+function placementCrossings(links: readonly Link[], positions: ReadonlyMap<string, Point>): number {
   const drawn = links.filter(link => positions.has(link.source) && positions.has(link.target) && link.source !== link.target);
-  let crossings = 0, climb = 0;
+  let crossings = 0;
   drawn.forEach((link, i) => {
     const a = positions.get(link.source)!, b = positions.get(link.target)!;
-    climb += Math.abs(a.y - b.y) / COMPACT_ROW_GAP;
     for (const other of drawn.slice(i + 1)) {
       if ([other.source, other.target].some(id => id === link.source || id === link.target)) continue;
       if (segmentsCross(a, b, positions.get(other.source)!, positions.get(other.target)!)) crossings++;
     }
   });
-  return (blockedLinkCount(drawn, positions, caption, COMPACT_NODE_WIDTH, zoom) + boxedPeerLinks(drawn, positions)) * 1000 + crossings * 40 + climb * 4;
+  return crossings;
+}
+
+/** Caption obstacles cost most, then crossings, then vertical travel. */
+function placementCost(links: readonly Link[], positions: ReadonlyMap<string, Point>, caption: (id: string) => CaptionText, zoom: number): number {
+  const drawn = links.filter(link => positions.has(link.source) && positions.has(link.target) && link.source !== link.target);
+  const climb = drawn.reduce((sum, link) => sum + Math.abs(positions.get(link.source)!.y - positions.get(link.target)!.y) / COMPACT_ROW_GAP, 0);
+  return (blockedLinkCount(drawn, positions, caption, COMPACT_NODE_WIDTH, zoom) + boxedPeerLinks(drawn, positions)) * 1000
+    + placementCrossings(drawn, positions) * 40 + climb * 4;
 }
 
 /** A card with the run of single-link cards leading into it from the left (an entry chain such as
@@ -375,7 +381,12 @@ function refinePlacement(ids: readonly string[], links: readonly Link[], positio
     relevel(map);
     return map;
   };
-  const ordered = orderedRankStarts(positions, links, spine).map(map => {
+  // Several build/configuration inputs converging on one deployed asset need
+  // coordinated lineage ordering. Other topologies keep their established
+  // placement so changing a caption cannot reshuffle unrelated branches.
+  const configuration = links.filter(link => link.data?.relationship === "configures");
+  const converging = configuration.some(link => configuration.some(other => other.source !== link.source && other.target === link.target));
+  const ordered = (converging ? orderedRankStarts(positions, links, spine) : []).map(map => {
     const xs = new Set([...map.values()].map(point => point.x));
     for (const x of xs) {
       const items = ids.filter(id => map.get(id)!.x === x).sort((a, b) => map.get(a)!.y - map.get(b)!.y)
@@ -385,7 +396,7 @@ function refinePlacement(ids: readonly string[], links: readonly Link[], positio
     relevel(map);
     return map;
   });
-  const starts = [...ordered, positions, ...Array.from({ length: RESTARTS }, (_, seed) => flips(seed))];
+  const starts = [positions, ...ordered, ...Array.from({ length: RESTARTS }, (_, seed) => flips(seed))];
   // A restart never begins taller than the sweep's own layout plus one row; moves are bounded by the zoom budget.
   const heightOf = (map: ReadonlyMap<string, Point>) => { const ys = ids.map(id => map.get(id)!.y); return Math.max(...ys) - Math.min(...ys); };
   const maxSpan = heightOf(positions) + COMPACT_ROW_GAP;
@@ -399,7 +410,7 @@ function refinePlacement(ids: readonly string[], links: readonly Link[], positio
     const copy = new Map(start), cost = refineRows(ids, links, copy, spine, caption, zoom, levelLeaf, tall, share, relevel);
     budget.left -= granted - Math.max(0, share.left);
     if (cost < best.cost - 1e-6) best = { copy, cost };
-    if (best.cost < 40 || budget.left <= 0) break;
+    if (best.cost < 1000 && (!converging || placementCrossings(links, best.copy) === 0) || budget.left <= 0) break;
   }
   for (const [id, p] of best.copy) positions.set(id, p);
 }

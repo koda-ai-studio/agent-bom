@@ -59,10 +59,14 @@ describe("the Internet anchor and cross-row links", () => {
     expect(out.nodes.find(n => n.id === "p")?.data.internetAnchored).toBeUndefined();
   });
 
-  it("gives the Internet arrow its own entry when another link enters the same node", () => {
+  it("keeps Internet level and fans the other input around its centered entry", () => {
     const nodes = [node("w", "container", { internet_exposed: true }), node("p", "package"), node("k8s", "cluster")];
     const out = semanticGraphLayout(nodes, [edge("path", "w", "p", "contains"), edge("k8s-w", "k8s", "w", "contains")]);
-    expect(out.edges.find(e => e.source === INTERNET_ANCHOR_ID)!.targetHandle).toBe("above");
+    const internet = out.edges.find(e => e.source === INTERNET_ANCHOR_ID)!;
+    expect(internet.targetHandle).toBeNull();
+    expect(internet.data?.targetFan).toBe(0);
+    expect(out.edges.find(e => e.id === "k8s-w")!.data?.targetFan).not.toBe(0);
+    expect(out.nodes.find(n => n.id === INTERNET_ANCHOR_ID)!.position.y).toBe(out.nodes.find(n => n.id === "w")!.position.y);
     expect(out.edges.find(e => e.id === "k8s-w")!.targetHandle).toBeNull();
     // An environment holding everything is drawn as the boundary, so its link no longer shares the entry.
     const framed = semanticGraphLayout([...nodes.slice(0, 2), node("env", "environment")], [edge("path", "w", "p", "contains"), edge("env-w", "env", "w", "hosts")]);
