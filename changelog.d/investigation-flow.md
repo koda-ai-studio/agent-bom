@@ -16,3 +16,4 @@
 - Sensitive-data markers use recorded classifications; asset names never establish sensitivity.
 - Administrator and critical-asset markers read recorded risk-context verdicts, with keyboard-accessible explanations. Internet context uses a geographic globe; light-theme node outlines and finding counts have stronger contrast.
 - Node details display paginated observation values, timestamps, sources and conflicts, including explicit unknowns.
+- Recompute shared-scope preview connection offsets from the displayed rows so renaming or reordering scopes does not retain crossings from the full map.

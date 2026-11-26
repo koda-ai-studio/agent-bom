@@ -46,6 +46,18 @@ describe("scope relationship preview", () => {
     expect(handles("role", "agent")).toEqual([null, null]);
     expect(handles("agent", "portal")).toEqual([null, null]);
   });
+  it("routes preview links using displayed rows after labels reorder the source map", () => {
+    const items = [item("client", "agent", "Cursor Workspace"), item("provider", "provider", "Bundled sample"),
+      item("project", "directory", "Project root"), item("sample", "directory", "sample")];
+    const edges = items.slice(1).map(n => ({ source: n.id, target: "client", count: 4, relationships: ["depends_on"], directions: ["directed"] }));
+    const preview = buildScopePreview(items, edges, "client")!;
+    const incoming = [...preview.edges].sort((a, b) => preview.nodes.find(n => n.id === a.source)!.position.y - preview.nodes.find(n => n.id === b.source)!.position.y);
+    const endpoints = incoming.map(edge => Number(edge.data?.targetFan ?? 0));
+    expect(endpoints).toEqual([...endpoints].sort((a, b) => a - b));
+    expect(endpoints[1]).toBe(0);
+    expect(incoming.every(edge => edge.data?.arcDy === undefined)).toBe(true);
+    expect(incoming.map(edge => edge.data?.aggregate)).toEqual(edges);
+  });
   it("does not fabricate connectivity for missing endpoints, findings-only or unlinked inventories", () => {
     expect(buildScopePreview([item("repo", "application")], [])).toBeNull();
     expect(buildScopePreview([item("a"), item("b")], [{ source: "a", target: "b", count: 1, relationships: ["related_to"] }])).toBeNull();

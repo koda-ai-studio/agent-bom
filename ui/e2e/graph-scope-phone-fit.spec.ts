@@ -6,6 +6,8 @@ import { test, expect, type Page } from "@playwright/test";
 const rollup = JSON.parse(readFileSync(join(__dirname, "fixtures/quickstart-scope-rollup.json"), "utf8")) as {
   top_level: { id: string; label: string; entity_type: string }[];
 };
+// The installation directory may change its alphabetical row without changing any relationship.
+for (const item of rollup.top_level) if (item.label === "agent-bom-first-run") item.label = "sample";
 const stamp = "2026-11-05T00:00:00Z";
 
 async function serve(page: Page, theme: string) {
@@ -72,6 +74,22 @@ for (const theme of ["light", "dark"]) {
       }), { timeout: 3000 }).toEqual([]);
       await expect(page.getByTestId("graph-in-view")).toHaveCount(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+      if (viewport.width >= 640) expect(await page.locator(".react-flow__edge-path").evaluateAll(paths => {
+        const curves = paths.map(el => {
+          const path = el as SVGPathElement, length = path.getTotalLength();
+          return Array.from({ length: 65 }, (_, i) => path.getPointAtLength(length * i / 64));
+        });
+        const side = (a: DOMPoint, b: DOMPoint, c: DOMPoint) => (b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);
+        let crossings = 0;
+        for (let i=0;i<curves.length;i++) for (let j=i+1;j<curves.length;j++) {
+          const a=curves[i]!, b=curves[j]!;
+          for (let m=1;m<a.length;m++) for (let n=1;n<b.length;n++) {
+            const p=a[m-1]!,q=a[m]!,r=b[n-1]!,t=b[n]!;
+            if (side(p,q,r)*side(p,q,t)<-0.01 && side(r,t,p)*side(r,t,q)<-0.01) crossings++;
+          }
+        }
+        return crossings;
+      })).toBe(0);
       await page.screenshot({ path: info.outputPath(`scope-${theme}-${viewport.width}.png`), fullPage: true });
       await overview.getByRole("button", { name: "Browse all 6 nodes and scopes" }).click();
       const directory = page.getByTestId("graph-rollup-decision-surface");
