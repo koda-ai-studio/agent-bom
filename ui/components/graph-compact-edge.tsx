@@ -120,7 +120,7 @@ export function CompactRelationshipEdge(props: EdgeProps) {
   // At rest a folded group link shows only its count (×N); its relationship and evidence read on inspection.
   const count = !inspecting && props.data?.isClusterEdge && typeof full === "string" ? full.match(/×\d+/)?.[0] ?? null : null;
   // A link standing for a single relationship carries no summary worth reading at rest; it names itself on inspection.
-  const restingSummary = aggregate && (folded === null || folded > 1);
+  const restingSummary = aggregate && !props.data?.quietLabel && (folded === null || folded > 1);
   // A focused attack path names each hop's relationship at rest, as the path card does.
   const hidden = props.data?.labelVisibility === "hide";
   const text = (inspecting || restingSummary || props.data?.pathLabel === true) && !hidden ? count ?? full : null;
