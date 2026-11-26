@@ -9,6 +9,15 @@ const item = (id: string, entity_type = "misconfiguration", label = id): GraphRo
 });
 
 describe("scope relationship preview", () => {
+  it("retains backend issue counts when the preview uses compact asset captions", () => {
+    const org = { ...item("org", "org"), has_children: true, is_container: true,
+      aggregate: { ...item("org").aggregate, descendant_count: 5578, issue_count: 1923 } };
+    const preview = buildScopePreview([org, item("source", "source_file")], [
+      { source: "org", target: "source", count: 2, relationships: ["affects"] },
+    ])!;
+    expect(preview.nodes.find(node => node.id === "org")?.data.findingAggregate).toEqual(org.aggregate);
+    expect(preview.edges.map(edge => [edge.source, edge.target])).toEqual([["org", "source"]]);
+  });
   it("shows named diverse findings around their recorded owner, with honest bounded totals", () => {
     const items = [item("repo", "application"), item("a", "misconfiguration", "Open port"),
       item("b", "misconfiguration", "Open port"), item("c", "misconfiguration", "Run as root"), item("d", "misconfiguration", "Secret in source"), item("orphan")];

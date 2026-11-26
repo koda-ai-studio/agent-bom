@@ -24,6 +24,7 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     await page.goto(`/graph?scan=${scan_id}&rollup=1`);
     const overview = page.getByTestId("graph-scope-overview"), canvas = page.getByTestId("graph-scope-connections");
     await expect(overview).toBeVisible();
+    await expect(page.getByTestId("graph-edge-note")).toHaveCount(0);
     await expect(canvas.locator(".react-flow__node")).toHaveCount(4);
     await expect(canvas.locator(".react-flow__edge")).toHaveCount(3);
     await expect(overview).toContainText("3 of 14 loaded relationships");
@@ -54,7 +55,7 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 1000 });
     await page.addInitScript(t => localStorage.setItem("agent-bom-theme", t), theme);
     const created_at = "2026-11-03T09:00:00Z", scan_id = "scope-preview";
-    const aggregate = { descendant_count: 0, by_type: {}, severity_counts: {}, worst_severity: "none", worst_severity_rank: 0,
+    const aggregate = { descendant_count: 12, issue_count: 5, by_type: {}, severity_counts: { high: 5 }, worst_severity: "high", worst_severity_rank: 4,
       internet_exposed: false, toxic_combo: false, exposed_count: 0, toxic_count: 0 };
     const items = [
       ["environment", "Sample environment", "environment"], ["agent-a", "Research assistant", "agent"],
@@ -77,6 +78,10 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     const overview = page.getByTestId("graph-scope-overview"), canvas = page.getByTestId("graph-scope-connections");
     await expect(overview).toBeVisible();
     await expect(page.getByLabel("Connection scope").locator("option")).toHaveCount(6);
+    await expect(overview.getByRole("button", { name: "Open scope", exact: true })).toBeVisible();
+    await expect(page.getByTestId("graph-preview-scope-counts")).toContainText("12 contained nodes · 2 direct children · 5 open issues");
+    await expect(canvas.locator("[data-finding-disclosure]")).toHaveCount(4);
+    await expect(page.getByTestId("graph-edge-note")).toHaveCount(0);
     await expect(canvas.locator(".react-flow__node")).toHaveCount(4);
     await expect(canvas.locator(".react-flow__edge")).toHaveCount(3);
     await expect(overview).toContainText("12 of 12 loaded relationships");

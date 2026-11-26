@@ -31,6 +31,14 @@ export function GraphScopeOverview(props: Props) {
   const narrow = useNarrowViewport();
   const preview = useMemo(() => buildScopePreview(props.items, props.edges, rootId) ?? buildScopePreview(props.items, props.edges), [props.items, props.edges, rootId]);
   if (!preview || props.edges.length < 3) return <GraphRollupDecisionSurface {...props} />;
+  const scope = preview.root;
+  const nodes = preview.nodes.map((node, index) => ({ ...node,
+    ...(narrow ? { position: { x: 0, y: index * 230 } } : {}),
+    data: { ...node.data, onExploreFindings: () => {
+      const item = props.items.find(item => item.id === node.id);
+      if (item) { if (item.has_children) props.onDrill(item); else props.onInvestigate(item); }
+    } },
+  }));
   return <section data-testid="graph-scope-overview" className="overflow-hidden rounded-2xl bg-surface">
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline px-4 py-3">
       <div className="flex min-w-0 flex-wrap items-center gap-3">
@@ -42,11 +50,16 @@ export function GraphScopeOverview(props: Props) {
         </label>}
       </div>
       <div className="flex flex-wrap items-center gap-2">
+        {!showList && scope.has_children && <button type="button" className="graph-page-action" onClick={() => props.onDrill(scope)}>Open scope</button>}
         {!showList && <button type="button" className="graph-page-action" onClick={() => props.onInvestigate(preview.root)}>Inspect this scope</button>}
         <button type="button" className="graph-page-action" onClick={() => setShowList(value => !value)}>{showList ? "Show connections" : `Browse all ${props.items.length} nodes and scopes`}</button>
       </div>
     </div>
     {showList ? <GraphRollupDecisionSurface {...props} /> : <>
+      {scope.has_children && <p data-testid="graph-preview-scope-counts" className="px-4 pt-3 text-sm text-ink-secondary">
+        {scope.aggregate.descendant_count.toLocaleString()} contained nodes · {scope.direct_child_count.toLocaleString()} direct children
+        {typeof scope.aggregate.issue_count === "number" && <> · {scope.aggregate.issue_count.toLocaleString()} open issues</>}
+      </p>}
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 pt-3 text-xs text-ink-secondary">
         <span>{preview.shownRelationships} of {preview.availableRelationships} loaded relationships for this scope{props.completeness?.truncated ? " · partial inventory" : ""}</span>
       </div>
@@ -55,7 +68,7 @@ export function GraphScopeOverview(props: Props) {
         {/* The frame is as tall as the drawn scope at full size, within the room left in the window, so a short scope
             does not sit in an empty canvas. */}
         <div style={{ height: narrow ? preview.nodes.length * 230 : `clamp(280px, min(calc(100dvh - 380px), ${scopeFrameHeight(preview.rows)}px), 560px)` }} data-testid="graph-scope-connections">
-          <ReactFlow nodes={narrow ? preview.nodes.map((node, index) => ({ ...node, position: { x: 0, y: index * 230 } })) : preview.nodes}
+          <ReactFlow nodes={nodes}
             style={{ "--graph-node-meta-size": "14px" } as CSSProperties}
             edges={narrow ? preview.edges.map(edge => ({ ...edge, sourceHandle: null, targetHandle: "context" })) : preview.edges} nodeTypes={lineageNodeTypes} edgeTypes={relationshipEdgeTypes}
             fitView fitViewOptions={SCOPE_FIT} minZoom={0.35} maxZoom={1.5}

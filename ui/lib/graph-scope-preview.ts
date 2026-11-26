@@ -94,7 +94,7 @@ export function buildScopePreview(items: GraphRollupContainer[], edges: GraphRol
   };
   const nodes = flow.nodes.map(node => ({ ...node,
     position: place(node.id),
-    data: { ...node.data, rollup: undefined, rollupCompact: false, highlighted: false,
+    data: { ...node.data, findingAggregate: node.data.rollup?.aggregate, rollup: undefined, rollupCompact: false, highlighted: false,
       attributes: { ...node.data.attributes, rollup_is_container: false },
     },
   }));
