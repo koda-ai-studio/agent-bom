@@ -2816,6 +2816,7 @@ async function main() {
     };
     const prepareCorrelationPath = async (proofPage) => {
       await proofPage.locator(".react-flow__node").first().waitFor({ state: "visible" });
+      await proofPage.getByRole("button", { name: "Expand findings (1 grouped)", exact: true }).click();
       await fitReactFlow(proofPage);
       // Every recorded direction is available on inspection; the Internet anchor is extra display context.
       await assertRecordedDirections(proofPage, referenceOverview.edges);
