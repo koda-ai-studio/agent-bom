@@ -10,6 +10,12 @@ const graphPage = ["app/graph/graph-page-client.tsx", "hooks/use-graph-page-data
 const exposurePath = fs.readFileSync(path.join(process.cwd(), "components", "exposure-path-command-center.tsx"), "utf8");
 
 describe("product proof capture contract", () => {
+  it("keeps generated capability assessment separate from the demo's overall risk", async () => {
+    const { buildGraph } = await import("../scripts/product-proof-graph.mjs");
+    const tool = buildGraph().nodes.find(node => node.id === "tool:exec")!;
+    expect(tool).toMatchObject({attributes: {capability_risk: {score: 5, basis: "mcp_capability_risk_declared"}}});
+    expect(tool).not.toHaveProperty("risk_assessment");
+  });
   it("expects recorded evidence for the explicitly simulated configuration mesh", async () => {
     const { buildGraph } = await import("../scripts/product-proof-graph.mjs");
     const links = buildGraph().edges.filter(edge => ["uses", "hosted_on"].includes(edge.relationship)
