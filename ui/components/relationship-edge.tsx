@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { BaseEdge, EdgeLabelRenderer, useStore, useStoreApi, type EdgeProps } from "@xyflow/react";
+import { BaseEdge, getBezierPath, EdgeLabelRenderer, useStore, useStoreApi, type EdgeProps } from "@xyflow/react";
 import {
   ArrowRightLeft, Box, Bug, CirclePlay, Database, Eye, Fingerprint,
   GitBranch, KeyRound, Link2, LogIn, Plug, ShieldCheck, UserRoundCheck, Wrench,
@@ -92,12 +92,17 @@ export function RelationshipEdge(props: EdgeProps) {
   const edgeRef = useRef<SVGGElement>(null);
   // The focusable wrapper belongs to React Flow, outside this component.
   useLayoutEffect(() => {
-    const wrapper = edgeRef.current?.closest(".react-flow__edge");
-    const focus = () => setFocused(true);
-    const blur = () => setFocused(false);
-    wrapper?.addEventListener("focus", focus);
-    wrapper?.addEventListener("blur", blur);
-    return () => { wrapper?.removeEventListener("focus", focus); wrapper?.removeEventListener("blur", blur); };
+    const ownsFocus = (target: EventTarget | null) => {
+      const wrapper = edgeRef.current?.closest(".react-flow__edge");
+      setFocused(Boolean(wrapper && target instanceof Node && wrapper.contains(target)));
+    };
+    const focus = (event: FocusEvent) => ownsFocus(event.target);
+    const blur = (event: FocusEvent) => ownsFocus(event.relatedTarget);
+    // Initialize from held focus and observe the current wrapper after remounts.
+    document.addEventListener("focus", focus, true);
+    document.addEventListener("blur", blur, true);
+    ownsFocus(document.activeElement);
+    return () => { document.removeEventListener("focus", focus, true); document.removeEventListener("blur", blur, true); };
   }, []);
   const relationship = typeof props.data?.relationship === "string" ? props.data.relationship : "";
   const nodes = useStore(state => state.nodes);
@@ -128,7 +133,10 @@ export function RelationshipEdge(props: EdgeProps) {
     width: node.measured?.width ?? node.width ?? 240,
     height: node.measured?.height ?? node.height ?? 180,
   })), [nodes]);
-  const [path, routeX, routeY] = relationshipPath(props, obstacles, props.data?.phoneLayout ? undefined : portLane);
+  // Rise beside the upstream node before approaching a wide target caption.
+  const earlyRise: [string, number, number] = [`M${props.sourceX},${props.sourceY} C${props.sourceX + 8},${props.sourceY} ${props.sourceX + 8},${props.targetY} ${props.targetX},${props.targetY}`,
+    props.sourceX + 6 + (props.targetX - props.sourceX) / 8, (props.sourceY + props.targetY) / 2];
+  const [path, routeX, routeY] = props.data?.earlyRise ? earlyRise : props.data?.directOverview ? getBezierPath(props) : relationshipPath(props, obstacles, props.data?.phoneLayout ? undefined : portLane);
   const anchor = props.data?.labelAnchor === "source" || props.data?.labelAnchor === "target" ? anchoredLabelPoint(props, props.data.labelAnchor) : null;
   const x = anchor?.x ?? routeX, y = anchor?.y ?? routeY;
   useLayoutEffect(() => { scheduleRelationshipLabelLayout(labelRef.current); }, [path, zoom, label, x, y, visibility, inspecting]);

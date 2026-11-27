@@ -37,6 +37,7 @@ async function serve(page: Page, fixture: typeof cloud, rollup: boolean) {
     const path = new URL(route.request().url()).pathname;
     if (path === "/v1/auth/me") return route.fulfill({ json: { authenticated: true, auth_required: false, tenant_id: "fixture", role: "admin", memberships: [], configured_modes: [], recommended_ui_mode: "no_auth" } });
     if (path === "/v1/graph/snapshots") return route.fulfill({ json: [{ scan_id: "hierarchy", created_at: stamp, node_count: fixture.nodes.length, edge_count: fixture.edges.length }] });
+    if (path === "/v1/graph/query") return route.fulfill({ json: { ...graph, roots: ["agent"], direction: "both", truncated: false, missing_roots: [], depth_by_node: {}, filters: {}, completeness: { truncated: false } } });
     if (path === "/v1/graph") return route.fulfill({ json: { ...graph, pagination: { total: fixture.nodes.length, offset: 0, limit: 100, has_more: false } } });
     if (path === "/v1/graph/rollup") return route.fulfill({ json: { ...graph, mode: "rollup",
       top_level: rollup ? fixture.nodes.map(n => ({ ...n, aggregate, is_container: false, has_children: false, direct_child_count: 0 })) : [],
@@ -109,24 +110,48 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
     await serve(page, agent, true);
     await page.goto("/graph?scan=hierarchy&rollup=1");
-    const canvas = page.getByTestId("graph-scope-connections");
+    const canvas = page.getByTestId("graph-agent-evidence");
     await expect(canvas).toBeVisible();
     await page.getByLabel("Connection scope").selectOption("agent");
-    await expect(canvas.locator("[data-reading-focus]")).toHaveCount(1);
-    await expect(canvas.locator(".react-flow__edge")).toHaveCount(4);
-    await expect(canvas.locator(".graph-relationship-label:visible")).toHaveCount(0);
-    await stable(page);
     if (width === 1440) {
-      const center = (id: string) => canvas.locator(`.react-flow__node[data-id="${id}"] .graph-entity-glyph`).evaluate(el => { const b = el.getBoundingClientRect(); return (b.top + b.bottom) / 2; });
-      expect(Math.abs(await center("agent") - await center("role"))).toBeLessThan(1);
-      expect(Math.abs(await center("agent") - await center("peer"))).toBeLessThan(1);
-      expect(await center("host")).toBeLessThan(await center("agent") - 50);
-      expect(await center("policy")).toBeLessThan(await center("agent") - 50);
-    }
-    if (width === 390) {
-      const y = (id: string) => canvas.locator(`.react-flow__node[data-id="${id}"]`).evaluate(el => el.getBoundingClientRect().top);
-      expect(await y("peer")).toBeLessThan(await y("policy"));
+      await expect(canvas.locator("[data-reading-focus]")).toHaveCount(1);
+      await expect(canvas.locator(".react-flow__edge")).toHaveCount(agent.edges.length);
+      await expect(canvas.locator(".graph-relationship-label:visible")).toHaveCount(agent.edges.filter(edge => edge.relationship === "can_access").length);
+      await expect(canvas.locator(".react-flow__node")).toHaveCount(5);
+      await expect(canvas.locator("[data-internet-anchor]")).toHaveCount(0);
+      await stable(page);
+      for (const link of agent.edges) {
+        const rendered = canvas.locator(`.react-flow__edge[data-id="${link.id}"]`);
+        await expect(rendered.locator(".react-flow__edge-path")).toHaveAttribute("marker-end", /.+/);
+      }
+    } else {
+      await expect(canvas.locator("[data-recorded-edge]")).toHaveCount(agent.edges.length);
+      for (const link of agent.edges) await expect(canvas.locator(`[data-recorded-edge="${link.id}"]`)).toContainText(link.relationship.replaceAll("_", " "));
     }
     await page.screenshot({ path: info.outputPath(`agent-${theme}-${width}.png`), fullPage: width === 390 });
+  });
+}
+
+for (const theme of ["light", "dark"]) {
+  test(`bounded agent neighborhood keeps every recorded connection readable ${theme}`, async ({ page }, info) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
+    const servers = Array.from({ length: 7 }, (_, index) => node(`server-${index}`, "server", `Recorded MCP ${index + 1}`));
+    await serve(page, { nodes: [node("agent", "agent", "Agent with seven servers"), node("peer", "agent", "Shared server peer"), ...servers],
+      edges: [...servers.map(server => edge("agent", server.id, "uses")), edge("peer", "server-0", "uses"), edge("peer", "server-1", "uses")] }, true);
+    await page.goto("/graph?scan=hierarchy&rollup=1");
+    const canvas = page.getByTestId("graph-agent-evidence");
+    const rows = canvas.locator("li[data-recorded-edge]");
+    await expect(rows).toHaveCount(9);
+    await expect(canvas.locator(".react-flow__node")).toHaveCount(0);
+    for (const server of servers) await expect(rows.filter({ hasText: `Agent with seven servers→${server.label}` })).toContainText("uses");
+    await expect(rows.filter({ hasText: "Shared server peer→Recorded MCP" })).toHaveCount(2);
+    const boxes = await rows.evaluateAll(elements => elements.map(element => {
+      const rect = element.getBoundingClientRect();
+      return { top: rect.top, bottom: rect.bottom, width: rect.width, scrollWidth: element.scrollWidth };
+    }));
+    expect(boxes.every((box, index) => box.scrollWidth <= box.width && (index === 0 || box.top >= boxes[index - 1]!.bottom))).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: info.outputPath(`bounded-agent-${theme}.png`), fullPage: true });
   });
 }

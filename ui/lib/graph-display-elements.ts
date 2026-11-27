@@ -1,4 +1,4 @@
-import type { Edge, Node } from "@xyflow/react";
+import { MarkerType, type Edge, type Node } from "@xyflow/react";
 
 import { EDGE_STROKE } from "@/lib/graph-edge-family";
 import type { LineageNodeData } from "@/components/lineage-nodes";
@@ -141,7 +141,11 @@ export function emphasizedDisplayEdges({ edges, nodes, neighborhood, pathEdgeIds
   captureMode: boolean;
   zoom: number;
 }): Edge[] {
-  const readable = readableGraphEdges(edges, neighborhood, {
+  const directed = edges.map(edge => edge.data?.direction === "directed" && !edge.data?.isClusterEdge && !edge.markerEnd ? {
+    ...edge,
+    markerEnd: { type: MarkerType.ArrowClosed, color: "var(--text-tertiary)" },
+  } : edge);
+  const readable = readableGraphEdges(directed, neighborhood, {
     baseOpacity: 1, highSignalOpacity: 1, inactiveOpacity: 0.06, captureMode, zoom,
     nodeLabels: graphNodeDisplayLabels(nodes),
     // Past this many edges the captions overlap into noise, so they follow
@@ -187,6 +191,7 @@ export function emphasizedDisplayEdges({ edges, nodes, neighborhood, pathEdgeIds
   }
   return readable.map(edge => ({
     ...edge,
+    ...(!edge.data?.isClusterEdge && nodes.length <= 6 ? { data: { ...edge.data, directionEmphasis: true } } : {}),
     // ReactFlow measures label backgrounds when label content changes.
     // A stable group font prevents Fit/zoom from outgrowing that background.
     ...(edge.data?.isClusterEdge ? { labelStyle: { ...edge.labelStyle, fontSize: 18 } } : {}),

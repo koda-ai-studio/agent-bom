@@ -5202,6 +5202,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/graph/scope-findings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Scope Findings
+         * @description Open issues on the roll-up count basis; tenant-scoped and revision-pinned pages.
+         */
+        get: operations["get_scope_findings_v1_graph_scope_findings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/graph/scoped": {
         parameters: {
             query?: never;
@@ -19696,6 +19716,42 @@ export interface components {
             kind: "estate" | "account" | "repository" | "environment" | "investigation";
             /** Observed */
             observed: boolean;
+        };
+        /** GraphScopeFinding */
+        GraphScopeFinding: {
+            /** Issue Key */
+            issue_key: string;
+            /** Label */
+            label: string;
+            /** Node Ids */
+            node_ids: string[];
+            /** Severity */
+            severity: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphScopeFindingsResponse */
+        GraphScopeFindingsResponse: {
+            /** Finding Revision */
+            finding_revision: string;
+            /** Findings */
+            findings: components["schemas"]["GraphScopeFinding"][];
+            /** Limit */
+            limit: number;
+            /** Node Id */
+            node_id: string;
+            /** Offset */
+            offset: number;
+            /** Scan Id */
+            scan_id: string;
+            /** Snapshot Generation */
+            snapshot_generation: string;
+            /** Tenant Id */
+            tenant_id: string;
+            /** Total */
+            total: number;
+        } & {
+            [key: string]: unknown;
         };
         /** GraphSearchFilters */
         GraphSearchFilters: {
@@ -39620,6 +39676,51 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GraphSchemaResponse"];
+                };
+            };
+            /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE) */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_scope_findings_v1_graph_scope_findings_get: {
+        parameters: {
+            query: {
+                node_id: string;
+                scan_id?: string | null;
+                snapshot_generation?: string | null;
+                finding_revision?: string | null;
+                offset?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GraphScopeFindingsResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */

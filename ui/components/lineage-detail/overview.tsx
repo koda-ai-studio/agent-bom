@@ -1,22 +1,23 @@
 import type { LineageNodeData } from "../lineage-nodes";
 import { Loader2, Radar } from "lucide-react";
-import { nodeRiskLabel } from "@/lib/node-risk-assessment";
+import { nodeRiskLabel, nodeRiskAssessment } from "@/lib/node-risk-assessment";
 import type { LineageDetailProps } from "./types";
 import { CodeBlock, Label, Row, shortDate } from "./fields";
 import { EvidenceTierBadge, RuntimeEvidenceBadge } from "./evidence";
 import { PrimaryNodeDetails } from "./node-details";
 
 function LifecycleDetails({ data }: { data: LineageNodeData }) {
+  const capability = data.attributes?.capability_risk as {score?: number} | undefined;
+  const showNodeRisk = (data.riskScore != null || data.riskAssessment != null) && (!Number.isFinite(capability?.score) || nodeRiskAssessment(data.riskAssessment).status === "assessed");
   return (<>
 {(data.status ||
-  data.riskAssessment != null ||
-  data.riskScore != null ||
+  showNodeRisk ||
   data.firstSeen ||
   data.lastSeen) && (
   <div className="space-y-2">
     <Label>Lifecycle</Label>
     {data.status && <Row label="Status" value={data.status} />}
-    {(data.riskScore != null || data.riskAssessment != null) && (
+    {showNodeRisk && (
       <Row label="Node risk score" value={nodeRiskLabel(data.riskScore, data.riskAssessment)} />
     )}
     {data.firstSeen && (
@@ -47,8 +48,20 @@ function NodeIdentifier({ data }: { data: LineageNodeData }) {
 
 export function OverviewDetails({ data, onShowBlastRadius, blastRadiusActive = false, blastRadiusLoading = false }: LineageDetailProps) {
   const aggregate = data.findingAggregate;
+  const capability = data.attributes?.capability_risk as {score?: number; level?: string; justification?: string; basis?: string} | undefined;
   return (<>
     <PrimaryNodeDetails data={data} />
+    {capability && Number.isFinite(capability.score) && <section aria-label="Capability risk assessment" className="space-y-2">
+      <Label>Capability risk assessment</Label>
+      <Row label="Capability risk" value={`${capability.score}/10 · ${capability.level}`} />
+      <p className="text-xs text-ink-secondary">{capability.justification}</p>
+      <p className="text-xs text-ink-secondary">Based on loaded tools and credential references.</p>
+    </section>}
+    {data.nodeType === "tool" && typeof data.attributes?.tool_class === "string" && <section aria-label="Recorded tool capability" className="space-y-2">
+      <Label>Recorded tool capability</Label>
+      <Row label="Capability" value={data.attributes.tool_class === "shell" ? "Shell command execution" : data.attributes.tool_class.replaceAll("_", " ")} />
+      {Array.isArray(data.attributes.capabilities) && <Row label="Operations" value={data.attributes.capabilities.filter((value): value is string => typeof value === "string").join(", ")} />}
+    </section>}
     {aggregate && <section aria-label="Finding count scope" className="space-y-2 rounded-lg border border-outline p-3 text-xs">
       <Label>Finding count scope</Label>
       <p className="text-ink-secondary">This asset and its containment scope in the selected snapshot. Counts can overlap between assets and are not estate totals.</p>

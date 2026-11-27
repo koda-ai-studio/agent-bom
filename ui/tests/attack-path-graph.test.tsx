@@ -51,9 +51,10 @@ describe("AttackPathGraph", () => {
     expect(within(screen.getByTestId("attack-path-node-role:admin")).queryByLabelText("Privileged: admin (recorded)")).toBeNull();
   });
 
-  it("names every hop of the selected path on its line, and a branch's relationship on hover or focus", () => {
+  it("keeps ordinary path labels quiet until hover or focus and retains the privilege label", () => {
     const { container } = renderGraph();
-    for (const hop of ["Acted As", "Assumes", "Can Access", "Depends On"]) expect(screen.getAllByText(hop).length).toBeGreaterThan(0);
+    expect(container.querySelectorAll("[data-path-hop-label]")).toHaveLength(1);
+    expect(container.querySelector("[data-path-hop-label]")).toHaveTextContent("Can Access");
     expect(screen.getAllByText("Accessed")).toHaveLength(1);
     const edge = container.querySelector('[data-id="server:filesystem->dataset:finance:accessed"]')!;
     expect(edge).not.toBeNull();

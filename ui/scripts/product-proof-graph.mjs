@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { CREATED_AT } from "./product-proof-fixtures.mjs";
+import riskFixture from "../tests/fixtures/product-proof-rollup.json" with { type: "json" };
 import layerByEntityType from "../tests/fixtures/product-proof-layers.json" with { type: "json" };
 
 const UI_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
@@ -129,6 +130,9 @@ export function hopsAreConnected(graphEdges, hops) {
     graphEdges.some((item) => item.source === source && item.target === hops[index + 1]));
 }
 
+// Synthetic configuration records exercise static-scan presentation; these are not live scan receipts.
+const SAMPLE_CONFIG_EVIDENCE = { tier: "static_scan", source: "synthetic-config-scan", simulated: true };
+
 export function buildGraph() {
   const nodes = [
     node("provider:aws-prod", "provider", "AWS prod account", "medium", 5.4, { environment: "prod", owner: "cloud-platform" }),
@@ -153,7 +157,7 @@ export function buildGraph() {
     node("tool:post", "tool", "post_incident_update", "medium", 4.8, { tool_class: "messaging" }),
     node("cred:github", "credential", "GITHUB_ENTERPRISE_TOKEN", "critical", 9.1, { safe_to_store: false }),
     node("cred:snowflake", "credential", "SNOWFLAKE_PROD_KEY", "critical", 9.3, { safe_to_store: false }),
-    node("cred:aws", "credential", "AWS_ROLE_SESSION", "high", 8.1, { safe_to_store: false }),
+    node("cred:aws", "credential", "AWS_ROLE_SESSION", "high", 8.1, { safe_to_store: false, risk_context: { crown_jewel: true, data_sensitivity: "secret", source: "synthetic-asset-classification", simulated: true } }),
     node("cred:incident-webhook", "credential", "INCIDENT_WEBHOOK_TOKEN", "high", 7.4, { safe_to_store: false }),
     packageNode("pkg:next", "next", "15.2.2", "npm", ["CVE-2025-29927"]),
     packageNode("pkg:urllib3", "urllib3", "2.2.1", "pypi", ["CVE-2024-37891"]),
@@ -175,22 +179,22 @@ export function buildGraph() {
     edge("user:contractor", "sa:jit-review", "acted_as"),
     edge("sa:jit-review", "role:prod-admin", "assumes"),
     edge("role:prod-admin", "agent:developer-copilot", "can_access"),
-    edge("agent:developer-copilot", "container:copilot-portal", "hosted_on"),
-    edge("agent:developer-copilot", "server:github", "uses"),
-    edge("agent:developer-copilot", "server:filesystem", "uses"),
-    edge("agent:sre-runbook", "server:filesystem", "uses"),
+    edge("agent:developer-copilot", "container:copilot-portal", "hosted_on", 1, SAMPLE_CONFIG_EVIDENCE),
+    edge("agent:developer-copilot", "server:github", "uses", 1, SAMPLE_CONFIG_EVIDENCE),
+    edge("agent:developer-copilot", "server:filesystem", "uses", 1, SAMPLE_CONFIG_EVIDENCE),
+    edge("agent:sre-runbook", "server:filesystem", "uses", 1, SAMPLE_CONFIG_EVIDENCE),
     edge("agent:sre-runbook", "server:slack", "uses"),
     edge("agent:finance-rag", "server:snowflake", "uses"),
     edge("agent:finance-rag", "server:slack", "uses"),
     edge("agent:developer-copilot", "agent:sre-runbook", "shares_server", 1, { server: "server:filesystem" }),
     edge("agent:sre-runbook", "agent:finance-rag", "shares_cred", 1, { credential: "INCIDENT_WEBHOOK_TOKEN" }),
     edge("server:github", "tool:repo-write", "provides_tool"),
-    edge("server:filesystem", "tool:exec", "provides_tool"),
+    edge("server:filesystem", "tool:exec", "provides_tool", 1, SAMPLE_CONFIG_EVIDENCE),
     edge("server:snowflake", "tool:query", "provides_tool"),
     edge("server:slack", "tool:post", "provides_tool"),
     edge("server:github", "cred:github", "exposes_cred"),
     edge("server:snowflake", "cred:snowflake", "exposes_cred"),
-    edge("server:filesystem", "cred:aws", "exposes_cred"),
+    edge("server:filesystem", "cred:aws", "exposes_cred", 1, SAMPLE_CONFIG_EVIDENCE),
     edge("server:slack", "cred:incident-webhook", "exposes_cred"),
     edge("container:copilot-portal", "pkg:next", "depends_on"),
     edge("server:filesystem", "pkg:urllib3", "depends_on"),
@@ -204,6 +208,10 @@ export function buildGraph() {
     edge("agent:finance-rag", "model:gpt-prod", "uses"),
     edge("policy:gateway-default-deny", "tool:exec", "manages"),
   ];
+  for (const item of nodes) {
+    const assessment = riskFixture.mcp_risk?.[item.id];
+    if (assessment) item.attributes.capability_risk = assessment.capability_risk;
+  }
   const attackPaths = buildAttackPaths(nodes, edges);
   const stats = {
     total_nodes: nodes.length,

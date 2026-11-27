@@ -35,6 +35,8 @@ describe("lineage inspector rendering before extraction", () => {
     const { container } = render(<LineageDetailPanel data={{ ...rich, label: "CVE-2025-12345", nodeType }}
       variant="inline" onClose={() => {}} onShowBlastRadius={() => {}}
       headerSlot={<p>Header evidence</p>} footerSlot={<button>Next action</button>} />);
+    expect(screen.getByText("2026-01-01 00:00 UTC")).toBeVisible();
+    expect(screen.getByText("2026-01-02 00:00 UTC")).toBeVisible();
     expect(digest(container.innerHTML)).toMatchSnapshot();
   });
 

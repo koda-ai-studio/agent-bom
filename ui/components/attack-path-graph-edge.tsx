@@ -8,7 +8,6 @@ import { compactEdgeCurve } from "@/components/graph-compact-edge";
 import type { EdgeEvidenceStyle, PathGraphEdge } from "@/lib/attack-path-graph-model";
 import { relationshipLaneFor } from "@/lib/relationship-lanes";
 import { relationshipPath } from "@/lib/relationship-routing";
-import { RELATIONSHIP_COLOR_MAP } from "@/lib/graph-schema";
 import type { HopTrace } from "@/lib/attack-path-trace";
 
 /** One hop of the single entry-to-target trace drawn when a path is selected; absent under reduced motion. */
@@ -24,7 +23,7 @@ export const LINE_STYLE: Record<EdgeEvidenceStyle, { name: "solid" | "dashed" | 
 };
 
 /** The selected path reads first: thick accent. Connected paths recede: thin and muted. */
-export const PATH_STROKE = { selected: { color: "var(--accent)", width: EDGE_STROKE.path }, connected: { color: "var(--border-strong)", width: EDGE_STROKE.rest } } as const;
+export const PATH_STROKE = { selected: { color: "var(--graph-edge-exposure)", width: EDGE_STROKE.path }, connected: { color: "var(--graph-edge-structure)", width: EDGE_STROKE.rest } } as const;
 
 export function edgeStroke(onPath: boolean): string {
   return (onPath ? PATH_STROKE.selected : PATH_STROKE.connected).color;
@@ -68,14 +67,14 @@ export function AttackPathGraphEdge(props: EdgeProps<AttackPathFlowEdge>) {
   return <>
     <BaseEdge id={id} path={path} interactionWidth={18} data-line-style={style.name} data-two-way={edge.bidirectional || undefined} {...ends}
       style={{
-        stroke: RELATIONSHIP_COLOR_MAP[edge.relationship] ?? "var(--text-secondary)",
+        stroke: edge.relationship === "can_access" ? "var(--graph-edge-risk)" : stroke.color,
         strokeWidth: stroke.width + (active ? 0.75 : 0),
         strokeDasharray: style.dash,
         strokeLinecap: style.name === "dotted" ? "round" : undefined,
       }} />
     {trace && <path key={trace.key} data-path-trace={trace.index} d={path} pathLength={1} aria-hidden="true"
       className="attack-path-trace" style={{ animationDuration: `${trace.duration}ms`, animationDelay: `${trace.delay}ms` }} />}
-    {(active || (edge.onPath && direction !== "TB")) && <EdgeName active={active} transform={transform}
+    {(active || edge.relationship === "can_access") && <EdgeName active={active} transform={transform}
       text={`${edge.relationshipLabel}${active && edge.bidirectional ? " · two-way" : ""}`}
       room={direction === "TB" || active ? 0 : Math.abs(props.targetX - props.sourceX) - 12} />}
   </>;

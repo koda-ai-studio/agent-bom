@@ -42,7 +42,7 @@ describe("flowEdgeLegend", () => {
       id, source: `${id}-s`, target: `${id}-t`, type: "compact", style: { stroke: "var(--edge-per-relationship)" },
       data: { relationship, relationshipLabel: `${relationship.replace("_", " ")} · modeled`, ...data },
     });
-    const legend = flowEdgeLegend([compact("a", "acted_as"), compact("b", "authenticates_as"), compact("c", "depends_on", { evidenceMode: "recorded" })]);
+    const legend = flowEdgeLegend([compact("a", "acted_as", { evidenceMode: "inferred" }), compact("b", "authenticates_as", { evidenceMode: "inferred" }), compact("c", "depends_on", { evidenceMode: "recorded" })]);
     expect(legend.styles).toEqual(["solid", "dashed"]);
     expect(legend.relationships).toEqual([
       { relationship: "acted_as", label: "acted as, authenticates as", stroke: "var(--graph-edge-access)", count: 2 },

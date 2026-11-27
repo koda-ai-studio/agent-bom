@@ -2,7 +2,7 @@
 
 import type { InvestigationFlow, ReadingFlow, SpecificFlow } from "@/lib/graph-investigation-flow";
 
-const FLOW_NAMES: Record<SpecificFlow, string> = { exposure: "Exposure", identity: "Identity and access", vulnerability: "Vulnerability", inventory: "Inventory" };
+const FLOW_NAMES: Record<SpecificFlow, string> = { exposure: "Exposure", identity: "Identity and access", vulnerability: "Vulnerability", inventory: "Asset connections" };
 const ABSENT: Record<SpecificFlow, string> = { exposure: "no external entry", identity: "no identities", vulnerability: "no findings", inventory: "no containment" };
 const FLOWS = Object.keys(FLOW_NAMES) as SpecificFlow[];
 
@@ -30,7 +30,7 @@ export function GraphFlowControl({ value, automaticLabel, available, disabledRea
   // On a phone's narrow row a standing reason moves to Graph options; a just-chosen flow's note stays with it.
   const message = compact ? note : disabledReason ?? note;
   return <div data-testid="graph-flow-control" title={disabledReason} className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-    <label className="flex items-center gap-2"><span className={compact ? "sr-only" : undefined}>Flow</span>
+    <label className="flex items-center gap-2"><span className={compact ? "sr-only" : undefined}>View</span>
       <select aria-label="Investigation flow" title={compact && value === "auto" ? automaticLabel : undefined} value={value} disabled={Boolean(disabledReason)} onChange={event => onChange(event.target.value as InvestigationFlow)}
         className={`rounded-md border border-outline bg-background px-2 py-1 text-foreground disabled:opacity-60 ${compact ? "min-h-11 w-[8.5rem]" : ""}`}>
         <option value="auto">{compact ? compactAutomaticLabel(automaticLabel) : automaticLabel}</option>

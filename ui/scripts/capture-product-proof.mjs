@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { graphNodeAggregatesResponse, nodeAggregatesFixtureIds, nodeAggregatesResponse, rollupResponse } from "./product-proof-rollup.mjs";
+import { graphNodeAggregatesResponse, nodeAggregatesFixtureIds, nodeAggregatesResponse, rollupResponse, scopeFindingsResponse } from "./product-proof-rollup.mjs";
 import { auditRenderedGraph, graphGrammarExpression, renderedRelationshipCurves, sharedRelationshipRuns } from "./graph-visual-audit.mjs";
 import { chromium, expect } from "@playwright/test";
 import { spawn, spawnSync } from "node:child_process";
@@ -1544,6 +1544,7 @@ export async function installRoutes(page, fixtureGraph = graph) {
     changed: [],
     count: 0,
   }));
+  await page.route("**/v1/graph/scope-findings?**", route => fulfill(route, scopeFindingsResponse(new URL(route.request().url()))));
   await page.route("**/v1/graph/query", (route) => {
     const request = route.request().postDataJSON();
     const roots = request.roots ?? [];
@@ -3069,8 +3070,8 @@ async function main() {
         "Developer Copilot",
         "SRE Runbook Agent",
         "filesystem MCP",
-        // The line legend's dash entry says the links are modeled.
-        /modeled/i,
+        // These mesh links carry explicitly simulated static configuration evidence.
+        /Recorded relationship/i,
       ],
       expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/query"],
       minGraphNodes: 5,
@@ -3205,15 +3206,21 @@ async function main() {
         // ranked overview: the riskiest scope's recorded connections, with every scope one click away.
         await canvasPage.locator('[data-testid="graph-scope-overview"]').waitFor({ state: "visible", timeout: 30_000 });
         await canvasPage.locator('[data-testid="graph-scope-overview"] .react-flow__node').first().waitFor({ state: "visible", timeout: 30_000 });
+        const pathCanvas = canvasPage.getByTestId("graph-agent-evidence");
+        await expect(pathCanvas.locator(".react-flow__node")).toHaveCount(9);
+        await expect(pathCanvas.locator(".react-flow__edge")).toHaveCount(8);
+        await expect(pathCanvas.locator('[data-id="display:internet"]')).toHaveCount(1);
+        await expect(pathCanvas.locator('.react-flow__node[data-id^="display:scope-findings:"]')).toHaveCount(2);
         await canvasPage.waitForTimeout(500);
       },
       {
         awaitResponses: [
           (response) => new URL(response.url()).pathname === "/v1/graph/rollup" && response.ok(),
         ],
-        expectedText: ["Investigation", "Agent connections", "4 of 4 loaded relationships for this scope", "Browse all 15 nodes and scopes"],
+        expectedText: ["Investigation", "Agent connections", "Showing 6 assets · 5 recorded connections", "Browse inventory", "execute_command", "AWS_ROLE_SESSION"],
         expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/rollup", "/v1/graph/scenarios"],
         readySelector: '[data-testid="graph-scope-overview"]',
+        minGraphNodes: 6, maxGraphNodes: 6, minGraphEdges: 5, maxGraphEdges: 5,
         assertNoHorizontalOverflow: true,
       },
     );

@@ -11,3 +11,13 @@ it("answers any requested hop list from the table of every node, reporting the r
   expect(answer.scan_id).toBe("scan");
   expect(answer.snapshot_generation).toBe("g1");
 });
+
+import { queryStaticScopeFindings } from "@/lib/static-demo-node-aggregates.mjs";
+
+it("pages the selected server-derived scope and refuses missing scope evidence", () => {
+  const scopes = { a: { node_id: "a", scan_id: "scan", total: 2, findings: [{ issue_key: "one" }, { issue_key: "two" }] },
+    b: { node_id: "b", scan_id: "scan", total: 1, findings: [{ issue_key: "private-to-b" }] } };
+  expect(queryStaticScopeFindings({ scopes }, "/v1/graph/scope-findings?node_id=a&offset=1&limit=1"))
+    .toMatchObject({ node_id: "a", total: 2, findings: [{ issue_key: "two" }] });
+  expect(() => queryStaticScopeFindings({ scopes }, "/v1/graph/scope-findings?node_id=missing")).toThrow("No finding evidence");
+});

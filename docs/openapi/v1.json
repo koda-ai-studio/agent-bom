@@ -29460,6 +29460,95 @@
         "title": "GraphScopeDescriptor",
         "type": "object"
       },
+      "GraphScopeFinding": {
+        "additionalProperties": true,
+        "properties": {
+          "issue_key": {
+            "title": "Issue Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "node_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Node Ids",
+            "type": "array"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "issue_key",
+          "label",
+          "severity",
+          "node_ids"
+        ],
+        "title": "GraphScopeFinding",
+        "type": "object"
+      },
+      "GraphScopeFindingsResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "finding_revision": {
+            "title": "Finding Revision",
+            "type": "string"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/GraphScopeFinding"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "node_id": {
+            "title": "Node Id",
+            "type": "string"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "scan_id": {
+            "title": "Scan Id",
+            "type": "string"
+          },
+          "snapshot_generation": {
+            "title": "Snapshot Generation",
+            "type": "string"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "scan_id",
+          "tenant_id",
+          "snapshot_generation",
+          "node_id",
+          "finding_revision",
+          "total",
+          "offset",
+          "limit",
+          "findings"
+        ],
+        "title": "GraphScopeFindingsResponse",
+        "type": "object"
+      },
       "GraphSearchFilters": {
         "additionalProperties": true,
         "properties": {
@@ -76122,6 +76211,134 @@
           }
         },
         "summary": "Get Graph Schema",
+        "tags": [
+          "graph"
+        ]
+      }
+    },
+    "/v1/graph/scope-findings": {
+      "get": {
+        "description": "Open issues on the roll-up count basis; tenant-scoped and revision-pinned pages.",
+        "operationId": "get_scope_findings_v1_graph_scope_findings_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "node_id",
+            "required": true,
+            "schema": {
+              "maxLength": 2048,
+              "minLength": 1,
+              "title": "Node Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scan_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scan Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "snapshot_generation",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Snapshot Generation"
+            }
+          },
+          {
+            "in": "query",
+            "name": "finding_revision",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Finding Revision"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphScopeFindingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)"
+          }
+        },
+        "summary": "Get Scope Findings",
         "tags": [
           "graph"
         ]

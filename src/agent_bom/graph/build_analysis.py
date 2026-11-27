@@ -18,6 +18,7 @@ from agent_bom.graph.credential_findings import project_credential_findings
 from agent_bom.graph.edge_freshness import stamp_edge_freshness
 from agent_bom.graph.finding_row_projection import apply_finding_row_times, project_finding_rows
 from agent_bom.graph.interaction_risk_ids import bind_interaction_risk_agent_ids
+from agent_bom.graph.mcp_risk import apply_mcp_risk
 from agent_bom.graph.provider_inheritance import inherit_cloud_provider
 from agent_bom.graph.relationship_contract import audit_graph_contract
 from agent_bom.graph.risk_context_overlay import apply_node_risk_context
@@ -60,6 +61,7 @@ def apply_build_analysis(graph: UnifiedGraph, report_json: dict[str, Any], ports
     # Per-node exposure, privilege, sensitivity and crown-jewel context reads
     # every recorded fact above, so it runs once the assets are final.
     apply_node_risk_context(graph)
+    apply_mcp_risk(graph)
     # Edges the assessment projections added after fusion.
     _stamp_freshness(graph)
     audit_graph_contract(graph)

@@ -1,7 +1,7 @@
 "use client";
 
 import { Background, ReactFlow, ReactFlowProvider, type Node } from "@xyflow/react";
-import { useMemo, useState, type ComponentProps, type CSSProperties } from "react";
+import { useCallback, useMemo, useState, type ComponentProps, type CSSProperties } from "react";
 import { GraphRollupDecisionSurface } from "@/components/graph-rollup-decision-surface";
 import { lineageNodeTypes, type LineageNodeData } from "@/components/lineage-nodes";
 import { relationshipEdgeTypes } from "@/components/relationship-edge";
@@ -16,7 +16,14 @@ import type { DisplayRollupEdge } from "@/lib/graph-rollup-view";
 import { phoneStoryLayout } from "@/lib/graph-phone-story";
 import { GraphProviderMark } from "@/components/graph-provider-mark";
 
-type Props = ComponentProps<typeof GraphRollupDecisionSurface>;
+import { GraphAgentConnections } from "@/components/graph-agent-connections";
+import { GraphScopeFindings } from "@/components/graph-scope-findings";
+import type { GraphRollupContainer } from "@/lib/api-types";
+
+type Props = ComponentProps<typeof GraphRollupDecisionSurface> & {
+  scanId?: string | undefined; generation?: string | undefined;
+  onInspectNode?: ((id: string, label: string) => void) | undefined;
+};
 
 /** Start with readable recorded connections; keep the complete returned directory one click away. */
 /** Cards here draw 14px metadata at layout size, so a fit stops where it is still 11px on screen. */
@@ -28,13 +35,18 @@ function scopeFrameHeight(rows: number): number {
 }
 
 export function GraphScopeOverview(props: Props) {
+  const [unavailable, setUnavailable] = useState<string>();
+  const [findings, setFindings] = useState<Pick<GraphRollupContainer, "id" | "label" | "aggregate">>();
   const [showList, setShowList] = useState(false);
   const [rootId, setRootId] = useState<string>();
   const [edgeDetail, setEdgeDetail] = useState<string>();
   const narrow = useNarrowViewport();
   const preview = useMemo(() => buildScopePreview(props.items, props.edges, rootId) ?? buildScopePreview(props.items, props.edges), [props.items, props.edges, rootId]);
+  const unavailableRoot = preview?.root.id;
+  const originalUnavailable = useCallback(() => setUnavailable(unavailableRoot), [unavailableRoot]);
   if (!preview || props.edges.length < 3) return <GraphRollupDecisionSurface {...props} />;
   const scope = preview.root;
+  const originalConnections = scope.entity_type === "agent" && props.scanId && props.onInspectNode && unavailable !== scope.id;
   const contextIds = new Set(preview.edges.filter(edge => edge.data?.supportingContext).flatMap(edge => [edge.source, edge.target]).filter(id => id !== scope.id));
   const ordered = narrow ? [...preview.nodes].sort((a, b) => Number(contextIds.has(a.id)) - Number(contextIds.has(b.id))) : preview.nodes;
   const nodes: Node<LineageNodeData>[] = ordered.map((node, index) => ({ ...node,
@@ -42,7 +54,7 @@ export function GraphScopeOverview(props: Props) {
     ...(narrow ? { position: { x: 0, y: index * 230 } } : {}),
     data: { ...node.data, onExploreFindings: () => {
       const item = props.items.find(item => item.id === node.id);
-      if (item) { if (item.has_children) props.onDrill(item); else props.onInvestigate(item); }
+      if (item) setFindings(item);
     } },
   }));
   const flow = narrow ? phoneStoryLayout(nodes, preview.edges) : { nodes, edges: preview.edges };
@@ -62,22 +74,26 @@ export function GraphScopeOverview(props: Props) {
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {!showList && scope.has_children && <button type="button" className="graph-page-action" onClick={() => props.onDrill(scope)}>Open scope</button>}
-        {!showList && <button type="button" className="graph-page-action" onClick={() => props.onInvestigate(preview.root)}>Inspect this scope</button>}
-        <button type="button" className="graph-page-action" onClick={() => setShowList(value => !value)}>{showList ? "Show connections" : `Browse all ${props.items.length} nodes and scopes`}</button>
+
+        <button type="button" className="graph-page-action" aria-label={showList ? "Show connections" : `Browse all ${props.items.length} nodes and scopes`} onClick={() => setShowList(value => !value)}>{showList ? "Show connections" : "Browse inventory"}</button>
       </div>
     </div>
+    {unavailable === scope.id && <p role="alert" className="px-4 py-2 text-xs">Original connections could not be loaded. Showing recorded scope aggregates, not direct asset links. <button className="underline" onClick={() => setUnavailable(undefined)}>Retry original connections</button></p>}
     {showList ? <GraphRollupDecisionSurface {...props} /> : <>
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 pt-3 text-xs text-ink-secondary">
+      {originalConnections ? <details className="px-4 pt-2 text-xs text-ink-secondary"><summary>Scope totals</summary><p>{scope.aggregate.descendant_count} contained nodes · {scope.direct_child_count} direct children · {scope.aggregate.issue_count ?? "Unknown"} open {scope.aggregate.issue_count === 1 ? "issue" : "issues"}</p></details> : <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 pt-3 text-xs text-ink-secondary">
       {scope.has_children && <p data-testid="graph-preview-scope-counts">
         {scope.aggregate.descendant_count.toLocaleString()} contained nodes · {scope.direct_child_count.toLocaleString()} direct children
-        {typeof scope.aggregate.issue_count === "number" && <> · {scope.aggregate.issue_count.toLocaleString()} open issues</>}
+        {typeof scope.aggregate.issue_count === "number" && <> · {scope.aggregate.issue_count.toLocaleString()} open {scope.aggregate.issue_count === 1 ? "issue" : "issues"}</>}
       </p>}
 
         <span>{preview.shownRelationships} of {preview.availableRelationships} loaded relationships for this scope{props.completeness?.truncated ? " · partial inventory" : ""}</span>
-      </div>
+      </div>}
       {scope.entity_type === "account" && <p className="px-4 pt-1 text-xs text-ink-secondary">Connections between assets in these account scopes, not account ownership.</p>}
       {edgeDetail && <p role="status" className="px-4 pt-3 text-sm text-ink-secondary">{edgeDetail}</p>}
-      <ReactFlowProvider key={`${preview.root.id}:${narrow}`}>
+      {originalConnections && props.scanId && props.onInspectNode ? <GraphAgentConnections
+        onUnavailable={originalUnavailable} key={`${props.scanId}:${scope.id}`} scanId={props.scanId} rootId={scope.id} generation={props.generation}
+        onInspect={props.onInspectNode} onFindings={(id, label, aggregate) => setFindings({ id, label, aggregate })} aggregate={scope.aggregate}
+      /> : <><ReactFlowProvider key={`${preview.root.id}:${narrow}`}>
         {/* The frame is as tall as the drawn scope at full size, within the room left in the window, so a short scope
             does not sit in an empty canvas. */}
         <div style={{ height: narrow ? Math.max(...flow.nodes.map(node => node.position.y)) + 160 : `clamp(280px, min(calc(100dvh - 380px), ${scopeFrameHeight(preview.rows)}px), 560px)` }} data-testid="graph-scope-connections">
@@ -104,7 +120,9 @@ export function GraphScopeOverview(props: Props) {
           </ReactFlow>
         </div>
       </ReactFlowProvider>
-      <GraphFlowEdgeLegend edges={preview.edges} />
+      <GraphFlowEdgeLegend edges={preview.edges} /></>}
     </>}
+    {findings && props.scanId && props.onInspectNode && <GraphScopeFindings key={`${props.scanId}:${findings.id}`} scanId={props.scanId}
+      nodeId={findings.id} label={findings.label} expected={findings.aggregate.issue_count} onClose={() => setFindings(undefined)} onInspect={props.onInspectNode} />}
   </section>;
 }

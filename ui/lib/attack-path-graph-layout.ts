@@ -152,14 +152,21 @@ function portraitPathLayout(model: AttackPathGraphModel): AttackPathLayout {
  * Layered DAG: the selected path is one straight line, every node sits in its
  * dagre layer, and branches take lanes above and below the path.
  */
-export function layoutAttackPathGraph(model: AttackPathGraphModel, _requestedDirection: AttackPathDirection): AttackPathLayout {
+export function layoutAttackPathGraph(model: AttackPathGraphModel, _requestedDirection: AttackPathDirection, hopColumns?: Map<string, number>, branches?: { lanes: Map<string, number>; rankGap?: number }): AttackPathLayout {
   if (_requestedDirection === "TB") return portraitPathLayout(model);
   // Desktop preserves the backend semantic columns.
   const direction: AttackPathDirection = "LR";
-  const spacing = SPACING[direction];
-  const columns = rankColumns(model);
+  const spacing = { ...SPACING[direction], ...(branches?.rankGap ? {rank: branches.rankGap} : {}) };
+  const columns = hopColumns ? new Map(hopColumns) : rankColumns(model);
   const lanes = assignLanes(model, columns);
   besideBranchOwners(model, columns, lanes);
+  const reserved = new Set<string>();
+  for (const [id, preferred] of branches?.lanes ?? []) {
+    if (!lanes.has(id)) continue;
+    let lane = preferred;
+    while (reserved.has(`${columns.get(id)}:${lane}`)) lane += Math.sign(preferred) || 1;
+    lanes.set(id, lane); reserved.add(`${columns.get(id)}:${lane}`);
+  }
   const occupiedColumns = [...new Set(columns.values())].sort((a, b) => a - b);
   const minLane = Math.min(0, ...lanes.values());
   const maxLane = Math.max(0, ...lanes.values());
@@ -170,7 +177,7 @@ export function layoutAttackPathGraph(model: AttackPathGraphModel, _requestedDir
   const positions = new Map<string, { x: number; y: number }>();
   let width = 0, height = 0;
   for (const node of model.nodes) {
-    const along = occupiedColumns.indexOf(columns.get(node.id)!) * (mainSize + spacing.rank);
+    const along = (hopColumns ? columns.get(node.id)! - occupiedColumns[0]! : occupiedColumns.indexOf(columns.get(node.id)!)) * (mainSize + spacing.rank);
     const across = margin + (lanes.get(node.id)! - minLane) * (crossSize + spacing.lane);
     const x = row ? along : across, y = row ? across : along;
     positions.set(node.id, { x, y });

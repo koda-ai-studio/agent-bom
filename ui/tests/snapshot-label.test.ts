@@ -18,9 +18,9 @@ it("keeps the distinguishing suffix of a long id", () => {
 });
 
 describe("snapshotOptionLabel", () => {
-  it("joins the short snapshot name and its local capture time, the text the selector shows and titles", () => {
+  it("joins the short snapshot name and its UTC capture time, the text the selector shows and titles", () => {
     const createdAt = "2026-06-30T16:00:00Z";
-    const when = new Date(createdAt).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" });
+    const when = "2026-06-30 16:00 UTC";
     expect(snapshotOptionLabel({ scan_id: "scan-proof-ai-platform", created_at: createdAt })).toBe(`scan-proof-ai-platform · ${when}`);
   });
 });

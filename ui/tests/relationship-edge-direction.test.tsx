@@ -1,4 +1,4 @@
-import { fireEvent, render } from "@testing-library/react";
+import { act, fireEvent, render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { EdgeProps } from "@xyflow/react";
 const flowStore = vi.hoisted(() => {
@@ -80,4 +80,11 @@ it("re-places its caption after the canvas pans, not on unrelated store updates,
   expect(afterMove.mock.calls[0]![0]).toHaveTextContent("Acted As");
   unmount();
   expect(flowStore.listeners.size).toBe(0);
+});
+
+it("reveals the relationship when its wrapper already holds focus at mount", () => {
+  const { container, rerender, getByText } = render(<svg><g className="react-flow__edge" tabIndex={0} /></svg>);
+  act(() => (container.querySelector(".react-flow__edge") as SVGElement).focus());
+  rerender(<svg><g className="react-flow__edge" tabIndex={0}><RelationshipEdge {...props} /></g></svg>);
+  expect(getByText("Affects")).toBeVisible();
 });

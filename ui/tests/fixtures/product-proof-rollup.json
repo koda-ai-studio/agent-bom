@@ -1,4 +1,67 @@
 {
+  "mcp_risk": {
+    "server:filesystem": {
+      "capability_risk": {
+        "basis": "mcp_capability_portfolio_risk",
+        "capabilities": {
+          "execute": 1
+        },
+        "justification": "Server has EXECUTE capabilities across 1 tool(s). Dangerous combinations detected: Can execute arbitrary code/commands. 1 credential(s) exposed (cred:aws). EXECUTE tools: execute_command.",
+        "level": "low",
+        "scope": "loaded_mcp_capabilities_and_credential_references",
+        "score": 2.41
+      }
+    },
+    "tool:exec": {
+      "capability_risk": {
+        "basis": "mcp_capability_risk_declared",
+        "capabilities": [
+          "execute"
+        ],
+        "justification": "Declared capabilities: EXECUTE.",
+        "level": "medium",
+        "scope": "loaded_mcp_capabilities_and_credential_references",
+        "score": 5.0
+      }
+    },
+    "tool:post": {
+      "capability_risk": {
+        "basis": "mcp_capability_risk_inferred_from_descriptor",
+        "capabilities": [
+          "write"
+        ],
+        "justification": "Inferred capabilities: WRITE.",
+        "level": "low",
+        "scope": "loaded_mcp_capabilities_and_credential_references",
+        "score": 3.0
+      }
+    },
+    "tool:query": {
+      "capability_risk": {
+        "basis": "mcp_capability_risk_inferred_from_descriptor",
+        "capabilities": [
+          "execute"
+        ],
+        "justification": "Inferred capabilities: EXECUTE.",
+        "level": "medium",
+        "scope": "loaded_mcp_capabilities_and_credential_references",
+        "score": 5.0
+      }
+    },
+    "tool:repo-write": {
+      "capability_risk": {
+        "basis": "mcp_capability_risk_inferred_from_descriptor",
+        "capabilities": [
+          "network",
+          "write"
+        ],
+        "justification": "Inferred capabilities: NETWORK, WRITE.",
+        "level": "medium",
+        "scope": "loaded_mcp_capabilities_and_credential_references",
+        "score": 5.0
+      }
+    }
+  },
   "node_aggregates": {
     "agent:developer-copilot": {
       "aggregate": {
@@ -1717,5 +1780,139 @@
         "severity": "medium"
       }
     ]
+  },
+  "scope_findings": {
+    "agent:developer-copilot": [
+      {
+        "issue_key": "occurrence:cve:urllib3",
+        "label": "CVE-2024-37891",
+        "node_ids": [
+          "cve:urllib3"
+        ],
+        "severity": "medium"
+      }
+    ],
+    "agent:finance-rag": [
+      {
+        "issue_key": "occurrence:cve:protobuf",
+        "label": "CVE-2025-4565",
+        "node_ids": [
+          "cve:protobuf"
+        ],
+        "severity": "high"
+      }
+    ],
+    "agent:sre-runbook": [
+      {
+        "issue_key": "occurrence:cve:urllib3",
+        "label": "CVE-2024-37891",
+        "node_ids": [
+          "cve:urllib3"
+        ],
+        "severity": "medium"
+      }
+    ],
+    "cluster:eks-ai": [],
+    "container:agent-gateway": [],
+    "container:copilot-portal": [],
+    "cred:aws": [],
+    "cred:github": [],
+    "cred:incident-webhook": [],
+    "cred:snowflake": [],
+    "cve:next": [
+      {
+        "issue_key": "occurrence:cve:next",
+        "label": "CVE-2025-29927",
+        "node_ids": [
+          "cve:next"
+        ],
+        "severity": "critical"
+      }
+    ],
+    "cve:protobuf": [
+      {
+        "issue_key": "occurrence:cve:protobuf",
+        "label": "CVE-2025-4565",
+        "node_ids": [
+          "cve:protobuf"
+        ],
+        "severity": "high"
+      }
+    ],
+    "cve:urllib3": [
+      {
+        "issue_key": "occurrence:cve:urllib3",
+        "label": "CVE-2024-37891",
+        "node_ids": [
+          "cve:urllib3"
+        ],
+        "severity": "medium"
+      }
+    ],
+    "dataset:finance-docs": [],
+    "env:prod-ai": [],
+    "model:gpt-prod": [],
+    "pkg:langchain": [],
+    "pkg:next": [
+      {
+        "issue_key": "occurrence:cve:next",
+        "label": "CVE-2025-29927",
+        "node_ids": [
+          "cve:next"
+        ],
+        "severity": "critical"
+      }
+    ],
+    "pkg:protobuf": [
+      {
+        "issue_key": "occurrence:cve:protobuf",
+        "label": "CVE-2025-4565",
+        "node_ids": [
+          "cve:protobuf"
+        ],
+        "severity": "high"
+      }
+    ],
+    "pkg:urllib3": [
+      {
+        "issue_key": "occurrence:cve:urllib3",
+        "label": "CVE-2024-37891",
+        "node_ids": [
+          "cve:urllib3"
+        ],
+        "severity": "medium"
+      }
+    ],
+    "policy:gateway-default-deny": [],
+    "provider:aws-prod": [],
+    "role:prod-admin": [],
+    "sa:jit-review": [],
+    "server:filesystem": [
+      {
+        "issue_key": "occurrence:cve:urllib3",
+        "label": "CVE-2024-37891",
+        "node_ids": [
+          "cve:urllib3"
+        ],
+        "severity": "medium"
+      }
+    ],
+    "server:github": [],
+    "server:slack": [],
+    "server:snowflake": [
+      {
+        "issue_key": "occurrence:cve:protobuf",
+        "label": "CVE-2025-4565",
+        "node_ids": [
+          "cve:protobuf"
+        ],
+        "severity": "high"
+      }
+    ],
+    "tool:exec": [],
+    "tool:post": [],
+    "tool:query": [],
+    "tool:repo-write": [],
+    "user:contractor": []
   }
 }

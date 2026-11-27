@@ -1,3 +1,5 @@
+import { graphTimestamp } from "./graph-timestamp";
+
 const TAIL = 9;
 
 /**
@@ -12,6 +14,6 @@ export function snapshotLabel(id: string, max = 28): string {
 
 /** Option text for a snapshot selector; also its tooltip when ellipsized. */
 export function snapshotOptionLabel(snapshot: { scan_id: string; created_at: string }): string {
-  const when = new Date(snapshot.created_at).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" });
+  const when = graphTimestamp(snapshot.created_at);
   return `${snapshotLabel(snapshot.scan_id)} · ${when}`;
 }

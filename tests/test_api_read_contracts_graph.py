@@ -20,7 +20,7 @@ from agent_bom.api.read_models import graph as graph_models
 from agent_bom.api.read_models.exploit_story import GraphExploitStoryResponse
 from agent_bom.api.read_models.graph_agent_architecture import GraphAgentArchitectureResponse
 from agent_bom.api.read_models.graph_cluster_map import GraphClusterMapResponse
-from agent_bom.api.read_models.graph_node_aggregates import GraphNodeAggregatesResponse
+from agent_bom.api.read_models.graph_node_aggregates import GraphNodeAggregatesResponse, GraphScopeFindingsResponse
 from agent_bom.api.read_models.graph_vendor_paths import GraphCrossVendorPathsResponse
 from agent_bom.api.server import app
 from agent_bom.api.stores import set_graph_store
@@ -46,6 +46,7 @@ GRAPH_TYPED_READS: dict[str, type[BaseModel]] = {
     "/v1/graph/impact": graph_models.GraphImpactResponse,
     "/v1/graph/legend": graph_models.GraphLegendResponse,
     "/v1/graph/nhi/governance": graph_models.GraphNhiGovernanceResponse,
+    "/v1/graph/scope-findings": GraphScopeFindingsResponse,
     "/v1/graph/node-aggregates": GraphNodeAggregatesResponse,
     "/v1/graph/node-context": graph_models.GraphNodeContextResponse,
     "/v1/graph/node/{node_id}": graph_models.GraphNodeContextResponse,
@@ -152,6 +153,7 @@ LIVE_REQUESTS: dict[str, str] = {
     "/v1/graph/impact": "/v1/graph/impact?node=pkg:npm:x",
     "/v1/graph/legend": "/v1/graph/legend",
     "/v1/graph/nhi/governance": "/v1/graph/nhi/governance",
+    "/v1/graph/scope-findings": "/v1/graph/scope-findings?node_id=server:a:fs",
     "/v1/graph/node-aggregates": "/v1/graph/node-aggregates?node_id=server:a:fs&node_id=agent:a",
     "/v1/graph/node-context": "/v1/graph/node-context?node_id=server:a:fs",
     "/v1/graph/node-neighbors": "/v1/graph/node-neighbors?node_id=server:a:fs",

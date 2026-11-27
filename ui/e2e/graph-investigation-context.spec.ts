@@ -1,6 +1,37 @@
 import { readFile } from "node:fs/promises";
 import { test, expect, type Page } from "@playwright/test";
 import { withSemanticLayer } from "./helpers/graph-rollup-mocks";
+import { installAgentScopeFixture } from "./helpers/agent-scope-fixture";
+import { assertAgentPathStructure } from "./helpers/agent-path-structure";
+
+test("agent entry chains stay connected and findings disclose their exact CVE", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const { graph } = await installAgentScopeFixture(page);
+  await page.goto(`/graph?scan=${graph.scan_id}&rollup=1`);
+  await assertAgentPathStructure(page);
+  await page.getByRole("button", { name: "Expand 1 finding for filesystem MCP", exact: true }).click();
+  const findings = page.getByRole("region", { name: "Findings for filesystem MCP" });
+  await expect(findings).toContainText("CVE-2024-37891");
+  await expect(findings.getByRole("button", { name: "Inspect evidence" })).toHaveCount(1);
+  await findings.getByRole("button", { name: "Close findings" }).click();
+  await page.getByRole("button", { name: "admin via prod-ai-admin", exact: true }).click();
+  const canvas = page.getByTestId("graph-agent-evidence");
+  await expect(canvas.locator('[data-internet-anchor]')).toHaveCount(0);
+  await expect(canvas.locator('.react-flow__node[data-id="sa:jit-review"]')).toBeVisible();
+  await expect(canvas.locator('.react-flow__node[data-id="role:prod-admin"]')).toBeVisible();
+  const privilege = canvas.locator('[data-relationship="can_access"] .react-flow__edge-path');
+  expect(await privilege.evaluate(element => (element as SVGElement).style.stroke)).toBe("var(--graph-edge-risk)");
+  await expect(privilege).toHaveAttribute("marker-end", /.+/);
+  await page.getByLabel("Entry route", {exact: true}).selectOption("exposure");
+  await page.getByRole("button", { name: "Expand 1 finding for Developer Copilot", exact: true }).click();
+  await expect(page.getByRole("region", {name: "Findings for Developer Copilot"})).toContainText("CVE-2024-37891");
+  await page.getByRole("button", {name: "Close findings"}).click();
+  await page.getByRole("button", { name: "Explore neighbours", exact: true }).click();
+  await expect(page.getByTestId("graph-agent-evidence")).toHaveAttribute("data-layout", "neighborhood");
+  await expect(page.locator('.react-flow__node[data-id="agent:sre-runbook"]')).toBeVisible();
+  await page.getByRole("button", { name: "Show path layout", exact: true }).click();
+  await assertAgentPathStructure(page);
+});
 const stamp = "2026-10-15T00:00:00Z";
 const node = (id: string, entity_type: string, label = id) => withSemanticLayer({ id, entity_type, label, severity: "none", status: "active", risk_score: 0, attributes: {}, dimensions: {}, data_sources: ["synthetic-fixture"], compliance_tags: [] });
 const edge = (source: string, target: string, relationship: string) => ({ id: `${source}:${relationship}:${target}`, source, target, relationship, direction: "directed", traversable: true, weight: 1, evidence: { tier: "static_scan", source: "synthetic-fixture" }, first_seen: stamp, last_seen: stamp });

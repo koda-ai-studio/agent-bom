@@ -174,8 +174,8 @@ export const graphApi = {
     limit?: number | undefined;
     snapshotGeneration?: string | undefined;
     cursor?: string | undefined;
-    /** `canvas`: the graph page's projection; selection refetches the full node. */
-    view?: "canvas" | undefined;
+    /** `canvas`: compact page projection; `full`: retained relationship evidence. */
+    view?: "canvas" | "full" | undefined;
   }) => {
     const params = new URLSearchParams();
     if (filters?.scanId) params.set("scan_id", filters.scanId);
@@ -526,6 +526,14 @@ export const graphApi = {
   /** Grouped full map: groups, expanded members and bundled edges with exact counts — GET /v1/graph/cluster-map */
   getGraphClusterMap: (params: URLSearchParams) => get<ClusterMapResponse>(`/v1/graph/cluster-map?${params.toString()}`),
 
+
+  getGraphScopeFindings: (scanId: string, nodeId: string, offset = 0, generation?: string, findingRevision?: string) => {
+    const params = new URLSearchParams({ scan_id: scanId, node_id: nodeId, offset: String(offset), limit: "20" });
+    if (generation) params.set("snapshot_generation", generation);
+    if (findingRevision) params.set("finding_revision", findingRevision);
+    return get<{ finding_revision: string; scan_id: string; snapshot_generation: string; node_id: string; total: number; offset: number; limit: number;
+      findings: { issue_key: string; label: string; severity: string; node_ids: string[] }[] }>(`/v1/graph/scope-findings?${params}`);
+  },
 
   /** Estate-scale CONTAINS roll-up with optional one-level drill-down */
   getGraphRollup: (

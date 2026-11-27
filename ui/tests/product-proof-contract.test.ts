@@ -10,6 +10,22 @@ const graphPage = ["app/graph/graph-page-client.tsx", "hooks/use-graph-page-data
 const exposurePath = fs.readFileSync(path.join(process.cwd(), "components", "exposure-path-command-center.tsx"), "utf8");
 
 describe("product proof capture contract", () => {
+  it("keeps generated capability assessment separate from the demo's overall risk", async () => {
+    const { buildGraph } = await import("../scripts/product-proof-graph.mjs");
+    const tool = buildGraph().nodes.find(node => node.id === "tool:exec")!;
+    expect(tool).toMatchObject({attributes: {capability_risk: {score: 5, basis: "mcp_capability_risk_declared"}}});
+    expect(tool).not.toHaveProperty("risk_assessment");
+  });
+  it("expects recorded evidence for the explicitly simulated configuration mesh", async () => {
+    const { buildGraph } = await import("../scripts/product-proof-graph.mjs");
+    const links = buildGraph().edges.filter(edge => ["uses", "hosted_on"].includes(edge.relationship)
+      && ["container:copilot-portal", "server:github", "server:filesystem"].includes(edge.target));
+    expect(links).toHaveLength(4);
+    for (const link of links) expect(link.evidence).toMatchObject({ tier: "static_scan", simulated: true, source: "synthetic-config-scan" });
+    const start = source.indexOf('"mesh-live.png", async');
+    const capture = source.slice(start, source.indexOf("await capture(", start + 1));
+    expect(capture).toContain('/Recorded relationship/i');
+  });
   it("pins the optional advice status instead of querying an absent API", () => {
     expect(source).toContain('await page.route("**/v1/ai/status"');
     expect(source).toContain('schema_version: "ai.status.v1"');
@@ -135,7 +151,7 @@ describe("product proof capture contract", () => {
     expect(source).toContain('newCapturePage("light", { width: 1568, height: 780 })');
     // Fifteen scopes do not frame whole legibly at 1512x811, so the current state is the ranked overview.
     expect(source).toContain(`canvasPage.locator('[data-testid="graph-scope-overview"]').waitFor`);
-    expect(source).toContain('expectedText: ["Investigation", "Agent connections", "4 of 4 loaded relationships for this scope", "Browse all 15 nodes and scopes"]');
+    expect(source).toContain('expectedText: ["Investigation", "Agent connections", "Showing 6 assets · 5 recorded connections", "Browse inventory", "execute_command", "AWS_ROLE_SESSION"]');
     expect(source).toContain("const body = rollupResponse();");
     expect(source).not.toContain("top_level: graph.nodes.slice(0, 30)");
     expect(source).toContain('page.route("**/v1/graph/scenarios"');

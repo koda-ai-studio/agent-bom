@@ -6,7 +6,7 @@ import type { LineageNodeData } from "@/components/lineage-nodes";
 import { semanticColumns, semanticLayer } from "@/lib/graph-semantic-columns";
 import { INTERNET_ANCHOR_ID, internetExposure, withInternetAnchor } from "@/lib/graph-internet-context";
 import { workloadImageContext } from "@/lib/graph-workload-image";
-import { allEdgesModeled, edgeFamily, edgeFamilyColor } from "@/lib/graph-edge-family";
+import { edgeFamily, edgeFamilyColor } from "@/lib/graph-edge-family";
 import { COMPACT_NODE_WIDTH, COMPACT_RANK_GAP, COMPACT_ROW_GAP, compactLayout } from "@/lib/graph-compact-layout";
 import { canvasName, prosePreview } from "@/components/graph-compact-node";
 import { captionGeometry } from "@/lib/graph-caption-geometry";
@@ -213,7 +213,6 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
     width: id => boxes.get(id) ?? cardWidth(byId.get(id), id, nameScale), tall: id => twoLineName(byId.get(id), id, nameScale) ? TALL_CARD_ROOM : undefined }));
   const pathPairs = new Set(primary.slice(1).map((id, index) => `${primary[index]}\u0000${id}`));
   const fans = linkEndFans(drawn, positions);
-  const modeledOnly = allEdgesModeled(drawn);
   const anchored = new Set(drawn.filter(edge => edge.source === INTERNET_ANCHOR_ID).map(edge => edge.target));
   // The Internet arrow takes the glyph's upper left when another link also enters that node, so the two
   // arrowheads never land on one point; nothing hangs above a glyph, so the entry clears every caption.
@@ -253,7 +252,6 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
         highlighted: node.data.highlighted || onPath.has(node.id), ...(anchored.has(node.id) ? { internetAnchored: true } : {}) } };
     })],
     edges: edges.map((edge): Edge => {
-      const uniformlyModeled = modeledOnly;
       const from = positions.get(edge.source), to = positions.get(edge.target);
       const reverse = Boolean(from && to && from.x > to.x);
       const sameRank = Boolean(from && to && from.x === to.x);
@@ -263,7 +261,7 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
       const quietUntilFocus = visible.length >= QUIET_MIN_NODES && roundabout && !pathPairs.has(`${edge.source}\u0000${edge.target}`);
       const onExposure = edge.data?.rankedPathWitness !== false && (edge.data?.traversable !== false || edge.source === INTERNET_ANCHOR_ID && edge.data?.displayOnly === true) && exposurePairs.has(`${edge.source}\u0000${edge.target}`);
       const color = edgeFamilyColor(onExposure ? "exposure" : edgeFamily(String(edge.data?.relationship ?? "")));
-      const marker = (value: Edge["markerEnd"]) => value && typeof value === "object" ? { ...value, color, width: 14, height: 14 } : value;
+      const marker = (value: Edge["markerEnd"]) => value && typeof value === "object" ? { ...value, color, width: value.width ?? 24, height: value.height ?? 20 } : value;
       // A small map shows which way every link runs; a larger one keeps the arrows its data recorded.
       // An aggregate or folded link may stand for several directions; it keeps only the arrow its data recorded.
       const directional = !edge.data?.aggregate && edge.data?.isClusterEdge !== true && typeof edge.data?.relationship === "string";
@@ -271,7 +269,7 @@ export function semanticGraphLayout(nodes: Node<LineageNodeData>[], edges: Edge[
       return { ...edge, type: "compact", animated: false, ...(markerEnd ? { markerEnd: marker(markerEnd)! } : {}),
         ...(edge.markerStart ? { markerStart: marker(edge.markerStart)! } : {}), sourceHandle: reverse ? "context" : null,
         targetHandle: reverse || sameRank ? "context" : sharedInternetEntry(edge) ? "above" : null,
-        data: { ...edge.data, ...(uniformlyModeled ? { uniformlyModeled } : {}), semanticLayout: true, individualLabel: true, arcDy: outside && edge.source === INTERNET_ANCHOR_ID ? undefined : arcs.get(edge.id), ...fans.get(edge.id), ...(quietUntilFocus ? { quietUntilFocus } : {}), passesBehind: behind.has(edge.id) || undefined, quietLabel: edge.data?.isClusterEdge !== true,
+        data: { ...edge.data, semanticLayout: true, individualLabel: true, arcDy: outside && edge.source === INTERNET_ANCHOR_ID ? undefined : arcs.get(edge.id), ...fans.get(edge.id), ...(quietUntilFocus ? { quietUntilFocus } : {}), passesBehind: behind.has(edge.id) || undefined, quietLabel: edge.data?.isClusterEdge !== true,
           pathEmphasis: edge.data?.rankedPathWitness !== false && edge.data?.traversable !== false && (pathPairs.has(`${edge.source}\u0000${edge.target}`) || edge.data?.pathEmphasis === true),
           ...(onExposure ? { exposurePath: true } : {}) } };
     }),

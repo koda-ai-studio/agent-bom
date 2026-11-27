@@ -36,9 +36,9 @@ export function AttackPathGraphLegend({ model }: { model: AttackPathGraphModel }
   const item = "inline-flex items-center gap-1.5";
   return (
     <ul aria-label="Graph legend" className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-outline bg-surface px-3 py-2 text-xs text-ink-secondary">
-      <li className={item}><LineSwatch stroke="var(--text-secondary)" width={PATH_STROKE.selected.width} />Selected path</li>
-      {branches && <li className={item}><LineSwatch stroke="var(--text-secondary)" width={PATH_STROKE.connected.width} />Connected path</li>}
-      {relationships.map(relationship => <li key={relationship.relationship} className={item}><LineSwatch stroke={relationship.color} />{relationship.label}</li>)}
+      <li className={item}><LineSwatch stroke={PATH_STROKE.selected.color} width={PATH_STROKE.selected.width} />Selected path</li>
+      {branches && <li className={item}><LineSwatch stroke={PATH_STROKE.connected.color} width={PATH_STROKE.connected.width} />Connected path</li>}
+      {relationships.map(relationship => <li key={relationship.relationship} className={item}>{relationship.relationship === "can_access" && <LineSwatch stroke="var(--graph-edge-risk)" />}{relationship.label}</li>)}
       {evidence.map(kind => (
         <li key={kind} className={item}><LineSwatch stroke="var(--text-secondary)" dash={LINE_STYLE[kind].dash} round={kind === "unrecorded"} />{EVIDENCE_LABELS[kind]}</li>
       ))}
