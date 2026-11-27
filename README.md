@@ -94,6 +94,10 @@ the chain, agent → MCP server → tool → package → credential → data, ke
 evidence for every edge, and ranks findings by that reach. Start with the
 [five-minute path for your role](site-docs/getting-started/start-by-role.md).
 
+<p align="center"><a href="docs/images/agent-exposure-path-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/agent-exposure-path-light-live.png"><img src="docs/images/agent-exposure-path-dark-live.png" alt="Sample exposure path: from the Internet, an exposed copilot-portal workload with a critical CVE hosts Developer Copilot, which uses a filesystem MCP server that exposes AWS_ROLE_SESSION; that credential can access the crown-jewel s3-ai-training-data bucket, and the server also offers execute_command" width="1100"></picture></a></p>
+
+*Sample data.* [What the sample shows](docs/GALLERY.md#what-the-readme-sample-shows)
+
 ## What it covers
 
 Agents and MCP servers, models and AI platforms, dependencies, code, containers

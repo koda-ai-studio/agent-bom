@@ -267,11 +267,15 @@ These are application captures, not mockups. Overview, Findings and remediation 
 
 ## What the README sample shows
 
-The README graphs show a fictional sample estate. Dashed use, credential and
-access links are configured or modeled, not observed at runtime; path analysis
-covers the collected snapshot only. The AWS badge describes environment
-membership; these sample agents have no recorded execution host or model
-endpoint. See [agent, hosting and model context](graph/AGENT_CONTEXT.md).
+The README graphs show a fictional sample estate. The lead image is one agent's
+exposure path. The Internet link comes from the workload's recorded
+`internet_exposed` flag; it is display context, not a traversable step. Each
+other line is a recorded relationship read from configuration or inventory,
+such as the credential's IAM policy grant to the bucket, not an observed runtime call.
+The crown on `s3-ai-training-data` comes from its recorded data sensitivity.
+"Findings" branches open the distinct issues counted in that asset's scope.
+Path analysis covers the collected snapshot only. See
+[agent, hosting and model context](graph/AGENT_CONTEXT.md).
 
 ## Reproduce the README screenshots
 

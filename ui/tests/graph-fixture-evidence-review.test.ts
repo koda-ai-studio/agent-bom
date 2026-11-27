@@ -6,7 +6,7 @@ import { nodeAggregatesResponse, scopeFindingsResponse } from "../scripts/produc
 
 it("assigns synthetic scan evidence consistently across all configuration and inventory relationships", () => {
   const graph = buildGraph();
-  const recorded = new Set(["hosts", "hosted_on", "uses", "provides_tool", "exposes_cred", "depends_on", "vulnerable_to"]);
+  const recorded = new Set(["contains", "hosts", "hosted_on", "uses", "provides_tool", "exposes_cred", "depends_on", "vulnerable_to"]);
   for (const edge of graph.edges) {
     // An access grant read from an IAM policy by cloud inventory is configuration, so it is static too.
     const configured = recorded.has(edge.relationship) || (edge.relationship === "can_access" && (edge.evidence as Record<string, unknown>).basis === "iam_policy_grant" && edge.evidence.source === "synthetic-cloud-inventory");

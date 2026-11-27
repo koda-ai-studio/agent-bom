@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import struct
 from pathlib import Path
 
@@ -380,3 +381,17 @@ def test_mesh_storefront_capture_does_not_leave_a_portrait_blank_tail() -> None:
     header = (ROOT / "docs/images/mesh-live.png").read_bytes()[:24]
     width, height = struct.unpack(">II", header[16:24])
     assert width / height >= 1.6, "A small neighborhood should fill a landscape storefront image"
+
+
+def test_readme_hero_is_the_captured_exposure_path_in_both_themes() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    pypi = (ROOT / "docs" / "registry" / "PYPI_README.md").read_text(encoding="utf-8")
+    manifest = json.loads((ROOT / "docs" / "images" / "product-screenshots.json").read_text(encoding="utf-8"))
+    captured = {entry["path"] for entry in manifest["screenshots"]}
+    for theme in ("light", "dark"):
+        image = f"agent-exposure-path-{theme}-live.png"
+        assert image in readme
+        assert image in captured
+        assert (ROOT / "docs" / "images" / image).is_file()
+    assert "agent-exposure-path-dark-live.png" in pypi
+    assert "*Sample data.*" in readme

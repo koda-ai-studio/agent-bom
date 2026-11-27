@@ -2344,7 +2344,20 @@ async function captureFrame(page, urlPath, filename, beforeShot, options = {}) {
       const grammar = await page.evaluate(graphGrammarExpression({}));
       if (Object.keys(grammar).length) throw new Error(`Graph grammar violated on ${filename}: ${JSON.stringify(grammar)}`);
     }
-    await page.screenshot({ path: path.join(captureOutputDir, filename), fullPage: false, animations: "disabled" });
+    for (const selector of options.hideSelectors ?? []) {
+      await page.locator(selector).evaluateAll(elements => elements.forEach(element => { element.style.visibility = "hidden"; }));
+    }
+    // A README frame is the drawn tree alone: the canvas cropped to its nodes, with no app chrome or empty band.
+    const clip = options.clipToNodes ? await page.locator(options.clipToNodes).first().evaluate((canvas, pad) => {
+      const frame = canvas.getBoundingClientRect();
+      const boxes = [...canvas.querySelectorAll(".react-flow__node")].map(node => node.getBoundingClientRect());
+      const left = Math.max(frame.left, Math.min(...boxes.map(box => box.left)) - pad);
+      const top = Math.max(frame.top, Math.min(...boxes.map(box => box.top)) - pad);
+      const right = Math.min(frame.right, Math.max(...boxes.map(box => box.right)) + pad);
+      const bottom = Math.min(frame.bottom, Math.max(...boxes.map(box => box.bottom)) + pad);
+      return { x: left, y: top + window.scrollY, width: right - left, height: bottom - top };
+    }, options.clipPadding ?? 32) : undefined;
+    await page.screenshot({ path: path.join(captureOutputDir, filename), fullPage: Boolean(clip), animations: "disabled", ...(clip ? { clip } : {}) });
     if (options.fitContentHeight) await page.setViewportSize(viewport);
     console.log(`captured ${filename}`);
   } catch (error) {
@@ -2574,6 +2587,12 @@ async function writeScreenshotManifest(outputDir = IMAGE_DIR) {
       page: CONTEXT_MAP_PAGE,
       scope: "Same developer-copilot neighborhood in the shared graph workspace",
       presentation: `${theme} responsive 1000x900`,
+    })),
+    ...["light", "dark"].map(theme => ({
+      path: `agent-exposure-path-${theme}-live.png`,
+      page: `/security-graph?lens=estate&scan=${SCAN_ID}&rollup=1`,
+      scope: "README hero: Developer Copilot's exposure path from the Internet to the crown-jewel data an exposed credential opens, with findings branching off their assets",
+      presentation: `${theme} desktop, cropped to the drawn path`,
     })),
     {
       path: "inventory-live.png",
@@ -3180,6 +3199,30 @@ async function main() {
           assertEdgeLabelsClearOfNodes: true, assertNoHorizontalOverflow: true,
         });
       await relationshipPage.close();
+    }
+    for (const theme of ["light", "dark"]) {
+      const heroPage = await newCapturePage(theme, { width: 1440, height: 1000 });
+      await capture(
+        heroPage,
+        `/security-graph?lens=estate&scan=${SCAN_ID}&rollup=1&capture=1`,
+        `agent-exposure-path-${theme}-live.png`,
+        async (canvasPage) => {
+          await canvasPage.waitForLoadState("networkidle");
+          const pathCanvas = canvasPage.getByTestId("graph-agent-evidence");
+          await pathCanvas.waitFor({ state: "visible", timeout: 30_000 });
+          await expect(pathCanvas).toHaveAttribute("data-layout", "path");
+          await expect(pathCanvas.locator('.react-flow__node[data-id="store:ai-training"]')).toBeVisible();
+          await expect(pathCanvas.locator('.react-flow__node[data-id="display:scope-findings:container:copilot-portal"]')).toHaveCount(1);
+          await canvasPage.waitForTimeout(500);
+        },
+        {
+          expectedText: ["Agent connections", "s3-ai-training-data", "AWS_ROLE_SESSION", "execute_command"],
+          readySelector: '[data-testid="graph-agent-evidence"] .react-flow__node',
+          hideSelectors: ['[data-testid="graph-agent-evidence"] .react-flow__controls'],
+          clipToNodes: '[data-testid="graph-agent-evidence"]',
+        },
+      );
+      await heroPage.close();
     }
     const currentCanvasPage = await newCapturePage("dark", { width: 1512, height: 811 });
     await capture(

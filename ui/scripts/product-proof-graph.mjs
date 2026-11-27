@@ -54,7 +54,7 @@ export function node(id, entityType, label, severity = "none", riskScore = 0, at
 }
 
 // Synthetic collector receipts are assigned by relationship, never by a selected path.
-const CONFIG_RELATIONSHIPS = new Set(["hosts", "hosted_on", "uses", "provides_tool", "exposes_cred", "depends_on", "vulnerable_to"]);
+const CONFIG_RELATIONSHIPS = new Set(["contains", "hosts", "hosted_on", "uses", "provides_tool", "exposes_cred", "depends_on", "vulnerable_to"]);
 
 export function edge(source, target, relationship, weight = 1, evidence = {}) {
   const spec = graphRelationshipSpecs[relationship];
@@ -182,10 +182,12 @@ export function buildGraph() {
   ];
 
   const edges = [
-    edge("provider:aws-prod", "env:prod-ai", "hosts"),
-    edge("env:prod-ai", "cluster:eks-ai", "hosts"),
-    edge("cluster:eks-ai", "container:agent-gateway", "hosts"),
-    edge("cluster:eks-ai", "container:copilot-portal", "hosts"),
+    // Inventory scope, as cloud and Kubernetes projections record it: the account contains the
+    // environment, the environment its cluster, and the cluster its workloads.
+    edge("provider:aws-prod", "env:prod-ai", "contains"),
+    edge("env:prod-ai", "cluster:eks-ai", "contains"),
+    edge("cluster:eks-ai", "container:agent-gateway", "contains"),
+    edge("cluster:eks-ai", "container:copilot-portal", "contains"),
     edge("container:agent-gateway", "policy:gateway-default-deny", "manages"),
     edge("user:contractor", "sa:jit-review", "acted_as"),
     edge("sa:jit-review", "role:prod-admin", "assumes"),
