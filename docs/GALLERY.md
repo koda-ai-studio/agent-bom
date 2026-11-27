@@ -271,7 +271,8 @@ The README graphs show a fictional sample estate. The lead image is one agent's
 exposure path. The Internet link comes from the workload's recorded
 `internet_exposed` flag; it is display context, not a traversable step. Each
 other line is a recorded relationship read from configuration or inventory,
-such as the credential's IAM policy grant to the bucket, not an observed runtime call.
+such as the credential's IAM policy grant to the bucket; these links are
+not observed at runtime.
 The crown on `s3-ai-training-data` comes from its recorded data sensitivity.
 "Findings" branches open the distinct issues counted in that asset's scope.
 Path analysis covers the collected snapshot only. See

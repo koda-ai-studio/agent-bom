@@ -505,7 +505,12 @@ def test_readme_application_captures_use_standard_viewports() -> None:
         assert path.is_file(), f"Missing authentic capture: {name}"
         data = path.read_bytes()
         assert data[:8] == b"\x89PNG\r\n\x1a\n", name
+        width, height = struct.unpack(">II", data[16:24])
+        if name.startswith("agent-exposure-path-"):
+            # The hero is the drawn path cropped from a 1440-wide canvas: wide, never taller than half its width.
+            assert 1000 <= width <= 1440 and height * 2 <= width, name
+            continue
         expected = (390, 844) if "-mobile-" in name else (1440, 900)
         if name.startswith("context-map-horizontal-"):
             expected = (1000, 900)
-        assert struct.unpack(">II", data[16:24]) == expected, name
+        assert (width, height) == expected, name
