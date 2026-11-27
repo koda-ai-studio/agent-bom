@@ -90,6 +90,11 @@ _AGENT_STACK_CONTAINMENT: frozenset[tuple[str, str, str]] = frozenset(
         (RelationshipType.VULNERABLE_TO.value, EntityType.AGENT.value, EntityType.MISCONFIGURATION.value),
         (RelationshipType.VULNERABLE_TO.value, EntityType.SERVER.value, EntityType.MISCONFIGURATION.value),
         (RelationshipType.DEPENDS_ON.value, EntityType.SERVER.value, EntityType.PACKAGE.value),
+        # A workload counts what its image ships: packages it depends on directly, and the image it
+        # runs (Kubernetes records depends_on; an image-digest match records runs).
+        (RelationshipType.DEPENDS_ON.value, EntityType.CONTAINER.value, EntityType.PACKAGE.value),
+        (RelationshipType.DEPENDS_ON.value, EntityType.CONTAINER.value, EntityType.CONTAINER.value),
+        (RelationshipType.RUNS.value, EntityType.CONTAINER.value, EntityType.CONTAINER.value),
         (RelationshipType.DEPENDS_ON.value, EntityType.PACKAGE.value, EntityType.PACKAGE.value),
         (RelationshipType.PROVIDES_TOOL.value, EntityType.SERVER.value, EntityType.TOOL.value),
         (RelationshipType.EXPOSES_CRED.value, EntityType.SERVER.value, EntityType.CREDENTIAL.value),

@@ -25,7 +25,7 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
       await expect(canvas.locator('.react-flow__node[data-id="store:ai-training"]')).toBeVisible();
       await expect(canvas.locator('[data-relationship="shares_server"]')).toHaveCount(0);
       await expect(canvas.locator("[data-internet-anchor]")).toHaveCount(1);
-      await expect(canvas.locator(".react-flow__node")).toHaveCount(9);
+      await expect(canvas.locator(".react-flow__node")).toHaveCount(10);
       await expect(canvas.locator(".graph-relationship-label:visible")).toHaveCount(0);
       await expect(canvas.locator('.react-flow__node[data-id="display:scope-findings:agent:developer-copilot"]')).toHaveCount(0);
       await expect(canvas.locator('[data-finding-disclosure][data-finding-count-severity="critical"]')).toHaveCount(0);
@@ -65,7 +65,8 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
       await expect(page.getByText(/SRE Runbook Agent → filesystem MCP · uses/)).toBeVisible();
       await canvas.getByRole("button", { name: "Expand 1 finding for filesystem MCP" }).click();
     } else {
-      await expect(canvas.getByRole("button", {name: /finding/})).toHaveCount(1);
+      // The exposed workload's critical CVE and the server's shared CVE, each disclosed once.
+      await expect(canvas.getByRole("button", {name: /finding/})).toHaveCount(2);
       await canvas.getByRole("button", { name: "filesystem MCP · 1 finding" }).click();
     }
     await expect(page.getByText("Showing 7 assets · 6 recorded connections.")).toBeVisible();

@@ -15,7 +15,7 @@ export async function assertAgentPathStructure(page: Page) {
   await expect(canvas.locator("[data-internet-anchor]")).toHaveCount(1);
   await expect(canvas.locator('.react-flow__node[data-id="agent:sre-runbook"]')).toHaveCount(0);
   await expect(canvas.getByRole("button", { name: "also used by: SRE Runbook Agent" })).toBeVisible();
-  const pairs = [...spine.slice(1).map((id, index) => [spine[index]!, id]), ["server:filesystem", "tool:exec"], ["server:filesystem", "display:scope-findings:server:filesystem"], ["agent:developer-copilot", "server:github"]];
+  const pairs = [...spine.slice(1).map((id, index) => [spine[index]!, id]), ["server:filesystem", "tool:exec"], ["server:filesystem", "display:scope-findings:server:filesystem"], ["agent:developer-copilot", "server:github"], ["container:copilot-portal", "display:scope-findings:container:copilot-portal"]];
   const expectedIds = [...new Set(pairs.flat())].sort();
   await expect.poll(() => canvas.locator(".react-flow__node").evaluateAll(nodes => nodes.map(node => node.getAttribute("data-id")!).sort())).toEqual(expectedIds);
   await expect(canvas.locator(".react-flow__edge")).toHaveCount(pairs.length);
@@ -56,7 +56,7 @@ export async function assertAgentPathStructure(page: Page) {
   await expect(canvas.locator(".graph-relationship-label:visible")).toHaveCount(0);
   await expect(canvas.locator('[data-id="role:prod-admin"]')).toHaveCount(0);
   await expect(canvas.getByRole("button", {name: "admin via prod-ai-admin"})).toBeVisible();
-  for (const owner of ["server:filesystem"]) {
+  for (const owner of ["container:copilot-portal", "server:filesystem"]) {
     const asset = canvas.locator(`.react-flow__node[data-id="${owner}"]`);
     const group = canvas.locator(`.react-flow__node[data-id="display:scope-findings:${owner}"]`);
     await expect(asset.locator("[data-finding-disclosure]")).toHaveCount(0);

@@ -3197,10 +3197,11 @@ async function main() {
         await canvasPage.locator('[data-testid="graph-scope-overview"]').waitFor({ state: "visible", timeout: 30_000 });
         await canvasPage.locator('[data-testid="graph-scope-overview"] .react-flow__node').first().waitFor({ state: "visible", timeout: 30_000 });
         const pathCanvas = canvasPage.getByTestId("graph-agent-evidence");
-        await expect(pathCanvas.locator(".react-flow__node")).toHaveCount(9);
-        await expect(pathCanvas.locator(".react-flow__edge")).toHaveCount(8);
+        await expect(pathCanvas.locator(".react-flow__node")).toHaveCount(10);
+        await expect(pathCanvas.locator(".react-flow__edge")).toHaveCount(9);
         await expect(pathCanvas.locator('[data-id="display:internet"]')).toHaveCount(1);
-        await expect(pathCanvas.locator('.react-flow__node[data-id^="display:scope-findings:"]')).toHaveCount(1);
+        await expect(pathCanvas.locator('.react-flow__node[data-id^="display:scope-findings:"]')).toHaveCount(2);
+        await expect(pathCanvas.locator('.react-flow__node[data-id="display:scope-findings:container:copilot-portal"]')).toHaveCount(1);
         await expect(pathCanvas.locator('.react-flow__node[data-id="display:scope-findings:agent:developer-copilot"]')).toHaveCount(0);
         await canvasPage.waitForTimeout(500);
       },

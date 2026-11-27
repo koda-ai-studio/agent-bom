@@ -235,14 +235,17 @@
     },
     "container:copilot-portal": {
       "aggregate": {
-        "by_type": {},
-        "descendant_count": 0,
+        "by_type": {
+          "package": 1,
+          "vulnerability": 1
+        },
+        "descendant_count": 2,
         "exposed_count": 0,
-        "finding_occurrence_count": 0,
+        "finding_occurrence_count": 1,
         "internet_exposed": false,
-        "issue_count": 0,
+        "issue_count": 1,
         "severity_counts": {
-          "critical": 0,
+          "critical": 1,
           "high": 0,
           "info": 0,
           "low": 0,
@@ -251,8 +254,8 @@
         },
         "toxic_combo": false,
         "toxic_count": 0,
-        "worst_severity": "none",
-        "worst_severity_rank": 0
+        "worst_severity": "critical",
+        "worst_severity_rank": 5
       },
       "semantic_layer": "infra"
     },
@@ -930,8 +933,8 @@
       "additive": false,
       "basis": "returned_entry_descendants",
       "definition": "Filtered descendants of returned entries, excluding each entry itself; not an estate total.",
-      "descendant_memberships": 27,
-      "distinct_descendants": 19,
+      "descendant_memberships": 28,
+      "distinct_descendants": 20,
       "distinct_finding_occurrences": 3,
       "extra_memberships": 8,
       "finding_occurrence_memberships": 4,
@@ -944,10 +947,10 @@
     },
     "completeness": {
       "complete": true,
-      "returned": 15,
+      "returned": 14,
       "sampled": false,
       "status": "complete",
-      "total": 15,
+      "total": 14,
       "truncated": false
     },
     "created_at": "2026-06-03T20:30:00Z",
@@ -955,8 +958,8 @@
       "connections_definition": "Each entry's connections count other returned entries it is linked to, before the row cap.",
       "definition": "Aggregated non-containment container-to-container relationship rows in the roll-up source graph.",
       "reason": "",
-      "returned": 16,
-      "source_total": 16,
+      "returned": 15,
+      "source_total": 15,
       "source_truncated": false,
       "truncated": false
     },
@@ -1095,20 +1098,6 @@
           "directed"
         ],
         "relationship_counts": {
-          "depends_on": 1
-        },
-        "relationships": [
-          "depends_on"
-        ],
-        "source": "container:copilot-portal",
-        "target": "pkg:next"
-      },
-      {
-        "count": 1,
-        "directions": [
-          "directed"
-        ],
-        "relationship_counts": {
           "hosts": 1
         },
         "relationships": [
@@ -1197,7 +1186,7 @@
     "orphan_summary": {
       "by_type": {
         "cluster": 1,
-        "container": 2,
+        "container": 1,
         "dataset": 1,
         "environment": 1,
         "model": 1,
@@ -1206,8 +1195,8 @@
         "service_account": 1,
         "user": 1
       },
-      "exposed_count": 1,
-      "internet_exposed": true,
+      "exposed_count": 0,
+      "internet_exposed": false,
       "issue_count": 0,
       "sample": [],
       "severity_counts": {
@@ -1218,8 +1207,8 @@
         "medium": 0,
         "none": 0
       },
-      "shown": 10,
-      "total": 10,
+      "shown": 9,
+      "total": 9,
       "toxic_combo": false,
       "toxic_count": 0,
       "truncated": 0,
@@ -1231,8 +1220,8 @@
       "limit": null,
       "next_offset": null,
       "offset": 0,
-      "returned": 15,
-      "total": 15
+      "returned": 14,
+      "total": 14
     },
     "scan_id": "scan-proof-ai-platform",
     "summary": {
@@ -1247,12 +1236,12 @@
         "medium": 1,
         "none": 0
       },
-      "orphan_count": 10,
-      "orphan_shown_count": 10,
+      "orphan_count": 9,
+      "orphan_shown_count": 9,
       "orphan_truncated_count": 0,
-      "returned_top_level_count": 15,
+      "returned_top_level_count": 14,
       "severity_basis": "issue_groups",
-      "top_level_count": 15,
+      "top_level_count": 14,
       "total_edges": 38,
       "total_nodes": 34,
       "total_nodes_source": 34
@@ -1397,9 +1386,10 @@
       {
         "aggregate": {
           "by_type": {
+            "package": 1,
             "vulnerability": 1
           },
-          "descendant_count": 1,
+          "descendant_count": 2,
           "exposed_count": 0,
           "finding_occurrence_count": 1,
           "internet_exposed": false,
@@ -1420,17 +1410,19 @@
         "cloud_provider": "",
         "cloud_provider_basis": "",
         "connections": {
-          "connected_entry_count": 1,
-          "relationship_count": 1
+          "connected_entry_count": 2,
+          "relationship_count": 2
         },
-        "context": {},
+        "context": {
+          "environment": "prod"
+        },
         "direct_child_count": 1,
-        "entity_type": "package",
+        "entity_type": "container",
         "has_children": true,
-        "id": "pkg:next",
+        "id": "container:copilot-portal",
         "is_container": true,
-        "label": "next@15.2.2",
-        "semantic_layer": "package",
+        "label": "copilot-portal:2.4.0",
+        "semantic_layer": "infra",
         "severity": "critical"
       },
       {
@@ -1473,45 +1465,6 @@
         "label": "AWS prod account",
         "semantic_layer": "scope",
         "severity": "medium"
-      },
-      {
-        "aggregate": {
-          "by_type": {},
-          "descendant_count": 0,
-          "exposed_count": 0,
-          "finding_occurrence_count": 0,
-          "internet_exposed": false,
-          "issue_count": 0,
-          "severity_counts": {
-            "critical": 0,
-            "high": 0,
-            "info": 0,
-            "low": 0,
-            "medium": 0,
-            "none": 0
-          },
-          "toxic_combo": false,
-          "toxic_count": 0,
-          "worst_severity": "none",
-          "worst_severity_rank": 0
-        },
-        "cloud_provider": "",
-        "cloud_provider_basis": "",
-        "connections": {
-          "connected_entry_count": 3,
-          "relationship_count": 3
-        },
-        "context": {
-          "environment": "prod"
-        },
-        "direct_child_count": 0,
-        "entity_type": "container",
-        "has_children": false,
-        "id": "container:copilot-portal",
-        "is_container": true,
-        "label": "copilot-portal:2.4.0",
-        "semantic_layer": "infra",
-        "severity": "critical"
       },
       {
         "aggregate": {
@@ -1892,7 +1845,10 @@
     ],
     "cluster:eks-ai": [],
     "container:agent-gateway": [],
-    "container:copilot-portal": [],
+    "container:copilot-portal": [
+      "cve:next",
+      "pkg:next"
+    ],
     "cred:aws": [],
     "cred:github": [],
     "cred:incident-webhook": [],
@@ -1980,7 +1936,16 @@
     ],
     "cluster:eks-ai": [],
     "container:agent-gateway": [],
-    "container:copilot-portal": [],
+    "container:copilot-portal": [
+      {
+        "issue_key": "occurrence:cve:next",
+        "label": "CVE-2025-29927",
+        "node_ids": [
+          "cve:next"
+        ],
+        "severity": "critical"
+      }
+    ],
     "cred:aws": [],
     "cred:github": [],
     "cred:incident-webhook": [],

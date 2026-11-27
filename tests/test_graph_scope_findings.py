@@ -144,3 +144,40 @@ def test_scope_exclusions_validate_containment_on_full_snapshot_fallback(monkeyp
     assert not missing
     assert rows[0]["finding_disclosure"]["exclude_node_ids"] == ["child"]
     assert rows[1]["finding_disclosure"]["exclude_node_ids"] == []
+
+
+def test_workloads_count_the_findings_of_the_image_they_run():
+    """A workload's badge includes its image's package CVEs, for direct package and image links alike."""
+    graph = UnifiedGraph(scan_id="images", tenant_id="one")
+    containers = {"web": "workload", "worker": "workload", "portal": "workload", "image": "image"}
+    for nid, kind in containers.items():
+        graph.add_node(UnifiedNode(id=nid, entity_type=EntityType.CONTAINER, label=nid, attributes={"container_kind": kind}))
+    for nid in ("pkg", "direct"):
+        graph.add_node(UnifiedNode(id=nid, entity_type=EntityType.PACKAGE, label=nid, attributes={"ecosystem": "npm", "version": "1"}))
+    for nid, cve in (("v1", "CVE-2025-0001"), ("v2", "CVE-2025-0002")):
+        graph.add_node(
+            UnifiedNode(
+                id=nid,
+                entity_type=EntityType.VULNERABILITY,
+                label=cve,
+                attributes={"vulnerability_id": cve, "finding_id": nid},
+                severity="critical",
+            )
+        )
+    for source, target, relation in [
+        ("web", "image", RelationshipType.DEPENDS_ON),
+        ("worker", "image", RelationshipType.RUNS),
+        ("image", "pkg", RelationshipType.CONTAINS),
+        ("pkg", "v1", RelationshipType.VULNERABLE_TO),
+        ("portal", "direct", RelationshipType.DEPENDS_ON),
+        ("direct", "v2", RelationshipType.VULNERABLE_TO),
+    ]:
+        graph.add_edge(UnifiedEdge(source=source, target=target, relationship=relation))
+    for workload, cve in (("web", "CVE-2025-0001"), ("worker", "CVE-2025-0001"), ("portal", "CVE-2025-0002")):
+        aggregate = node_aggregate(graph, workload)
+        assert aggregate is not None
+        assert aggregate.issue_count == 1, workload
+        rows = scope_findings(graph, workload)
+        assert len(rows) == 1 and cve in str(rows[0])
+    image = node_aggregate(graph, "image")
+    assert image is not None and image.issue_count == 1

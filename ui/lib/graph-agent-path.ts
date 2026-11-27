@@ -66,7 +66,7 @@ export function agentPathGraph(graph: UnifiedGraphData, flow: Flow, root: string
   for (const edge of [...impact, ...reach]) if (!tail.includes(edge.target)) branchLanes.set(edge.target, 1);
   for (const server of rankedServers.slice(1)) branchLanes.set(server, 1);
 
-  for (const owner of [root, ...rankedServers]) {
+  for (const owner of [...(exposedHost && entry === "exposure" ? [exposedHost] : []), root, ...rankedServers]) {
     const asset = byId.get(owner)!, aggregate = asset.data.findingAggregate;
     if (!aggregate?.issue_count || !asset.data.onExploreFindings) continue;
     const id = `display:scope-findings:${owner}`;

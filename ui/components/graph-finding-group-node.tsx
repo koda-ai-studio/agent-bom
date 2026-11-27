@@ -31,7 +31,7 @@ export function GraphFindingGroupNode({ data }: { data: LineageNodeData }) {
     </div>
     <div data-graph-caption className="flex flex-col items-center">
     <span style={{ fontSize: "var(--graph-node-label-size, 14px)" }} className={`mt-[0.4em] whitespace-nowrap ${data.pathPresentation ? "font-normal" : "font-semibold"} leading-tight text-foreground`}>Findings ({count})</span>
-    <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className="whitespace-nowrap leading-tight text-ink-secondary">{data.pathPresentation ? `${data.description} scope` : "Click to explore"}<span className="sr-only"> · {count} findings</span></span>
+    <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className={`${data.pathPresentation ? "mx-auto block w-max max-w-[8.5rem] text-center" : "whitespace-nowrap"} leading-tight text-ink-secondary`}>{data.pathPresentation ? `${data.description} scope` : "Click to explore"}<span className="sr-only"> · {count} findings</span></span>
     </div>
   </div>;
 }
