@@ -56,14 +56,15 @@ test("the selected path and its branches fit the canvas, refitted on resize", as
   await page.setViewportSize({ width: 1440, height: 900 });
   await openInvestigation(page);
   expect(await nodesOutsideCanvas(page)).toEqual([]);
-  // The CVE is the path's last hop, its target; the package it was found on carries the finding badge.
+  // The CVE is the path's last hop, its target, so the package does not repeat that finding as a badge.
   await expect(page.getByTestId("attack-path-node-cve:next")).toHaveAttribute("data-role", "target");
-  await expect(page.getByLabel("Findings (1) on next@15.2.2, worst critical", { exact: true })).toBeVisible();
+  await expect(page.getByLabel(/^Findings \(\d+\) on next@15\.2\.2/)).toHaveCount(0);
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.waitForTimeout(800);
-  // Narrower, the selected path still fits at the readable floor; branches beyond it are panned to and counted, never shrunk to fit.
+  // Narrower, a six-hop path is wider than the pane at the readable floor: the hops up to the package stay in view,
+  // and anything beyond is panned to and counted, never shrunk below the floor.
   const outside = await nodesOutsideCanvas(page);
-  for (const hop of ["contractor-reviewer", "jit-prod-reviewer", "prod-ai-admin", "Developer Copilot", "copilot-portal", "next@15.2.2", "CVE-2025-29927"]) {
+  for (const hop of ["contractor-reviewer", "jit-prod-reviewer", "prod-ai-admin", "Developer Copilot", "copilot-portal", "next@15.2.2"]) {
     expect(outside.some((label) => label?.includes(hop)), hop).toBe(false);
   }
   if (outside.length) await expect(page.getByRole("status").filter({ hasText: "off screen" })).toHaveText(`${outside.length} more ${outside.length === 1 ? "node" : "nodes"} off screen · drag to pan`);

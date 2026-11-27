@@ -4,7 +4,14 @@ import { get } from "@/lib/api-transport";
 import { useGraphNodeAggregates } from "@/lib/graph-node-aggregates";
 vi.mock("@/lib/api-transport", () => ({ get: vi.fn() }));
 beforeEach(() => { vi.mocked(get).mockReset(); });
-const row = { node_id: "node:a", semantic_layer: "app", aggregate: { issue_count: 37, worst_severity: "high", exposed_count: 4 } };
+const row: GraphNodeAggregate = {
+  node_id: "node:a", semantic_layer: "app",
+  aggregate: {
+    issue_count: 37, finding_occurrence_count: 37, worst_severity: "high", worst_severity_rank: 3,
+    severity_counts: { high: 37 }, exposed_count: 4, internet_exposed: true,
+    by_type: { container: 4 }, descendant_count: 4, toxic_combo: false, toxic_count: 0,
+  },
+};
 it("requests the selected hops in one snapshot-pinned batch and keeps backend totals", async () => {
   vi.mocked(get).mockResolvedValue({ scan_id: "scan", snapshot_generation: "revision", aggregates: [row], missing_node_ids: ["node:b"] });
   const { result, rerender } = renderHook(({ hops }) => useGraphNodeAggregates("scan", hops, "revision"), { initialProps: { hops: ["node:a", "node:b"] } });
@@ -51,7 +58,7 @@ import type { GraphNodeAggregate } from "@/lib/graph-node-aggregates";
 it("passes authoritative aggregates through the selected-path model without counting adjacent findings", () => {
   const { graph, selected } = branchingFixture();
   const nodeId = selected.hops[0]!;
-  const aggregate = { ...row, node_id: nodeId } as GraphNodeAggregate;
+  const aggregate = { ...row, node_id: nodeId };
   const model = buildAttackPathGraphModel(graph, selected, { nodeAggregates: new Map([[nodeId, aggregate]]) });
   expect(model.nodes.find(node => node.id === nodeId)?.aggregate?.issue_count).toBe(37);
   expect(model.nodes.find(node => node.id === selected.hops[1])?.aggregate).toBeUndefined();
@@ -63,7 +70,7 @@ import { AttackPathGraphNode } from "@/components/attack-path-graph-node";
 it("renders backend count and severity even when only one finding is loaded", () => {
   const { graph, selected } = branchingFixture();
   const nodeId = selected.hops[0]!;
-  const model = buildAttackPathGraphModel(graph, selected, { nodeAggregates: new Map([[nodeId, { ...row, node_id: nodeId } as GraphNodeAggregate]]) });
+  const model = buildAttackPathGraphModel(graph, selected, { nodeAggregates: new Map([[nodeId, { ...row, node_id: nodeId }]]) });
   const node = { ...model.nodes.find(node => node.id === nodeId)!, findings: [{ id: "one", label: "One", severity: "low" }] };
   render(<ReactFlowProvider><AttackPathGraphNode id={node.id} data={{ node, vertical: false, onOpenFindings: vi.fn(), onExpandGroup: vi.fn() }}
     type="attackPathNode" selected={false} dragging={false} draggable={false} selectable deletable={false} zIndex={0} isConnectable={false} positionAbsoluteX={0} positionAbsoluteY={0} /></ReactFlowProvider>);

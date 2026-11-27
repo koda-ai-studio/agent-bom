@@ -19,6 +19,7 @@ export function GraphScopeContext({ graph, selected, onInspect, compact = false,
   const exposed = selected.nodes.filter(node => internetExposure(node.attributes) === true);
   const content = <>
     {shared.map(server => <p key={server.id}>Shared MCP server: {server.label}. Expand it to inspect tools and access evidence.</p>)}
+    {exposed.length > 0 && <p className="mt-2">Internet exposure source: recorded internet_exposed flag.</p>}
     {exposed.map(node => <button key={node.id} className="mt-2 block underline underline-offset-4" onClick={() => onInspect(node.id, node.label)}>Internet-exposed: {node.label}</button>)}
     {controls.length > 0 && <details className="mt-2" open={toolsOpen}><summary className="cursor-pointer" onClick={event => { if (onToolsToggle) { event.preventDefault(); onToolsToggle(); } }}>Recorded tool control context ({controls.length})</summary>
       <p className="my-2">Additional relationships outside the overview. Recorded configuration does not confirm enforcement.</p>

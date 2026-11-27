@@ -136,7 +136,11 @@ export function RelationshipEdge(props: EdgeProps) {
   // Rise beside the upstream node before approaching a wide target caption.
   const earlyRise: [string, number, number] = [`M${props.sourceX},${props.sourceY} C${props.sourceX + 8},${props.sourceY} ${props.sourceX + 8},${props.targetY} ${props.targetX},${props.targetY}`,
     props.sourceX + 6 + (props.targetX - props.sourceX) / 8, (props.sourceY + props.targetY) / 2];
-  const [path, routeX, routeY] = props.data?.earlyRise ? earlyRise : props.data?.directOverview ? getBezierPath(props) : relationshipPath(props, obstacles, props.data?.phoneLayout ? undefined : portLane);
+  // Drop through the gap between caption columns, then enter the lower row level.
+  const dx = props.targetX - props.sourceX;
+  const lateDescent: [string, number, number] = [`M${props.sourceX},${props.sourceY} C${props.sourceX + dx / 3},${props.sourceY} ${props.sourceX + dx / 4},${props.targetY} ${props.targetX},${props.targetY}`,
+    props.sourceX + dx / 2, (props.sourceY + props.targetY) / 2];
+  const [path, routeX, routeY] = props.data?.lateDescent ? lateDescent : props.data?.earlyRise ? earlyRise : props.data?.directOverview ? getBezierPath(props) : relationshipPath(props, obstacles, props.data?.phoneLayout ? undefined : portLane);
   const anchor = props.data?.labelAnchor === "source" || props.data?.labelAnchor === "target" ? anchoredLabelPoint(props, props.data.labelAnchor) : null;
   const x = anchor?.x ?? routeX, y = anchor?.y ?? routeY;
   useLayoutEffect(() => { scheduleRelationshipLabelLayout(labelRef.current); }, [path, zoom, label, x, y, visibility, inspecting]);

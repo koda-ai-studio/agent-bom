@@ -449,7 +449,10 @@ descendant counts, a by-type breakdown, worst-severity, a per-severity
 histogram, and internet-exposed / toxic-combination flags propagated from every
 descendant. The UI (and `GET /v1/graph/rollup`) drills down one level at a time
 instead of loading the whole estate, with an attack-path-first view that returns
-the nodes on materialized attack paths first. The roll-up is a pure read over
+the nodes on materialized attack paths first. A container workload rolls up what
+its image ships: the packages it `depends_on` and the image it runs (`depends_on`
+from Kubernetes, `runs` from an image-digest match), so a workload's badge
+counts its image CVEs. The roll-up is a pure read over
 the existing `UnifiedGraph` — no new collection. Two further overlays enrich the
 same graph: an ASPM layer (`aspm_overlay.py`) that organizes AppSec findings
 around `APPLICATION` nodes, and a FinOps layer (`cost_overlay.py`) that fuses

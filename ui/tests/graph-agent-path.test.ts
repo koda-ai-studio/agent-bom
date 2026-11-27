@@ -14,15 +14,21 @@ function sample() {
   return { graph, flow };
 }
 
-it("ends one exposure story at real capabilities and credentials with findings above each owner", () => {
+it("ends one exposure story at the crown-jewel data an exposed credential opens, with findings above each owner", () => {
   const { graph, flow } = sample();
   const original = JSON.stringify(graph);
   const result = agentPathGraph(graph, flow, "agent:developer-copilot", () => {});
   const pos = (id: string) => result.nodes.find(node => node.id === id)!.position;
-  const path = ["display:internet", "container:copilot-portal", "agent:developer-copilot", "server:filesystem", "tool:exec"];
+  const path = ["display:internet", "container:copilot-portal", "agent:developer-copilot", "server:filesystem", "cred:aws", "store:ai-training"];
   for (let i = 1; i < path.length; i++) expect(pos(path[i]!).x).toBeGreaterThan(pos(path[i - 1]!).x);
-  expect(pos("cred:aws").x).toBeGreaterThan(pos("server:filesystem").x);
-  expect(pos("cred:aws").y).toBeGreaterThan(pos("tool:exec").y);
+  for (const id of path.slice(1)) expect(pos(id).y).toBe(pos("display:internet").y);
+  expect(pos("tool:exec").x).toBe(pos("cred:aws").x);
+  expect(pos("tool:exec").y).toBeGreaterThan(pos("cred:aws").y);
+  expect(pos("server:github").y).toBe(pos("tool:exec").y);
+  // The crown rests on the data store's recorded sensitivity, not on the credential.
+  expect(result.nodes.find(node => node.id === "store:ai-training")!.data.attributes?.risk_context).toMatchObject({ crown_jewel: true });
+  expect(result.nodes.find(node => node.id === "cred:aws")!.data.attributes?.risk_context).toBeUndefined();
+  for (const edge of result.edges) expect(Math.abs(pos(edge.target).x - pos(edge.source).x)).toBeLessThanOrEqual(248);
   for (const owner of ["agent:developer-copilot", "server:filesystem"]) {
     const group = result.nodes.find(node => node.id === `display:scope-findings:${owner}`)!;
     expect(group.data.readingFindings?.count).toBe(1);
@@ -33,9 +39,9 @@ it("ends one exposure story at real capabilities and credentials with findings a
   for (const excluded of ["sa:jit-review", "role:prod-admin", "agent:sre-runbook"]) expect(result.nodes.some(node => node.id === excluded)).toBe(false);
   expect(result.nodes.find(node => node.id === "agent:developer-copilot")!.data.scopeAdmin?.label).toBe("prod-ai-admin");
   expect(result.nodes.find(node => node.id === "server:filesystem")!.data.scopePeers?.[0]?.label).toBe("SRE Runbook Agent");
-  expect(result.edges.find(edge => edge.data?.relationship === "hosted_on")).toMatchObject({ source: "container:copilot-portal", target: "agent:developer-copilot", data: { originalSource: "agent:developer-copilot", originalTarget: "container:copilot-portal", relationshipLabel: "Hosts" } });
+  expect(result.edges.find(edge => edge.data?.originalRelationship === "hosted_on")).toMatchObject({ source: "container:copilot-portal", target: "agent:developer-copilot", data: { originalSource: "agent:developer-copilot", originalTarget: "container:copilot-portal", relationshipLabel: "Hosts" } });
   expect(result.edges.filter(edge => !edge.data?.displayOnly).every(edge => graph.edges.some(record => record.id === edge.id))).toBe(true);
-  const pairs = new Set([...path.slice(1).map((id, index) => `${path[index]}>${id}`), "server:filesystem>cred:aws"]);
+  const pairs = new Set([...path.slice(1).map((id, index) => `${path[index]}>${id}`), "server:filesystem>tool:exec"]);
   for (const edge of result.edges) {
     expect(edge.style?.stroke === "var(--graph-edge-exposure)").toBe(pairs.has(`${edge.source}>${edge.target}`));
     if (edge.data?.exposurePath) expect(edge.style?.strokeDasharray).toBeUndefined();
@@ -82,4 +88,13 @@ it("keeps the capability endpoint when another server has more findings, without
   const result = agentPathGraph(graph, flow, "agent:developer-copilot", () => {});
   expect(result.edges.find(edge => edge.target === "tool:exec")?.data?.exposurePath).toBe(true);
   expect(new Set(result.nodes.map(node => `${node.position.x},${node.position.y}`)).size).toBe(result.nodes.length);
+});
+
+it("draws recorded exposure as part of the selected path without persisting a new edge", () => {
+  const {graph, flow} = sample();
+  const result = agentPathGraph(graph, flow, "agent:developer-copilot", () => {});
+  const context = result.edges.find(edge => edge.source === "display:internet")!;
+  expect(context.data).toMatchObject({displayOnly: true, traversable: false, exposurePath: true});
+  expect(context.markerEnd).toBeDefined();
+  expect(context.style?.strokeDasharray).toBeUndefined();
 });

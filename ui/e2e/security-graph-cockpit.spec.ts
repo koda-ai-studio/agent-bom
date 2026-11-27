@@ -1296,8 +1296,9 @@ for (const viewport of [
     expect(interactionBox!.y + interactionBox!.height).toBeLessThanOrEqual(nodeBandBox!.y + 1);
     expect(legendBox!.y).toBeGreaterThanOrEqual(nodeBandBox!.y + nodeBandBox!.height - 1);
     await expect(legend).toContainText("Selected path");
-    // The path's finding is its terminal hop, so the legend names the has-finding link that reaches it.
-    await expect(legend).toContainText("Has finding");
+    // Relationship names are disclosed on hover; the footer explains the visible line styles.
+    await expect(legend).toContainText("No per-edge receipt");
+    await expect(legend).toContainText("Hover or focus a line for its relationship");
     await page.screenshot({
       path: testInfo.outputPath(`security-graph-${viewport.width}x${viewport.height}.png`),
       fullPage: true,

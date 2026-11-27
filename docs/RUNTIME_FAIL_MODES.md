@@ -1221,3 +1221,14 @@ authentication and durable audit admission still fail closed, policy reloads
 retain their existing last-good/invalidation rules, and `/healthz` reports
 the same resolved `fail_mode_runtime`. Lifecycle tests cover cleanup after
 normal shutdown and failed initial policy loading.
+
+## Scope finding disclosure
+
+`GET /v1/graph/scope-findings` fails closed on missing authentication (401),
+unknown scope/snapshot (404), changed snapshot or suppression revision (409),
+and invalid pagination or descendant exclusions (422). Exclusions are bounded
+and resolved within the selected tenant and containment subtree. Graph admission
+or store unavailability remains an error, not a zero-finding response. The UI
+preserves a visible error and asks for retry; it does not label failed reads clean.
+Full scope totals remain available when path groups disclose descendant issues
+separately. This endpoint never mutates findings, suppressions or access policy.

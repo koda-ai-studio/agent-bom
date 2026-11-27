@@ -227,13 +227,14 @@ describe("Internet boundary display context", () => {
       network_reachability_assessment: { complete: true, decision: "allow", source_scope: "internet", target_id: "ing-1", evidence_refs: ["receipt-1"] } } } } : n) };
   };
 
-  it("draws the unproven link no stronger than a recorded non-traversable one", () => {
+  it("draws recorded exposure as the solid exposure route while it stays display-only and non-traversable", () => {
     const { nodes, edges, ingress } = assessed();
     const result = investigationFlow(nodes, edges, "exposure");
     const link = result.edges.find(e => e.data?.displayOnly)!;
     expect(link.target).toBe(ingress.id);
-    expect(link.style?.strokeDasharray).toBeTruthy();
-    expect(Number(link.style?.strokeWidth)).toBeLessThanOrEqual(1.2);
+    expect(link.style?.strokeDasharray).toBeUndefined();
+    expect(link.style?.stroke).toBe("var(--graph-edge-exposure)");
+    expect(link.data).toMatchObject({ displayOnly: true, traversable: false, relationship: "exposed_to" });
   });
 
   it("names display objects for assistive technology by their target, never by display id", () => {

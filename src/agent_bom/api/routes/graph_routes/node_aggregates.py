@@ -8,6 +8,7 @@ only its own containment subtree.
 
 from __future__ import annotations
 
+from collections import Counter
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -20,6 +21,7 @@ from agent_bom.api.read_models.graph_node_aggregates import GraphNodeAggregatesR
 from agent_bom.api.routes.graph_routes import _runtime
 from agent_bom.api.routes.graph_routes._admission import _GraphAdmissionRoute
 from agent_bom.api.scan_finding_read import suppressed_finding_ids
+from agent_bom.graph.rollup import containment_descendants
 from agent_bom.graph.rollup_node import node_aggregate, scope_findings
 from agent_bom.graph.semantic_layer import semantic_layer
 
@@ -37,7 +39,21 @@ def _aggregates(store, *, tenant: str, scan_id: str, node_ids: list[str], suppre
         if aggregate is None:
             missing.append(node_id)
             continue
-        rows.append({"node_id": node_id, "semantic_layer": semantic_layer(graph.nodes[node_id]), "aggregate": aggregate.to_dict()})
+        descendants = set(containment_descendants(graph, node_id))
+        excluded = sorted(other for other in node_ids if other != node_id and other in descendants)
+        findings = scope_findings(graph, node_id, suppressed=suppressed, exclude_node_ids=tuple(excluded))
+        rows.append(
+            {
+                "node_id": node_id,
+                "semantic_layer": semantic_layer(graph.nodes[node_id]),
+                "aggregate": aggregate.to_dict(),
+                "finding_disclosure": {
+                    "issue_count": len(findings),
+                    "severity_counts": dict(Counter(row["severity"] for row in findings)),
+                    "exclude_node_ids": excluded,
+                },
+            }
+        )
     return rows, missing
 
 
@@ -82,11 +98,16 @@ async def get_graph_node_aggregates(
 __all__ = ["MAX_NODE_AGGREGATES", "router"]
 
 
-def _scope_findings(store, *, tenant: str, scan_id: str, node_id: str, suppressed: frozenset[str]) -> list[dict]:
+def _scope_findings(
+    store, *, tenant: str, scan_id: str, node_id: str, suppressed: frozenset[str], excluded: tuple[str, ...] = ()
+) -> list[dict]:
     graph = containment_drilldown_graph(store, node_id=node_id, scan_id=scan_id, tenant_id=tenant)
     if node_id not in graph.nodes:
         raise HTTPException(404, "Scope not found in this snapshot.")
-    return scope_findings(graph, node_id, suppressed=suppressed)
+    descendants = set(containment_descendants(graph, node_id))
+    if any(child == node_id or child not in descendants for child in excluded):
+        raise HTTPException(422, "Excluded scopes must be descendants of the selected scope.")
+    return scope_findings(graph, node_id, suppressed=suppressed, exclude_node_ids=excluded)
 
 
 @router.get("/graph/scope-findings", **documented(GraphScopeFindingsResponse), tags=["graph"])
@@ -98,9 +119,12 @@ async def get_scope_findings(
     finding_revision: Optional[str] = Query(None, max_length=128),
     offset: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
+    exclude_node_id: list[str] = Query(default=[], max_length=25, description="Descendant scopes disclosed separately; at most 25."),
 ) -> dict:
     """Open issues on the roll-up count basis; tenant-scoped and revision-pinned pages."""
     tenant = _runtime._tenant(request)
+    if any(not value or len(value) > 2048 for value in exclude_node_id):
+        raise HTTPException(422, "Excluded scope identifiers must contain 1 to 2048 characters.")
     store = _runtime._get_graph_store_or_503()
     identity = await _runtime._graph_store_call(
         pin_generation, store, tenant=tenant, scan_id=scan_id or "", generation=snapshot_generation, offset=offset
@@ -112,7 +136,13 @@ async def get_scope_findings(
         raise HTTPException(409, "Finding suppressions changed; restart the query.")
     suppressed = await _runtime._graph_store_call(suppressed_finding_ids, tenant)
     rows = await _runtime._graph_store_call(
-        _scope_findings, store, tenant=tenant, scan_id=identity[0], node_id=node_id, suppressed=suppressed
+        _scope_findings,
+        store,
+        tenant=tenant,
+        scan_id=identity[0],
+        node_id=node_id,
+        suppressed=suppressed,
+        excluded=tuple(sorted(set(exclude_node_id))),
     )
     await _runtime._graph_store_call(verify_generation, store, tenant=tenant, identity=identity, has_rows=bool(rows))
     if revision != await _runtime._graph_store_call(suppression_revision, tenant):

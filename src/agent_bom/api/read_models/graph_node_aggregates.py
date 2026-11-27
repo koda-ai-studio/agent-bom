@@ -23,10 +23,19 @@ class GraphRollupAggregate(ReadModel):
     toxic_count: int
 
 
+class GraphFindingDisclosure(ReadModel):
+    """Issues not already disclosed by another requested descendant scope."""
+
+    issue_count: int
+    severity_counts: dict[str, int]
+    exclude_node_ids: list[str]
+
+
 class GraphNodeAggregate(ReadModel):
     node_id: str
     semantic_layer: str
     aggregate: GraphRollupAggregate
+    finding_disclosure: GraphFindingDisclosure | None = None
 
 
 class GraphNodeAggregatesResponse(ReadResponse):

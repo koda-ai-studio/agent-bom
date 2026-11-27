@@ -47,11 +47,13 @@ describe("seeded product-proof graph", () => {
       expect(item.composite_risk).toBeGreaterThan(10);
       expect(item.composite_risk).toBeLessThanOrEqual(100);
       expect(item.composite_risk).toBe(pathRisk(graph.nodes, item.hops));
-      expect(item.hops.length).toBeGreaterThanOrEqual(4);
+      if (item.source === "container:copilot-portal") expect(item.hops).toEqual(["container:copilot-portal", "pkg:next", "cve:next"]);
+      else expect(item.hops.length).toBeGreaterThanOrEqual(4);
       expect(item.hops.length).toBeLessThanOrEqual(7);
       expect(hopsAreConnected(graph.edges, item.hops)).toBe(true);
       expect(item.edges).not.toContain("related");
-      const pathCves = item.hops.map((id) => byId.get(id)!).filter((node) => node.entity_type === "vulnerability").map((node) => node.label);
+      const pathHops: string[] = item.hops;
+      const pathCves = pathHops.map((id) => byId.get(id)!).filter((node) => node.entity_type === "vulnerability").map((node) => node.label);
       expect(item.vuln_ids).toEqual(pathCves);
       expect(item.severity).toBe(pathCves.length ? advisory(pathCves[0]).severity : byId.get(item.target)!.severity);
     }

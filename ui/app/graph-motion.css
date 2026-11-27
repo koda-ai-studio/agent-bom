@@ -8,7 +8,7 @@
 .attack-path-trace {
   fill: none;
   pointer-events: none;
-  stroke: var(--accent);
+  stroke: var(--graph-edge-exposure);
   stroke-width: 2.5;
   stroke-linecap: round;
   stroke-dasharray: 1;

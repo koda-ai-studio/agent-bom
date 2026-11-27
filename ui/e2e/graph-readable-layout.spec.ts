@@ -4,7 +4,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { ownedFindingAggregates, routeNodeAggregates, withSemanticLayer } from "./helpers/graph-rollup-mocks";
 import { graphGrammarViolations } from "./helpers/graph-grammar";
 import { installAgentScopeFixture } from "./helpers/agent-scope-fixture";
-import { assertAgentPathStructure } from "./helpers/agent-path-structure";
+import { assertAgentPathStructure, auditAgentCaptions } from "./helpers/agent-path-structure";
 
 for (const theme of ["light", "dark"]) test(`agent path has no crossings or caption collisions ${theme}`, async ({ page }, info) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
@@ -13,7 +13,7 @@ for (const theme of ["light", "dark"]) test(`agent path has no crossings or capt
   await page.goto(`/graph?scan=${graph.scan_id}&rollup=1`);
   await assertAgentPathStructure(page);
   await page.getByTestId("graph-agent-evidence").screenshot({ path: info.outputPath(`agent-path-canvas-${theme}.png`) });
-  await page.screenshot({ path: info.outputPath(`agent-path-${theme}.png`), fullPage: true });
+  await page.screenshot({ path: info.outputPath(`agent-path-${theme}.png`), fullPage: false });
 });
 
 const stamp = "2026-10-15T00:00:00Z";
@@ -837,3 +837,31 @@ for (const theme of ["light", "dark"] as const) {
     expect(Math.abs(centers[0]! - centers[1]!)).toBeLessThan(1);
   });
 }
+
+
+test("caption audit rejects vertical edges through names, types and both sub-captions", async ({ page }) => {
+  await page.setContent(`<div data-testid="caption-probe" style="position:relative;width:400px;height:300px;padding:20px;box-sizing:border-box">
+    <p data-semantic-name>Developer Copilot</p><p data-graph-caption>IDE</p>
+    <button data-graph-caption>admin via prod-ai-admin</button><br>
+    <button data-graph-caption>also used by: SRE Runbook Agent</button>
+  </div>`);
+  const canvas = page.getByTestId("caption-probe");
+  await canvas.evaluate(element => {
+    const origin = element.getBoundingClientRect();
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.style.cssText = "position:absolute;inset:0;width:400px;height:300px";
+    for (const caption of element.querySelectorAll("[data-semantic-name], [data-graph-caption]")) {
+      const box = caption.getBoundingClientRect();
+      const path = document.createElementNS(svg.namespaceURI, "path");
+      path.setAttribute("class", "react-flow__edge-path");
+      const x = box.left - origin.left + box.width / 2;
+      path.setAttribute("d", `M${x},${box.top - origin.top + 1} V${box.bottom - origin.top - 1}`);
+      svg.appendChild(path);
+    }
+    element.appendChild(svg);
+  });
+  const audit = await canvas.evaluate(auditAgentCaptions);
+  for (const label of ["Developer Copilot", "IDE", "admin via prod-ai-admin", "also used by: SRE Runbook Agent"]) {
+    expect(audit.crossed.some(crossing => crossing.endsWith(`crosses ${label}`)), JSON.stringify(audit)).toBe(true);
+  }
+});

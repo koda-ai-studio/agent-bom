@@ -21,7 +21,7 @@ from typing import Any
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.mcp_risk import apply_mcp_risk
 from agent_bom.graph.risk_context import derive_node_risk_context
-from agent_bom.graph.rollup import rollup_view
+from agent_bom.graph.rollup import containment_descendants, rollup_view
 from agent_bom.graph.rollup_node import node_aggregate, scope_findings
 from agent_bom.graph.semantic_layer import LAYER_BY_ENTITY_TYPE, semantic_layer
 
@@ -109,6 +109,7 @@ def build_fixture(data: dict[str, Any]) -> dict[str, Any]:
         },
         "rollup": rollup_view(graph),
         "node_aggregates": aggregates,
+        "scope_descendants": {node_id: containment_descendants(graph, node_id) for node_id in sorted(graph.nodes)},
         "scope_findings": {node_id: scope_findings(graph, node_id) for node_id in sorted(graph.nodes)},
     }
 

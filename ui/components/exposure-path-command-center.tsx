@@ -160,7 +160,7 @@ export function ExposurePathCommandCenter({
                   </span>}
                   {evidence?.isKev ? <span className="ep-kev">CISA KEV</span> : null}
                 </span>
-                <span className="ep-header-context">Path context &amp; evidence · {pathSpanLabel(path.hops.length)} · {countLabel(path.affectedAgents.length, "agent")} on this path</span>
+                <span className="ep-header-context">Path context &amp; evidence · {pathSpanLabel(path.hops.length)}{path.affectedAgents.length > 0 && <> · {countLabel(path.affectedAgents.length, "agent")} on this path</>}</span>
               </span>
               <ChevronDown className="ep-chevron" aria-hidden="true" />
             </summary>

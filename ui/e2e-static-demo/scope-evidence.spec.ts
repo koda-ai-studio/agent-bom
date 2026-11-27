@@ -20,12 +20,14 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     if (width === 1440) {
       await page.getByText(/Relationship evidence \(/).click();
       await expect(page.getByText(/prod-ai-admin → Developer Copilot · can access/)).toBeVisible();
-      await canvas.getByRole("button", { name: "Expand 1 finding for Developer Copilot" }).click();
+      // The shared CVE is disclosed once, at the server that holds it, not again at the agent.
+      await canvas.getByRole("button", { name: "Expand 1 finding for filesystem MCP" }).click();
     } else {
-      await expect(canvas.locator("li").filter({ hasText: "AWS_ROLE_SESSION" })).toContainText("exposes cred · Static / configured");
-      await canvas.getByRole("button", { name: "Open 1 finding for Developer Copilot" }).click();
+      await expect(canvas.locator('li[data-recorded-edge="server:filesystem->cred:aws:exposes_cred"]')).toContainText("exposes cred · Static / configured");
+      await expect(canvas.locator('li[data-recorded-edge="cred:aws->store:ai-training:can_access"]')).toContainText("can access · Static / configured");
+      await canvas.getByRole("button", { name: "filesystem MCP · 1 finding" }).click();
     }
-    const findings = page.getByRole("region", { name: "Findings for Developer Copilot" });
+    const findings = page.getByRole("region", { name: "Findings for filesystem MCP" });
     await expect(findings).toContainText("1 open issue");
     await expect(findings).toContainText("CVE-2024-37891");
     await expect(findings.getByRole("button", { name: "Inspect evidence" })).toBeVisible();

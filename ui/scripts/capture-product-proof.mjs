@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { queryStaticAttackPaths } from "../lib/static-demo-attack-paths.mjs";
 import { graphNodeAggregatesResponse, nodeAggregatesFixtureIds, nodeAggregatesResponse, rollupResponse, scopeFindingsResponse } from "./product-proof-rollup.mjs";
 import { auditRenderedGraph, graphGrammarExpression, renderedRelationshipCurves, sharedRelationshipRuns } from "./graph-visual-audit.mjs";
 import { chromium, expect } from "@playwright/test";
@@ -425,28 +426,17 @@ function fleetAgentFromScan(agent, index) {
 
 const fleetAgents = scanAgents().map(fleetAgentFromScan);
 
-function fixFirstView() {
+export function fixFirstView() {
   const cards = graph.attack_paths.map((pathItem, index) => ({
     id: `fix-${index + 1}`,
     rank: index + 1,
-    title: [
-      "JIT identity reaches repo-write MCP and critical CVE",
-      "Runbook agent reaches shell tooling and vulnerable dependency",
-      "RAG agent reaches confidential dataset through Snowflake key",
-    ][index],
+    title: `${graph.nodes.find(node => node.id === pathItem.source)?.label ?? pathItem.source} → ${graph.nodes.find(node => node.id === pathItem.target)?.label ?? pathItem.target}`,
     summary: pathItem.summary,
     attack_path: pathItem,
     nodes: graph.nodes,
     sequence_labels: pathItem.hops.map((hop) => graph.nodes.find((item) => item.id === hop)?.label ?? hop),
-    risk_reasons: [
-      { kind: "effective_reach", label: "Reachable", detail: "Graph traversal connects identity, agent, server, tool, package, and finding." },
-      { kind: "credential_exposure", label: "Credential", detail: "The path includes a safe-to-store credential reference." },
-      { kind: "runtime_policy", label: "Policy hit", detail: "Gateway policy has evaluated this tool class in advisory or blocking mode." },
-    ],
-    next_actions: [
-      { title: "Narrow tool scope", detail: "Disable or scope the highest-risk MCP tool on this path.", href: "/gateway" },
-      { title: "Open remediation", detail: "Patch the vulnerable package and regenerate graph evidence.", href: "/remediation" },
-    ],
+    risk_reasons: [{ kind: "recorded_relationships", label: "Recorded relationships", detail: "Synthetic configuration relationships connect these assets; execution and effective access are not established." }],
+    next_actions: [{ title: "Review remediation", detail: "Review the recorded finding and available package fix before applying changes.", href: "/remediation" }],
     affected: {
       agents: pathItem.hops.filter((hop) => hop.startsWith("agent:")),
       servers: pathItem.hops.filter((hop) => hop.startsWith("server:")),
@@ -462,11 +452,11 @@ function fixFirstView() {
     created_at: CREATED_AT,
     cards,
     summary: {
-      total_paths: 12,
+      total_paths: cards.length,
       matched_paths: cards.length,
       returned_paths: cards.length,
-      highest_risk: 9.8,
-      covered_findings: 3,
+      highest_risk: Math.max(0, ...graph.attack_paths.map(path => path.composite_risk ?? 0)),
+      covered_findings: new Set(graph.attack_paths.flatMap(path => path.vuln_ids ?? [])).size,
       node_count: graph.nodes.length,
       edge_count: graph.edges.length,
     },
@@ -1504,7 +1494,7 @@ export async function installRoutes(page, fixtureGraph = graph) {
   await page.route("**/v1/graph/attack-paths?**", (route) => {
     const url = new URL(route.request().url());
     const selectedGraph = url.searchParams.get("scan_id") === REFERENCE_CORRELATION_ID ? referenceGraph : graph;
-    return fulfill(route, graphResponseWithPagination(selectedGraph, "attack_paths"));
+    return fulfill(route, queryStaticAttackPaths(selectedGraph, url));
   });
   await page.route("**/v1/graph/attack-paths/cross-vendor?**", (route) => {
     const url = new URL(route.request().url());
@@ -2878,7 +2868,7 @@ async function main() {
       }
     };
     const executiveRiskAssertions = {
-      expectedText: ["Same order as Investigation · top 2 advisories from 3 ranked paths", /Top risks/i, /Assets & coverage/i],
+      expectedText: ["Same order as Investigation · top 2 advisories from 4 ranked paths", /Top risks/i, /Assets & coverage/i],
       rejectedText: ["Severity unavailable"],
       expectedApiPaths: ["/v1/overview", "/v1/inventory/summary", "/v1/graph/attack-paths"], assertNoHorizontalOverflow: true,
     };
@@ -3105,9 +3095,9 @@ async function main() {
           }).map(node => node.getAttribute("data-id"));
         }), { message: "The whole selected path and its branches fit the canvas" }).toEqual([]);
       }
-      // The path ends at the advisory, drawn as the terminal hop; the package keeps the backend's finding count.
+      // The path ends at the advisory, drawn as the terminal hop, so the package does not repeat that finding as a badge.
       await expect(pathCanvas.getByTestId("attack-path-node-cve:next")).toHaveAttribute("data-role", "target");
-      await expect(pathCanvas.getByLabel("Findings (1) on next@15.2.2, worst critical", { exact: true })).toBeVisible();
+      await expect(pathCanvas.getByLabel(/^Findings \(\d+\) on next@15\.2\.2/)).toHaveCount(0);
       // Relationship names appear on hover or focus only.
       const tooltip = pathCanvas.getByRole("tooltip");
       await expect(tooltip).toHaveCount(0);
@@ -3207,20 +3197,22 @@ async function main() {
         await canvasPage.locator('[data-testid="graph-scope-overview"]').waitFor({ state: "visible", timeout: 30_000 });
         await canvasPage.locator('[data-testid="graph-scope-overview"] .react-flow__node').first().waitFor({ state: "visible", timeout: 30_000 });
         const pathCanvas = canvasPage.getByTestId("graph-agent-evidence");
-        await expect(pathCanvas.locator(".react-flow__node")).toHaveCount(9);
-        await expect(pathCanvas.locator(".react-flow__edge")).toHaveCount(8);
+        await expect(pathCanvas.locator(".react-flow__node")).toHaveCount(10);
+        await expect(pathCanvas.locator(".react-flow__edge")).toHaveCount(9);
         await expect(pathCanvas.locator('[data-id="display:internet"]')).toHaveCount(1);
         await expect(pathCanvas.locator('.react-flow__node[data-id^="display:scope-findings:"]')).toHaveCount(2);
+        await expect(pathCanvas.locator('.react-flow__node[data-id="display:scope-findings:container:copilot-portal"]')).toHaveCount(1);
+        await expect(pathCanvas.locator('.react-flow__node[data-id="display:scope-findings:agent:developer-copilot"]')).toHaveCount(0);
         await canvasPage.waitForTimeout(500);
       },
       {
         awaitResponses: [
           (response) => new URL(response.url()).pathname === "/v1/graph/rollup" && response.ok(),
         ],
-        expectedText: ["Investigation", "Agent connections", "Showing 6 assets · 5 recorded connections", "Browse inventory", "execute_command", "AWS_ROLE_SESSION"],
+        expectedText: ["Investigation", "Agent connections", "Showing 7 assets · 6 recorded connections", "Browse inventory", "execute_command", "AWS_ROLE_SESSION", "s3-ai-training-data"],
         expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/rollup", "/v1/graph/scenarios"],
         readySelector: '[data-testid="graph-scope-overview"]',
-        minGraphNodes: 6, maxGraphNodes: 6, minGraphEdges: 5, maxGraphEdges: 5,
+        minGraphNodes: 7, maxGraphNodes: 7, minGraphEdges: 6, maxGraphEdges: 6,
         assertNoHorizontalOverflow: true,
       },
     );
@@ -3401,7 +3393,7 @@ async function main() {
       });
       await scrollTo(inventoryPage, 0);
     }, {
-      expectedText: ["Asset inventory", "Unique packages", "MCP servers", "AI agents", "Cloud resources", "Recorded assets are separate from collection and assessment coverage"],
+      expectedText: ["Asset inventory", "Unique packages", "MCP servers", "AI agents", /Cloud resources?/, "Recorded assets are separate from collection and assessment coverage"],
       expectedApiPaths: ["/v1/inventory/summary", "/v1/inventory/assets"],
     });
     await capture(page, "/fleet?capture=1", "fleet-state-live.png", async (fleetPage) => {

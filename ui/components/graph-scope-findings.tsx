@@ -5,8 +5,8 @@ import { api } from "@/lib/api";
 
 type Page = Awaited<ReturnType<typeof api.getGraphScopeFindings>>;
 
-export function GraphScopeFindings({ scanId, nodeId, label, expected, onClose, onInspect }: {
-  scanId: string; nodeId: string; label: string; expected?: number | undefined;
+export function GraphScopeFindings({ scanId, nodeId, label, expected, excludeNodeIds, onClose, onInspect }: {
+  scanId: string; nodeId: string; label: string; expected?: number | undefined; excludeNodeIds?: string[] | undefined;
   onClose: () => void; onInspect: (id: string, label: string) => void;
 }) {
   const panel = useRef<HTMLElement>(null);
@@ -32,11 +32,11 @@ export function GraphScopeFindings({ scanId, nodeId, label, expected, onClose, o
   useEffect(() => {
     let active = true;
     setLoading(true); setError(false);
-    api.getGraphScopeFindings(scanId, nodeId, offset, offset ? generation : undefined, offset ? revision : undefined).then(result => {
+    api.getGraphScopeFindings(scanId, nodeId, offset, offset ? generation : undefined, offset ? revision : undefined, excludeNodeIds).then(result => {
       if (active) { if (result.node_id !== nodeId || result.scan_id !== scanId) throw new Error("Scope response mismatch"); setPage(result); }
     }).catch(() => { if (active) setError(true); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [scanId, nodeId, offset, generation, revision, retry]);
+  }, [scanId, nodeId, offset, generation, revision, retry, excludeNodeIds]);
   return <section ref={panel} tabIndex={-1} aria-label={`Findings for ${label}`} className="border-t border-outline p-4 text-sm">
     <div className="flex items-center justify-between gap-3"><h3 className="font-semibold">Findings · {label}</h3><button className="graph-page-action" onClick={onClose}>Close findings</button></div>
     <p className="my-2 text-xs text-ink-secondary">Distinct open issues in this asset’s containment scope. Shared occurrences of the same advisory and package count once.</p>

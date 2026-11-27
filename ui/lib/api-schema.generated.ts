@@ -18632,6 +18632,22 @@ export interface components {
             [key: string]: unknown;
         };
         /**
+         * GraphFindingDisclosure
+         * @description Issues not already disclosed by another requested descendant scope.
+         */
+        GraphFindingDisclosure: {
+            /** Exclude Node Ids */
+            exclude_node_ids: string[];
+            /** Issue Count */
+            issue_count: number;
+            /** Severity Counts */
+            severity_counts: {
+                [key: string]: number;
+            };
+        } & {
+            [key: string]: unknown;
+        };
+        /**
          * GraphFreshness
          * @description A graph is building, so reachability on this page is unassessed (``graph_refreshing`` on each row).
          *
@@ -18925,6 +18941,7 @@ export interface components {
         /** GraphNodeAggregate */
         GraphNodeAggregate: {
             aggregate: components["schemas"]["GraphRollupAggregate"];
+            finding_disclosure?: components["schemas"]["GraphFindingDisclosure"] | null;
             /** Node Id */
             node_id: string;
             /** Semantic Layer */
@@ -39707,6 +39724,8 @@ export interface operations {
                 finding_revision?: string | null;
                 offset?: number;
                 limit?: number;
+                /** @description Descendant scopes disclosed separately; at most 25. */
+                exclude_node_id?: string[];
             };
             header?: never;
             path?: never;

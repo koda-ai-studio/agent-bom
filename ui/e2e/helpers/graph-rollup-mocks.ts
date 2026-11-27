@@ -54,6 +54,8 @@ export function ownedFindingAggregates(nodes: { id: string; entity_type: string;
   return Object.fromEntries([...owned].map(([id, ids]) => {
     const worst = [...ids].map(f => findings.get(f)!.severity).sort((a, b) => (rank[b] ?? 0) - (rank[a] ?? 0))[0] ?? "none";
     const layer = nodes.find(n => n.id === id)!.semantic_layer ?? "";
-    return [id, { semantic_layer: layer, aggregate: { issue_count: ids.size, worst_severity: worst, worst_severity_rank: rank[worst] ?? 0 } }];
+    const severity_counts: Record<string, number> = {};
+    for (const finding of ids) { const severity = findings.get(finding)!.severity; severity_counts[severity] = (severity_counts[severity] ?? 0) + 1; }
+    return [id, { semantic_layer: layer, aggregate: { issue_count: ids.size, severity_counts, worst_severity: worst, worst_severity_rank: rank[worst] ?? 0 } }];
   }));
 }

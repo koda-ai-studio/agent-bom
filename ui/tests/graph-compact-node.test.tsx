@@ -83,6 +83,14 @@ it("previews a prose finding title in about two lines, cut at a word, and keeps 
   expect(prosePreview("CVE-2025-29927")).toBe("CVE-2025-29927");
 });
 
+it("wraps a credential identifier only after an underscore, so the whole name stays readable", () => {
+  const Renderer = lineageNodeTypes.credentialNode;
+  const {container} = render(<ReactFlowProvider><Renderer data={{label: "GITHUB_ENTERPRISE_TOKEN", nodeType: "credential", semanticLayout: true}} /></ReactFlowProvider>);
+  expect(container.querySelector("[data-semantic-name]")?.textContent).toBe("GITHUB_ENTERPRISE_TOKEN");
+  expect(container.querySelector("[data-semantic-name]")?.getAttribute("title")).toContain("GITHUB_ENTERPRISE_TOKEN");
+  expect(nameBreaks("GITHUB_ENTERPRISE_TOKEN").map(piece => piece.text)).toEqual(["GITHUB_", "ENTERPRISE_", "TOKEN"]);
+});
+
 it("never splits or truncates a finding id; ordinary names break only after a hyphen or underscore", () => {
   const Renderer = lineageNodeTypes.vulnNode;
   const { container } = render(<ReactFlowProvider><Renderer data={{ label: "CVE-2026-108", nodeType: "vulnerability", semanticLayout: true }} /></ReactFlowProvider>);

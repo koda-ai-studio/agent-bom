@@ -1,3 +1,4 @@
+import { queryStaticAttackPaths } from "./static-demo-attack-paths.mjs";
 import { queryStaticFindings } from "./static-demo-findings.mjs";
 import { queryStaticNodeAggregates, queryStaticScopeFindings } from "./static-demo-node-aggregates.mjs";
 import { ApiError, ApiNetworkError, classifyApiResponse } from "./api-errors";
@@ -37,9 +38,10 @@ export async function staticDemoFetch(apiPath: string, init: RequestInit, method
   const findings = route === "/v1/findings";
   // Node aggregates depend on the hop list a page settles on; the demo answers any list from one table of every node.
   const scopeFindings = route === "/v1/graph/scope-findings";
+  const attackPaths = route === "/v1/graph/attack-paths";
   const aggregates = route === "/v1/graph/node-aggregates";
-  const queryKey = findings || aggregates || scopeFindings ? null : staticDemoQueryKey(apiPath);
-  const url = staticDemoDataUrl(findings || aggregates || scopeFindings ? route : apiPath);
+  const queryKey = findings || aggregates || scopeFindings || attackPaths ? null : staticDemoQueryKey(apiPath);
+  const url = staticDemoDataUrl(findings || aggregates || scopeFindings || attackPaths ? route : apiPath);
   let res: Response;
   try {
     // An answer recorded for this exact query wins over the path's default answer.
@@ -55,5 +57,6 @@ export async function staticDemoFetch(apiPath: string, init: RequestInit, method
   if (findings) return new Response(JSON.stringify(queryStaticFindings(await res.json(), apiPath)), { status: 200, headers: { "Content-Type": "application/json" } });
   if (scopeFindings) return new Response(JSON.stringify(queryStaticScopeFindings(await res.json(), apiPath)), { status: 200, headers: { "Content-Type": "application/json" } });
   if (aggregates) return new Response(JSON.stringify(queryStaticNodeAggregates(await res.json(), apiPath)), { status: 200, headers: { "Content-Type": "application/json" } });
+  if (route === "/v1/graph/attack-paths") return new Response(JSON.stringify(queryStaticAttackPaths(await res.json(), apiPath)), {status: 200, headers: {"Content-Type": "application/json"}});
   return res;
 }

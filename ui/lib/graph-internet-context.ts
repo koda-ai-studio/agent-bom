@@ -30,9 +30,9 @@ export function withInternetAnchor(nodes: Node<LineageNodeData>[], edges: Edge[]
     return {
       id: `${INTERNET_ANCHOR_ID}:${node.id}`, source: INTERNET_ANCHOR_ID, target: node.id, type: "relationship",
       ariaLabel: assessment ? `Assessed ingress from Internet to ${node.data.label}` : `Recorded internet exposure for ${node.data.label}; display context, not a traversable relationship`,
-      label: "Internet-exposed", markerEnd: { type: MarkerType.ArrowClosed },
-      style: { stroke: "var(--text-secondary)", strokeWidth: 1, strokeDasharray: "6 3" },
-      data: { relationship: "exposed_to", displayOnly: true, traversable: false, evidenceMode: "inferred", individualLabel: true, ...(assessment ? { evidence: assessment } : {}) },
+      label: "Internet exposure · recorded internet_exposed flag", markerEnd: {type: MarkerType.ArrowClosed},
+      style: { stroke: "var(--graph-edge-exposure)", strokeWidth: 2.4 },
+      data: { relationship: "exposed_to", displayOnly: true, traversable: false, evidenceMode: "static", individualLabel: true, ...(assessment ? { evidence: assessment } : {}) },
     };
   })] };
 }

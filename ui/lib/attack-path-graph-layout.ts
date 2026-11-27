@@ -47,7 +47,8 @@ function rankColumns(model: AttackPathGraphModel): Map<string, number> {
   let previous = -Infinity;
   for (const id of model.pathNodeIds) {
     if (!columns.has(id) || placed.has(id)) continue;
-    previous = Math.max(layered.get(id)!, previous + 1);
+    // Hops are consecutive: a skipped backend layer is not drawn as an empty column on the path.
+    previous = previous === -Infinity ? layered.get(id)! : previous + 1;
     columns.set(id, previous);
     placed.add(id);
   }

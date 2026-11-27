@@ -17,7 +17,9 @@ def node_aggregate(graph: UnifiedGraph, node_id: str, *, suppressed_finding_ids:
     return _aggregate(_descendants(node_id, _contains_children(graph)), graph, facts=facts, scope_root=node_id)
 
 
-def scope_findings(graph: UnifiedGraph, node_id: str, *, suppressed: frozenset[str] = frozenset()) -> list[dict]:
+def scope_findings(
+    graph: UnifiedGraph, node_id: str, *, suppressed: frozenset[str] = frozenset(), exclude_node_ids: tuple[str, ...] = ()
+) -> list[dict]:
     """Disclose the exact issue groups counted by node_aggregate, retaining original node ids."""
     if node_id not in graph.nodes:
         return []
@@ -37,6 +39,9 @@ def scope_findings(graph: UnifiedGraph, node_id: str, *, suppressed: frozenset[s
                 row["severity"] = node.severity
     for row in groups.values():
         row["node_ids"].sort()
+    if exclude_node_ids:
+        excluded = {row["issue_key"] for child in exclude_node_ids for row in scope_findings(graph, child, suppressed=suppressed)}
+        groups = {key: row for key, row in groups.items() if key not in excluded}
     return sorted(groups.values(), key=lambda row: (-SEVERITY_RANK.get(row["severity"], 0), row["issue_key"]))
 
 

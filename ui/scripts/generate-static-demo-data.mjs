@@ -93,6 +93,10 @@ async function main() {
   };
   const browser = await chromium.launch();
   const recorded = new Map();
+  // Seed the complete collection before focused or paginated reads are crawled.
+  const pathsKey = staticDemoDataKey("/v1/graph/attack-paths");
+  recorded.set(pathsKey, JSON.stringify(fixtureGraph));
+  await fs.writeFile(path.join(dataDir, `${pathsKey}.json`), recorded.get(pathsKey));
   const scopeKey = staticDemoDataKey("/v1/graph/scope-findings");
   const scopes = Object.fromEntries(fixtureGraph.nodes.map(node => [node.id, scopeFindingsResponse(new URL(`/v1/graph/scope-findings?node_id=${encodeURIComponent(node.id)}&limit=100`, "http://demo"))]));
   if (Object.values(scopes).some(scope => scope.total !== scope.findings.length)) throw new Error("Static scope finding table is incomplete");

@@ -366,3 +366,27 @@ security review, publication or live provider qualification.
 | Stale credential authorization | Salted scrypt hashes and constant-time comparisons; cached KDF results require fresh durable records; expiry, rotation overlap, and revocation are checked on each verification | Operator configuration must be changed consistently across replicas; in-flight requests are not retroactively canceled |
 | Missing tenant root | Postgres key creation locks and checks the tenant root before insertion; an absent root returns 409 | Tenant provisioning remains an explicit authorized operation; key issuance does not silently create tenants |
 | Ephemeral audit key loss | Persisted key-identity diagnostics distinguish unavailable verification from an altered row | A database owner can alter that diagnostic metadata; use a stable externally managed signing key and independent retention for audit assurance |
+
+## Scope finding disclosure
+
+`GET /v1/graph/scope-findings` crosses the authenticated caller-to-tenant-store
+boundary. It is read-only. Node aggregates also describe issues remaining after
+other requested descendant scopes are disclosed. Full scope totals stay
+unchanged. Exclusions use canonical issue keys and are applied before pagination.
+
+| STRIDE | Threat and control | Residual risk |
+|---|---|---|
+| Spoofing | Existing API authentication and `_runtime._tenant(request)` bind reads to the caller's tenant; anonymous requests fail closed. | Explicitly configured unauthenticated deployments remain the operator's boundary. |
+| Tampering | Snapshot generation and suppression revision are checked before and after reads. Stale revisions return 409; unpinned continuation returns 422. | Revision pins are consistency tokens, not signatures or credentials. |
+| Repudiation | This GET cannot change findings or suppressions. Responses identify the snapshot and finding revision. | No independent signed read receipt; operators need access-log retention for reader attribution. |
+| Information disclosure | Every store read uses the authenticated tenant. Exclusions must be descendants inside that same selected scope. Unknown scopes return 404; invalid exclusions return 422. | Authorized readers can enumerate their tenant's findings. |
+| Denial of service | Page size is 1–100; identifiers are bounded; exclusions and requested aggregate scopes are capped at 25. `_GraphAdmissionRoute` reserves graph capacity before work. | Pagination bounds returned rows, not containment subtree size. Broad authorized reads still consume graph resources. |
+| Elevation of privilege | Viewer access grants no mutation, suppression, credential retrieval or cross-tenant access. Exclusions never change the tenant. | Trusted-proxy or store compromise remains outside this route's protection. |
+
+Regression coverage: `test_scope_disclosure_auth_tenants_and_revision_pinning`
+in `tests/test_graph_scope_findings.py` exercises anonymous rejection, two tenants
+with identical IDs, descendant exclusions and revision pinning. Its full-snapshot
+fallback regression rejects unrelated scopes even when their nodes are loaded. The same module
+checks canonical deduplication; `tests/api/test_graph_node_aggregates.py` checks
+count reconciliation and missing scopes. Failures remain errors, never empty
+clean results; see [scope failure modes](RUNTIME_FAIL_MODES.md#scope-finding-disclosure).

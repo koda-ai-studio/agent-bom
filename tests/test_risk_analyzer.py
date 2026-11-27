@@ -73,6 +73,18 @@ def test_declared_capability_aliases_are_normalized():
 # ── score_server_risk tests ────────────────────────────────────────────────
 
 
+def test_shell_with_exposed_credential_has_high_risk_floor():
+    from agent_bom.config import SERVER_RISK_HIGH_THRESHOLD
+
+    shell = MCPTool(name="execute_command", description="", declared_capabilities=["execute"])
+    profile = score_server_risk([shell], credentials=["AWS_ROLE_SESSION"])
+    assert profile.risk_score >= SERVER_RISK_HIGH_THRESHOLD
+    assert profile.risk_level in {"high", "critical"}
+    assert "floor" in profile.justification.lower()
+    assert score_server_risk([shell]).risk_score < SERVER_RISK_HIGH_THRESHOLD
+    assert score_server_risk([MCPTool(name="read_file", description="")], credentials=["REF"]).risk_score < SERVER_RISK_HIGH_THRESHOLD
+
+
 def test_score_read_only_server():
     """A server with only read tools should have risk_level 'low'."""
     tools = [

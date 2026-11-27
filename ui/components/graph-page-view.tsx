@@ -281,7 +281,7 @@ export function GraphPageView({ page }: { page: GraphPageModel }) {
             <><GraphScopeOverview
               scanId={selectedScanId || undefined}
               generation={rollupView?.snapshot_generation}
-              onInspectNode={(rootId, rootLabel) => { if (isStaticDemo()) { setSelectedNode(null); setSelectedNodeId(rootId); } else void loadRootInvestigation({ rootId, rootLabel, nodeLimit: 24 }); }}
+              onInspectNode={(rootId, rootLabel) => { window.scrollTo({top: 0, behavior: "instant"}); if (isStaticDemo()) { setSelectedNode(null); setSelectedNodeId(rootId); } else void loadRootInvestigation({ rootId, rootLabel, nodeLimit: 24 }); }}
               items={rollupItems}
               edges={rollupView?.edges ?? []}
               completeness={rollupView?.completeness}

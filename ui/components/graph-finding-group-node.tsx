@@ -24,14 +24,14 @@ export function GraphFindingGroupNode({ data }: { data: LineageNodeData }) {
       </>}
       <GraphCountHint text={`${data.description}: ${count} linked findings${severity ? ` · highest severity: ${severity}` : " · severity not rated"}. Click to expand.`}><button type="button" onClick={event => { event.stopPropagation(); data.readingFindings?.toggle(); }}
         aria-label={`Expand ${count} finding${count === 1 ? "" : "s"} for ${data.description ?? "component"}`}
-        style={{ width: GLYPH, height: GLYPH, ...(severity ? { borderColor: `var(--severity-ring-${severity})` } : {}) }}
+        style={{ width: GLYPH, height: GLYPH, ...(severity ? { borderColor: `var(--severity-ring-${severity})`, color: `var(--severity-ring-${severity})` } : {}) }}
         className="nodrag nopan graph-entity-glyph relative flex items-center justify-center rounded-full border-2 border-[var(--graph-edge-risk)] bg-surface text-[var(--graph-edge-risk)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
         <Binoculars style={{ width: `calc(var(--graph-node-icon-size, 28px) * ${COMPACT_GLYPH_SCALE})`, height: `calc(var(--graph-node-icon-size, 28px) * ${COMPACT_GLYPH_SCALE})` }} aria-hidden="true" />
       </button></GraphCountHint>
     </div>
     <div data-graph-caption className="flex flex-col items-center">
     <span style={{ fontSize: "var(--graph-node-label-size, 14px)" }} className={`mt-[0.4em] whitespace-nowrap ${data.pathPresentation ? "font-normal" : "font-semibold"} leading-tight text-foreground`}>Findings ({count})</span>
-    <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className="whitespace-nowrap leading-tight text-ink-secondary">{data.pathPresentation ? `${data.description} scope` : "Click to explore"}<span className="sr-only"> · {count} findings</span></span>
+    <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className={`${data.pathPresentation ? "mx-auto block w-max max-w-[8.5rem] text-center" : "whitespace-nowrap"} leading-tight text-ink-secondary`}>{data.pathPresentation ? `${data.description} scope` : "Click to explore"}<span className="sr-only"> · {count} findings</span></span>
     </div>
   </div>;
 }

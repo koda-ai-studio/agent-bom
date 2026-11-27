@@ -53,6 +53,9 @@ export function node(id, entityType, label, severity = "none", riskScore = 0, at
   };
 }
 
+// Synthetic collector receipts are assigned by relationship, never by a selected path.
+const CONFIG_RELATIONSHIPS = new Set(["hosts", "hosted_on", "uses", "provides_tool", "exposes_cred", "depends_on", "vulnerable_to"]);
+
 export function edge(source, target, relationship, weight = 1, evidence = {}) {
   const spec = graphRelationshipSpecs[relationship];
   if (!spec) throw new Error(`Unknown sample relationship: ${relationship}`);
@@ -66,8 +69,8 @@ export function edge(source, target, relationship, weight = 1, evidence = {}) {
     traversable: spec.traversable,
     first_seen: CREATED_AT,
     last_seen: CREATED_AT,
-    // Hand-authored sample topology is modeled; it is not a runtime receipt.
-    evidence: { tier: "modeled_infrastructure", source: "gallery-fixture", ...evidence },
+    // Static configuration and inventory receipts remain explicitly synthetic, never runtime observations.
+    evidence: { tier: CONFIG_RELATIONSHIPS.has(relationship) ? "static_scan" : "modeled_infrastructure", source: CONFIG_RELATIONSHIPS.has(relationship) ? "synthetic-config-scan" : "gallery-fixture", simulated: true, ...evidence },
     activity_id: 1,
   };
 }
@@ -131,7 +134,6 @@ export function hopsAreConnected(graphEdges, hops) {
 }
 
 // Synthetic configuration records exercise static-scan presentation; these are not live scan receipts.
-const SAMPLE_CONFIG_EVIDENCE = { tier: "static_scan", source: "synthetic-config-scan", simulated: true };
 
 export function buildGraph() {
   const nodes = [
@@ -157,7 +159,7 @@ export function buildGraph() {
     node("tool:post", "tool", "post_incident_update", "medium", 4.8, { tool_class: "messaging" }),
     node("cred:github", "credential", "GITHUB_ENTERPRISE_TOKEN", "critical", 9.1, { safe_to_store: false }),
     node("cred:snowflake", "credential", "SNOWFLAKE_PROD_KEY", "critical", 9.3, { safe_to_store: false }),
-    node("cred:aws", "credential", "AWS_ROLE_SESSION", "high", 8.1, { safe_to_store: false, risk_context: { crown_jewel: true, data_sensitivity: "secret", source: "synthetic-asset-classification", simulated: true } }),
+    node("cred:aws", "credential", "AWS_ROLE_SESSION", "high", 8.1, { safe_to_store: false }),
     node("cred:incident-webhook", "credential", "INCIDENT_WEBHOOK_TOKEN", "high", 7.4, { safe_to_store: false }),
     packageNode("pkg:next", "next", "15.2.2", "npm", ["CVE-2025-29927"]),
     packageNode("pkg:urllib3", "urllib3", "2.2.1", "pypi", ["CVE-2024-37891"]),
@@ -166,6 +168,15 @@ export function buildGraph() {
     advisoryNode("cve:next", "CVE-2025-29927", { compliance_tags: ["NIST-RA-5"] }),
     advisoryNode("cve:urllib3", "CVE-2024-37891"),
     advisoryNode("cve:protobuf", "CVE-2025-4565"),
+    node("store:ai-training", "data_store", "s3-ai-training-data", "critical", 9.0, {
+      resource_type: "s3_bucket", cloud_provider: "aws", environment: "prod", data_sensitivity: "confidential",
+      // Shape derive_node_risk_context stores: the sensitive_data_store rule makes it a crown jewel.
+      risk_context: { version: 1, scan_id: SCAN_ID, sources: ["aws"], internet_exposed: null, privilege_level: null, is_admin: null,
+        data_sensitivity: "confidential", crown_jewel: true, reasons: [
+          { field: "data_sensitivity", rule: "recorded_data_sensitivity", attribute: "data_sensitivity", value: "confidential" },
+          { field: "crown_jewel", rule: "sensitive_data_store", attribute: "data_sensitivity", value: "confidential" },
+        ] },
+    }),
     node("dataset:finance-docs", "dataset", "finance-board-rag-index", "high", 8.0, { data_classification: "confidential" }),
     node("model:gpt-prod", "model", "prod-reasoning-model", "medium", 4.8, { provider: "customer-managed" }),
   ];
@@ -179,22 +190,22 @@ export function buildGraph() {
     edge("user:contractor", "sa:jit-review", "acted_as"),
     edge("sa:jit-review", "role:prod-admin", "assumes"),
     edge("role:prod-admin", "agent:developer-copilot", "can_access"),
-    edge("agent:developer-copilot", "container:copilot-portal", "hosted_on", 1, SAMPLE_CONFIG_EVIDENCE),
-    edge("agent:developer-copilot", "server:github", "uses", 1, SAMPLE_CONFIG_EVIDENCE),
-    edge("agent:developer-copilot", "server:filesystem", "uses", 1, SAMPLE_CONFIG_EVIDENCE),
-    edge("agent:sre-runbook", "server:filesystem", "uses", 1, SAMPLE_CONFIG_EVIDENCE),
+    edge("agent:developer-copilot", "container:copilot-portal", "hosted_on"),
+    edge("agent:developer-copilot", "server:github", "uses"),
+    edge("agent:developer-copilot", "server:filesystem", "uses"),
+    edge("agent:sre-runbook", "server:filesystem", "uses"),
     edge("agent:sre-runbook", "server:slack", "uses"),
     edge("agent:finance-rag", "server:snowflake", "uses"),
     edge("agent:finance-rag", "server:slack", "uses"),
     edge("agent:developer-copilot", "agent:sre-runbook", "shares_server", 1, { server: "server:filesystem" }),
     edge("agent:sre-runbook", "agent:finance-rag", "shares_cred", 1, { credential: "INCIDENT_WEBHOOK_TOKEN" }),
     edge("server:github", "tool:repo-write", "provides_tool"),
-    edge("server:filesystem", "tool:exec", "provides_tool", 1, SAMPLE_CONFIG_EVIDENCE),
+    edge("server:filesystem", "tool:exec", "provides_tool"),
     edge("server:snowflake", "tool:query", "provides_tool"),
     edge("server:slack", "tool:post", "provides_tool"),
     edge("server:github", "cred:github", "exposes_cred"),
     edge("server:snowflake", "cred:snowflake", "exposes_cred"),
-    edge("server:filesystem", "cred:aws", "exposes_cred", 1, SAMPLE_CONFIG_EVIDENCE),
+    edge("server:filesystem", "cred:aws", "exposes_cred"),
     edge("server:slack", "cred:incident-webhook", "exposes_cred"),
     edge("container:copilot-portal", "pkg:next", "depends_on"),
     edge("server:filesystem", "pkg:urllib3", "depends_on"),
@@ -204,6 +215,9 @@ export function buildGraph() {
     edge("pkg:urllib3", "cve:urllib3", "vulnerable_to", 1.4, { cvss_score: advisory("CVE-2024-37891").cvss_score }),
     edge("pkg:protobuf", "cve:protobuf", "vulnerable_to", 1.2, { cvss_score: advisory("CVE-2025-4565").cvss_score }),
     edge("cred:snowflake", "dataset:finance-docs", "can_access"),
+    // Read from the role's IAM policy by cloud inventory: a configured grant, not an observed read.
+    edge("cred:aws", "store:ai-training", "can_access", 1, { tier: "static_scan", source: "synthetic-cloud-inventory", basis: "iam_policy_grant", actions: ["s3:GetObject", "s3:ListBucket"] }),
+    edge("provider:aws-prod", "store:ai-training", "contains"),
     edge("server:snowflake", "dataset:finance-docs", "accessed"),
     edge("agent:finance-rag", "model:gpt-prod", "uses"),
     edge("policy:gateway-default-deny", "tool:exec", "manages"),
@@ -277,7 +291,7 @@ function buildAttackPaths(nodes, edges) {
         target_node_id: target,
         relationship: recorded?.relationship ?? "related",
         source_snapshot_ids: [SCAN_ID],
-        evidence_tier: "static_scan",
+        evidence_tier: recorded?.evidence?.tier ?? "unknown",
         confidence: 1,
         freshness: "fresh",
         runtime_observed_state: "not_observed",
@@ -289,7 +303,13 @@ function buildAttackPaths(nodes, edges) {
         truncated: false,
       };
     });
-  return ATTACK_PATH_SPECS.map(({ hops, ...rest }) => {
+  const exposedDependencies = nodes.filter(node => node.attributes.internet_exposed === true).flatMap(host =>
+    edges.filter(edge => edge.source === host.id && edge.relationship === "depends_on").flatMap(dependency =>
+      edges.filter(edge => edge.source === dependency.target && edge.relationship === "vulnerable_to").map(finding => ({
+        hops: [host.id, dependency.target, finding.target],
+        summary: `Internet-exposed ${host.label} contains ${byId.get(dependency.target).label}, affected by ${byId.get(finding.target).label}.`,
+      }))));
+  return [...ATTACK_PATH_SPECS, ...exposedDependencies].map(({ hops, ...rest }) => {
     const target = byId.get(hops[hops.length - 1]);
     const vulnIds = hops.map((id) => byId.get(id)).filter((item) => item.type === "vulnerability").map((item) => item.label);
     return {
