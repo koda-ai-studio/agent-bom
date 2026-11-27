@@ -216,7 +216,7 @@ def test_readme_embeds_cli_and_investigation_and_links_workflow_detail() -> None
     assert "graph-environment-dark-live.png" not in readme
     gallery = (ROOT / "docs" / "GALLERY.md").read_text(encoding="utf-8")
     sample = gallery.split("## What the README sample shows", 1)[1].split("\n## ", 1)[0]
-    for caveat in ("fictional sample estate", "not observed at runtime", "collected snapshot", "no recorded execution host"):
+    for caveat in ("fictional sample estate", "not observed at runtime", "collected snapshot", "display context, not a traversable step"):
         assert caveat in " ".join(sample.split())
 
 
