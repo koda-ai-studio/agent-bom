@@ -210,7 +210,7 @@ export function buildGraph() {
   ];
   for (const item of nodes) {
     const assessment = riskFixture.mcp_risk?.[item.id];
-    if (assessment) { item.risk_score = assessment.risk_score; item.risk_assessment = assessment.risk_assessment; item.attributes.capability_risk = assessment.capability_risk; }
+    if (assessment) item.attributes.capability_risk = assessment.capability_risk;
   }
   const attackPaths = buildAttackPaths(nodes, edges);
   const stats = {

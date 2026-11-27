@@ -102,8 +102,6 @@ def build_fixture(data: dict[str, Any]) -> dict[str, Any]:
     return {
         "mcp_risk": {
             node.id: {
-                "risk_score": node.risk_score,
-                "risk_assessment": node.risk_assessment,
                 "capability_risk": node.attributes["capability_risk"],
             }
             for node in graph.nodes.values()

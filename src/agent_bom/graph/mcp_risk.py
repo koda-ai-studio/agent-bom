@@ -23,10 +23,7 @@ def _record(node: UnifiedNode, score: float, level: str, basis: str, justificati
         "justification": justification,
         "capabilities": capabilities,
     }
-    # Preserve a stronger assessed vulnerability/identity score; unbound numbers do not prove assessment.
-    if node.risk_assessment["status"] != "assessed" or score > node.risk_score:
-        node.risk_score = round(score, 2)
-        node.mark_risk_assessed(basis=basis, scope=scope)
+    # Capability is an independent assessment, not the graph risk used for ranking and paging.
 
 
 def apply_mcp_risk(graph: UnifiedGraph) -> None:

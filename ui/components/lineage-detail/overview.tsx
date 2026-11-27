@@ -1,22 +1,23 @@
 import type { LineageNodeData } from "../lineage-nodes";
 import { Loader2, Radar } from "lucide-react";
-import { nodeRiskLabel } from "@/lib/node-risk-assessment";
+import { nodeRiskLabel, nodeRiskAssessment } from "@/lib/node-risk-assessment";
 import type { LineageDetailProps } from "./types";
 import { CodeBlock, Label, Row, shortDate } from "./fields";
 import { EvidenceTierBadge, RuntimeEvidenceBadge } from "./evidence";
 import { PrimaryNodeDetails } from "./node-details";
 
 function LifecycleDetails({ data }: { data: LineageNodeData }) {
+  const capability = data.attributes?.capability_risk as {score?: number} | undefined;
+  const showNodeRisk = (data.riskScore != null || data.riskAssessment != null) && (!Number.isFinite(capability?.score) || nodeRiskAssessment(data.riskAssessment).status === "assessed");
   return (<>
 {(data.status ||
-  data.riskAssessment != null ||
-  data.riskScore != null ||
+  showNodeRisk ||
   data.firstSeen ||
   data.lastSeen) && (
   <div className="space-y-2">
     <Label>Lifecycle</Label>
     {data.status && <Row label="Status" value={data.status} />}
-    {(data.riskScore != null || data.riskAssessment != null) && (
+    {showNodeRisk && (
       <Row label="Node risk score" value={nodeRiskLabel(data.riskScore, data.riskAssessment)} />
     )}
     {data.firstSeen && (

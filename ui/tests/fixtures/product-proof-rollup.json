@@ -10,13 +10,7 @@
         "level": "low",
         "scope": "loaded_mcp_capabilities_and_credential_references",
         "score": 2.41
-      },
-      "risk_assessment": {
-        "basis": "mcp_capability_portfolio_risk",
-        "scope": "loaded_mcp_capabilities_and_credential_references",
-        "status": "assessed"
-      },
-      "risk_score": 2.41
+      }
     },
     "tool:exec": {
       "capability_risk": {
@@ -28,13 +22,7 @@
         "level": "medium",
         "scope": "loaded_mcp_capabilities_and_credential_references",
         "score": 5.0
-      },
-      "risk_assessment": {
-        "basis": "mcp_capability_risk_declared",
-        "scope": "loaded_mcp_capabilities_and_credential_references",
-        "status": "assessed"
-      },
-      "risk_score": 5
+      }
     },
     "tool:post": {
       "capability_risk": {
@@ -46,13 +34,7 @@
         "level": "low",
         "scope": "loaded_mcp_capabilities_and_credential_references",
         "score": 3.0
-      },
-      "risk_assessment": {
-        "basis": "mcp_capability_risk_inferred_from_descriptor",
-        "scope": "loaded_mcp_capabilities_and_credential_references",
-        "status": "assessed"
-      },
-      "risk_score": 3
+      }
     },
     "tool:query": {
       "capability_risk": {
@@ -64,13 +46,7 @@
         "level": "medium",
         "scope": "loaded_mcp_capabilities_and_credential_references",
         "score": 5.0
-      },
-      "risk_assessment": {
-        "basis": "mcp_capability_risk_inferred_from_descriptor",
-        "scope": "loaded_mcp_capabilities_and_credential_references",
-        "status": "assessed"
-      },
-      "risk_score": 5
+      }
     },
     "tool:repo-write": {
       "capability_risk": {
@@ -83,13 +59,7 @@
         "level": "medium",
         "scope": "loaded_mcp_capabilities_and_credential_references",
         "score": 5.0
-      },
-      "risk_assessment": {
-        "basis": "mcp_capability_risk_inferred_from_descriptor",
-        "scope": "loaded_mcp_capabilities_and_credential_references",
-        "status": "assessed"
-      },
-      "risk_score": 5
+      }
     }
   },
   "node_aggregates": {
