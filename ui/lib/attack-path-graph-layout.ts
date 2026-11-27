@@ -34,7 +34,9 @@ export const ATTACK_PATH_CANVAS_BOUNDS = { min: 240, max: 640 } as const;
  * between layers holds a hop's relationship name and the turns of lines changing row, so no
  * line bends inside a node's column.
  */
-const SPACING = { LR: { rank: 48, lane: 32 }, TB: { rank: 40, lane: 20 } } as const;
+// A 152px card already centres a 56px glyph, so a 16px gap leaves ~112px of visible link between hops and lets a
+// six-hop path fit a 1280px laptop at the readable floor.
+const SPACING = { LR: { rank: 16, lane: 32 }, TB: { rank: 40, lane: 20 } } as const;
 
 /** The card tells one path: its hops read left to right in hop order, even where a hop's backend layer comes
  * before the hop it follows (a role that reaches an agent). A branch sits one column before, after or level with

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildAttackPathGraphModel } from "@/lib/attack-path-graph-model";
-import { attackPathCanvasHeight, attackPathCanvasWidth, NARROW_MIN_ZOOM, layoutAttackPathGraph } from "@/lib/attack-path-graph-layout";
+import { attackPathCanvasHeight, attackPathCanvasWidth, NARROW_MIN_ZOOM, PATH_DESKTOP_MIN_ZOOM, layoutAttackPathGraph } from "@/lib/attack-path-graph-layout";
 import { ATTACK_PATH_FIT_PADDING, FINDING_BADGE_OVERHANG, attackPathViewport } from "@/lib/attack-path-graph-viewport";
 import { demoFixture, fanOutFixture } from "./fixtures/attack-path-graph-fixture";
 
@@ -35,14 +35,29 @@ describe("attack path viewport", () => {
     const { graph, selected } = demoFixture("headline");
     const model = buildAttackPathGraphModel(graph, selected);
     const layout = layoutAttackPathGraph(model, "LR");
-    // The badge starts 12px left of the glyph's right edge and reads e.g. "1 medium +2": about 110px wide.
+    // The badge is a 22px count circle anchored 8px past the 56px glyph's right edge, inside the card.
     const glyphRight = layout.nodeWidth / 2 + 28;
-    expect(FINDING_BADGE_OVERHANG).toBeGreaterThanOrEqual(glyphRight - 12 + 110 - layout.nodeWidth);
+    expect(FINDING_BADGE_OVERHANG).toBeGreaterThanOrEqual(glyphRight + 8 - layout.nodeWidth);
     for (const width of [1100, 1400]) {
       const pane = { width, height: 600 };
       const viewport = attackPathViewport(layout, model.pathNodeIds, pane, 0.6);
       const right = Math.max(...screenBoxes(layout, viewport).map(box => box.right));
       expect(right + FINDING_BADGE_OVERHANG * viewport.zoom).toBeLessThanOrEqual(pane.width - 8);
+    }
+  });
+
+  it("fits a six-hop path on a 1280px laptop at the readable floor", () => {
+    const { graph, selected } = demoFixture("headline");
+    const model = buildAttackPathGraphModel(graph, selected);
+    const layout = layoutAttackPathGraph(model, "LR");
+    // 1280px viewport minus the 240px navigation and page gutters leaves a 940px canvas.
+    const pane = { width: 940, height: 332 };
+    const viewport = attackPathViewport(layout, model.pathNodeIds, pane, PATH_DESKTOP_MIN_ZOOM);
+    expect(viewport.zoom).toBeGreaterThanOrEqual(PATH_DESKTOP_MIN_ZOOM);
+    const boxes = screenBoxes(layout, viewport).filter(box => model.pathNodeIds.includes(box.id));
+    for (const box of boxes) {
+      expect(box.left, box.id).toBeGreaterThanOrEqual(0);
+      expect(box.right, box.id).toBeLessThanOrEqual(pane.width);
     }
   });
 

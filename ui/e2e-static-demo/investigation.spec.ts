@@ -61,10 +61,9 @@ test("the selected path and its branches fit the canvas, refitted on resize", as
   await expect(page.getByLabel(/^Findings \(\d+\) on next@15\.2\.2/)).toHaveCount(0);
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.waitForTimeout(800);
-  // Narrower, a six-hop path is wider than the pane at the readable floor: the hops up to the package stay in view,
-  // and anything beyond is panned to and counted, never shrunk below the floor.
+  // Narrower, the whole six-hop path still fits at the readable floor; branches beyond it are panned to and counted.
   const outside = await nodesOutsideCanvas(page);
-  for (const hop of ["contractor-reviewer", "jit-prod-reviewer", "prod-ai-admin", "Developer Copilot", "copilot-portal", "next@15.2.2"]) {
+  for (const hop of ["contractor-reviewer", "jit-prod-reviewer", "prod-ai-admin", "Developer Copilot", "copilot-portal", "next@15.2.2", "CVE-2025-29927"]) {
     expect(outside.some((label) => label?.includes(hop)), hop).toBe(false);
   }
   if (outside.length) await expect(page.getByRole("status").filter({ hasText: "off screen" })).toHaveText(`${outside.length} more ${outside.length === 1 ? "node" : "nodes"} off screen · drag to pan`);
