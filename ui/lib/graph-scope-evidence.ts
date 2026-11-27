@@ -24,7 +24,10 @@ export function scopeEvidenceGraph(graph: UnifiedGraphData, root: string, includ
       const shell = (id: string) => graph.edges.some(edge => edge.source === id && edge.relationship === "provides_tool" && byId.get(edge.target)?.attributes.tool_class === "shell");
       return Number(shell(b)) - Number(shell(a)) || a.localeCompare(b);
     })[0];
-    for (const edge of graph.edges) if (edge.source === impactServer && ["provides_tool", "exposes_cred"].includes(edge.relationship) && byId.has(edge.target)) chosen.add(edge.target);
+    const impact = graph.edges.filter(edge => edge.source === impactServer && ["provides_tool", "exposes_cred"].includes(edge.relationship) && byId.has(edge.target)).map(edge => edge.target);
+    for (const id of impact) chosen.add(id);
+    // What an exposed credential can open is the end of the story, so its recorded access is included.
+    for (const edge of graph.edges) if (edge.relationship === "can_access" && impact.includes(edge.source) && byId.get(edge.source)?.entity_type === "credential" && byId.has(edge.target)) chosen.add(edge.target);
   }
   const edges = graph.edges.filter(edge => chosen.has(edge.source) && chosen.has(edge.target)).filter(edge => {
     if (edge.relationship !== "shares_server") return true;

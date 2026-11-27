@@ -126,7 +126,11 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
       }
     } else {
       await expect(canvas.locator("[data-recorded-edge]")).toHaveCount(agent.edges.length);
-      for (const link of agent.edges) await expect(canvas.locator(`[data-recorded-edge="${link.id}"]`)).toContainText(link.relationship.replaceAll("_", " "));
+      for (const link of agent.edges) {
+        const row = canvas.locator(`[data-recorded-edge="${link.id}"]`);
+        await expect(row).toContainText(link.relationship === "hosted_on" ? "hosts" : link.relationship.replaceAll("_", " "));
+        if (link.relationship === "hosted_on") await expect(row).toContainText(`copilot-portal:2.4.0→${agent.nodes.find(node => node.id === link.source)!.label}`);
+      }
     }
     await page.screenshot({ path: info.outputPath(`agent-${theme}-${width}.png`), fullPage: width === 390 });
   });

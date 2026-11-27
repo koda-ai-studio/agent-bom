@@ -44,7 +44,8 @@ describe("product proof capture contract", () => {
     const advisories = JSON.parse(fs.readFileSync(path.join(process.cwd(), "fixtures/gallery-advisories.json"), "utf8")).advisories;
     const advisory = (id: string) => advisories.find((item: { id: string }) => item.id === id);
     const paths = buildGraph().attack_paths;
-    expect(paths).toHaveLength(3);
+    expect(paths).toHaveLength(4);
+    expect(paths.some(path => path.source === "container:copilot-portal" && path.target === "cve:next")).toBe(true);
     for (const item of paths.filter((entry) => entry.vuln_ids.length)) expect(item.severity).toBe(advisory(item.vuln_ids[0]).severity);
   });
 
@@ -151,7 +152,7 @@ describe("product proof capture contract", () => {
     expect(source).toContain('newCapturePage("light", { width: 1568, height: 780 })');
     // Fifteen scopes do not frame whole legibly at 1512x811, so the current state is the ranked overview.
     expect(source).toContain(`canvasPage.locator('[data-testid="graph-scope-overview"]').waitFor`);
-    expect(source).toContain('expectedText: ["Investigation", "Agent connections", "Showing 6 assets · 5 recorded connections", "Browse inventory", "execute_command", "AWS_ROLE_SESSION"]');
+    expect(source).toContain('expectedText: ["Investigation", "Agent connections", "Showing 7 assets · 6 recorded connections", "Browse inventory", "execute_command", "AWS_ROLE_SESSION", "s3-ai-training-data"]');
     expect(source).toContain("const body = rollupResponse();");
     expect(source).not.toContain("top_level: graph.nodes.slice(0, 30)");
     expect(source).toContain('page.route("**/v1/graph/scenarios"');

@@ -1,3 +1,5 @@
+
+import { issueSeverity } from "@/lib/graph-issue-severity";
 import type { Edge, Node } from "@xyflow/react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { mixedEvidenceFlow } from "@/lib/graph-mixed-flow";
@@ -29,7 +31,7 @@ export function cloudFindingDisclosure(nodes: Node<LineageNodeData>[], edges: Ed
   if (!groups.size) return { nodes, edges, groupedIds };
   const mapped = nodes.map(n => {
     const findings = groups.get(n.id);
-    const severity = (n.data.findingAggregate ?? n.data.rollup?.aggregate)?.worst_severity;
+    const severity = issueSeverity(n.data.findingAggregate ?? n.data.rollup?.aggregate);
     return { ...n, hidden: n.hidden || Boolean(groupedIds.has(n.id) && n.data.readingOwner && !expanded.has(n.data.readingOwner)),
       data: { ...n.data, ...(findings ? { readingFindingsGroup: !expanded.has(n.id) && (n.data.findingAggregate ?? n.data.rollup!.aggregate).issue_count! > 1, readingFindings: { count: (n.data.findingAggregate ?? n.data.rollup!.aggregate).issue_count!, expanded: expanded.has(n.id), severity, toggle: () => toggle(n.id) } } : {}) } };
   });

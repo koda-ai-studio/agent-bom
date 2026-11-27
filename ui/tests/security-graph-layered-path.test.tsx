@@ -42,7 +42,11 @@ describe("embedded focused path", () => {
     expect(canvas).toHaveAttribute("data-path-layout", "layered");
     expect(within(canvas).getByTestId("attack-path-node-cve:next")).toHaveAttribute("data-role", "target");
     expect(within(canvas).getByTestId("attack-path-node-pkg:next")).toHaveAttribute("data-role", "path");
-    expect(within(canvas).getAllByText("Depends On").length).toBeGreaterThan(0);
+    expect(within(canvas).queryByText("Depends On")).toBeNull();
+    const dependency = canvas.querySelector('[data-id="server:github->pkg:next:depends_on"]')!;
+    expect(dependency).toHaveAttribute("aria-label", expect.stringMatching(/depends on/i));
+    fireEvent.focus(dependency);
+    expect(within(canvas).getByRole("tooltip")).toHaveTextContent("Depends On");
     expect(screen.getByRole("toolbar", { name: "Graph controls" })).toBeInTheDocument();
   });
 

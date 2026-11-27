@@ -1,3 +1,4 @@
+import { internetExposure } from "@/lib/graph-internet-context";
 import { hopReceiptCoverage } from "@/lib/hop-receipt-coverage";
 import { evidenceTierLabel } from "@/lib/plain-labels";
 import { countLabel } from "@/lib/count-label";
@@ -44,7 +45,8 @@ export function AttackPathCorrelationProof({
   const expectedHopCount = Math.max(path.hops.length - 1, 0);
   const coverage = hopReceiptCoverage(path);
   const pathEvidenceComplete = (path.reachability === "confirmed" || path.reachability === "likely") && coverage.complete !== null;
-  const proofLabel = pathEvidenceComplete ? "Hop receipts complete" : "Hop receipts incomplete";
+  const linksComplete = coverage.expected > 0 && coverage.evidenced === coverage.expected;
+  const proofLabel = pathEvidenceComplete ? "Hop receipts complete" : linksComplete ? `${coverage.evidenced}/${coverage.expected} relationships have source evidence` : "Hop receipts incomplete";
   const missingNodes = path.hops.filter((id) => !nodeById.has(id));
   const sourceCount = new Set(receipts.flatMap((receipt) =>
     Array.isArray(receipt?.source_snapshot_ids) ? receipt.source_snapshot_ids.filter(Boolean) : [],
@@ -77,7 +79,9 @@ export function AttackPathCorrelationProof({
           <p className="mt-0.5 text-[15px] text-[color:var(--text-tertiary)]">
             {coverage.summary}
           </p>
-          {coverage.complete === null && coverage.gaps.length > 0 && <p className="mt-0.5 text-[15px] text-[color:var(--text-tertiary)]">Why incomplete: {coverage.gaps.join("; ")}</p>}
+          {internetExposure(nodeById.get(path.source)?.attributes) === true && <p className="mt-0.5 text-[15px] text-[color:var(--text-tertiary)]">Internet exposure source: recorded internet_exposed flag on {nodeById.get(path.source)?.label || path.source}.</p>}
+          <p className="mt-0.5 text-[15px] text-[color:var(--text-tertiary)]">Full-path assessment: {(path.analysis?.status || "not_recorded").replaceAll("_", " ")}</p>
+          {coverage.complete === null && !linksComplete && coverage.gaps.length > 0 && <p className="mt-0.5 text-[15px] text-[color:var(--text-tertiary)]">{linksComplete ? "Path assessment" : "Why incomplete"}: {coverage.gaps.join("; ")}</p>}
         </div>
         <div className="flex flex-wrap gap-1.5">
           {[...kinds].map(([kind, label]) => (

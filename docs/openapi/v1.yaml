@@ -17959,6 +17959,29 @@ components:
       - paths
       title: GraphExposurePathsResponse
       type: object
+    GraphFindingDisclosure:
+      additionalProperties: true
+      description: Issues not already disclosed by another requested descendant scope.
+      properties:
+        exclude_node_ids:
+          items:
+            type: string
+          title: Exclude Node Ids
+          type: array
+        issue_count:
+          title: Issue Count
+          type: integer
+        severity_counts:
+          additionalProperties:
+            type: integer
+          title: Severity Counts
+          type: object
+      required:
+      - issue_count
+      - severity_counts
+      - exclude_node_ids
+      title: GraphFindingDisclosure
+      type: object
     GraphFreshness:
       additionalProperties: true
       description: 'A graph is building, so reachability on this page is unassessed
@@ -18481,6 +18504,10 @@ components:
       properties:
         aggregate:
           $ref: '#/components/schemas/GraphRollupAggregate'
+        finding_disclosure:
+          anyOf:
+          - $ref: '#/components/schemas/GraphFindingDisclosure'
+          - type: 'null'
         node_id:
           title: Node Id
           type: string
@@ -51341,6 +51368,18 @@ paths:
           minimum: 1
           title: Limit
           type: integer
+      - description: Descendant scopes disclosed separately; at most 25.
+        in: query
+        name: exclude_node_id
+        required: false
+        schema:
+          default: []
+          description: Descendant scopes disclosed separately; at most 25.
+          items:
+            type: string
+          maxItems: 25
+          title: Exclude Node Id
+          type: array
       responses:
         '200':
           content:

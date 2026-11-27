@@ -1,17 +1,18 @@
 "use client";
 
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
-import { Bug, Layers, Globe } from "lucide-react";
+import { Layers, Globe } from "lucide-react";
 import { Fragment, type CSSProperties } from "react";
 
 import { entityIcon } from "@/lib/entity-icons";
 import { lineageNodeTypeForEntity } from "@/lib/graph-entity-mapping";
 import { NODE_COLOR_MAP } from "@/lib/graph-utils";
-import type { PathGraphNode } from "@/lib/attack-path-graph-model";
+import { FINDING_ENTITY_TYPES, type PathGraphNode } from "@/lib/attack-path-graph-model";
 import { MARKER_META, type NodeContextMarker } from "@/lib/attack-path-graph-markers";
 import { PATH_NODE } from "@/lib/attack-path-graph-layout";
 import { BRANCH_DROP, BRANCH_INSET, GLYPH_CENTER_Y, glyphInsetX } from "@/lib/attack-path-graph-routes";
 import { labelSegments } from "@/lib/graph-label-breaks";
+import { issueSeverity } from "@/lib/graph-issue-severity";
 
 export type AttackPathNodeData = {
   node: PathGraphNode;
@@ -47,13 +48,16 @@ export function NodeName({ label, className }: { label: string; className: strin
   );
 }
 
-function FindingBadge({ node, onOpen }: { node: PathGraphNode; onOpen: AttackPathNodeData["onOpenFindings"] }) {
-  const aggregate = node.aggregate;
-  if (!aggregate) return null;
-  const { issue_count: count, worst_severity: worst } = aggregate;
-  const label = `Findings (${count}) on ${node.label}, worst ${worst}`;
-  const className = "nodrag nopan absolute left-[calc(100%-12px)] -top-4 z-10 inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-full border px-1.5 text-[13px] font-semibold tabular-nums shadow-sm";
-  const content = <><Bug className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />Findings ({count})</>;
+export function FindingBadge({ node, onOpen }: { node: PathGraphNode; onOpen: AttackPathNodeData["onOpenFindings"] }) {
+  const aggregate = node.findingDisclosure ?? node.aggregate;
+  if (!aggregate || !aggregate.issue_count || FINDING_ENTITY_TYPES.has(node.entityType)) return null;
+  const { issue_count: count } = aggregate;
+  const worst = issueSeverity(aggregate) ?? (count ? "unknown" : "none");
+  const label = node.findingDisclosure?.exclude_node_ids.length
+    ? `${count} additional findings on ${node.label}, ${node.aggregate?.issue_count} in scope, worst ${worst}`
+    : `Findings (${count}) on ${node.label}, worst ${worst}`;
+  const className = "nodrag nopan absolute -right-2 -top-2 z-10 inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full border px-1 text-[13px] font-semibold tabular-nums";
+  const content = count;
   return node.findings.length ? <button type="button" aria-label={`${label}. Open loaded findings`} title={label} data-severity={worst} data-node-badge="findings"
     onClick={event => { event.stopPropagation(); onOpen(node.id, node.findings.map(finding => finding.id)); }}
     className={className} style={severityStyle(worst)}>{content}</button>
@@ -110,7 +114,7 @@ export function AttackPathGraphNode({ data }: NodeProps<AttackPathFlowNode>) {
   const Icon = node.displayOnly ? Globe : entityIcon(lineageType ?? undefined);
   const tint = lineageType ? NODE_COLOR_MAP[lineageType] : undefined;
   const spine = node.role !== "branch";
-  const caption = ROLE_CAPTION[node.role];
+  const caption = node.displayOnly ? "" : ROLE_CAPTION[node.role];
   return (
     <div data-testid={`attack-path-node-${node.id}`} data-role={node.role} title={`${node.label} · ${node.typeLabel}`}
       style={BOX} className="pointer-events-none flex flex-col items-center text-center">

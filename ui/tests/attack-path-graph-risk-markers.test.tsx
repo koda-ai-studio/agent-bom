@@ -35,12 +35,14 @@ describe("AttackPathGraph risk markers", () => {
   it("reads canonical exposure, privilege and classification without inferring a crown jewel", () => {
     const { graph, selected } = leaderPath();
     render(<AttackPathGraph graph={graph} attackPath={selected} narrow={false} onOpenFindings={vi.fn()} onNodeSelect={vi.fn()} onEdgeSelect={vi.fn()} />);
-    expect(within(screen.getByTestId("attack-path-node-vm:web")).getByLabelText("Internet-exposed (recorded)")).toBeInTheDocument();
+    expect(within(screen.getByTestId("attack-path-node-vm:web")).queryByLabelText("Internet-exposed (recorded)")).toBeNull();
+    expect(screen.getByTestId("attack-path-node-display:internet")).toHaveTextContent("Internet");
     expect(within(screen.getByTestId("attack-path-node-role:app")).getByLabelText("Privileged: admin (recorded)")).toBeInTheDocument();
     const jewel = screen.getByTestId("attack-path-node-db:claims");
     expect(within(jewel).queryByLabelText(/Crown jewel/)).toBeNull();
     expect(within(jewel).getByLabelText("Sensitive data: phi (recorded)")).toBeInTheDocument();
     const legend = screen.getByRole("list", { name: "Graph legend" });
-    for (const label of ["Internet-exposed", "Privileged", "Sensitive data"]) expect(within(legend).getByText(label)).toBeInTheDocument();
+    for (const label of ["Privileged", "Sensitive data"]) expect(within(legend).getByText(label)).toBeInTheDocument();
+    expect(within(legend).queryByText("Internet-exposed")).toBeNull();
   });
 });

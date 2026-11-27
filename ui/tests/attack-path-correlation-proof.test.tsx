@@ -246,3 +246,15 @@ it("keeps the receipt summary consistent with the receipts listed for inspection
   expect(screen.getByText("Why incomplete: evidence marked incomplete by its source; evidence age unknown; source of the link not recorded")).toBeInTheDocument();
   expect(screen.getByText("Inspect 3 hop receipts")).toBeInTheDocument();
 });
+
+it("separates complete link evidence from missing full-path analysis", () => {
+  const path = {source: "a", target: "b", hops: ["a", "b"], edges: ["uses"], reachability: "unknown",
+    hop_evidence: [{source_node_id: "a", target_node_id: "b", relationship: "uses", source_snapshot_ids: ["scan"],
+      relationship_provenance: "recorded", correlation_identity_status: "current", evidence_tier: "static_scan", freshness: "fresh",
+      direction: "directed", traversable: true, complete: true, truncated: false}]} as GraphAttackPath;
+  render(<AttackPathCorrelationProof path={path} />);
+  expect(screen.getByText("1/1 relationships have source evidence")).toBeVisible();
+  expect(screen.getByText("1 of 1 hop fully evidenced")).toBeVisible();
+  expect(screen.getByText("Full-path assessment: not recorded")).toBeVisible();
+  expect(screen.queryByText("Hop receipts incomplete")).not.toBeInTheDocument();
+});

@@ -1,3 +1,4 @@
+import { hostReading } from "@/lib/graph-host-reading";
 import { graphEvidenceDash } from "@/lib/graph-edge-evidence";
 import { rankedVisiblePath } from "@/lib/graph-ranked-spine";
 import { recordSemanticLayer } from "@/lib/graph-semantic-columns";
@@ -122,6 +123,8 @@ export function buildUnifiedFlowGraph(
   graph: UnifiedGraphData,
   filters: UnifiedGraphFlowFilters,
   retainedNodeIds?: ReadonlySet<string>,
+  /** The selected path's hops, when the view is focused on one path. */
+  pathHops: readonly string[] = graph.attack_paths?.length === 1 ? graph.attack_paths[0]!.hops : [],
 ): UnifiedGraphFlowResult {
   const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
   const outgoing = buildAdjacency(graph.edges, "source");
@@ -154,12 +157,14 @@ export function buildUnifiedFlowGraph(
   }
 
   const prePrunedNodeIds = new Set(nodes.map((node) => node.id));
+  // A focused path keeps its hosting step in path direction; other views read it as "Hosts".
+  const pathSteps = new Set(pathHops.slice(1).map((target, index) => `${pathHops[index]}\0${target}`));
   const prePrunedEdges: Edge[] = graph.edges
     .filter(
       (edge) =>
         prePrunedNodeIds.has(edge.source) && prePrunedNodeIds.has(edge.target),
     )
-    .map((edge) => toFlowEdge(edge, nodeById));
+    .map((edge) => pathSteps.has(`${edge.source}\0${edge.target}`) ? toFlowEdge(edge, nodeById) : hostReading(toFlowEdge(edge, nodeById), edge, nodeById));
 
   const connectedNodeIds = new Set<string>();
   for (const edge of prePrunedEdges) {

@@ -6,10 +6,47 @@
         "capabilities": {
           "execute": 1
         },
-        "justification": "Server has EXECUTE capabilities across 1 tool(s). Dangerous combinations detected: Can execute arbitrary code/commands. 1 credential(s) exposed (cred:aws). EXECUTE tools: execute_command.",
+        "justification": "Server has EXECUTE capabilities across 1 tool(s). Dangerous combinations detected: Can execute arbitrary code/commands. 1 credential(s) exposed (cred:aws). High-risk floor: command execution capability combined with exposed credentials. EXECUTE tools: execute_command.",
+        "level": "high",
+        "scope": "loaded_mcp_capabilities_and_credential_references",
+        "score": 7.0
+      }
+    },
+    "server:github": {
+      "capability_risk": {
+        "basis": "mcp_capability_portfolio_risk",
+        "capabilities": {
+          "network": 1,
+          "write": 1
+        },
+        "justification": "Server has NETWORK, WRITE capabilities across 1 tool(s). 1 credential(s) exposed (cred:github).",
         "level": "low",
         "scope": "loaded_mcp_capabilities_and_credential_references",
-        "score": 2.41
+        "score": 2.11
+      }
+    },
+    "server:slack": {
+      "capability_risk": {
+        "basis": "mcp_capability_portfolio_risk",
+        "capabilities": {
+          "write": 1
+        },
+        "justification": "Server has WRITE capabilities across 1 tool(s). 1 credential(s) exposed (cred:incident-webhook).",
+        "level": "low",
+        "scope": "loaded_mcp_capabilities_and_credential_references",
+        "score": 1.52
+      }
+    },
+    "server:snowflake": {
+      "capability_risk": {
+        "basis": "mcp_capability_portfolio_risk",
+        "capabilities": {
+          "execute": 1
+        },
+        "justification": "Server has EXECUTE capabilities across 1 tool(s). Dangerous combinations detected: Can execute arbitrary code/commands. 1 credential(s) exposed (cred:snowflake). High-risk floor: command execution capability combined with exposed credentials. EXECUTE tools: run_sql.",
+        "level": "high",
+        "scope": "loaded_mcp_capabilities_and_credential_references",
+        "score": 7.0
       }
     },
     "tool:exec": {
@@ -572,8 +609,10 @@
     },
     "provider:aws-prod": {
       "aggregate": {
-        "by_type": {},
-        "descendant_count": 0,
+        "by_type": {
+          "data_store": 1
+        },
+        "descendant_count": 1,
         "exposed_count": 0,
         "finding_occurrence_count": 0,
         "internet_exposed": false,
@@ -588,8 +627,8 @@
         },
         "toxic_combo": false,
         "toxic_count": 0,
-        "worst_severity": "none",
-        "worst_severity_rank": 0
+        "worst_severity": "critical",
+        "worst_severity_rank": 5
       },
       "semantic_layer": "scope"
     },
@@ -747,6 +786,29 @@
       },
       "semantic_layer": "mcp_server"
     },
+    "store:ai-training": {
+      "aggregate": {
+        "by_type": {},
+        "descendant_count": 0,
+        "exposed_count": 0,
+        "finding_occurrence_count": 0,
+        "internet_exposed": false,
+        "issue_count": 0,
+        "severity_counts": {
+          "critical": 0,
+          "high": 0,
+          "info": 0,
+          "low": 0,
+          "medium": 0,
+          "none": 0
+        },
+        "toxic_combo": false,
+        "toxic_count": 0,
+        "worst_severity": "none",
+        "worst_severity_rank": 0
+      },
+      "semantic_layer": "asset"
+    },
     "tool:exec": {
       "aggregate": {
         "by_type": {},
@@ -868,8 +930,8 @@
       "additive": false,
       "basis": "returned_entry_descendants",
       "definition": "Filtered descendants of returned entries, excluding each entry itself; not an estate total.",
-      "descendant_memberships": 26,
-      "distinct_descendants": 18,
+      "descendant_memberships": 27,
+      "distinct_descendants": 19,
       "distinct_finding_occurrences": 3,
       "extra_memberships": 8,
       "finding_occurrence_memberships": 4,
@@ -893,8 +955,8 @@
       "connections_definition": "Each entry's connections count other returned entries it is linked to, before the row cap.",
       "definition": "Aggregated non-containment container-to-container relationship rows in the roll-up source graph.",
       "reason": "",
-      "returned": 15,
-      "source_total": 15,
+      "returned": 16,
+      "source_total": 16,
       "source_truncated": false,
       "truncated": false
     },
@@ -942,6 +1004,20 @@
         ],
         "source": "agent:developer-copilot",
         "target": "container:copilot-portal"
+      },
+      {
+        "count": 1,
+        "directions": [
+          "directed"
+        ],
+        "relationship_counts": {
+          "can_access": 1
+        },
+        "relationships": [
+          "can_access"
+        ],
+        "source": "agent:developer-copilot",
+        "target": "provider:aws-prod"
       },
       {
         "count": 1,
@@ -1126,7 +1202,6 @@
         "environment": 1,
         "model": 1,
         "policy": 1,
-        "provider": 1,
         "role": 1,
         "service_account": 1,
         "user": 1
@@ -1143,8 +1218,8 @@
         "medium": 0,
         "none": 0
       },
-      "shown": 11,
-      "total": 11,
+      "shown": 10,
+      "total": 10,
       "toxic_combo": false,
       "toxic_count": 0,
       "truncated": 0,
@@ -1161,7 +1236,7 @@
     },
     "scan_id": "scan-proof-ai-platform",
     "summary": {
-      "container_count": 4,
+      "container_count": 5,
       "finding_occurrence_count": 3,
       "issue_count": 3,
       "issue_severity_counts": {
@@ -1172,15 +1247,15 @@
         "medium": 1,
         "none": 0
       },
-      "orphan_count": 11,
-      "orphan_shown_count": 11,
+      "orphan_count": 10,
+      "orphan_shown_count": 10,
       "orphan_truncated_count": 0,
       "returned_top_level_count": 15,
       "severity_basis": "issue_groups",
       "top_level_count": 15,
-      "total_edges": 36,
-      "total_nodes": 33,
-      "total_nodes_source": 33
+      "total_edges": 38,
+      "total_nodes": 34,
+      "total_nodes_source": 34
     },
     "tenant_id": "default",
     "top_level": [
@@ -1259,8 +1334,8 @@
         "cloud_provider": "",
         "cloud_provider_basis": "",
         "connections": {
-          "connected_entry_count": 4,
-          "relationship_count": 4
+          "connected_entry_count": 5,
+          "relationship_count": 5
         },
         "context": {
           "environment": "prod"
@@ -1357,6 +1432,47 @@
         "label": "next@15.2.2",
         "semantic_layer": "package",
         "severity": "critical"
+      },
+      {
+        "aggregate": {
+          "by_type": {
+            "data_store": 1
+          },
+          "descendant_count": 1,
+          "exposed_count": 0,
+          "finding_occurrence_count": 0,
+          "internet_exposed": false,
+          "issue_count": 0,
+          "severity_counts": {
+            "critical": 0,
+            "high": 0,
+            "info": 0,
+            "low": 0,
+            "medium": 0,
+            "none": 0
+          },
+          "toxic_combo": false,
+          "toxic_count": 0,
+          "worst_severity": "critical",
+          "worst_severity_rank": 5
+        },
+        "cloud_provider": "",
+        "cloud_provider_basis": "",
+        "connections": {
+          "connected_entry_count": 2,
+          "relationship_count": 2
+        },
+        "context": {
+          "environment": "prod"
+        },
+        "direct_child_count": 1,
+        "entity_type": "provider",
+        "has_children": true,
+        "id": "provider:aws-prod",
+        "is_container": true,
+        "label": "AWS prod account",
+        "semantic_layer": "scope",
+        "severity": "medium"
       },
       {
         "aggregate": {
@@ -1739,47 +1855,97 @@
         "label": "default-deny gateway policy",
         "semantic_layer": "identity",
         "severity": "medium"
-      },
-      {
-        "aggregate": {
-          "by_type": {},
-          "descendant_count": 0,
-          "exposed_count": 0,
-          "finding_occurrence_count": 0,
-          "internet_exposed": false,
-          "issue_count": 0,
-          "severity_counts": {
-            "critical": 0,
-            "high": 0,
-            "info": 0,
-            "low": 0,
-            "medium": 0,
-            "none": 0
-          },
-          "toxic_combo": false,
-          "toxic_count": 0,
-          "worst_severity": "none",
-          "worst_severity_rank": 0
-        },
-        "cloud_provider": "",
-        "cloud_provider_basis": "",
-        "connections": {
-          "connected_entry_count": 1,
-          "relationship_count": 1
-        },
-        "context": {
-          "environment": "prod"
-        },
-        "direct_child_count": 0,
-        "entity_type": "provider",
-        "has_children": false,
-        "id": "provider:aws-prod",
-        "is_container": true,
-        "label": "AWS prod account",
-        "semantic_layer": "scope",
-        "severity": "medium"
       }
     ]
+  },
+  "scope_descendants": {
+    "agent:developer-copilot": [
+      "cred:aws",
+      "cred:github",
+      "cve:urllib3",
+      "pkg:urllib3",
+      "server:filesystem",
+      "server:github",
+      "tool:exec",
+      "tool:repo-write"
+    ],
+    "agent:finance-rag": [
+      "cred:incident-webhook",
+      "cred:snowflake",
+      "cve:protobuf",
+      "pkg:langchain",
+      "pkg:protobuf",
+      "server:slack",
+      "server:snowflake",
+      "tool:post",
+      "tool:query"
+    ],
+    "agent:sre-runbook": [
+      "cred:aws",
+      "cred:incident-webhook",
+      "cve:urllib3",
+      "pkg:urllib3",
+      "server:filesystem",
+      "server:slack",
+      "tool:exec",
+      "tool:post"
+    ],
+    "cluster:eks-ai": [],
+    "container:agent-gateway": [],
+    "container:copilot-portal": [],
+    "cred:aws": [],
+    "cred:github": [],
+    "cred:incident-webhook": [],
+    "cred:snowflake": [],
+    "cve:next": [],
+    "cve:protobuf": [],
+    "cve:urllib3": [],
+    "dataset:finance-docs": [],
+    "env:prod-ai": [],
+    "model:gpt-prod": [],
+    "pkg:langchain": [],
+    "pkg:next": [
+      "cve:next"
+    ],
+    "pkg:protobuf": [
+      "cve:protobuf"
+    ],
+    "pkg:urllib3": [
+      "cve:urllib3"
+    ],
+    "policy:gateway-default-deny": [],
+    "provider:aws-prod": [
+      "store:ai-training"
+    ],
+    "role:prod-admin": [],
+    "sa:jit-review": [],
+    "server:filesystem": [
+      "cred:aws",
+      "cve:urllib3",
+      "pkg:urllib3",
+      "tool:exec"
+    ],
+    "server:github": [
+      "cred:github",
+      "tool:repo-write"
+    ],
+    "server:slack": [
+      "cred:incident-webhook",
+      "tool:post"
+    ],
+    "server:snowflake": [
+      "cred:snowflake",
+      "cve:protobuf",
+      "pkg:langchain",
+      "pkg:protobuf",
+      "tool:query"
+    ],
+    "store:ai-training": [],
+    "tool:exec": [],
+    "tool:post": [],
+    "tool:query": [],
+    "tool:repo-write": [],
+    "user:contractor": []
   },
   "scope_findings": {
     "agent:developer-copilot": [
@@ -1909,6 +2075,7 @@
         "severity": "high"
       }
     ],
+    "store:ai-training": [],
     "tool:exec": [],
     "tool:post": [],
     "tool:query": [],

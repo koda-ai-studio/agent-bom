@@ -42,7 +42,7 @@ it("shows a display-only Internet anchor on a selected exposed path", () => {
   source.attributes = { ...source.attributes, risk_context: { internet_exposed: true } };
   const model = buildAttackPathGraphModel(graph, selected);
   expect(model.nodes.find(node => node.label === "Internet")?.displayOnly).toBe(true);
-  expect(model.edges.find(edge => edge.source === "display:internet")?.onPath).toBe(false);
+  expect(model.edges.find(edge => edge.source === "display:internet")?.onPath).toBe(true);
   expect(model.pathNodeIds[0]).toBe("display:internet");
 });
 

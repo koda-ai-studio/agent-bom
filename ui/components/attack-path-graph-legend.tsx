@@ -5,9 +5,8 @@ import { Bug } from "lucide-react";
 import { LINE_STYLE, PATH_STROKE } from "@/components/attack-path-graph-edge";
 import type { AttackPathGraphModel, EdgeEvidenceStyle } from "@/lib/attack-path-graph-model";
 import { MARKER_KINDS, MARKER_META } from "@/lib/attack-path-graph-markers";
-import { relationshipLegendItem } from "@/lib/graph-utils";
 
-/** Line style rule: a hop with a complete receipt on this path is solid; any other line follows its edge's own evidence. */
+/** Line patterns follow the same edge evidence envelope in every view. */
 const EVIDENCE_LABELS: Record<EdgeEvidenceStyle, string> = {
   receipt: "Hop receipt: directed, traversable, recorded",
   recorded: "Recorded",
@@ -27,21 +26,22 @@ function LineSwatch({ dash, stroke, width = 2, round, dots }: { dash?: string | 
 
 /** Explains only the line styles, colours and markers this graph actually draws. */
 export function AttackPathGraphLegend({ model }: { model: AttackPathGraphModel }) {
-  const evidence = (Object.keys(EVIDENCE_LABELS) as EdgeEvidenceStyle[]).filter(kind => model.edges.some(edge => edge.evidence === kind));
+  const evidence = [...new Set(model.edges.map(edge => edge.evidence === "receipt" ? "recorded" : edge.evidence))];
   const branches = model.nodes.some(node => node.role === "branch");
   const markers = MARKERS.filter(marker => model.nodes.some(node => node.markers.some(item => item.kind === marker.kind)));
   const findings = model.nodes.some(node => node.findings.length > 0);
   const twoWay = model.edges.some(edge => edge.bidirectional);
-  const relationships = [...new Set(model.edges.map(edge => edge.relationship))].sort().map(relationshipLegendItem);
+  const privilege = model.edges.some(edge => edge.relationship === "can_access");
   const item = "inline-flex items-center gap-1.5";
   return (
     <ul aria-label="Graph legend" className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-outline bg-surface px-3 py-2 text-xs text-ink-secondary">
       <li className={item}><LineSwatch stroke={PATH_STROKE.selected.color} width={PATH_STROKE.selected.width} />Selected path</li>
-      {branches && <li className={item}><LineSwatch stroke={PATH_STROKE.connected.color} width={PATH_STROKE.connected.width} />Connected path</li>}
-      {relationships.map(relationship => <li key={relationship.relationship} className={item}>{relationship.relationship === "can_access" && <LineSwatch stroke="var(--graph-edge-risk)" />}{relationship.label}</li>)}
+      {branches && <li className={item}><LineSwatch stroke={PATH_STROKE.connected.color} width={PATH_STROKE.connected.width} />Related asset</li>}
+      {privilege && <li className={item}><LineSwatch stroke="var(--graph-edge-risk)" />Privileged access</li>}
       {evidence.map(kind => (
         <li key={kind} className={item}><LineSwatch stroke="var(--text-secondary)" dash={LINE_STYLE[kind].dash} round={kind === "unrecorded"} />{EVIDENCE_LABELS[kind]}</li>
       ))}
+      {model.edges.some(edge => edge.displayOnly) && <li className={item}>Internet: recorded exposure flag</li>}
       {twoWay && <li className={item}><LineSwatch stroke="var(--text-secondary)" width={1.5} dots />Two-way relationship</li>}
       {findings && <li className={item}><Bug className="h-3.5 w-3.5 text-foreground" aria-hidden="true" />Findings on asset · worst severity</li>}
       {markers.map(({ kind, label, Icon }) => (

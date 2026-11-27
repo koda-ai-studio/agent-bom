@@ -1,5 +1,7 @@
 "use client";
 
+import { issueSeverity } from "@/lib/graph-issue-severity";
+
 import { seenInSummary } from "@/lib/graph-evidence-fold";
 import { nameBreaks } from "@/lib/graph-name-breaks";
 import { NAME_LINES, PHONE_NAME_LINES } from "@/lib/graph-caption-geometry";
@@ -167,7 +169,7 @@ function FindingDisclosure({ data }: { data: LineageNodeData }) {
   if (data.displayOnly || data.readingFindingsGroup || !toggle || !Number.isSafeInteger(count) || !count || count < 0
     || ["vulnerability", "misconfiguration"].includes(data.nodeType)) return null;
   const plural = count === 1 ? "" : "s";
-  const rating = findings?.severity ?? aggregate?.worst_severity;
+  const rating = findings?.severity ?? issueSeverity(aggregate);
   const severity = ["critical", "high", "medium", "low"].includes(rating ?? "") ? rating : undefined;
   const action = findings ? findings.expanded ? "Collapse" : "Expand" : "Inspect";
   const label = findings ? `${action} ${count} finding${plural} for ${data.label}` : `Inspect ${count} finding${plural} in the scope of ${data.label}`;
@@ -198,7 +200,8 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
   }, [nodeId, updateNodeInternals, data.phoneLayout, data.phoneSide, data.phoneLinear, data.label]);
   const repository = graphRepositoryContext(data);
   const Icon = repository ? FolderGit2 : nodeGlyph(data.nodeType, data.attributes, data.entityType, data.dimensions?.cloud_provider);
-  const provider = repository?.source ?? (showsProviderMark(data) ? entitySource(data) : null);
+  // The path view names the provider in its type line; a corner mark there would sit on the crown.
+  const provider = repository?.source ?? (showsProviderMark(data) && !data.pathPresentation ? entitySource(data) : null);
   const severity = findingSeverity(data);
   const { badges, ring } = nodeBadges(data);
   const anchor = isInternetAnchor(data);
@@ -227,7 +230,7 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
       {held && <span data-testid="graph-held-connections" className="sr-only">{held}</span>}
     </div>
     <CaptionBox wide={data.scopePorts} above={data.captionAbove} phone={Boolean(data.phoneLayout) && !stackedOnPhone(data)}>
-    <p data-semantic-name title={fullTitle} className={`mt-[0.3em] ${data.phoneLayout && !data.phoneLinear ? NAME_CLAMP.phone : NAME_CLAMP.desktop} max-w-full ${data.pathPresentation ? "font-normal" : "font-semibold"} leading-[1.15] text-foreground`} style={{ fontSize: data.phoneLinear ? "var(--graph-node-label-size, 16px)" : data.phoneLayout ? "calc(var(--graph-node-label-size, 14px) * 0.88)" : "calc(var(--graph-node-label-size, 14px) * var(--graph-node-name-scale, 0.88))" }}>
+    <p data-semantic-name title={fullTitle} className={`mt-[0.3em] ${data.phoneLayout && !data.phoneLinear ? NAME_CLAMP.phone : NAME_CLAMP.desktop} max-w-full ${data.scopePorts ? "mx-auto w-fit" : ""} ${data.pathPresentation ? "font-normal" : "font-semibold"} leading-[1.15] text-foreground`} style={{ fontSize: anchor && data.pathPresentation && !data.phoneLayout ? "calc(var(--graph-node-label-size, 14px) * 1.3)" : data.phoneLinear ? "var(--graph-node-label-size, 16px)" : data.phoneLayout ? "calc(var(--graph-node-label-size, 14px) * 0.88)" : "calc(var(--graph-node-label-size, 14px) * var(--graph-node-name-scale, 0.88))" }}>
       <NameWords text={canvasName(preview)} hidden={canvasName(preview) !== fullTitle} />
     </p>
     {canvasName(preview) !== fullTitle && <span className="sr-only">{fullTitle}</span>}
@@ -237,8 +240,8 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
     {scope && <span className="sr-only">{scope.spoken}</span>}
     {data.scopeAdmin && <button data-graph-caption type="button" className="nodrag nopan mt-1 whitespace-nowrap bg-[var(--graph-canvas)] text-[11px] text-ink-secondary" onClick={event => { event.stopPropagation(); data.scopeAdmin!.inspect(); }}>admin via {data.scopeAdmin.label}</button>}
     {!!data.scopePeers?.length && <div className="mt-1 flex items-center flex-col gap-1">
-      {data.scopePeers.map(peer => <button key={peer.id} data-graph-caption type="button" className="nodrag nopan whitespace-nowrap bg-[var(--graph-canvas)] px-1 text-[11px] text-ink-secondary"
-        onClick={event => { event.stopPropagation(); peer.inspect(); }}>also used by: {peer.label}</button>)}
+      {data.scopePeers.map(peer => <button key={peer.id} data-graph-caption type="button" aria-label={`also used by: ${peer.label}`} className="nodrag nopan whitespace-nowrap bg-[var(--graph-canvas)] px-1 text-center text-[11px] leading-tight text-ink-secondary"
+        onClick={event => { event.stopPropagation(); peer.inspect(); }}><span className="block">also used by:</span><span className="block">{peer.label}</span></button>)}
     </div>}
     {data.seenIn?.length ? <span className="sr-only" data-seen-in>{seenInSummary(data.seenIn)}</span> : null}
     </CaptionBox>

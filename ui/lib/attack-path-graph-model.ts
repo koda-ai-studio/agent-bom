@@ -18,9 +18,8 @@ const SEVERITY_ORDER = ["critical", "high", "medium", "low"];
 const MAX_CONNECTED_PATHS = 8;
 
 /**
- * `receipt`: the path's own hop receipt passes every check the coverage summary
- * counts (directed, traversable, complete, fresh, recorded provenance, current
- * identity, source scan). Otherwise the edge's evidence envelope decides.
+ * Evidence style always follows the edge envelope. A complete traversal receipt
+ * can annotate a recorded edge, but cannot upgrade modeled or missing evidence.
  */
 export type EdgeEvidenceStyle = "receipt" | "recorded" | "inferred" | "unrecorded";
 export type PathGraphFinding = { id: string; label: string; severity: string };
@@ -38,6 +37,7 @@ export type PathGraphNode = {
   dimensions?: UnifiedNode["dimensions"] | undefined;
   semanticLayer?: string | null | undefined;
   aggregate?: GraphNodeAggregate["aggregate"] | undefined;
+  findingDisclosure?: GraphNodeAggregate["finding_disclosure"] | undefined;
   isKev?: boolean | undefined;
   findings: PathGraphFinding[];
   markers: NodeContextMarker[];
@@ -46,6 +46,7 @@ export type PathGraphNode = {
   parentId?: string;
 };
 export type PathGraphEdge = {
+  displayOnly?: boolean;
   id: string;
   source: string;
   target: string;
@@ -138,6 +139,8 @@ function connectedPaths(graph: UnifiedGraphData, selected: AttackPath, selectedH
   return (graph.attack_paths ?? [])
     .filter(other => pathKey(other) !== selectedKey)
     .map(other => ({ other, hops: assetHops(other, nodes) }))
+    // A route into the selected entry is another entry choice, not a downstream branch.
+    .filter(({ hops }) => hops.indexOf(selected.hops[0]!) <= 0)
     .filter(({ hops }) => hops.some(id => selectedHops.has(id) || [...(adjacency.get(id) ?? [])].some(next => selectedHops.has(next))))
     .sort((a, b) => (b.other.composite_risk ?? 0) - (a.other.composite_risk ?? 0));
 }
@@ -209,6 +212,12 @@ export function buildAttackPathGraphModel(
   const selectedHops = new Set(pathNodeIds);
   const draft: Draft = { nodes: new Set(pathNodeIds), edges: new Map(), onPath: new Set() };
   addPathEdges(draft, pathNodeIds, path, graph.edges, true);
+  // A hosted agent is affected context, not an invented dependency hop.
+  for (const edge of graph.edges) {
+    if (edge.relationship === "hosted_on" && selectedHops.has(edge.target) && nodes.get(edge.source)?.entity_type === "agent") {
+      draft.nodes.add(edge.source); draft.edges.set(edge.id, edge);
+    }
+  }
   const images = workloadImageContext(graph.nodes.map(node => ({ id: node.id, data: { entityType: node.entity_type } })),
     graph.edges.map(edge => ({ source: edge.source, target: edge.target, data: { relationship: edge.relationship, evidence: edge.evidence } })));
   const contextOwners = new Map<string, string>();
@@ -303,6 +312,7 @@ export function buildAttackPathGraphModel(
       role: index < 0 ? "branch" : index === 0 && lastIndex > 0 ? "entry" : index === lastIndex ? "target" : "path",
       semanticOwner: contextOwners.get(id), imageSubrow: contextOwners.has(id) && images.owners.has(id), evidenceSources: images.sources.get(id),
       aggregate: options.nodeAggregates?.get(id)?.aggregate,
+      findingDisclosure: options.nodeAggregates?.get(id)?.finding_disclosure,
       isKev: FINDING_ENTITY_TYPES.has(node.entity_type) && node.attributes?.is_kev === true,
       findings: findingsFor(id, graph, nodes, drawnFindings),
       markers: nodeContextMarkers(node.attributes ?? {}),
@@ -324,12 +334,14 @@ export function buildAttackPathGraphModel(
     const base = {
       relationship: edge.relationship,
       relationshipLabel: relationshipEdgeLabelText(edge.relationship),
-      evidence: receiptFor(edge) ? "receipt" as const : evidenceStyle(edge),
+      evidence: evidenceStyle(edge) === "recorded" && receiptFor(edge) ? "receipt" as const : evidenceStyle(edge),
       onPath: draft.onPath.has(edge.id),
       bidirectional: edge.direction === "bidirectional",
     };
     if (!sourceGroup && !targetGroup) {
-      edges.push({ id: edge.id, source: edge.source, target: edge.target, ...base });
+      const inverse = edge.relationship === "hosted_on" && nodes.get(edge.target)?.entity_type === "container";
+      edges.push({ id: edge.id, source: inverse ? edge.target : edge.source, target: inverse ? edge.source : edge.target, ...base,
+        ...(inverse ? {relationship: "hosts", relationshipLabel: "Hosts"} : {}) });
       continue;
     }
     // Only the link from the visible parent into the group stands in for its members.
@@ -351,11 +363,11 @@ export function buildAttackPathGraphModel(
     while (nodes.has(id)) id += ":context";
     const sourceId = pathNodeIds[0]!;
     const source = entityNodes.find(node => node.id === sourceId);
-    if (source?.role === "entry") source.role = "path";
+    if (source?.role === "entry") { source.role = "path"; source.markers = source.markers.filter(marker => marker.kind !== "internet"); }
     entityNodes.unshift({ id, kind: "entity", displayOnly: true, role: "entry", label: "Internet",
       typeLabel: "Exposure context", entityType: "external_boundary", semanticLayer: "user", findings: [], markers: [] });
     edges.unshift({ id: `${id}:${sourceId}`, source: id, target: sourceId, relationship: "exposed_to",
-      relationshipLabel: "Internet-exposed", evidence: "inferred", onPath: false, bidirectional: false });
+      relationshipLabel: "Internet exposure · recorded internet_exposed flag", evidence: "recorded", onPath: true, displayOnly: true, bidirectional: false });
     pathNodeIds.unshift(id);
   }
   return {

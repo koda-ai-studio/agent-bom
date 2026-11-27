@@ -15,13 +15,13 @@ afterEach(cleanup);
 const style = (model: ReturnType<typeof buildAttackPathGraphModel>, source: string, target: string) =>
   model.edges.find(edge => edge.source === source && edge.target === target)!.evidence;
 
-describe("attack path line style follows the hop receipts", () => {
-  it("draws a hop with a complete receipt solid even when the edge envelope is modeled", () => {
+describe("attack path line style preserves the edge evidence level", () => {
+  it("keeps modeled edges dashed even when their traversal receipts are complete", () => {
     const { graph, selected } = receiptedDemoFixture();
     expect(hopReceiptCoverage(selected).evidenced).toBe(6);
     const model = buildAttackPathGraphModel(graph, selected);
     for (const [source, target] of [["user:contractor", "sa:jit"], ["role:admin", "agent:copilot"], ["server:github", "pkg:next"]] as const) {
-      expect(style(model, source, target)).toBe("receipt");
+      expect(style(model, source, target)).toBe("inferred");
     }
     // Branches carry no receipt for this path: their own envelope still decides.
     expect(style(model, "agent:sre", "server:filesystem")).toBe("inferred");
@@ -32,7 +32,7 @@ describe("attack path line style follows the hop receipts", () => {
     const model = buildAttackPathGraphModel(graph, selected);
     expect(style(model, "sa:jit", "role:admin")).toBe("inferred");
     expect(style(model, "agent:copilot", "server:github")).toBe("inferred");
-    expect(style(model, "user:contractor", "sa:jit")).toBe("receipt");
+    expect(style(model, "user:contractor", "sa:jit")).toBe("inferred");
     expect(hopReceiptCoverage(selected).evidenced).toBe(4);
   });
 
@@ -42,12 +42,12 @@ describe("attack path line style follows the hop receipts", () => {
     expect(style(model, "user:contractor", "sa:jit")).toBe("inferred");
   });
 
-  it("draws receipted hops solid and states the rule in the legend", () => {
+  it("draws modeled hops dashed and explains the evidence style", () => {
     const { graph, selected } = receiptedDemoFixture();
     const { container } = render(<AttackPathGraph graph={graph} attackPath={selected} narrow={false} onNodeSelect={vi.fn()} onEdgeSelect={vi.fn()} onOpenFindings={vi.fn()} />);
     const line = container.querySelector('[data-id="user:contractor->sa:jit:acted_as"] path')!;
-    expect(line.getAttribute("data-line-style")).toBe("solid");
+    expect(line.getAttribute("data-line-style")).toBe("dashed");
     const legend = screen.getByRole("list", { name: "Graph legend" });
-    expect(within(legend).getByText("Hop receipt: directed, traversable, recorded")).toBeInTheDocument();
+    expect(within(legend).getByText("Modeled or inferred")).toBeVisible();
   });
 });

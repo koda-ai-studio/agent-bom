@@ -19,12 +19,14 @@ test("agent entry chains stay connected and findings disclose their exact CVE", 
   await expect(canvas.locator('[data-internet-anchor]')).toHaveCount(0);
   await expect(canvas.locator('.react-flow__node[data-id="sa:jit-review"]')).toBeVisible();
   await expect(canvas.locator('.react-flow__node[data-id="role:prod-admin"]')).toBeVisible();
-  const privilege = canvas.locator('[data-relationship="can_access"] .react-flow__edge-path');
+  const privilege = canvas.locator('[data-id="role:prod-admin->agent:developer-copilot:can_access"] .react-flow__edge-path');
+  // The credential's grant to its data is structure here: the identity route carries no Internet exposure.
+  expect(await canvas.locator('[data-id="cred:aws->store:ai-training:can_access"] .react-flow__edge-path').evaluate(element => (element as SVGElement).style.stroke)).toBe("var(--graph-edge-structure)");
   expect(await privilege.evaluate(element => (element as SVGElement).style.stroke)).toBe("var(--graph-edge-risk)");
   await expect(privilege).toHaveAttribute("marker-end", /.+/);
-  await page.getByLabel("Entry route", {exact: true}).selectOption("exposure");
-  await page.getByRole("button", { name: "Expand 1 finding for Developer Copilot", exact: true }).click();
-  await expect(page.getByRole("region", {name: "Findings for Developer Copilot"})).toContainText("CVE-2024-37891");
+  await page.getByRole("tab", {name: "Internet (1)", exact: true}).click();
+  await page.getByRole("button", { name: "Expand 1 finding for filesystem MCP", exact: true }).click();
+  await expect(page.getByRole("region", {name: "Findings for filesystem MCP"})).toContainText("CVE-2024-37891");
   await page.getByRole("button", {name: "Close findings"}).click();
   await page.getByRole("button", { name: "Explore neighbours", exact: true }).click();
   await expect(page.getByTestId("graph-agent-evidence")).toHaveAttribute("data-layout", "neighborhood");

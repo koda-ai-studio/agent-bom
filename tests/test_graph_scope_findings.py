@@ -65,6 +65,9 @@ def test_scope_disclosure_auth_tenants_and_revision_pinning(tmp_path, monkeypatc
                 )
             )
             graph.add_edge(UnifiedEdge(source="same-node", target=f"finding-{index}", relationship=RelationshipType.CONTAINS))
+        graph.add_node(UnifiedNode(id="child-server", entity_type=EntityType.SERVER, label=f"{tenant} server"))
+        graph.add_edge(UnifiedEdge(source="same-node", target="child-server", relationship=RelationshipType.CONTAINS))
+        graph.add_edge(UnifiedEdge(source="child-server", target="finding-2", relationship=RelationshipType.CONTAINS))
         store.save_graph(graph)
     original = stores._graph_store
     secret = uuid4().hex
@@ -84,7 +87,21 @@ def test_scope_disclosure_auth_tenants_and_revision_pinning(tmp_path, monkeypatc
             assert response.status_code == 200
             assert response.json()["findings"][0]["label"] == f"{tenant} finding 0"
             assert response.json()["total"] == 3
+        for invalid in (["same-node"], ["outside-scope"], ["child-server"] * 26, ["x" * 2049]):
+            assert client.get("/v1/graph/scope-findings", params={**params, "exclude_node_id": invalid}, headers=headers).status_code == 422
         first = client.get("/v1/graph/scope-findings", params=params, headers=headers).json()
+        exclusive = client.get(
+            "/v1/graph/scope-findings", params={**params, "exclude_node_id": "child-server", "limit": 100}, headers=headers
+        )
+        assert exclusive.status_code == 200
+        assert exclusive.json()["total"] == 2
+        assert {row["label"] for row in exclusive.json()["findings"]} == {"alpha finding 0", "alpha finding 1"}
+        summaries = client.get(
+            "/v1/graph/node-aggregates", params={"scan_id": "same-scan", "node_id": ["same-node", "child-server"]}, headers=headers
+        ).json()
+        root = next(row for row in summaries["aggregates"] if row["node_id"] == "same-node")
+        assert root["aggregate"]["issue_count"] == 3
+        assert root["finding_disclosure"] == {"issue_count": 2, "severity_counts": {"high": 2}, "exclude_node_ids": ["child-server"]}
         assert client.get("/v1/graph/scope-findings", params={**params, "offset": 1}, headers=headers).status_code == 422
         second = client.get(
             "/v1/graph/scope-findings",
@@ -105,3 +122,25 @@ def test_scope_disclosure_auth_tenants_and_revision_pinning(tmp_path, monkeypatc
         assert client.get("/v1/graph/scope-findings", params={**params, "snapshot_generation": "stale"}, headers=headers).status_code == 409
     finally:
         set_graph_store(original)
+
+
+def test_scope_exclusions_validate_containment_on_full_snapshot_fallback(monkeypatch):
+    from fastapi import HTTPException
+
+    from agent_bom.api.routes.graph_routes import node_aggregates as routes
+
+    graph = UnifiedGraph(scan_id="scan", tenant_id="tenant")
+    for nid in ("root", "child", "unrelated"):
+        graph.add_node(UnifiedNode(id=nid, entity_type=EntityType.AGENT, label=nid))
+    graph.add_edge(UnifiedEdge(source="root", target="child", relationship=RelationshipType.CONTAINS))
+    # The bounded-store helper deliberately returns the full snapshot on fallback.
+    monkeypatch.setattr(routes, "containment_drilldown_graph", lambda *a, **kw: graph)
+    with pytest.raises(HTTPException) as error:
+        routes._scope_findings(None, tenant="tenant", scan_id="scan", node_id="root", suppressed=frozenset(), excluded=("unrelated",))
+    assert error.value.status_code == 422
+    rows, missing = routes._aggregates(
+        None, tenant="tenant", scan_id="scan", node_ids=["root", "child", "unrelated"], suppressed=frozenset()
+    )
+    assert not missing
+    assert rows[0]["finding_disclosure"]["exclude_node_ids"] == ["child"]
+    assert rows[1]["finding_disclosure"]["exclude_node_ids"] == []

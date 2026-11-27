@@ -53,7 +53,12 @@ export function AttackPathGraphEdge(props: EdgeProps<AttackPathFlowEdge>) {
     nodeId => nodes.find(node => node.id === nodeId)?.position.x);
   // A phone column draws one smooth curve between the two handles; routing around obstacles there looped past the column.
   const sideArc = direction === "LR" && props.sourcePosition === Position.Right && props.targetPosition === Position.Right && Math.abs(props.sourceX - props.targetX) < 1;
+  // A branch into a lower lane of a later column drops once, between the caption columns, instead of riding the path line.
+  const drop = direction === "LR" && !edge.onPath && props.targetX - props.sourceX > 40 && props.targetY - props.sourceY > 40;
+  const bend = props.sourceX + 0.7 * (props.targetX - props.sourceX);
   const curve = direction === "TB" ? compactEdgeCurve(props)
+    : drop ? { path: `M${props.sourceX},${props.sourceY} C${bend},${props.sourceY} ${bend},${props.targetY} ${props.targetX},${props.targetY}`,
+      mid: { x: (props.sourceX + props.targetX) / 2, y: (props.sourceY + props.targetY) / 2 } }
     : sideArc ? { path: sideArcPath({ x: props.sourceX, y: props.sourceY }, { x: props.targetX, y: props.targetY }),
       mid: { x: props.sourceX + 0.75 * Math.max(80, Math.abs(props.targetY - props.sourceY) * 0.35), y: (props.sourceY + props.targetY) / 2 } } : null;
   const [path, labelX, labelY] = curve ? [curve.path, curve.mid.x, curve.mid.y] : relationshipPath(props, nodes.filter(node => !node.hidden).map(node => ({ id: node.id, ...node.position,
@@ -72,7 +77,7 @@ export function AttackPathGraphEdge(props: EdgeProps<AttackPathFlowEdge>) {
         strokeDasharray: style.dash,
         strokeLinecap: style.name === "dotted" ? "round" : undefined,
       }} />
-    {trace && <path key={trace.key} data-path-trace={trace.index} d={path} pathLength={1} aria-hidden="true"
+    {trace && !edge.displayOnly && <path key={trace.key} data-path-trace={trace.index} d={path} pathLength={1} aria-hidden="true"
       className="attack-path-trace" style={{ animationDuration: `${trace.duration}ms`, animationDelay: `${trace.delay}ms` }} />}
     {(active || edge.relationship === "can_access") && <EdgeName active={active} transform={transform}
       text={`${edge.relationshipLabel}${active && edge.bidirectional ? " · two-way" : ""}`}
@@ -99,10 +104,10 @@ export function AttackPathArrowDefs({ prefix }: { prefix: string }) {
       <defs>
         {(["path", "branch"] as const).map(kind => (
           <g key={kind}>
-            <marker id={`${prefix}-${kind}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <marker id={`${prefix}-${kind}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
               <path d="M0,0 L10,5 L0,10 z" style={{ fill: "context-stroke" }} />
             </marker>
-            <marker id={`${prefix}-dot-${kind}`} viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5">
+            <marker id={`${prefix}-dot-${kind}`} viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" markerUnits="userSpaceOnUse">
               <circle cx="5" cy="5" r="4" style={{ fill: "context-stroke" }} />
             </marker>
           </g>

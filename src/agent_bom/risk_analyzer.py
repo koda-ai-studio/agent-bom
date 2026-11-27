@@ -464,17 +464,12 @@ def score_server_risk(
     combo_factor = min(len(combos_found) * SERVER_RISK_COMBO_WEIGHT, SERVER_RISK_COMBO_CAP)
     profile.dangerous_combinations = combos_found
 
-    # Registry override: if registry says high, enforce minimum floor
-    registry_floor = 0.0
-    if registry_entry:
-        rl = registry_entry.get("risk_level", "")
-        if rl == "high":
-            registry_floor = SERVER_RISK_REGISTRY_HIGH_FLOOR
-        elif rl == "medium":
-            registry_floor = SERVER_RISK_REGISTRY_MEDIUM_FLOOR
-
+    registry_floor = {"high": SERVER_RISK_REGISTRY_HIGH_FLOOR, "medium": SERVER_RISK_REGISTRY_MEDIUM_FLOOR}.get(
+        (registry_entry or {}).get("risk_level", ""), 0.0
+    )
+    execution_floor = SERVER_RISK_HIGH_THRESHOLD if ToolCapability.EXECUTE in present_caps and credentials else 0.0
     raw_score = base_score + tool_factor + cred_factor + combo_factor
-    profile.risk_score = min(max(raw_score, registry_floor), 10.0)
+    profile.risk_score = min(max(raw_score, registry_floor, execution_floor), 10.0)
 
     # Risk level thresholds
     if profile.risk_score >= SERVER_RISK_HIGH_THRESHOLD:
@@ -510,6 +505,9 @@ def _generate_justification(
     # Credentials
     if credentials:
         parts.append(f"{len(credentials)} credential(s) exposed ({', '.join(credentials[:3])}).")
+
+    if ToolCapability.EXECUTE in present_caps and credentials:
+        parts.append("High-risk floor: command execution capability combined with exposed credentials.")
 
     # Specific high-risk tools
     high_risk_caps = {ToolCapability.EXECUTE, ToolCapability.DELETE, ToolCapability.ADMIN}

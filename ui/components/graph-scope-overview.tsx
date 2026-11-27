@@ -36,7 +36,7 @@ function scopeFrameHeight(rows: number): number {
 
 export function GraphScopeOverview(props: Props) {
   const [unavailable, setUnavailable] = useState<string>();
-  const [findings, setFindings] = useState<Pick<GraphRollupContainer, "id" | "label" | "aggregate">>();
+  const [findings, setFindings] = useState<Pick<GraphRollupContainer, "id" | "label" | "aggregate"> & { excludeNodeIds?: string[] | undefined }>();
   const [showList, setShowList] = useState(false);
   const [rootId, setRootId] = useState<string>();
   const [edgeDetail, setEdgeDetail] = useState<string>();
@@ -92,7 +92,7 @@ export function GraphScopeOverview(props: Props) {
       {edgeDetail && <p role="status" className="px-4 pt-3 text-sm text-ink-secondary">{edgeDetail}</p>}
       {originalConnections && props.scanId && props.onInspectNode ? <GraphAgentConnections
         onUnavailable={originalUnavailable} key={`${props.scanId}:${scope.id}`} scanId={props.scanId} rootId={scope.id} generation={props.generation}
-        onInspect={props.onInspectNode} onFindings={(id, label, aggregate) => setFindings({ id, label, aggregate })} aggregate={scope.aggregate}
+        onInspect={props.onInspectNode} onFindings={(id, label, aggregate, excludeNodeIds) => setFindings({ id, label, aggregate, excludeNodeIds })} aggregate={scope.aggregate}
       /> : <><ReactFlowProvider key={`${preview.root.id}:${narrow}`}>
         {/* The frame is as tall as the drawn scope at full size, within the room left in the window, so a short scope
             does not sit in an empty canvas. */}
@@ -123,6 +123,6 @@ export function GraphScopeOverview(props: Props) {
       <GraphFlowEdgeLegend edges={preview.edges} /></>}
     </>}
     {findings && props.scanId && props.onInspectNode && <GraphScopeFindings key={`${props.scanId}:${findings.id}`} scanId={props.scanId}
-      nodeId={findings.id} label={findings.label} expected={findings.aggregate.issue_count} onClose={() => setFindings(undefined)} onInspect={props.onInspectNode} />}
+      excludeNodeIds={findings.excludeNodeIds} nodeId={findings.id} label={findings.label} expected={findings.aggregate.issue_count} onClose={() => setFindings(undefined)} onInspect={props.onInspectNode} />}
   </section>;
 }

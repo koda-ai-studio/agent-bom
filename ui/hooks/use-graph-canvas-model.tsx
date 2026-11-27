@@ -126,7 +126,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
     const presentationGraph = presentationFilters.findingKind === "iac"
       ? { ...projectedGraphData, ...applyFilters(projectedGraphData, presentationFilters) }
       : projectedGraphData;
-    return buildUnifiedFlowGraph(presentationGraph, presentationFilters, changedNodeIds ?? (investigationMode ? new Set([investigationMode.rootId]) : undefined));
+    return buildUnifiedFlowGraph(presentationGraph, presentationFilters, changedNodeIds ?? (investigationMode ? new Set([investigationMode.rootId]) : undefined), selectedAttackPath?.hops);
   }, [
     projectedGraphData,
     investigationMode,

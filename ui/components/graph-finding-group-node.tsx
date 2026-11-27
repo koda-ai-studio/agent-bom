@@ -24,7 +24,7 @@ export function GraphFindingGroupNode({ data }: { data: LineageNodeData }) {
       </>}
       <GraphCountHint text={`${data.description}: ${count} linked findings${severity ? ` · highest severity: ${severity}` : " · severity not rated"}. Click to expand.`}><button type="button" onClick={event => { event.stopPropagation(); data.readingFindings?.toggle(); }}
         aria-label={`Expand ${count} finding${count === 1 ? "" : "s"} for ${data.description ?? "component"}`}
-        style={{ width: GLYPH, height: GLYPH, ...(severity ? { borderColor: `var(--severity-ring-${severity})` } : {}) }}
+        style={{ width: GLYPH, height: GLYPH, ...(severity ? { borderColor: `var(--severity-ring-${severity})`, color: `var(--severity-ring-${severity})` } : {}) }}
         className="nodrag nopan graph-entity-glyph relative flex items-center justify-center rounded-full border-2 border-[var(--graph-edge-risk)] bg-surface text-[var(--graph-edge-risk)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
         <Binoculars style={{ width: `calc(var(--graph-node-icon-size, 28px) * ${COMPACT_GLYPH_SCALE})`, height: `calc(var(--graph-node-icon-size, 28px) * ${COMPACT_GLYPH_SCALE})` }} aria-hidden="true" />
       </button></GraphCountHint>

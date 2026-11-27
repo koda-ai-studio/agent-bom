@@ -19,6 +19,8 @@ import { pathTraceTiming } from "@/lib/attack-path-trace";
 import { prefersReducedMotion } from "@/lib/reduced-motion";
 import { buildAttackPathGraphModel, type AttackPathGraphModel } from "@/lib/attack-path-graph-model";
 import type { AttackPath, UnifiedEdge, UnifiedGraphData, UnifiedNode } from "@/lib/graph-schema";
+import { scopeBreadcrumb } from "@/lib/graph-recorded-boundaries";
+import { GraphScopeBreadcrumb } from "@/components/graph-recorded-boundaries";
 import { BACKGROUND_GAP, CONTROLS_CLASS } from "@/lib/graph-utils";
 
 export type AttackPathGraphProps = {
@@ -82,7 +84,7 @@ function edgeFromTarget(target: EventTarget | null): string | null {
 /** The selected path's hops in reading order, each with its slot in the one-time trace. */
 function traceByEdge(model: AttackPathGraphModel, key: string): Map<string, EdgeTrace> {
   const order = new Map(model.pathNodeIds.map((id, index) => [id, index]));
-  const hops = model.edges.filter(edge => edge.onPath).sort((a, b) => (order.get(a.source) ?? 0) - (order.get(b.source) ?? 0));
+  const hops = model.edges.filter(edge => edge.onPath && !edge.displayOnly).sort((a, b) => (order.get(a.source) ?? 0) - (order.get(b.source) ?? 0));
   const timing = pathTraceTiming(hops.length);
   return new Map(hops.map((edge, index) => [edge.id, { ...timing[index]!, index, key }]));
 }
@@ -125,6 +127,7 @@ function AttackPathCanvas({ graph, attackPath, narrow, context, onNodeSelect, on
   const reducedMotion = prefersReducedMotion();
   const traceKey = reducedMotion ? null : `${attackPath.source}>${attackPath.hops.join(">")}`;
   const { layout, nodes, edges } = useFlowElements(model, narrow, activeEdge, markerPrefix, handlers, traceKey);
+  const scope = useMemo(() => scopeBreadcrumb(graph, model.nodes.map(node => node.id)), [graph, model.nodes]);
   const frameRef = useRef<HTMLDivElement>(null);
   const frameWidth = useElementWidth(frameRef);
   const canvasWidth = attackPathCanvasWidth(layout, narrow, frameWidth);
@@ -133,10 +136,12 @@ function AttackPathCanvas({ graph, attackPath, narrow, context, onNodeSelect, on
   const manualCamera = useRef<string | null>(null);
   // Collapsed-group links stand in for several records; only a recorded edge has a receipt.
   const openEdge = (edge: AttackPathFlowEdge) => {
-    if (graph.edges.some(item => item.id === edge.id) || context?.edges.some(item => item.id === edge.id)) onEdgeSelect({ id: edge.id, source: edge.source, target: edge.target, relationship: edge.data!.edge.relationship });
+    const original = graph.edges.find(item => item.id === edge.id) ?? context?.edges.find(item => item.id === edge.id);
+    if (original) onEdgeSelect({ id: original.id, source: original.source, target: original.target, relationship: original.relationship });
   };
   return <>
     {/* A phone keeps every node at a legible size: a graph wider than the screen scrolls sideways. */}
+    <GraphScopeBreadcrumb label={scope} className="px-3 py-1.5" />
     <div ref={frameRef} className={narrow ? "overflow-x-auto overscroll-x-contain" : undefined} data-testid="attack-path-graph-frame">
     <div className={`relative bg-surface ${HIT_AREAS}`} style={{ height, width: narrow && canvasWidth > frameWidth ? canvasWidth : undefined }} data-testid="attack-path-graph-canvas" data-graph-annotations="on-demand"
       onFocusCapture={event => { const id = edgeFromTarget(event.target); if (id) setActiveEdge(id); }}
