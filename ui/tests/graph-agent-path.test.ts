@@ -100,3 +100,15 @@ it("draws recorded exposure as part of the selected path without persisting a ne
   expect(context.markerEnd).toBeDefined();
   expect(context.style?.strokeDasharray).toBeUndefined();
 });
+
+it("names a scope's one disclosed finding instead of counting it", () => {
+  const {graph, flow} = sample();
+  const server = flow.nodes.find(node => node.id === "server:filesystem")!;
+  server.data.soleFinding = {label: "CVE-2024-37891", severity: "medium"};
+  const result = agentPathGraph(graph, flow, "agent:developer-copilot", () => {});
+  const group = result.nodes.find(node => node.id === "display:scope-findings:server:filesystem")!;
+  expect(group.data.label).toBe("CVE-2024-37891");
+  expect(group.data.readingFindings?.count).toBe(1);
+  const counted = result.nodes.find(node => node.id === "display:scope-findings:agent:developer-copilot");
+  if (counted) expect(counted.data.label).toMatch(/^Findings \(\d+\)$/);
+});

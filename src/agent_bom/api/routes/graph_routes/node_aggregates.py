@@ -51,6 +51,7 @@ def _aggregates(store, *, tenant: str, scan_id: str, node_ids: list[str], suppre
                     "issue_count": len(findings),
                     "severity_counts": dict(Counter(row["severity"] for row in findings)),
                     "exclude_node_ids": excluded,
+                    "sole_finding": {"label": findings[0]["label"], "severity": findings[0]["severity"]} if len(findings) == 1 else None,
                 },
             }
         )

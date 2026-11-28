@@ -79,7 +79,7 @@ export function GraphAgentConnections({ scanId, rootId, generation, onInspect, o
         if (!full || (!neighbors && pathAvailable && !record?.finding_disclosure)) return {};
         const disclosure = !neighbors && pathAvailable ? record?.finding_disclosure : undefined;
         const shown = disclosure ? {...full, issue_count: disclosure.issue_count, severity_counts: disclosure.severity_counts} : full;
-        return {findingAggregate: shown, onExploreFindings: () => onFindings(node.id, node.data.label, shown, disclosure?.exclude_node_ids)};
+        return {findingAggregate: shown, soleFinding: disclosure?.sole_finding ?? undefined, onExploreFindings: () => onFindings(node.id, node.data.label, shown, disclosure?.exclude_node_ids)};
       })() } }));
     const positions = new Map(nodes.map(node => [node.id, node.position]));
     const edges = base.edges.map(edge => {

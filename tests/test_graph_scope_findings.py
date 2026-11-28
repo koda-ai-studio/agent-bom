@@ -101,7 +101,17 @@ def test_scope_disclosure_auth_tenants_and_revision_pinning(tmp_path, monkeypatc
         ).json()
         root = next(row for row in summaries["aggregates"] if row["node_id"] == "same-node")
         assert root["aggregate"]["issue_count"] == 3
-        assert root["finding_disclosure"] == {"issue_count": 2, "severity_counts": {"high": 2}, "exclude_node_ids": ["child-server"]}
+        assert root["finding_disclosure"] == {
+            "issue_count": 2,
+            "severity_counts": {"high": 2},
+            "exclude_node_ids": ["child-server"],
+            "sole_finding": None,
+        }
+        child = next(row for row in summaries["aggregates"] if row["node_id"] == "child-server")
+        # A scope with exactly one disclosed issue names it, so a path can say what was found.
+        assert child["finding_disclosure"]["issue_count"] == 1
+        sole = child["finding_disclosure"]["sole_finding"]
+        assert sole["label"] and sole["severity"] in child["finding_disclosure"]["severity_counts"]
         assert client.get("/v1/graph/scope-findings", params={**params, "offset": 1}, headers=headers).status_code == 422
         second = client.get(
             "/v1/graph/scope-findings",

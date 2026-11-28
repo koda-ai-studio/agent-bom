@@ -71,7 +71,7 @@ export function agentPathGraph(graph: UnifiedGraphData, flow: Flow, root: string
     if (!aggregate?.issue_count || !asset.data.onExploreFindings) continue;
     const id = `display:scope-findings:${owner}`;
     const group: Node<LineageNodeData> = { id, type: "findingGroupNode", position: { x: 0, y: 0 }, data: {
-      label: `Findings (${aggregate.issue_count})`, nodeType: "misconfiguration", displayOnly: true, displayTargetId: owner,
+      label: aggregate.issue_count === 1 && asset.data.soleFinding ? asset.data.soleFinding.label : `Findings (${aggregate.issue_count})`, nodeType: "misconfiguration", displayOnly: true, displayTargetId: owner,
       description: asset.data.label, findingAggregate: aggregate, readingFindings: { count: aggregate.issue_count, expanded: false, severity: issueSeverity(aggregate), toggle: asset.data.onExploreFindings },
     } };
     nodes.push(group);
