@@ -63,7 +63,7 @@ from agent_bom.runtime.proxy_tracing import _PROXY_TRACER as _PROXY_TRACER
 from agent_bom.runtime.proxy_tracing import proxy_span
 from agent_bom.runtime.proxy_upstream import UpstreamResponseRejectedError, build_proxy_upstream, upstream_error_message
 from agent_bom.runtime.trace_metadata import inject_jsonrpc_trace_meta as _inject_jsonrpc_trace_meta
-from agent_bom.security import sanitize_text
+from agent_bom.security import sanitize_text, sanitize_url
 
 logger = logging.getLogger("agent_bom.proxy")
 __all__ = ["_gateway_evaluator", "_safe_compile", "_safe_regex_match", "_safe_regex_search", "_truncate_args",
@@ -417,7 +417,7 @@ class _SseProxySession:
         try:
             with proxy_span("proxy.sse_tools_list") as span:
                 if span is not None:
-                    span.set_attribute("agent_bom.proxy.upstream_url", self.base_url)
+                    span.set_attribute("agent_bom.proxy.upstream_url", sanitize_url(self.base_url) or "")
                 catalog = await self.upstream.tool_catalog(_proxy_request_headers())
                 self.declared_tools = set(catalog.names)
                 if span is not None:
@@ -426,7 +426,7 @@ class _SseProxySession:
                 logger.warning("SSE proxy: tools/list pagination incomplete; %d tools declared so far", len(self.declared_tools))
             logger.info("SSE proxy: discovered %d declared tools", len(self.declared_tools))
         except Exception as exc:  # noqa: BLE001
-            logger.warning("SSE proxy: could not fetch tools/list from %s: %s", self.url, sanitize_text(exc))
+            logger.warning("SSE proxy: could not fetch tools/list from %s: %s", sanitize_url(self.url), sanitize_text(exc))
 
     async def _handle_line(self, line: bytes) -> None:
         if len(line) > _MAX_MESSAGE_BYTES:

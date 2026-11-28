@@ -16,7 +16,7 @@ they run it broadly.
 |---|---|---|
 | Did the command come from a repo instruction file or skill? | `agent-bom skills scan .` | Review command execution, credential access, URL, and trust-bypass findings. |
 | Which MCP clients and servers could execute similar commands? | `agent-bom agents -p . -f json -o agent-bom-agents.json` | Identify exposed tools, server packages, and credential env-var names. |
-| Does the command download and execute remote content? | code review plus `agent-bom code scan .` where applicable | Treat pipe-to-shell, curl/wget, encoded scripts, and installers as high risk. |
+| Does the command download and execute remote content? | code review plus `agent-bom code .` where applicable | Treat pipe-to-shell, curl/wget, encoded scripts, and installers as high risk. |
 | Does an MCP server expose shell, filesystem, browser, network, or database tools? | `agent-bom agents --enforce -p .` | Prefer proxy/gateway enforcement before enabling broad assistant access. |
 | Will the command touch AI provider keys? | inventory env-var names and provider secret owners | Rotate or scope credentials before testing in shared environments. |
 

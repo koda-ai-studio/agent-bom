@@ -26573,6 +26573,16 @@
             },
             "title": "Severity Counts",
             "type": "object"
+          },
+          "sole_finding": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GraphSoleFinding"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -29699,6 +29709,26 @@
         },
         "title": "GraphSnapshotsResponse",
         "type": "array"
+      },
+      "GraphSoleFinding": {
+        "additionalProperties": true,
+        "description": "The one disclosed issue, named so a path can say what it is without another read.",
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "severity"
+        ],
+        "title": "GraphSoleFinding",
+        "type": "object"
       },
       "GraphVendorFacets": {
         "additionalProperties": true,
@@ -74936,6 +74966,7 @@
             "schema": {
               "anyOf": [
                 {
+                  "maxLength": 256,
                   "type": "string"
                 },
                 {
@@ -76280,6 +76311,7 @@
             "schema": {
               "anyOf": [
                 {
+                  "maxLength": 256,
                   "type": "string"
                 },
                 {

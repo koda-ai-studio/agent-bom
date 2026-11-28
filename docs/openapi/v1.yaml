@@ -17976,6 +17976,10 @@ components:
             type: integer
           title: Severity Counts
           type: object
+        sole_finding:
+          anyOf:
+          - $ref: '#/components/schemas/GraphSoleFinding'
+          - type: 'null'
       required:
       - issue_count
       - severity_counts
@@ -20127,6 +20131,22 @@ components:
         type: object
       title: GraphSnapshotsResponse
       type: array
+    GraphSoleFinding:
+      additionalProperties: true
+      description: The one disclosed issue, named so a path can say what it is without
+        another read.
+      properties:
+        label:
+          title: Label
+          type: string
+        severity:
+          title: Severity
+          type: string
+      required:
+      - label
+      - severity
+      title: GraphSoleFinding
+      type: object
     GraphVendorFacets:
       additionalProperties: true
       description: Cross-vendor path counts per (source vendor, target vendor) over
@@ -50362,7 +50382,8 @@ paths:
         required: false
         schema:
           anyOf:
-          - type: string
+          - maxLength: 256
+            type: string
           - type: 'null'
           description: Scan snapshot ID; latest if omitted
           title: Scan Id
@@ -51330,7 +51351,8 @@ paths:
         required: false
         schema:
           anyOf:
-          - type: string
+          - maxLength: 256
+            type: string
           - type: 'null'
           title: Scan Id
       - in: query

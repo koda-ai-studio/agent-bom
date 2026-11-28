@@ -93,7 +93,7 @@ class ScopeIndex:
         return sorted(rows, key=lambda row: (-SEVERITY_RANK.get(row["severity"], 0), row["issue_key"]))
 
     def disclosure(self, node_id: str, exclude_node_ids: tuple[str, ...] = ()) -> dict:
-        """Count and severity mix of the disclosed issues, without building their row lists."""
+        """Count, severity mix and the one finding's name when there is exactly one; no row lists."""
         groups = self._issue_groups(node_id) if node_id in self.graph.nodes else {}
         excluded = {key for child in exclude_node_ids if child in self.graph.nodes for key in self._issue_groups(child)}
         kept = [row for key, row in groups.items() if key not in excluded]
@@ -101,6 +101,7 @@ class ScopeIndex:
             "issue_count": len(kept),
             "severity_counts": dict(Counter(row["severity"] for row in kept)),
             "exclude_node_ids": list(exclude_node_ids),
+            "sole_finding": {"label": kept[0]["label"], "severity": kept[0]["severity"]} if len(kept) == 1 else None,
         }
 
 

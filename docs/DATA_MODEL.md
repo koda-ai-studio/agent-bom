@@ -73,7 +73,7 @@ runtime response validation. The generated UI types consume the same OpenAPI.
 | `config/schemas/inventory.schema.json` | `Package.ecosystem` enum values | 9 |
 | `config/schemas/inventory.schema.json` | `MCPServer.transport` enum values | 3 |
 | `docs/openapi/v1.json` | paths | 388 |
-| `docs/openapi/v1.json` | component schemas | 761 |
+| `docs/openapi/v1.json` | component schemas | 762 |
 
 <!-- DATA_MODEL_ATLAS:END -->
 
@@ -776,7 +776,7 @@ field empty for scan type X is intentional, not a bug.
 
 | Scan type | `agents` | `blast_radius` | `mcp_servers` | `iac_findings` | `cloud_findings` | `secret_findings` |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|
-| `agents` (default) | ✅ | ✅ | ✅ | — | — | optional `--secrets` |
+| `agents` (default) | ✅ | ✅ | ✅ | — | — | ✅ (bounded by `--quick`; `--full-analysis` reads every file) |
 | `image` | synthetic single agent | ✅ | n/a | — | — | optional |
 | `iac` | — | — | — | ✅ | optional `--k8s-live` | — |
 | `cloud aws/gcp/azure/snowflake` | — | — | — | — | ✅ | — |

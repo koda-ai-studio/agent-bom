@@ -21,6 +21,8 @@ For AppSec, platform and AI teams who run Claude Code, Cursor, Codex or any MCP
 client: findings are ranked by that reach on one graph that runs on your
 machine or your own infrastructure. Local scans need no account.
 
+<p align="center"><b>One exposed agent, one MCP server, one credential: the path from the Internet to your AI training data.</b></p>
+
 <p align="center"><a href="docs/images/agent-exposure-path-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/agent-exposure-path-light-live.png"><img src="docs/images/agent-exposure-path-dark-live.png" alt="Sample exposure path: from the Internet, an exposed copilot-portal workload with a critical CVE hosts Developer Copilot, which uses a filesystem MCP server that exposes AWS_ROLE_SESSION; that credential can access the crown-jewel s3-ai-training-data bucket, and the server also offers execute_command" width="1100"></picture></a></p>
 
 *Sample data.* [What the sample shows](docs/GALLERY.md#what-the-readme-sample-shows)
@@ -191,6 +193,12 @@ agent-bom db update                                   # refresh OSV, NVD, KEV an
 agent-bom db advisory affected CVE-2026-109618        # most recent saved scan
 agent-bom db advisory affected CVE-2026-109618 --report <scan-report.json> --format json   # a JSON report written by an earlier scan
 ```
+
+Against a running control plane, one answer covers every retained scan, for an
+advisory or a package, with the exposure window, fix state and what the affected
+hosts reach: `agent-bom findings affected CVE-2026-109618` (or `pillow@9.0.0`),
+`GET /v1/affected?q=...`, or the MCP tool `am_i_affected`. List what you can fix
+now with `agent-bom findings list --fix available`.
 
 From an MCP client, the read-only `affected_assets` tool (`graph` and `full`
 profiles) takes the same `advisory_id`. In CI, run `uvx agent-bom db update`

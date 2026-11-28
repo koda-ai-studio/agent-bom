@@ -320,3 +320,29 @@ def test_validate_session_id(value, ok):
     else:
         with pytest.raises(ValueError, match="session"):
             mcp_protocol.validate_session_id(value)
+
+
+def test_failed_tool_discovery_never_logs_upstream_credentials(caplog):
+    import logging
+
+    from agent_bom.proxy import _SseProxySession
+
+    session = _SseProxySession(
+        "https://operator:placeholder-pass@mcp.example.com/mcp?token=PLACEHOLDER_TOKEN",
+        {},
+        None,
+        block_undeclared=False,
+        alert_webhook=None,
+    )
+
+    class _Failing:
+        async def tool_catalog(self, headers):
+            raise RuntimeError("upstream unavailable")
+
+    session.upstream = _Failing()
+    with caplog.at_level(logging.WARNING, logger="agent_bom.proxy"):
+        asyncio.run(session._discover_tools())
+    logged = caplog.text
+    assert "https://mcp.example.com/mcp" in logged
+    for secret in ("placeholder-pass", "PLACEHOLDER_TOKEN", "operator:"):
+        assert secret not in logged

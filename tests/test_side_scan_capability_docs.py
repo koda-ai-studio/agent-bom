@@ -32,5 +32,5 @@ def test_side_scan_capability_docs_mention_shipped_cli_executor() -> None:
     cli_map = (ROOT / "docs" / "CLI_MAP.md").read_text()
     assert "side-scan-capabilities" in cloud_connect or "side-scan-capabilities" in cli_map
     # The docs must describe the shipped Azure/GCP executor, not a refusal.
-    assert "side-scan --provider azure|gcp" in cloud_connect
+    assert "side-scan --provider azure" in cloud_connect and "--provider gcp" in cloud_connect
     assert "refuses" not in cli_map.lower()

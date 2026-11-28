@@ -408,3 +408,43 @@ fallback regression rejects unrelated scopes even when their nodes are loaded. T
 checks canonical deduplication; `tests/api/test_graph_node_aggregates.py` checks
 count reconciliation and missing scopes. Failures remain errors, never empty
 clean results; see [scope failure modes](RUNTIME_FAIL_MODES.md#scope-finding-disclosure).
+
+## Am I affected? (advisory or package lookup)
+
+`GET /v1/affected`, the MCP tool `am_i_affected` and `agent-bom findings affected`
+answer whether an advisory or package is present in the caller's estate. They cross
+the authenticated caller-to-tenant-store boundary and are read-only. Findings match
+exactly on advisory id or package name and version; reach is the latest graph
+snapshot's recorded topology, not proof of exploitation. The findings queue's `fix`
+filter (`available` / `none`) narrows rows already scoped to the caller's tenant.
+
+| STRIDE | Threat and control | Residual risk |
+|---|---|---|
+| Spoofing | Existing API authentication binds the request to its tenant; anonymous requests fail closed. The MCP server's bound tenant overrides any `tenant_id` argument. | Explicitly configured unauthenticated deployments remain the operator's boundary. |
+| Tampering | Read-only: no finding, suppression or graph state changes. Unknown query parameters (for example `tenant_id`) are rejected with 422. | None beyond the store's own integrity. |
+| Repudiation | Responses name the matched scans and graph snapshot. | No signed read receipt; reader attribution relies on access-log retention. |
+| Information disclosure | Every finding and reach read is scoped to the authenticated tenant; identical advisory and package names in another tenant return `not_found`. Errors log only exception types. | Authorized readers can enumerate their own tenant's exposure. |
+| Denial of service | `q` is 2–256 characters; the walk is capped at 5,000 findings, 200 assets and 5 advisories, and a truncated answer says so. It is registered as a heavy read. | Broad authorized lookups still consume store and graph resources. |
+| Elevation of privilege | Viewer (`finding:read`) access only; mutating methods return 403. | Trusted-proxy or store compromise is outside this route's protection. |
+
+Regression coverage: `tests/api/test_affected.py` (including
+`test_answers_never_cross_tenants_even_for_identical_advisories_and_packages`
+across every store backend) and `tests/test_mcp_estate_refusal_enumeration.py`.
+
+## Hosted admin key bootstrap
+
+`agent-bom auth mint-admin-key` mints the first admin API key for a hosted tenant
+and writes the one-time raw key to a private file. It runs with operator access to
+the key store, outside the API, and crosses the operator-to-tenant credential boundary.
+
+| STRIDE | Threat and control | Residual risk |
+|---|---|---|
+| Spoofing | Only an operator with key-store access can run it; the minted key is bound to the named tenant and role `admin`. | Anyone with operator access to the store can mint keys; protect that access. |
+| Tampering | The raw-key file is reserved before minting: created exclusively with mode 0600 (a symlink or existing path is refused), or with `--force` staged beside it and replaced only after the key is written. A refused path or failed mint therefore never leaves a stored key without its file. | `--force` replaces an existing key file by design. |
+| Repudiation | The key record carries its name, prefix, tenant, creation and expiry; metadata (never the raw key) is printed. | Operator identity comes from host access logs, not the command. |
+| Information disclosure | The raw key is never printed, logged or echoed in errors; only the file path is reported. The OIDC preflight reports variable names, never values. | The raw-key file is a credential at rest until the operator moves it into a secret store. |
+| Denial of service | One key per run; an in-memory key store is refused, so keys do not vanish on restart. | None. |
+| Elevation of privilege | The key's tenant is explicit and provisioned atomically; it cannot address another tenant. | A leaked raw key grants admin on its tenant until revoked or expired. |
+
+Regression coverage: `tests/test_hosted_admin_key_bootstrap.py`, including
+`test_refused_key_file_never_mints_and_failed_mint_keeps_the_old_file`.

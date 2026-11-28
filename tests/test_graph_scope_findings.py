@@ -101,7 +101,17 @@ def test_scope_disclosure_auth_tenants_and_revision_pinning(tmp_path, monkeypatc
         ).json()
         root = next(row for row in summaries["aggregates"] if row["node_id"] == "same-node")
         assert root["aggregate"]["issue_count"] == 3
-        assert root["finding_disclosure"] == {"issue_count": 2, "severity_counts": {"high": 2}, "exclude_node_ids": ["child-server"]}
+        assert root["finding_disclosure"] == {
+            "issue_count": 2,
+            "severity_counts": {"high": 2},
+            "exclude_node_ids": ["child-server"],
+            "sole_finding": None,
+        }
+        child = next(row for row in summaries["aggregates"] if row["node_id"] == "child-server")
+        # A scope with exactly one disclosed issue names it, so a path can say what was found.
+        assert child["finding_disclosure"]["issue_count"] == 1
+        sole = child["finding_disclosure"]["sole_finding"]
+        assert sole["label"] and sole["severity"] in child["finding_disclosure"]["severity_counts"]
         assert client.get("/v1/graph/scope-findings", params={**params, "offset": 1}, headers=headers).status_code == 422
         second = client.get(
             "/v1/graph/scope-findings",
@@ -243,3 +253,22 @@ def test_scope_index_matches_per_call_disclosure():
             disclosure = index.disclosure(node_id, excluded)
             assert disclosure["issue_count"] == len(rows)
             assert sum(disclosure["severity_counts"].values()) == len(rows)
+
+
+def test_scope_reads_bound_the_scan_identifier():
+    from agent_bom.api.server import app
+
+    paths = app.openapi()["paths"]
+    for path in ("/v1/graph/node-aggregates", "/v1/graph/scope-findings"):
+        scan_id = next(param for param in paths[path]["get"]["parameters"] if param["name"] == "scan_id")
+        schema = scan_id["schema"].get("anyOf", [scan_id["schema"]])[0]
+        assert schema.get("maxLength") == 256, path
+
+
+def test_disclosure_names_a_scope_s_only_finding():
+    from agent_bom.graph.rollup_node import ScopeIndex
+
+    index = ScopeIndex(_nested_estate(2))
+    assert index.disclosure("p0")["sole_finding"] == {"label": "CVE-2025-0000", "severity": "high"}
+    assert index.disclosure("server")["sole_finding"] is None
+    assert index.disclosure("server", ("p1",))["sole_finding"] == {"label": "CVE-2025-0000", "severity": "high"}
