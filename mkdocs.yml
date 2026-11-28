@@ -92,6 +92,7 @@ nav:
       - Cloud Normalization: features/cloud-normalization.md
       - Compliance: features/compliance.md
       - Registry: features/registry.md
+      - MCP Server Risk Catalog: mcp-servers/index.md
       - Runtime Proxy: features/runtime-proxy.md
       - SBOM Generation: features/sbom.md
       - Hardware/Firmware Evidence Ingest: features/hardware-evidence.md
