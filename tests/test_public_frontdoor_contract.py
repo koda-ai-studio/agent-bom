@@ -179,7 +179,10 @@ def test_public_first_run_surfaces_share_one_primary_command() -> None:
 
     site = (ROOT / "site-docs/index.md").read_text(encoding="utf-8")
     for text in (readme, pypi, guide, site):
-        assert text.split("```bash", 1)[1].split("```", 1)[0].strip() == "uvx agent-bom scan . -f html -o agent-bom-report.html"
+        # The first command shows what the AI tools on this machine reach; the repository scan follows.
+        assert text.split("```bash", 1)[1].split("```", 1)[0].strip() == "uvx agent-bom scan -f html -o agent-bom-report.html"
+        assert "uvx agent-bom scan . -f html -o agent-bom-report.html" in text
+        assert "uvx agent-bom scan --dry-run" in text
     # --no-discover drops secret, personal-data, skill, dataset and training-pipeline
     # scanning of the project; the first run must keep them.
     for path in (
