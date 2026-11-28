@@ -1,0 +1,2 @@
+### Fixed
+- **Selecting an attack path stays fast on large estates.** The path view's per-hop finding counts (`GET /v1/graph/node-aggregates`) loaded the graph once per hop and rebuilt the whole-graph finding index several times per hop. Hops nested in one another now share one graph load and one index, and each hop reads only its own subtree. On a synthetic estate of 200,000 findings, three nested hops went from 32 s to 6.6 s with identical answers. `GET /v1/graph/scope-findings` uses the same index.
