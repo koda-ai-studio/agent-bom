@@ -13,6 +13,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
+from agent_bom.ai_components.agent_model_uses import ModelScope, extract_model_uses
 from agent_bom.ai_components.framework_models import FrameworkAgent, FrameworkCapability, FrameworkTopologyEdge
 from agent_bom.ai_components.langgraph_prebuilt import (
     ORCHESTRATOR_CALLS,
@@ -21,7 +22,6 @@ from agent_bom.ai_components.langgraph_prebuilt import (
     collect_prebuilt_topology,
     compiled_name,
     list_bindings,
-    model_bindings,
     unwrap_compile,
 )
 from agent_bom.ai_components.langgraph_topology import collect_langgraph_topology
@@ -106,7 +106,7 @@ class _SourceFacts:
     """Per-file lookups agent calls resolve names through."""
 
     tools: dict[str, FrameworkCapability]
-    models: dict[str, str]
+    models: ModelScope
     lists: dict[str, ast.List | ast.Tuple]
     aliases: dict[str, str]
 
@@ -179,7 +179,7 @@ def _scan_python_file(filepath: Path, root: Path, declared: frozenset[str] = fro
 
     rel_path = str(filepath.relative_to(root)) if filepath.is_relative_to(root) else str(filepath)
     credential_refs = _extract_credential_refs(tree)
-    facts = _SourceFacts(_collect_tools(tree), model_bindings(tree), list_bindings(tree), _call_aliases(tree))
+    facts = _SourceFacts(_collect_tools(tree), ModelScope.build(tree, rel_path, filepath, root), list_bindings(tree), _call_aliases(tree))
     scopes = ScopeIndex(tree)
     framework_agents: list[FrameworkAgent] = []
     agent_by_binding: dict[str, FrameworkAgent] = {}
@@ -277,13 +277,15 @@ def _agent_from_call(
     framework = _framework_for_call(imports, call_name, short_name)
     if framework is None:
         return None
+    model_uses = extract_model_uses(node, short_name, facts.models)
     return FrameworkAgent(
         framework=framework,
         name=_agent_name(node, rel_path, framework, fallback_name=fallback_name),
         file_path=rel_path,
         line_number=getattr(node, "lineno", 1),
         capabilities=_dedupe_capabilities(_extract_capabilities(node, short_name, facts)),
-        model_refs=_dedupe_strings(_extract_model_refs(node, short_name, facts)),
+        model_refs=_dedupe_strings([use.model for use in model_uses]),
+        model_uses=model_uses,
         credential_refs=credential_refs,
         dynamic_edges=_has_dynamic_edges(node),
         confidence="high" if short_name in _AGENT_CALLS or "assistants.create" in call_name else "medium",
@@ -410,19 +412,6 @@ def _tool_from_expr(node: ast.AST, line_number: int) -> FrameworkCapability | No
     if not name and node.args:
         name = _name_from_expr(node.args[0])
     return FrameworkCapability(name or short_name, "tool-constructor", line_number, "medium")
-
-
-def _extract_model_refs(node: ast.Call, short_name: str, facts: _SourceFacts) -> list[str]:
-    """Literal model names, or a module-level chat-model binding passed by name."""
-    values = [_keyword_value(node, keyword) for keyword in ("model", "model_name", "llm")]
-    if short_name in _AGENT_TOOLS_ARG and node.args:
-        values.append(node.args[0])
-    refs = []
-    for value in values:
-        ref = _string_literal(value) or (facts.models.get(value.id, "") if isinstance(value, ast.Name) else "")
-        if ref:
-            refs.append(ref)
-    return refs
 
 
 def _extract_credential_refs(tree: ast.Module) -> list[str]:

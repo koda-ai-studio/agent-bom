@@ -12,8 +12,8 @@ straight from the call:
 - ``create_handoff_tool(agent_name="b")`` in agent ``a``'s ``tools`` → ``a`` → ``b``;
   a target that names no agent in the file is recorded as an unresolved route
 
-Also here: module-level bindings that agent calls reference by name — a chat
-model (``model = ChatOpenAI(model="gpt-4o")``) and a tool list (``TOOLS = [...]``).
+Also here: module-level tool lists (``TOOLS = [...]``) that agent calls
+reference by name. Model bindings resolve in ``agent_model_uses``.
 """
 
 from __future__ import annotations
@@ -28,7 +28,6 @@ ORCHESTRATOR_CALLS = frozenset({"create_supervisor", "create_swarm"})
 _HANDOFF_CALL = "create_handoff_tool"
 # Source text that must appear for this pass to find anything; files without it skip the walk.
 PREBUILT_MARKERS = (*ORCHESTRATOR_CALLS, _HANDOFF_CALL)
-_MODEL_KEYWORDS = ("model", "model_name", "model_id")
 
 
 @dataclass
@@ -36,27 +35,6 @@ class PrebuiltTopology:
     edges: list[FrameworkTopologyEdge] = field(default_factory=list)
     parent_ids: dict[str, str] = field(default_factory=dict)
     unresolved_routes: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
-
-
-def model_bindings(tree: ast.Module) -> dict[str, str]:
-    """``name = ChatX(model="m")`` / ``init_chat_model("m")`` / ``NAME = "m"`` → ``{name: "m"}`` at module level.
-
-    Callers read these only where a model is expected, so a plain string
-    constant is bound too: ``create_agent(MODEL, ...)`` is the common shape.
-    """
-    bindings: dict[str, str] = {}
-    for node in tree.body:
-        value = node.value if isinstance(node, (ast.Assign, ast.AnnAssign)) else None
-        if isinstance(value, ast.Call):
-            ref = _model_literal(value)
-        elif isinstance(value, ast.Constant) and isinstance(value.value, str):
-            ref = value.value
-        else:
-            continue
-        if ref:
-            targets = node.targets if isinstance(node, ast.Assign) else [node.target]  # type: ignore[attr-defined]
-            bindings.update({target.id: ref for target in targets if isinstance(target, ast.Name)})
-    return bindings
 
 
 def list_bindings(tree: ast.Module) -> dict[str, ast.List | ast.Tuple]:
@@ -196,16 +174,6 @@ def _edge(
         provenance="declared",
         kind=kind,
     )
-
-
-def _model_literal(call: ast.Call) -> str:
-    for keyword in _MODEL_KEYWORDS:
-        value = _string(_keyword(call, keyword))
-        if value:
-            return value
-    if _short_name(call.func, {}) == "init_chat_model" and call.args:
-        return _string(call.args[0])
-    return ""
 
 
 def _short_name(node: ast.AST, aliases: dict[str, str]) -> str:
