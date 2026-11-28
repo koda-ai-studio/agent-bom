@@ -114,8 +114,9 @@ def test_receipt_and_graph_report_the_same_retained_paths(client, monkeypatch) -
         time.sleep(0.02)
         status = client.get(f"/v1/graph/correlations/{created['correlation_id']}").json()
     assert status["status"] == "complete", status
-    # Paths are derived once per run: the receipt counts the rows the store indexes.
-    assert calls == [created["correlation_id"]]
+    # Paths are derived once per run: the receipt counts the rows the store indexes. A background
+    # current-estate projection may derive its own paths meanwhile; only this run's calls count.
+    assert [scan_id for scan_id in calls if scan_id == created["correlation_id"]] == [created["correlation_id"]]
 
     output = status["result_manifest"]["output"]
     receipt = output["attack_paths"]
