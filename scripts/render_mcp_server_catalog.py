@@ -82,8 +82,10 @@ def render(registry: dict[str, Any]) -> str:
         "",
         "## How to read this catalog",
         "",
-        "- **Risk level** describes what a server's tools can do (write files, run commands, reach cloud or data "
-        "services), not a vulnerability. Package CVEs are reported by a scan.",
+        (
+            "- **Risk level** describes what a server's tools can do (write files, run commands, reach cloud or data "
+            "services), not a vulnerability. Package CVEs are reported by a scan."
+        ),
         "- **Credential variables** are inferred from the server's documentation and configuration; confirm them against your own setup.",
         "- **Manually verified** entries were checked against the server's source by a maintainer.",
         f"- The registry also holds **{unreviewed} servers** synced from public MCP registries without a risk "
