@@ -149,8 +149,11 @@ def client():
     # The maintenance loop binds the poller when the app starts, so a later per-test
     # patch never reaches it. Left running, it walks every pending tenant in a shared
     # database and its scan projections land inside tests that count their own.
+    # Its lifecycle backfill tick, every 60 seconds, would likewise write rows a test
+    # has just deleted to prove a read writes none; tests run the tick themselves.
     with pytest.MonkeyPatch.context() as patch:
         patch.setattr("agent_bom.api.campaign_reconciliation.poll_campaign_reconciliation", _no_campaign_reconciliation)
+        patch.setattr("agent_bom.api.server.run_finding_lifecycle_tick", lambda **_: 0)
         with TestClient(app) as shared:
             yield shared
     if postgres:

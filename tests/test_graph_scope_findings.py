@@ -181,3 +181,65 @@ def test_workloads_count_the_findings_of_the_image_they_run():
         assert len(rows) == 1 and cve in str(rows[0])
     image = node_aggregate(graph, "image")
     assert image is not None and image.issue_count == 1
+
+
+def _nested_estate(packages: int = 3) -> UnifiedGraph:
+    graph = UnifiedGraph(scan_id="nested", tenant_id="one")
+    graph.add_node(UnifiedNode(id="agent", entity_type=EntityType.AGENT, label="agent"))
+    graph.add_node(UnifiedNode(id="server", entity_type=EntityType.SERVER, label="server"))
+    graph.add_edge(UnifiedEdge(source="agent", target="server", relationship=RelationshipType.USES))
+    for index in range(packages):
+        package, finding = f"p{index}", f"v{index}"
+        package_attrs = {"ecosystem": "npm", "version": "1"}
+        graph.add_node(UnifiedNode(id=package, entity_type=EntityType.PACKAGE, label=package, attributes=package_attrs))
+        graph.add_node(
+            UnifiedNode(
+                id=finding,
+                entity_type=EntityType.VULNERABILITY,
+                label=f"CVE-2025-000{index}",
+                severity="high",
+                attributes={"vulnerability_id": f"CVE-2025-000{index}", "finding_id": finding},
+            )
+        )
+        graph.add_edge(UnifiedEdge(source="server", target=package, relationship=RelationshipType.DEPENDS_ON))
+        graph.add_edge(UnifiedEdge(source=package, target=finding, relationship=RelationshipType.VULNERABLE_TO))
+    return graph
+
+
+def test_path_hops_share_one_finding_index_and_one_store_load(monkeypatch):
+    """A path's hops are nested scopes: whole-graph passes and store loads must not repeat per hop."""
+    from agent_bom.api.routes.graph_routes import node_aggregates as route
+    from agent_bom.graph import rollup, rollup_issues
+
+    graph = _nested_estate()
+    index_builds, loads = [], []
+    real_index = rollup_issues.build_finding_index
+    monkeypatch.setattr(rollup, "build_finding_index", lambda *a, **k: index_builds.append(1) or real_index(*a, **k))
+    monkeypatch.setattr(route, "containment_drilldown_graph", lambda store, **kwargs: loads.append(kwargs["node_id"]) or graph)
+
+    rows, missing = route._aggregates(None, tenant="one", scan_id="nested", node_ids=["agent", "server", "p0"], suppressed=frozenset())
+
+    assert missing == []
+    assert loads == ["agent"]
+    assert len(index_builds) == 1
+    disclosed = {row["node_id"]: row["finding_disclosure"] for row in rows}
+    assert disclosed["p0"]["issue_count"] == 1
+    assert disclosed["server"]["issue_count"] == 2
+    assert disclosed["server"]["exclude_node_ids"] == ["p0"]
+    assert disclosed["agent"]["issue_count"] == 0
+    for row in rows:
+        assert row["aggregate"] == node_aggregate(graph, row["node_id"]).to_dict()
+
+
+def test_scope_index_matches_per_call_disclosure():
+    from agent_bom.graph.rollup_node import ScopeIndex
+
+    graph = _nested_estate(4)
+    for suppressed in [frozenset(), frozenset({"v1"})]:
+        index = ScopeIndex(graph, suppressed)
+        for node_id, excluded in [("agent", ("server",)), ("server", ("p0", "p2")), ("p3", ()), ("missing", ())]:
+            rows = scope_findings(graph, node_id, suppressed=suppressed, exclude_node_ids=excluded)
+            assert index.findings(node_id, excluded) == rows
+            disclosure = index.disclosure(node_id, excluded)
+            assert disclosure["issue_count"] == len(rows)
+            assert sum(disclosure["severity_counts"].values()) == len(rows)

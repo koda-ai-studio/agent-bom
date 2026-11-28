@@ -8,7 +8,6 @@ only its own containment subtree.
 
 from __future__ import annotations
 
-from collections import Counter
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -21,8 +20,7 @@ from agent_bom.api.read_models.graph_node_aggregates import GraphNodeAggregatesR
 from agent_bom.api.routes.graph_routes import _runtime
 from agent_bom.api.routes.graph_routes._admission import _GraphAdmissionRoute
 from agent_bom.api.scan_finding_read import suppressed_finding_ids
-from agent_bom.graph.rollup import containment_descendants
-from agent_bom.graph.rollup_node import node_aggregate, scope_findings
+from agent_bom.graph.rollup_node import ScopeIndex
 from agent_bom.graph.semantic_layer import semantic_layer
 
 MAX_NODE_AGGREGATES = 25
@@ -30,28 +28,34 @@ MAX_NODE_AGGREGATES = 25
 router = APIRouter(route_class=_GraphAdmissionRoute)
 
 
+def _scope_index_for(store, loaded: list[tuple[str, ScopeIndex]], *, tenant: str, scan_id: str, node_id: str, suppressed) -> ScopeIndex:
+    """A graph already loaded for an ancestor scope holds this node's whole subtree; reuse it."""
+    for root, index in loaded:
+        if node_id == root or node_id in index.descendant_set(root):
+            return index
+    index = ScopeIndex(containment_drilldown_graph(store, node_id=node_id, scan_id=scan_id, tenant_id=tenant), suppressed)
+    loaded.append((node_id, index))
+    return index
+
+
 def _aggregates(store, *, tenant: str, scan_id: str, node_ids: list[str], suppressed: frozenset[str]) -> tuple[list[dict], list[str]]:
     rows: list[dict] = []
     missing: list[str] = []
+    loaded: list[tuple[str, ScopeIndex]] = []
     for node_id in node_ids:
-        graph = containment_drilldown_graph(store, node_id=node_id, scan_id=scan_id, tenant_id=tenant)
-        aggregate = node_aggregate(graph, node_id, suppressed_finding_ids=suppressed)
+        index = _scope_index_for(store, loaded, tenant=tenant, scan_id=scan_id, node_id=node_id, suppressed=suppressed)
+        aggregate = index.aggregate(node_id)
         if aggregate is None:
             missing.append(node_id)
             continue
-        descendants = set(containment_descendants(graph, node_id))
+        descendants = index.descendant_set(node_id)
         excluded = sorted(other for other in node_ids if other != node_id and other in descendants)
-        findings = scope_findings(graph, node_id, suppressed=suppressed, exclude_node_ids=tuple(excluded))
         rows.append(
             {
                 "node_id": node_id,
-                "semantic_layer": semantic_layer(graph.nodes[node_id]),
+                "semantic_layer": semantic_layer(index.graph.nodes[node_id]),
                 "aggregate": aggregate.to_dict(),
-                "finding_disclosure": {
-                    "issue_count": len(findings),
-                    "severity_counts": dict(Counter(row["severity"] for row in findings)),
-                    "exclude_node_ids": excluded,
-                },
+                "finding_disclosure": index.disclosure(node_id, tuple(excluded)),
             }
         )
     return rows, missing
@@ -101,13 +105,13 @@ __all__ = ["MAX_NODE_AGGREGATES", "router"]
 def _scope_findings(
     store, *, tenant: str, scan_id: str, node_id: str, suppressed: frozenset[str], excluded: tuple[str, ...] = ()
 ) -> list[dict]:
-    graph = containment_drilldown_graph(store, node_id=node_id, scan_id=scan_id, tenant_id=tenant)
-    if node_id not in graph.nodes:
+    index = ScopeIndex(containment_drilldown_graph(store, node_id=node_id, scan_id=scan_id, tenant_id=tenant), suppressed)
+    if node_id not in index.graph.nodes:
         raise HTTPException(404, "Scope not found in this snapshot.")
-    descendants = set(containment_descendants(graph, node_id))
+    descendants = index.descendant_set(node_id)
     if any(child == node_id or child not in descendants for child in excluded):
         raise HTTPException(422, "Excluded scopes must be descendants of the selected scope.")
-    return scope_findings(graph, node_id, suppressed=suppressed, exclude_node_ids=excluded)
+    return index.findings(node_id, excluded)
 
 
 @router.get("/graph/scope-findings", **documented(GraphScopeFindingsResponse), tags=["graph"])
