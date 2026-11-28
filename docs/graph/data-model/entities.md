@@ -187,7 +187,7 @@ Id formats:
 
 ## `model`
 
-Emitted by: `graph/eval_projection.py`, `graph/finding_row_projection.py`, `graph/framework_topology_projection.py`, `graph/training_projection.py`; demo fixtures: `demo_estate/estate_graph.py`
+Emitted by: `graph/agent_model_projection.py`, `graph/eval_projection.py`, `graph/finding_row_projection.py`, `graph/framework_topology_projection.py`, `graph/training_projection.py`; demo fixtures: `demo_estate/estate_graph.py`
 
 ## `org`
 

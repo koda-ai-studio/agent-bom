@@ -530,7 +530,7 @@ Class `dependency` · directed · traversable · required evidence `source`, `ti
 - `framework` → `model`
 - `server` → `model`
 
-Emitted by: `graph/framework_topology_projection.py`, `graph/training_projection.py`
+Emitted by: `graph/agent_model_projection.py`, `graph/training_projection.py`
 
 ## `shares_cred`
 
