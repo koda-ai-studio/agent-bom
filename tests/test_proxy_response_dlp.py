@@ -56,7 +56,10 @@ def test_sse_response_policy_before_stdout(tmp_path, monkeypatch, method, mode, 
     assert (
         asyncio.run(
             proxy._proxy_sse_server(
-                "https://upstream.example.test", policy_path=_policy(tmp_path, mode, enabled, pii_action), log_path=str(audit)
+                "https://upstream.example.test",
+                policy_path=_policy(tmp_path, mode, enabled, pii_action),
+                log_path=str(audit),
+                compat_endpoints=True,
             )
         )
         == 0
@@ -145,7 +148,7 @@ def test_sse_upstream_error_does_not_echo_connection_secrets(monkeypatch):
     monkeypatch.setattr(proxy, "read_async_stdin_line", AsyncMock(side_effect=[json.dumps(request).encode(), b""]))
     stdout = SimpleNamespace(buffer=io.BytesIO())
     monkeypatch.setattr(proxy.sys, "stdout", stdout)
-    assert asyncio.run(proxy._proxy_sse_server("https://upstream.example.test")) == 0
+    assert asyncio.run(proxy._proxy_sse_server("https://upstream.example.test", compat_endpoints=True)) == 0
     written = json.loads(stdout.buffer.getvalue())
     assert written["id"] == 7
     assert written["error"] == {"code": -32603, "message": "Upstream connection error"}

@@ -91,8 +91,12 @@ Save this policy as `policy.json`, then connect a remote MCP server:
 ```
 
 ```bash
-agent-bom proxy --url https://mcp.example.com --policy policy.json --log audit.jsonl
+agent-bom proxy --url https://mcp.example.com/mcp --policy policy.json --log audit.jsonl
 ```
+
+`--url` speaks MCP Streamable HTTP to that one endpoint and keeps the session id
+the server issues. Add `--compat-endpoints` for servers that still expose
+`/tools/list`, `/tools/call` and `/message`.
 
 The same `inline_scanning` policy applies to stdio and the SSE/HTTP proxy.
 Before returning JSON-RPC results, errors or notifications, enforcement replaces blocked content with

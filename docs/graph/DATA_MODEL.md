@@ -53,7 +53,7 @@ Entity types grouped into domains by each type's semantic layer (`graph/containe
 | `group` | Group | Identity and access | `identity` | 3 / 3001 |  | 4 |
 | `managed_identity` | Managed Identity | Identity and access | `identity` | 3 / 3001 |  | 8 |
 | `misconfiguration` | Misconfiguration | Findings | `finding` | 2 / 2003 | yes | 9 (+3 demo) |
-| `model` | Model | Cloud, infrastructure and data | `asset` | 5 / 4001 |  | 4 (+1 demo) |
+| `model` | Model | Cloud, infrastructure and data | `asset` | 5 / 4001 |  | 5 (+1 demo) |
 | `org` | Organization | Cloud, infrastructure and data | `scope` | 3 / 3001 |  | 6 (+2 demo) |
 | `package` | Package | Code and supply chain | `package` | 5 / 4001 |  | 6 (+2 demo) |
 | `policy` | Policy | Identity and access | `identity` | 3 / 3001 |  | 5 (+1 demo) |

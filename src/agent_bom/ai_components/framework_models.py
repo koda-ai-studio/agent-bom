@@ -2,8 +2,9 @@
 
 ``FrameworkAgent`` is a non-MCP framework-native agent (a LangGraph graph or
 node, a CrewAI agent, an AutoGen agent, ...). ``FrameworkTopologyEdge`` is a
-static relationship between two of them read from source, and
-``FrameworkCapability`` a tool registered to one.
+static relationship between two of them read from source,
+``FrameworkCapability`` a tool registered to one, and ``AgentModelUse`` a
+model one is configured with.
 """
 
 from __future__ import annotations
@@ -32,6 +33,36 @@ class FrameworkCapability:
             "line_number": self.line_number,
             "confidence": self.confidence,
             "dynamic": self.dynamic,
+        }
+
+
+@dataclass(frozen=True)
+class AgentModelUse:
+    """A model an agent is configured with, and where that is declared.
+
+    ``declared_in`` is ``code`` (a constructor argument), ``config`` (a config
+    dict or file) or ``env`` (an environment variable selects it). For ``env``
+    only the variable's name is kept; ``model`` is the literal default written
+    beside it, or empty.
+    """
+
+    model: str
+    provider: str
+    declared_in: str
+    file_path: str
+    line_number: int
+    via: str
+    env_var: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "model": self.model,
+            "provider": self.provider,
+            "declared_in": self.declared_in,
+            "file_path": self.file_path,
+            "line_number": self.line_number,
+            "via": self.via,
+            "env_var": self.env_var,
         }
 
 
@@ -86,6 +117,7 @@ class FrameworkAgent:
     line_number: int
     capabilities: list[FrameworkCapability] = field(default_factory=list)
     model_refs: list[str] = field(default_factory=list)
+    model_uses: list[AgentModelUse] = field(default_factory=list)
     credential_refs: list[str] = field(default_factory=list)
     topology_edges: list[FrameworkTopologyEdge] = field(default_factory=list)
     dynamic_edges: bool = False
@@ -116,6 +148,7 @@ class FrameworkAgent:
             "confidence": self.confidence,
             "capabilities": [capability.to_dict() for capability in self.capabilities],
             "model_refs": list(self.model_refs),
+            "model_uses": [use.to_dict() for use in self.model_uses],
             "credential_refs": list(self.credential_refs),
             "topology_edges": [edge.to_dict() for edge in self.topology_edges],
             "dynamic_edges": self.dynamic_edges,

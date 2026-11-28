@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from agent_bom.graph.agent_model_projection import project_agent_models
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.harness_model import placements_from_framework_agents
@@ -22,8 +23,8 @@ def _add_framework_topology(
     """Add framework nodes, model nodes, framework-native agents, and topology edges.
 
     Frameworks (LangChain, LangGraph, CrewAI, …) are first-class BOM entities.
-    Agents link via ``uses_framework``; model string refs become ``model`` nodes
-    linked via ``serves_model``.
+    Agents link via ``uses_framework``; the models an agent uses become
+    ``model`` nodes linked via ``serves_model`` (see ``agent_model_projection``).
 
     With a ``host_agent_id`` (the project agent), a construct that takes no part
     in multi-agent delegation is folded into the host as ``code_agents``
@@ -119,26 +120,6 @@ class _FrameworkTopology:
             )
         return fid
 
-    def _ensure_model(self, ref: str) -> str | None:
-        label = str(ref or "").strip()
-        if not label:
-            return None
-        mid = _model_node_id(label)
-        # add_node is create-or-merge: unconditionally add so a model discovered
-        # by multiple sources (provenance + framework ref) unions its attributes
-        # onto one node rather than being skipped when already present.
-        self.graph.add_node(
-            UnifiedNode(
-                id=mid,
-                entity_type=EntityType.MODEL,
-                label=label,
-                attributes={"model_ref": label, "source": "framework-agent"},
-                dimensions=NodeDimensions(surface="model"),
-                data_sources=[self.data_source, "source-ast"],
-            )
-        )
-        return mid
-
     def project_agent(self, item: Any) -> None:
         if not isinstance(item, dict):
             return
@@ -155,6 +136,7 @@ class _FrameworkTopology:
                     "line_number": item.get("line_number", 0),
                     "confidence": item.get("confidence", ""),
                     "capabilities": item.get("capabilities", []),
+                    "model_uses": item.get("model_uses", []),
                     **_nesting_attributes(item),
                 }
             )
@@ -173,6 +155,7 @@ class _FrameworkTopology:
                         "line_number": item.get("line_number", 0),
                         "confidence": item.get("confidence", ""),
                         "model_refs": item.get("model_refs", []),
+                        "model_uses": item.get("model_uses", []),
                         "credential_refs": item.get("credential_refs", []),
                         "capabilities": item.get("capabilities", []),
                         "dynamic_edges": item.get("dynamic_edges", False),
@@ -193,17 +176,7 @@ class _FrameworkTopology:
                     evidence={"source": "source-ast", "framework": framework_name},
                 )
             )
-        for model_ref in item.get("model_refs", []) or []:
-            mid = self._ensure_model(str(model_ref))
-            if mid:
-                self.graph.add_edge(
-                    UnifiedEdge(
-                        source=agent_id,
-                        target=mid,
-                        relationship=RelationshipType.SERVES_MODEL,
-                        evidence={"source": "source-ast", "model_ref": str(model_ref)},
-                    )
-                )
+        project_agent_models(self.graph, agent_id, item, self.data_source)
 
     def project_edges(self, item: Any) -> None:
         if not isinstance(item, dict):
