@@ -71,8 +71,15 @@ The gateway rejects `subscriptions/listen` before forwarding: persistent streams
 revocation during delivery and resumability are not yet supported. Ordinary SSE
 responses are bounded and reduced to their correlated response; progress
 notifications are not relayed. The stdio proxy preserves MCP messages. The remote
-`proxy --url` adapter still uses compatibility endpoints (`/tools/list`,
-`/tools/call`, `/message`); use the gateway for a modern Streamable HTTP endpoint.
+`proxy --url` adapter speaks Streamable HTTP to the one endpoint it is given: it
+keeps the `Mcp-Session-Id` the server issues on `initialize` (1-512 visible ASCII
+characters, otherwise the handshake fails), sends it on later requests, drops it
+when the server answers 404 and ends it with `DELETE` on shutdown. It reuses the
+gateway's bounded reader: 2 MiB per response, 1 MiB per SSE event, 256 events and
+a 60-second deadline per request. Server-initiated requests inside a response
+stream and the optional `GET` stream are not relayed. `--compat-endpoints` keeps
+the older `/tools/list`, `/tools/call` and `/message` endpoints for servers that
+need them.
 
 ## OAuth configuration
 

@@ -187,6 +187,24 @@ server only verifies tokens. Design and tests: [MCP OAuth](MCP_OAUTH.md),
 
 Any verification or introspection failure rejects the request.
 
+## Remote proxy over Streamable HTTP
+
+`agent-bom proxy --url` relays a local MCP client to one remote MCP endpoint
+through the policy and inspection engine. The remote server and everything it
+returns are untrusted. Code: `src/agent_bom/runtime/proxy_upstream.py`, which
+reuses `forward_jsonrpc_http` and `sse_messages`; tests:
+`tests/test_proxy_streamable_http.py`. Fail modes:
+[Runtime failure modes](RUNTIME_FAIL_MODES.md#remote-proxy-upstream).
+
+| STRIDE | Attack scenario | Mitigation | Residual risk |
+|---|---|---|---|
+| Spoofing | The server or a client tries to make the proxy join another session | Only the `Mcp-Session-Id` returned on `initialize` is kept; caller-supplied session headers are always dropped and stdin has no header channel | The proxy cannot tell whether the server's session id is guessable |
+| Tampering | A server injects headers through a crafted session id | The id must be 1-512 visible ASCII characters, otherwise the handshake fails | None known |
+| Repudiation | Calls through the remote proxy are not attributable | The audit log and policy gates are the same as before the transport change | Upstream server logs are outside this project's control |
+| Information disclosure | Response bodies or the session id reach logs or client errors | Client errors carry fixed reasons only; the session id and bodies are never logged; no credentials are forwarded | Tool results still reach the client after inspection, as before |
+| Denial of service | Oversized, endless or never-finishing SSE streams | 2 MiB per response, 1 MiB per event, 256 events, 60-second deadline, 30-second read timeout | A slow server can still hold one request for up to 60 seconds |
+| Elevation of privilege | A stream answer bypasses inspection | SSE answers are reduced to the correlated response before the same response scanning as JSON; server-initiated requests in a stream are rejected, not relayed | `--compat-endpoints` keeps the older endpoints and their unbounded JSON reads |
+
 ## Install guard plugin hook
 
 `agent-bom-guard` adds one `PreToolUse` hook on Bash. The command text is untrusted

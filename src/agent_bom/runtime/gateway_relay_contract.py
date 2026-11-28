@@ -60,6 +60,8 @@ class RelayForwardResult:
     message: dict[str, Any]
     upstream_name: str
     bytes_read: int
+    session_id: str | None = None
+    """Raw ``Mcp-Session-Id`` response header; callers that keep sessions must validate it."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,22 +110,30 @@ async def forward_jsonrpc_http(
     client: Any,
     upstream_name: str = "",
     max_bytes: int = MAX_GATEWAY_RELAY_MESSAGE_BYTES,
+    session_id: str | None = None,
+    max_event_bytes: int | None = None,
+    max_events: int | None = None,
 ) -> RelayForwardResult:
     """Python reference implementation of the pure HTTP JSON-RPC forward.
 
     ``client`` is an httpx-like async client that supports ``stream("POST", ...)``.
     Auth / Content-Type headers are caller-supplied (registry resolves bearer /
-    OAuth before this call).
+    OAuth before this call). A caller-supplied ``Mcp-Session-Id`` header is
+    always dropped; only ``session_id`` (a value the caller obtained from the
+    upstream and validated) is sent.
     """
-    from agent_bom.runtime.mcp_protocol import request_headers, sse_messages, validate_response
+    from agent_bom.runtime.mcp_protocol import request_headers, sse_messages, validate_response, validate_session_id
 
     merged = request_headers(message, headers)
+    if session_id is not None:
+        merged["Mcp-Session-Id"] = validate_session_id(session_id)
     async with client.stream("POST", upstream_url, json=message, headers=merged) as response:
         response.raise_for_status()
+        issued = response.headers.get("mcp-session-id")
         if "id" not in message:
             if response.status_code not in (200, 202, 204):
                 raise ValueError("Invalid MCP notification acknowledgement")
-            return RelayForwardResult(message={}, upstream_name=upstream_name, bytes_read=0)
+            return RelayForwardResult(message={}, upstream_name=upstream_name, bytes_read=0, session_id=issued)
         if response.status_code == 202:
             raise ValueError("MCP request acknowledged without a response")
         content_length = response.headers.get("content-length")
@@ -134,10 +144,10 @@ async def forward_jsonrpc_http(
             # Parse incrementally and stop at the correlated final response,
             # even when the upstream keeps its stream open. Never wrap an
             # opaque event stream in a fabricated successful tool result.
-            async for event, size in sse_messages(response, max_bytes):
+            async for event, size in sse_messages(response, max_bytes, max_event_bytes=max_event_bytes, max_events=max_events):
                 if isinstance(event, dict) and ("result" in event or "error" in event):
                     parsed = validate_response(message, event)
-                    return RelayForwardResult(message=parsed, upstream_name=upstream_name, bytes_read=size)
+                    return RelayForwardResult(message=parsed, upstream_name=upstream_name, bytes_read=size, session_id=issued)
                 if not isinstance(event, dict) or event.get("jsonrpc") != "2.0" or "id" in event:
                     raise ValueError("Unsupported MCP upstream stream message")
             raise ValueError("MCP upstream stream ended without a response")
@@ -149,7 +159,7 @@ async def forward_jsonrpc_http(
                 raise ValueError("MCP upstream response exceeds size limit")
             body.extend(chunk)
         parsed = validate_response(message, json.loads(body))
-        return RelayForwardResult(message=parsed, upstream_name=upstream_name, bytes_read=len(body))
+        return RelayForwardResult(message=parsed, upstream_name=upstream_name, bytes_read=len(body), session_id=issued)
 
 
 class PythonHttpRelayTransport:

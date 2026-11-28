@@ -1145,7 +1145,7 @@ def test_proxy_sse_server_uses_httpx(tmp_path):
     ):
         mock_loop.return_value.connect_read_pipe = AsyncMock()
 
-        exit_code = asyncio.run(_proxy_sse_server(url="http://localhost:3000"))
+        exit_code = asyncio.run(_proxy_sse_server(url="http://localhost:3000", compat_endpoints=True))
 
     # httpx.AsyncClient was instantiated (i.e., we used httpx for the connection)
     assert mock_client.__aenter__.called or True  # context manager was entered
@@ -1190,7 +1190,7 @@ def test_proxy_sse_policy_blocks_gated_resource_reads(tmp_path, monkeypatch):
     monkeypatch.setattr(proxy_mod.sys, "stdout", stdout)
 
     with patch("httpx.AsyncClient", return_value=mock_client):
-        exit_code = asyncio.run(_proxy_sse_server(url="http://localhost:3000", policy_path=str(policy_path)))
+        exit_code = asyncio.run(_proxy_sse_server(url="http://localhost:3000", policy_path=str(policy_path), compat_endpoints=True))
 
     assert exit_code == 0
     assert mock_client.post.await_count == 1  # tools/list only; blocked before /message
@@ -1230,7 +1230,7 @@ def test_proxy_sse_block_undeclared_fails_closed_when_tools_list_is_empty(monkey
     monkeypatch.setattr(proxy_mod.sys, "stdout", stdout)
 
     with patch("httpx.AsyncClient", return_value=mock_client):
-        exit_code = asyncio.run(_proxy_sse_server(url="http://localhost:3000", block_undeclared=True))
+        exit_code = asyncio.run(_proxy_sse_server(url="http://localhost:3000", block_undeclared=True, compat_endpoints=True))
 
     assert exit_code == 0
     assert mock_client.post.await_count == 1
@@ -1275,7 +1275,7 @@ def test_proxy_sse_forwards_allowed_gated_messages_to_message_endpoint(monkeypat
     monkeypatch.setattr(proxy_mod.sys, "stdout", stdout)
 
     with patch("httpx.AsyncClient", return_value=mock_client):
-        exit_code = asyncio.run(_proxy_sse_server(url="http://localhost:3000/"))
+        exit_code = asyncio.run(_proxy_sse_server(url="http://localhost:3000/", compat_endpoints=True))
 
     assert exit_code == 0
     assert mock_client.post.await_args_list[1].args[0] == "http://localhost:3000/message"
