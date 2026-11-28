@@ -95,8 +95,7 @@ export type LineageNodeData = CompactNodePresentation & {
   dimensions?: import("@/lib/graph-schema").NodeDimensions | undefined;
   semanticLayer?: string | null | undefined;
   findingAggregate?: import("@/lib/api-types").GraphRollupAggregate | undefined;
-  /** The one disclosed issue in this asset's scope, named on a path instead of a count. */
-  soleFinding?: { label: string; severity: string } | undefined;
+  soleFinding?: { label: string; severity: string } | undefined; // the scope's one disclosed issue, named on a path
   semanticLayerIssue?: string | undefined;
   imageSubrow?: boolean | undefined;
   evidenceSources?: string[] | undefined;
