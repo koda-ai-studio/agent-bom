@@ -178,9 +178,10 @@ class TestRegistryCountRefresh:
     def test_sync_refreshes_and_stages_count_claims_before_committing(self):
         workflow = (ROOT / ".github/workflows/mcp-registry-sync.yml").read_text(encoding="utf-8")
         refresh = workflow.index("--write-registry-counts --changed-paths-file /tmp/registry-count-paths.json")
-        stage = workflow.index('["git", "add", "--", "src/agent_bom/mcp_registry.json", *paths]')
+        catalog = workflow.index("uv run python scripts/render_mcp_server_catalog.py")
+        stage = workflow.index('["git", "add", "--", "src/agent_bom/mcp_registry.json", "site-docs/mcp-servers/index.md", *paths]')
         commit = workflow.index("git commit -S")
-        assert refresh < stage < commit
+        assert refresh < catalog < stage < commit
 
     def test_refresh_manifest_lists_only_changed_authored_paths(self, tmp_path, monkeypatch):
         published = tmp_path / "surface.md"

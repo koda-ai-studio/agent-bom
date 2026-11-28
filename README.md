@@ -27,6 +27,7 @@ machine or your own infrastructure. Local scans need no account.
   <a href="https://koda-ai-studio.github.io/agent-bom/demo/"><b>Try in browser</b></a> ·
   <a href="#from-laptop-to-team-to-org">Laptop → team → org</a> ·
   <a href="docs/GALLERY.md">Product tour</a> ·
+  <a href="https://koda-ai-studio.github.io/agent-bom/mcp-servers/">MCP server risk catalog</a> ·
   <a href="https://koda-ai-studio.github.io/agent-bom/">Docs</a>
 </p>
 

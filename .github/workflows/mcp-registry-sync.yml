@@ -156,6 +156,9 @@ jobs:
           uv run python scripts/check_published_counts.py
           --write-registry-counts --changed-paths-file /tmp/registry-count-paths.json
 
+      - name: Refresh the public MCP server risk catalog
+        run: uv run python scripts/render_mcp_server_catalog.py
+
       - name: Read counts
         id: count
         run: |
@@ -240,7 +243,7 @@ jobs:
           from pathlib import Path
 
           paths = json.loads(Path("/tmp/registry-count-paths.json").read_text())
-          subprocess.run(["git", "add", "--", "src/agent_bom/mcp_registry.json", *paths], check=True)
+          subprocess.run(["git", "add", "--", "src/agent_bom/mcp_registry.json", "site-docs/mcp-servers/index.md", *paths], check=True)
           PY
           TITLE="chore: sync MCP registry — ${NEW_COUNT} new, ${CORRECTED_COUNT} trust corrections, ${VERSION_COUNT} versions, ${CVE_COUNT} CVE updates"
           git commit -S -m "$TITLE"

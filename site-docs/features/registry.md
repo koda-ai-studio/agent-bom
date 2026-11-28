@@ -2,6 +2,8 @@
 
 A curated registry of 1430 MCP server security metadata entries.
 
+Browse the reviewed entries, with why each has its risk level, in the [MCP server risk catalog](../mcp-servers/index.md).
+
 ## What's in each entry
 
 | Field | Description |
