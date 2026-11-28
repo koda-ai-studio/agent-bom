@@ -509,7 +509,14 @@ affected rows with the fixed version to patch to, possibly affected distro
 packages with the reason to verify the distribution's advisory, and not
 affected rows, with graph node ids for the blast radius. Possibly-affected
 results are listed but never counted as confirmed vulnerabilities in severity
-totals or gates. The operator runbook is
+totals or gates.
+
+`GET /v1/affected?q=` (CLI `agent-bom findings affected <query>`, MCP tool
+`am_i_affected`) takes an advisory id or a package (`name` or `name@version`) and
+answers from every retained scan and ingest: a verdict, the exposure window, open
+and fixed counts with fix availability, the affected assets and what they reach in
+the latest graph snapshot. `agent-bom findings list --fix available` (or `none`)
+narrows the queue to findings with or without a recorded fix. The operator runbook is
 [Respond to a new CVE](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/RESPOND_TO_A_NEW_CVE.md).
 
 ### Daily re-match

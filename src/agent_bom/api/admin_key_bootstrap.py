@@ -76,22 +76,38 @@ def mint_admin_key(
     )
 
 
-def write_raw_key_file(path: Path, raw_key: str, *, force: bool = False) -> Path:
-    """Write the one-time raw API key to a private file without logging it."""
+def _reserve_raw_key_file(path: Path, *, force: bool) -> tuple[Path, Path, int]:
+    """Open a private file before any key exists, so a refused path never strands a minted key.
 
-    path = path.expanduser()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    flags = os.O_WRONLY | os.O_CREAT
-    flags |= os.O_TRUNC if force else os.O_EXCL
+    Returns ``(final, staging, fd)``. Without ``force`` the final path is created
+    exclusively; with ``force`` a private sibling is staged and only replaces the
+    existing file once the key is written, so a failed mint keeps the old key file.
+    """
+    final = path.expanduser()
+    final.parent.mkdir(parents=True, exist_ok=True)
+    if not force and final.exists():
+        raise RuntimeError(f"{RAW_KEY_FILE_EXISTS} {final}")
+    staging = final.with_name(f".{final.name}.{os.getpid()}.tmp") if force else final
     try:
-        fd = os.open(path, flags, 0o600)
+        return final, staging, os.open(staging, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     except FileExistsError as exc:
-        raise RuntimeError(f"{RAW_KEY_FILE_EXISTS} {path}") from exc
+        raise RuntimeError(f"{RAW_KEY_FILE_EXISTS} {staging}") from exc
+
+
+def _write_reserved(final: Path, staging: Path, fd: int, raw_key: str) -> Path:
     with os.fdopen(fd, "w", encoding="utf-8") as handle:
         handle.write(raw_key)
         handle.write("\n")
-    path.chmod(0o600)
-    return path
+    staging.chmod(0o600)
+    if staging != final:
+        os.replace(staging, final)
+    return final
+
+
+def write_raw_key_file(path: Path, raw_key: str, *, force: bool = False) -> Path:
+    """Write the one-time raw API key to a private file without logging it."""
+    final, staging, fd = _reserve_raw_key_file(path, force=force)
+    return _write_reserved(final, staging, fd, raw_key)
 
 
 def bootstrap_admin_key(
@@ -106,8 +122,14 @@ def bootstrap_admin_key(
 ) -> dict[str, Any]:
     """Mint, write the raw key file, and return the non-secret metadata to print."""
 
-    minted = mint_admin_key(tenant_id=tenant_id, name=name, expires_at=expires_at, scopes=scopes, allow_inmemory=allow_inmemory)
-    written = write_raw_key_file(raw_key_file, minted.raw_key, force=force)
+    final, staging, fd = _reserve_raw_key_file(raw_key_file, force=force)
+    try:
+        minted = mint_admin_key(tenant_id=tenant_id, name=name, expires_at=expires_at, scopes=scopes, allow_inmemory=allow_inmemory)
+    except BaseException:
+        os.close(fd)
+        staging.unlink(missing_ok=True)
+        raise
+    written = _write_reserved(final, staging, fd, minted.raw_key)
     return {**minted.metadata, "raw_key_file": str(written)}
 
 

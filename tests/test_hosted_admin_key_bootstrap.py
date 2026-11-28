@@ -175,3 +175,37 @@ def test_bootstrap_binds_the_tenant_and_provisions_a_fresh_one(monkeypatch: pyte
     expected = [("add", "customer-0", "customer-0")] + ([] if provisioned else [("provision", "customer-0", "customer-0")])
     assert store.calls == expected
     assert _current_tenant.get() == before
+
+
+def test_refused_key_file_never_mints_and_failed_mint_keeps_the_old_file(tmp_path, monkeypatch):
+    import pytest
+
+    from agent_bom.api import admin_key_bootstrap as bootstrap
+
+    minted: list[str] = []
+
+    def fake_mint(**kwargs):
+        minted.append(kwargs["name"])
+        return bootstrap.MintedAdminKey(raw_key="abom_fresh-key", metadata={"key_id": "k1"})
+
+    monkeypatch.setattr(bootstrap, "mint_admin_key", fake_mint)
+    existing = tmp_path / "k"
+    existing.write_text("abom_old-key\n", encoding="utf-8")
+    with pytest.raises(RuntimeError, match="raw key file already exists"):
+        bootstrap.bootstrap_admin_key(tenant_id="t", name="refused", raw_key_file=existing)
+    assert minted == []
+
+    def failing_mint(**kwargs):
+        raise RuntimeError("store unavailable")
+
+    monkeypatch.setattr(bootstrap, "mint_admin_key", failing_mint)
+    with pytest.raises(RuntimeError, match="store unavailable"):
+        bootstrap.bootstrap_admin_key(tenant_id="t", name="forced", raw_key_file=existing, force=True)
+    assert existing.read_text(encoding="utf-8") == "abom_old-key\n"
+    assert sorted(path.name for path in tmp_path.iterdir()) == ["k"]
+
+    monkeypatch.setattr(bootstrap, "mint_admin_key", fake_mint)
+    payload = bootstrap.bootstrap_admin_key(tenant_id="t", name="forced", raw_key_file=existing, force=True)
+    assert payload["raw_key_file"] == str(existing)
+    assert existing.read_text(encoding="utf-8") == "abom_fresh-key\n"
+    assert oct(existing.stat().st_mode & 0o777) == "0o600"

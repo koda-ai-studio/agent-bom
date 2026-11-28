@@ -776,7 +776,7 @@ field empty for scan type X is intentional, not a bug.
 
 | Scan type | `agents` | `blast_radius` | `mcp_servers` | `iac_findings` | `cloud_findings` | `secret_findings` |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|
-| `agents` (default) | ✅ | ✅ | ✅ | — | — | optional `--secrets` |
+| `agents` (default) | ✅ | ✅ | ✅ | — | — | ✅ (bounded by `--quick`; `--full-analysis` reads every file) |
 | `image` | synthetic single agent | ✅ | n/a | — | — | optional |
 | `iac` | — | — | — | ✅ | optional `--k8s-live` | — |
 | `cloud aws/gcp/azure/snowflake` | — | — | — | — | ✅ | — |
