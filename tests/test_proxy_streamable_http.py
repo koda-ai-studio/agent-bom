@@ -323,7 +323,6 @@ def test_validate_session_id(value, ok):
 
 
 def test_failed_tool_discovery_never_logs_upstream_credentials(caplog):
-    import asyncio
     import logging
 
     from agent_bom.proxy import _SseProxySession
