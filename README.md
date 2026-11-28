@@ -37,18 +37,30 @@ machine or your own infrastructure. Local scans need no account.
 
 ## Quick start
 
-From the repository you want to inspect, with [uv installed](https://docs.astral.sh/uv/getting-started/installation/):
+With [uv installed](https://docs.astral.sh/uv/getting-started/installation/), see
+what the AI tools on this machine can reach:
+
+```bash
+uvx agent-bom scan -f html -o agent-bom-report.html
+```
+
+It finds the agents you use (Claude Desktop and Claude Code, Cursor, Codex and
+others), the MCP servers each one runs, and the packages, tools and credential
+variables behind them, then ranks findings by that reach.
+Open `agent-bom-report.html` for inventory, findings and fix guidance; run it
+again later to see what changed.
+
+Scan a repository instead, from its root. No MCP configuration in the project?
+Package findings still apply.
 
 ```bash
 uvx agent-bom scan . -f html -o agent-bom-report.html
 ```
 
-Open `agent-bom-report.html` for inventory, findings and fix guidance. Run it
-again later to see what changed. No MCP configuration in the project? Package
-findings still apply. To explore the same chain as a graph, see
-[open the sample graph](#open-the-sample-graph).
+Then gate pull requests with one line in a workflow:
+`uses: koda-ai-studio/agent-bom@v0` ([GitHub Action](site-docs/integrations/github-action.md)).
 
-No project handy? `uvx agent-bom scan --demo --offline` scans a bundled sample.
+No agents configured yet? `uvx agent-bom scan --demo --offline` scans a bundled sample.
 Exit `1` is expected there: the sample trips the security gate. Elsewhere, a
 non-zero exit can mean a security gate or incomplete assessment; inspect the
 report and coverage ([exit codes](site-docs/reference/exit-codes.md),
@@ -57,11 +69,16 @@ report and coverage ([exit codes](site-docs/reference/exit-codes.md),
 <p align="center"><img src="docs/images/demo-latest.gif" alt="Recorded agent-bom CLI showing sample findings and remediation guidance; no fix executed" width="920" /></p>
 
 <details>
-<summary>What the scan reads and what it does not establish</summary>
+<summary>What each scan reads and what it does not establish</summary>
 
-The scan stays inside this repository: packages, MCP configuration, secrets and
-personal data, skills and IaC. It does not read agent configuration elsewhere on
-the machine. Missing evidence is reported as partial, not clean. See
+`uvx agent-bom scan` reads the agent configuration files in known client
+locations on this machine; `uvx agent-bom scan --dry-run` lists every file and
+lookup it would make without reading anything.
+`uvx agent-bom scan .` stays inside the repository: packages, MCP configuration,
+secrets and personal data, skills and IaC. Both run locally and send the project
+no data; package names and versions are checked against public advisory
+databases unless you scan `--offline`. Missing evidence is reported as partial,
+not clean. See
 [what a scan does and does not establish](docs/FIRST_RUN.md#what-this-scan-does-and-does-not-establish).
 
 </details>

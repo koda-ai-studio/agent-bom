@@ -22,7 +22,7 @@ Local directory plugins run selected inventory, package, configuration and skill
 checks. Depending on the requested tool, inputs include package names and
 versions, selected file paths and contents, MCP server definitions, environment
 variable names, vulnerability identifiers and findings. Discovery can read known
-client configuration locations; preview them with `agent-bom where --dry-run`.
+client configuration locations; preview them with `agent-bom where`.
 Directory skills and the audit profile do not expose the `agent_activity` tool
 or a skill for reading chat history. Other explicitly selected standalone
 features have their own permissions; installing a directory plugin does not
@@ -146,7 +146,7 @@ advisory id refers to (`intel_lookup`).
 
 The information above is processed only to produce the security result you asked for.
 There is no telemetry, advertising or profiling in the plugins. You can preview what
-is read with `agent-bom where --dry-run`, turn off network lookups with offline mode or
+is read with `agent-bom where`, turn off network lookups with offline mode or
 the guard's `osv_lookup` option, turn off rescan summaries with
 `AGENT_BOM_NO_SCAN_MEMORY=1`, and delete local data by removing `~/.agent-bom`.
 
