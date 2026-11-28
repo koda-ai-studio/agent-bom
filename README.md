@@ -192,6 +192,12 @@ agent-bom db advisory affected CVE-2026-109618        # most recent saved scan
 agent-bom db advisory affected CVE-2026-109618 --report <scan-report.json> --format json   # a JSON report written by an earlier scan
 ```
 
+Against a running control plane, one answer covers every retained scan, for an
+advisory or a package, with the exposure window, fix state and what the affected
+hosts reach: `agent-bom findings affected CVE-2026-109618` (or `pillow@9.0.0`),
+`GET /v1/affected?q=...`, or the MCP tool `am_i_affected`. List what you can fix
+now with `agent-bom findings list --fix available`.
+
 From an MCP client, the read-only `affected_assets` tool (`graph` and `full`
 profiles) takes the same `advisory_id`. In CI, run `uvx agent-bom db update`
 before the GitHub Action step (its `auto-update-db` default only refreshes

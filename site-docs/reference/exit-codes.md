@@ -20,7 +20,7 @@ automation can distinguish caller mistakes from control-plane outages.
 | `4`   | (reserved)          | Reserved for "auth required" / "auth invalid" on commands that talk to an authenticated control plane.        | Not yet emitted.                                                           |
 | `5`   | (reserved)          | Reserved for "remote control-plane error" (5xx response from the API).                                         | Not yet emitted.                                                           |
 | `130` | interrupted         | Process received `SIGINT` (`Ctrl-C`) — POSIX convention, kept for shell idiom compatibility.                  | Long-running `agent-bom proxy` / `agent-bom serve` / `agent-bom agents`.    |
-| `*`   | subprocess passthrough | When agent-bom shells out (e.g. native scanner binaries), the child's non-zero exit code is propagated.    | `agent-bom shield`, `agent-bom run` proxy invocations.                     |
+| `*`   | subprocess passthrough | When agent-bom shells out (e.g. native scanner binaries), the child's non-zero exit code is propagated.    | `agent-shield`, `agent-bom run` proxy invocations.                     |
 
 ### Why `scan` exits 1
 

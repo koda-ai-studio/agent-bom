@@ -163,3 +163,18 @@ def test_an_inventory_match_without_a_finding_still_answers(scan_store, monkeypa
     body = _affected("CVE-2026-7777")
     assert body["verdict"] == verdict and body["verdict_basis"] == ["inventory_match"]
     assert body["findings"]["total"] == 0 and body["inventory"]["href"] == "/v1/intel/advisories/CVE-2026-7777/affected"
+
+
+def test_answers_never_cross_tenants_even_for_identical_advisories_and_packages(scan_store) -> None:
+    scan_store.put(job(9, findings=[_finding("CVE-2026-1111", "shared-pkg", "1.0.0")]))
+    other = [_finding("CVE-2026-1111", "shared-pkg", "9.9.9"), _finding("CVE-2026-9999", "other-only")]
+    scan_store.put(job(9, tenant="other-tenant", findings=other))
+    mine = _affected("CVE-2026-1111")
+    assert mine["verdict"] == "affected" and mine["findings"]["total"] == 1
+    assert [asset.get("version") for asset in mine["assets"]] in (["1.0.0"], [None])
+    for foreign in ("CVE-2026-9999", "other-only", "shared-pkg@9.9.9"):
+        body = _affected(foreign)
+        assert body["verdict"] == "not_found" and body["findings"]["total"] == 0 and body["assets"] == [], foreign
+    with TestClient(app) as client:
+        client.headers.update(proxy_headers(role="analyst", tenant="history-tenant"))
+        assert client.get("/v1/affected", params={"q": "CVE-2026-1111", "tenant_id": "other-tenant"}).status_code == 422

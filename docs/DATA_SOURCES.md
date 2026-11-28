@@ -29,8 +29,8 @@ cloud grants: [CLOUD_CONNECT.md](CLOUD_CONNECT.md)
 | **CI** | Direct scan in pipeline + optional push | `uses: koda-ai-studio/agent-bom@v…` or `agent-bom agents … --push-url …/v1/results/push` | CI runner filesystem; push uses API key to *your* control plane |
 | **MCP** | Config discovery + optional live introspection | `agent-bom agents -p .` or `agent-bom mcp introspect` | Reads MCP configs; no credential values |
 | **Image** | Container image scanner driver | `agent-bom image <ref>` | Local daemon/registry/tarball read |
-| **IaC** | Terraform/K8s/Helm scanner drivers | `agent-bom iac -p .` | Local/IaC tree read-only |
-| **SBOM** | SBOM import driver | `agent-bom sbom ingest <file>` | Parses supplied artifact only |
+| **IaC** | Terraform/K8s/Helm scanner drivers | `agent-bom iac .` | Local/IaC tree read-only |
+| **SBOM** | SBOM import driver | `agent-bom sbom <file>` | Parses supplied artifact only |
 | **Model** | Model advisory / Hugging Face paths | `agent-bom agents --huggingface` (etc.) | Token read from env at runtime; never stored |
 | **AWS** | Read-only IAM role (`SecurityAudit` + optional `ViewOnlyAccess`) | `agent-bom connect aws --emit --out agent-bom-aws-readonly.json` → deploy → connect with outputs → `agent-bom cloud aws` | Emitted CloudFormation; optional [Terraform](../deploy/terraform/connect-aws/README.md); STS `AssumeRole` + `ExternalId` for org fan-out |
 | **Azure** | `Reader` + `Security Reader` | `agent-bom connect azure` → `AGENT_BOM_AZURE_INVENTORY=1` → `agent-bom cloud azure` | [connect-azure](../deploy/terraform/connect-azure/README.md); `DefaultAzureCredential` chain |

@@ -439,7 +439,7 @@ the tenant durable evidence store is non-empty (`AGENT_BOM_TENANT_ID`). The
 findings Evidence drawer shows a dedicated Workload runtime evidence panel
 (separate from proxy/gateway reach badges). CLI
 `agent-bom cloud side-scan-capabilities` prints the honest provider surface;
-`agent-bom cloud side-scan --provider azure|gcp` runs the shipped executor
+`agent-bom cloud side-scan --provider azure` (or `--provider gcp`) runs the shipped executor
 (opt-in via `AGENT_BOM_SIDESCAN`).
 
 ### Runtime producer authentication
