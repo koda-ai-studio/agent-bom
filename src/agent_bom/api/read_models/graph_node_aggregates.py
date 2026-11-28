@@ -23,12 +23,20 @@ class GraphRollupAggregate(ReadModel):
     toxic_count: int
 
 
+class GraphSoleFinding(ReadModel):
+    """The one disclosed issue, named so a path can say what it is without another read."""
+
+    label: str
+    severity: str
+
+
 class GraphFindingDisclosure(ReadModel):
     """Issues not already disclosed by another requested descendant scope."""
 
     issue_count: int
     severity_counts: dict[str, int]
     exclude_node_ids: list[str]
+    sole_finding: GraphSoleFinding | None = None
 
 
 class GraphNodeAggregate(ReadModel):

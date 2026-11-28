@@ -3218,7 +3218,8 @@ async function main() {
         {
           expectedText: ["Agent connections", "s3-ai-training-data", "AWS_ROLE_SESSION", "execute_command"],
           readySelector: '[data-testid="graph-agent-evidence"] .react-flow__node',
-          hideSelectors: ['[data-testid="graph-agent-evidence"] .react-flow__controls'],
+          // The README frame keeps the path itself; peer and admin-route captions stay in the app.
+          hideSelectors: ['[data-testid="graph-agent-evidence"] .react-flow__controls', '[data-testid="graph-agent-evidence"] button[data-graph-caption]'],
           clipToNodes: '[data-testid="graph-agent-evidence"]',
         },
       );

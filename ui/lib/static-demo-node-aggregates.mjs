@@ -19,7 +19,8 @@ export function scopeFindingDisclosure(table, nodeId, requested) {
   const exclude_node_ids = requested.filter(id => id !== nodeId && table.scope_descendants[nodeId]?.includes(id)).sort();
   const excluded = new Set(exclude_node_ids.flatMap(id => (table.scope_findings[id] ?? []).map(row => row.issue_key)));
   const findings = (table.scope_findings[nodeId] ?? []).filter(row => !excluded.has(row.issue_key));
-  return {issue_count: findings.length, severity_counts: findings.reduce((counts, row) => ({...counts, [row.severity]: (counts[row.severity] ?? 0) + 1}), {}), exclude_node_ids};
+  const sole_finding = findings.length === 1 ? {label: findings[0].label, severity: findings[0].severity} : null;
+  return {issue_count: findings.length, severity_counts: findings.reduce((counts, row) => ({...counts, [row.severity]: (counts[row.severity] ?? 0) + 1}), {}), exclude_node_ids, sole_finding};
 }
 
 /** Exact server-derived issue groups for the selected immutable demo scope. */

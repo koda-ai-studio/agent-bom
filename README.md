@@ -21,6 +21,8 @@ For AppSec, platform and AI teams who run Claude Code, Cursor, Codex or any MCP
 client: findings are ranked by that reach on one graph that runs on your
 machine or your own infrastructure. Local scans need no account.
 
+<p align="center"><b>One exposed agent, one MCP server, one credential: the path from the Internet to your AI training data.</b></p>
+
 <p align="center"><a href="docs/images/agent-exposure-path-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/agent-exposure-path-light-live.png"><img src="docs/images/agent-exposure-path-dark-live.png" alt="Sample exposure path: from the Internet, an exposed copilot-portal workload with a critical CVE hosts Developer Copilot, which uses a filesystem MCP server that exposes AWS_ROLE_SESSION; that credential can access the crown-jewel s3-ai-training-data bucket, and the server also offers execute_command" width="1100"></picture></a></p>
 
 *Sample data.* [What the sample shows](docs/GALLERY.md#what-the-readme-sample-shows)
