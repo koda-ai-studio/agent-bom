@@ -9,6 +9,12 @@ from tests.test_postgres_migrated_graph_parity import _with_database, migrated_f
 from tests.test_postgres_migrated_graph_parity import pytestmark as pytestmark
 
 
+@pytest.fixture(autouse=True)
+def _real_graph_retention_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The suite lengthens retention for dated fixtures; this test exercises the shipped default."""
+    monkeypatch.delenv("AGENT_BOM_GRAPH_RETENTION_DAYS", raising=False)
+
+
 def test_store_reset_reopens_wrapped_pool_and_keeps_retention_override(migrated_fresh_database, monkeypatch):  # noqa: F811
     from agent_bom.api import postgres_common, tenant_graph_retention_store
     from tests.conftest import _snapshot_store_singletons
