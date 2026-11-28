@@ -36,7 +36,7 @@ export async function assertAgentPathStructure(page: Page) {
     return pairs.every(([source, target]) => bounds[source!] < bounds[target!]);
   }).toBe(true);
   for (const [index, edge] of edges.entries()) {
-    const color = index < 6 ? "--graph-edge-exposure" : edge.source === "role:prod-admin" ? "--graph-edge-risk" : "--graph-edge-structure";
+    const color = index < 5 ? "--graph-edge-exposure" : edge.source === "role:prod-admin" ? "--graph-edge-risk" : "--graph-edge-structure";
     const path = canvas.locator(`[data-id="${edge.id}"] .react-flow__edge-path`);
     expect(await path.evaluate((element, token) => (element as SVGElement).style.stroke === `var(${token})`, color)).toBe(true);
   }
@@ -68,7 +68,7 @@ export async function assertAgentPathStructure(page: Page) {
   await expect(canvas.locator('[data-id="store:ai-training"] [data-compact-marker="sensitive"]')).toHaveAttribute("aria-label", /Recorded critical asset · data classification: confidential/);
   await expect(canvas.locator('[data-id="cred:aws"] [data-compact-marker]')).toHaveCount(0);
   await expect(canvas.locator('[data-id="store:ai-training"] .graph-provider-mark-node')).toHaveCount(0);
-  for (const edge of edges.slice(0, 6)) expect(await canvas.locator(`[data-id="${edge.id}"] .react-flow__edge-path`).evaluate(element => (element as SVGElement).style.strokeDasharray)).toBe("");
+  for (const edge of edges.slice(0, 5)) expect(await canvas.locator(`[data-id="${edge.id}"] .react-flow__edge-path`).evaluate(element => (element as SVGElement).style.strokeDasharray)).toBe("");
   for (const id of ["container:copilot-portal", "server:github"]) {
     const name = canvas.locator(`.react-flow__node[data-id="${id}"] [data-semantic-name]`);
     expect(await name.evaluate(node => node.getBoundingClientRect().height)).toBeLessThan(25);

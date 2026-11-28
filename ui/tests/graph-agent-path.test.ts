@@ -41,7 +41,8 @@ it("ends one exposure story at the crown-jewel data an exposed credential opens,
   expect(result.nodes.find(node => node.id === "server:filesystem")!.data.scopePeers?.[0]?.label).toBe("SRE Runbook Agent");
   expect(result.edges.find(edge => edge.data?.originalRelationship === "hosted_on")).toMatchObject({ source: "container:copilot-portal", target: "agent:developer-copilot", data: { originalSource: "agent:developer-copilot", originalTarget: "container:copilot-portal", relationshipLabel: "Hosts" } });
   expect(result.edges.filter(edge => !edge.data?.displayOnly).every(edge => graph.edges.some(record => record.id === edge.id))).toBe(true);
-  const pairs = new Set([...path.slice(1).map((id, index) => `${path[index]}>${id}`), "server:filesystem>tool:exec"]);
+  // One amber route to the data; the shell tool branches in the structure colour.
+  const pairs = new Set(path.slice(1).map((id, index) => `${path[index]}>${id}`));
   for (const edge of result.edges) {
     expect(edge.style?.stroke === "var(--graph-edge-exposure)").toBe(pairs.has(`${edge.source}>${edge.target}`));
     if (edge.data?.exposurePath) expect(edge.style?.strokeDasharray).toBeUndefined();
@@ -86,7 +87,8 @@ it("keeps the capability endpoint when another server has more findings, without
   const github = flow.nodes.find(node => node.id === "server:github")!;
   github.data.findingAggregate = {...counts.node_aggregates["server:filesystem"].aggregate, issue_count: 2};
   const result = agentPathGraph(graph, flow, "agent:developer-copilot", () => {});
-  expect(result.edges.find(edge => edge.target === "tool:exec")?.data?.exposurePath).toBe(true);
+  expect(result.edges.find(edge => edge.source === "server:filesystem" && edge.target === "cred:aws")?.data?.exposurePath).toBe(true);
+  expect(result.edges.some(edge => edge.source === "server:filesystem" && edge.target === "tool:exec")).toBe(true);
   expect(new Set(result.nodes.map(node => `${node.position.x},${node.position.y}`)).size).toBe(result.nodes.length);
 });
 

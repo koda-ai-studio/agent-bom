@@ -76,13 +76,14 @@ describe("attack path graph layout", () => {
     expect(new Set(model.pathNodeIds.map(id => vertical.positions.get(id)!.x)).size).toBe(1);
   });
 
-  it("keeps generous column and branch-row spacing", () => {
+  it("keeps clear column and branch-row spacing", () => {
     const { graph, selected } = branchingFixture();
     const model = buildAttackPathGraphModel(graph, selected);
     const layout = layoutAttackPathGraph(model, "LR");
     const x = model.pathNodeIds.map(id => layout.positions.get(id)!.x).sort((a, b) => a - b);
     for (let index = 1; index < x.length; index += 1) {
-      expect(x[index]! - x[index - 1]!).toBeGreaterThanOrEqual(180);
+      // A card plus a 16px gap: ~112px of link between neighbouring 56px glyphs.
+      expect(x[index]! - x[index - 1]!).toBeGreaterThanOrEqual(168);
 
     }
     const rowGap = Math.abs(layout.positions.get("server:filesystem")!.y - layout.positions.get("server:github")!.y);

@@ -94,7 +94,7 @@ export function agentPathGraph(graph: UnifiedGraphData, flow: Flow, root: string
   };
   const layout = layoutAttackPathGraph(model, "LR", columns, { lanes: branchLanes, rankGap: 64 });
   const pathPairs = new Set(primary.slice(1).map((id, index) => `${primary[index]}\0${id}`));
-  for (const edge of [...impact, ...reach]) pathPairs.add(`${edge.source}\0${edge.target}`);
+  // One amber route, to the data the path ends at; other capabilities branch in the structure colour.
   const exposure = primary[0] === INTERNET_ANCHOR_ID;
   return {
     nodes: nodes.map(node => ({ ...node, position: layout.positions.get(node.id)!, style: { ...node.style, width: 152, "--graph-node-card-width": "152px" },

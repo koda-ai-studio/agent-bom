@@ -11,6 +11,13 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
+
+@pytest.fixture(autouse=True)
+def _real_graph_retention_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The suite lengthens retention for dated fixtures; these tests exercise the shipped default."""
+    monkeypatch.delenv("AGENT_BOM_GRAPH_RETENTION_DAYS", raising=False)
+
+
 RECENT = datetime.now(timezone.utc).isoformat()
 OLD = (datetime.now(timezone.utc) - timedelta(days=400)).isoformat()
 
