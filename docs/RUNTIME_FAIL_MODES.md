@@ -40,6 +40,7 @@ pending work and loss of acknowledgement; it does not attest the reported agent.
 | Graph reachability (evaluation error) | fail-open | no |
 | Audit export (sink/webhook delivery failure) | fail-open | no |
 | Injection protection (detector error) | alert profile (default): fail-open with alert; enforce profile: fail-closed | no |
+| Remote proxy upstream (`proxy --url`: invalid session id, oversized or malformed response, deadline) | fail-closed: JSON-RPC error `-32603`, nothing relayed | no |
 
 Two rules explain the split:
 
@@ -154,6 +155,28 @@ The default stays `alert` so an upgrade changes no traffic. It is
 planned to become `enforce` once detector false-positive rates have been
 measured on real catalogs and results. Pin `--injection-mode alert` now if you
 need today's behaviour after that change.
+
+## Remote proxy upstream
+
+`agent-bom proxy --url` talks to the remote server over MCP Streamable HTTP.
+Each request either returns its correlated JSON-RPC response or the client gets
+a JSON-RPC error with code `-32603` for that request id; a partial or
+unverifiable answer is never relayed.
+
+| Upstream condition | Client sees |
+|---|---|
+| HTTP error status | `Upstream server error: <status>` |
+| 404 while a session is open | `Upstream response rejected: MCP upstream session terminated; the client must re-initialize`; the session id is dropped |
+| `Mcp-Session-Id` on `initialize` that is empty, longer than 512 characters or not visible ASCII | `Upstream response rejected: Invalid MCP session id from upstream`; no session is kept |
+| Response over 2 MiB, SSE event over 1 MiB, or more than 256 SSE events | `Upstream response rejected: ... exceeds size limit` / `... has too many events` |
+| No final response within 60 seconds (including streams kept open with keep-alives) | `Upstream response rejected: MCP upstream response deadline exceeded` |
+| Content type other than JSON or SSE, mismatched id, or malformed envelope | `Upstream response rejected: <fixed protocol reason>` |
+| Connection failure | `Upstream connection error` |
+
+Error text never includes response bodies or headers. A session id from any
+response other than `initialize` is ignored, and the client side of the proxy
+has no way to supply one. With `--compat-endpoints` the older per-endpoint
+behavior is unchanged: a failed pass-through message is logged and dropped.
 
 ## Control-plane browser credentials
 

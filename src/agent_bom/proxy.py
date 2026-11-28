@@ -61,7 +61,7 @@ from agent_bom.runtime.proxy_setup import (
 )
 from agent_bom.runtime.proxy_tracing import _PROXY_TRACER as _PROXY_TRACER
 from agent_bom.runtime.proxy_tracing import proxy_span
-from agent_bom.runtime.tool_catalog_pages import fetch_http_tool_catalog
+from agent_bom.runtime.proxy_upstream import UpstreamResponseRejectedError, build_proxy_upstream, upstream_error_message
 from agent_bom.runtime.trace_metadata import inject_jsonrpc_trace_meta as _inject_jsonrpc_trace_meta
 from agent_bom.security import sanitize_text
 
@@ -367,7 +367,8 @@ class _SseProxySession:
         self.tenant_id = (os.environ.get("AGENT_BOM_TENANT_ID") or "default").strip() or "default"
         self.declared_tools: set[str] = set()
         self.call_counter = 0
-        self.client: Any = None
+        self.upstream: Any = None
+        self._catalog_attempted = False
 
     def _handle_alerts(self, alerts) -> None:  # noqa: ANN001
         for alert in alerts:
@@ -396,9 +397,10 @@ class _SseProxySession:
             tenant_id=self.tenant_id,
         )
 
-    async def run(self, client: Any) -> None:
-        self.client = client
-        await self._discover_tools()
+    async def run(self, upstream: Any) -> None:
+        self.upstream = upstream
+        if upstream.discover_at_start:
+            await self._discover_tools()
         reader = await create_async_stdin_reader()
         while True:
             try:
@@ -411,11 +413,12 @@ class _SseProxySession:
             await self._handle_line(line)
 
     async def _discover_tools(self) -> None:
+        self._catalog_attempted = True
         try:
             with proxy_span("proxy.sse_tools_list") as span:
                 if span is not None:
                     span.set_attribute("agent_bom.proxy.upstream_url", self.base_url)
-                catalog = await fetch_http_tool_catalog(self.client, self.base_url + "/tools/list", _proxy_request_headers())
+                catalog = await self.upstream.tool_catalog(_proxy_request_headers())
                 self.declared_tools = set(catalog.names)
                 if span is not None:
                     span.set_attribute("agent_bom.proxy.declared_tool_count", len(self.declared_tools))
@@ -437,6 +440,8 @@ class _SseProxySession:
             return
         tool_name, arguments = policy_subject
         is_tool_call = is_tools_call(msg)
+        if is_tool_call and not self._catalog_attempted:
+            await self._discover_tools()
         trace_meta = _extract_jsonrpc_trace_meta(msg)
         msg_id = msg.get("id")
         p_hash = compute_payload_hash(msg)
@@ -446,16 +451,16 @@ class _SseProxySession:
 
     async def _pass_through(self, msg: Optional[dict], line_str: str) -> None:
         """Forward non-gated messages (initialize, notifications, ...) unchanged."""
+        payload: Any = msg
         try:
-            fwd = await self.client.post(
-                self.base_url + "/message",
-                json=msg or json.loads(line_str),
-                timeout=30,
-                headers=_proxy_request_headers(),
-            )
-            _write_stdout_message(self._scan_response(fwd.json(), str((msg or {}).get("method", "unknown"))))
+            payload = msg or json.loads(line_str)
+            response = await self.upstream.pass_through(payload, _proxy_request_headers())
+            if response is not None:
+                _write_stdout_message(self._scan_response(response, str((msg or {}).get("method", "unknown"))))
         except Exception as exc:  # noqa: BLE001
             logger.debug("SSE proxy: pass-through failed: %s", sanitize_text(exc))
+            if self.upstream.reports_pass_through_errors and isinstance(payload, dict) and "id" in payload and "method" in payload:
+                _write_stdout_message(make_error_response(payload["id"], -32603, upstream_error_message(exc)))
 
     async def _gate_and_forward(self, call: _SseCall, identity_block_reason: Any) -> None:
         reason = self._admission_block_reason(call, identity_block_reason)
@@ -544,7 +549,7 @@ class _SseProxySession:
         return None
 
     async def _forward(self, call: _SseCall) -> Optional[dict]:
-        """POST the gated request upstream; tool calls use /tools/call, other methods keep /message."""
+        """POST the gated request upstream (Streamable HTTP, or /tools/call and /message in compat mode)."""
         meta = call.trace_meta
         try:
             span_name = "proxy.sse_tools_call" if call.is_tool_call else "proxy.sse_gated_message"
@@ -554,21 +559,13 @@ class _SseProxySession:
                 forwarded_message = _inject_jsonrpc_trace_meta(
                     call.msg, traceparent=meta.get("traceparent"), tracestate=meta.get("tracestate"), baggage=meta.get("baggage")
                 )
-                forward_path = "/tools/call" if call.is_tool_call else "/message"
-                resp = await self.client.post(
-                    self.base_url + forward_path,
-                    json=forwarded_message,
-                    timeout=30,
-                    headers=_proxy_request_headers(
-                        traceparent=meta.get("traceparent"), tracestate=meta.get("tracestate"), baggage=meta.get("baggage")
-                    ),
+                headers = _proxy_request_headers(
+                    traceparent=meta.get("traceparent"), tracestate=meta.get("tracestate"), baggage=meta.get("baggage")
                 )
-            resp.raise_for_status()
-            return resp.json()
-        except httpx.HTTPStatusError as exc:
-            status = exc.response.status_code
-            logger.warning("SSE proxy: server returned %d for %s: %s", status, call.tool_name, sanitize_text(exc))
-            _write_stdout_message(make_error_response(call.msg_id, -32603, f"Upstream server error: {status}"))
+                return await self.upstream.forward(forwarded_message, headers, is_tool_call=call.is_tool_call)
+        except (httpx.HTTPStatusError, UpstreamResponseRejectedError) as exc:
+            logger.warning("SSE proxy: upstream failed for %s: %s", call.tool_name, sanitize_text(exc))
+            _write_stdout_message(make_error_response(call.msg_id, -32603, upstream_error_message(exc)))
         except Exception as exc:  # noqa: BLE001
             logger.warning("SSE proxy: connection error for %s: %s", call.tool_name, sanitize_text(exc))
             _write_stdout_message(make_error_response(call.msg_id, -32603, "Upstream connection error"))
@@ -607,20 +604,22 @@ async def _proxy_sse_server(
     log_path: Optional[str] = None,
     block_undeclared: bool = False,
     alert_webhook: Optional[str] = None,
+    compat_endpoints: bool = False,
 ) -> int:
-    """Proxy an SSE/HTTP MCP server through the protection engine.
+    """Proxy a remote MCP server through the protection engine.
 
-    Connects to a remote MCP server that exposes an SSE or HTTP transport
-    instead of spawning a subprocess.  Tool calls received on stdin are
-    forwarded through the protection engine then POSTed to the server URL.
-    Responses are written back to stdout.
+    Connects to a remote MCP server instead of spawning a subprocess.
+    Messages received on stdin pass the protection engine and are POSTed to
+    the server's Streamable HTTP endpoint (``url``) with the server-issued
+    ``Mcp-Session-Id``; bounded JSON or SSE answers are written to stdout.
 
     Args:
-        url: Base URL of the remote SSE/HTTP MCP server.
+        url: Remote MCP endpoint (the base URL with ``compat_endpoints``).
         policy_path: Optional path to a runtime policy JSON file.
         log_path: Optional path to audit JSONL log.
         block_undeclared: Block tools not in initial tools/list.
         alert_webhook: Optional webhook URL for alert notifications.
+        compat_endpoints: Use legacy /tools/list, /tools/call and /message.
 
     Returns:
         0 on clean shutdown, 1 on connection or policy load error.
@@ -631,8 +630,8 @@ async def _proxy_sse_server(
     log_file = RotatingAuditLog(log_path) if log_path else None
     session = _SseProxySession(url, policy, log_file, block_undeclared=block_undeclared, alert_webhook=alert_webhook)
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            await session.run(client)
+        async with httpx.AsyncClient(timeout=30) as client, build_proxy_upstream(client, url, compat_endpoints) as upstream:
+            await session.run(upstream)
     finally:
         if log_file:
             log_file.close()

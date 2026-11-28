@@ -97,6 +97,6 @@ async def test_proxy_sse_child_failures_do_not_export_raw_exception(tracing, mon
     message = {"jsonrpc": "2.0", "id": 8, "method": method, "params": {"name": "demo", "arguments": {}}}
     monkeypatch.setattr(proxy, "read_async_stdin_line", AsyncMock(side_effect=[json.dumps(message).encode() + b"\n", b""]))
     monkeypatch.setattr(proxy.sys, "stdout", type("Stdout", (), {"buffer": io.BytesIO()})())
-    assert await proxy._proxy_sse_server(url="https://fixture.example") == 0
+    assert await proxy._proxy_sse_server(url="https://fixture.example", compat_endpoints=True) == 0
     assert_sanitized(exporter, "proxy.sse_tools_list")
     assert_sanitized(exporter, "proxy.sse_tools_call" if method == "tools/call" else "proxy.sse_gated_message")

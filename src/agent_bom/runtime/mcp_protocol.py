@@ -134,10 +134,26 @@ async def parameter_headers(transport: Any, target: Any, message: dict[str, Any]
     raise ValueError("MCP catalog pagination exceeds limit")
 
 
-async def sse_messages(response: Any, max_bytes: int):
-    """Bound bytes before line/event decoding; ignore comments and SSE retry hints."""
+MAX_SESSION_ID_LENGTH = 512
+
+
+def validate_session_id(value: Any) -> str:
+    """Accept a server-issued ``Mcp-Session-Id`` only as 1-512 visible ASCII characters."""
+    if not isinstance(value, str) or not value or len(value) > MAX_SESSION_ID_LENGTH or any(ord(c) < 0x21 or ord(c) > 0x7E for c in value):
+        raise ValueError("Invalid MCP session id from upstream")
+    return value
+
+
+async def sse_messages(response: Any, max_bytes: int, *, max_event_bytes: int | None = None, max_events: int | None = None):
+    """Bound bytes before line/event decoding; ignore comments and SSE retry hints.
+
+    ``max_event_bytes`` caps one event (and any unterminated line) and
+    ``max_events`` caps how many events a single response may carry.
+    """
     buffer = b""
     data: list[str] = []
+    event_bytes = 0
+    events = 0
     consumed = 0
     async for chunk in response.aiter_bytes():
         consumed += len(chunk)
@@ -149,10 +165,19 @@ async def sse_messages(response: Any, max_bytes: int):
             line = raw.rstrip(b"\r").decode("utf-8", errors="strict")
             if line.startswith("data:"):
                 data.append(line[5:].removeprefix(" "))
+                event_bytes += len(raw)
+                if max_event_bytes is not None and event_bytes > max_event_bytes:
+                    raise ValueError("MCP upstream stream event exceeds size limit")
             elif not line and data:
                 import json
 
+                events += 1
+                if max_events is not None and events > max_events:
+                    raise ValueError("MCP upstream stream has too many events")
                 yield json.loads("\n".join(data)), consumed
                 data.clear()
+                event_bytes = 0
+        if max_event_bytes is not None and len(buffer) > max_event_bytes:
+            raise ValueError("MCP upstream stream event exceeds size limit")
     if data or buffer.strip():
         raise ValueError("Incomplete MCP event stream")
