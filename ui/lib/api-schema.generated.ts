@@ -18644,6 +18644,7 @@ export interface components {
             severity_counts: {
                 [key: string]: number;
             };
+            sole_finding?: components["schemas"]["GraphSoleFinding"] | null;
         } & {
             [key: string]: unknown;
         };
@@ -19810,6 +19811,18 @@ export interface components {
         GraphSnapshotsResponse: {
             [key: string]: unknown;
         }[];
+        /**
+         * GraphSoleFinding
+         * @description The one disclosed issue, named so a path can say what it is without another read.
+         */
+        GraphSoleFinding: {
+            /** Label */
+            label: string;
+            /** Severity */
+            severity: string;
+        } & {
+            [key: string]: unknown;
+        };
         /**
          * GraphVendorFacets
          * @description Cross-vendor path counts per (source vendor, target vendor) over the whole snapshot queue.

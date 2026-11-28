@@ -79,6 +79,8 @@ helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom -
 
 ## Product views
 
+**One exposed agent, one MCP server, one credential: the path from the Internet to your AI training data.**
+
 ![Sample exposure path: from the Internet, an exposed copilot-portal workload with a critical CVE hosts Developer Copilot, which uses a filesystem MCP server that exposes AWS_ROLE_SESSION; that credential can access the crown-jewel s3-ai-training-data bucket, and the server also offers execute_command](https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/docs/images/agent-exposure-path-dark-live.png)
 
 The path from the Internet to the data an exposed credential opens, with
