@@ -25,8 +25,17 @@ paths with read-only cloud connect.
 
 ## 0. One command to see value
 
-With [uv installed](https://docs.astral.sh/uv/getting-started/installation/), run
-this from the repository you want to inspect:
+With [uv installed](https://docs.astral.sh/uv/getting-started/installation/), see
+what the AI tools on this machine can reach:
+
+```bash
+uvx agent-bom scan -f html -o agent-bom-report.html
+```
+
+This reads the agent configuration files in known client locations (Claude
+Desktop and Claude Code, Cursor, Codex and others; `uvx agent-bom scan --dry-run`
+lists every file first) and scans the MCP servers they run. To inspect one
+repository instead, run this from its root:
 
 ```bash
 uvx agent-bom scan . -f html -o agent-bom-report.html
@@ -35,7 +44,7 @@ uvx agent-bom scan . -f html -o agent-bom-report.html
 Open `agent-bom-report.html` for inventory, prioritized findings, recorded
 exposure paths, fix guidance and coverage warnings. When any finding has a fix,
 the terminal also ends with the top three fixes from the same remediation plan
-and the `--remediate remediation.md` command that writes all of them. The command scans only the
+and the `--remediate remediation.md` command that writes all of them. The repository scan covers only the
 selected project (packages, MCP configuration, secrets and personal data,
 skills and IaC) and does not read agent configuration elsewhere on the machine.
 Do not add `--no-discover` here: it also turns off the project's secret,
