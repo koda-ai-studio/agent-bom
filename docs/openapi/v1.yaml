@@ -50382,7 +50382,8 @@ paths:
         required: false
         schema:
           anyOf:
-          - type: string
+          - maxLength: 256
+            type: string
           - type: 'null'
           description: Scan snapshot ID; latest if omitted
           title: Scan Id
@@ -51350,7 +51351,8 @@ paths:
         required: false
         schema:
           anyOf:
-          - type: string
+          - maxLength: 256
+            type: string
           - type: 'null'
           title: Scan Id
       - in: query

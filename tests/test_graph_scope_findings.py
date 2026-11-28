@@ -191,3 +191,13 @@ def test_workloads_count_the_findings_of_the_image_they_run():
         assert len(rows) == 1 and cve in str(rows[0])
     image = node_aggregate(graph, "image")
     assert image is not None and image.issue_count == 1
+
+
+def test_scope_reads_bound_the_scan_identifier():
+    from agent_bom.api.server import app
+
+    paths = app.openapi()["paths"]
+    for path in ("/v1/graph/node-aggregates", "/v1/graph/scope-findings"):
+        scan_id = next(param for param in paths[path]["get"]["parameters"] if param["name"] == "scan_id")
+        schema = scan_id["schema"].get("anyOf", [scan_id["schema"]])[0]
+        assert schema.get("maxLength") == 256, path

@@ -68,7 +68,7 @@ self-hosted deployment.
 # Railway, Docker, Helm, etc.
 export NVD_API_KEY="<your-nvd-api-key>"
 export AGENT_BOM_CLICKHOUSE_URL="https://<host>:8443"
-agent-bom serve mcp
+agent-bom mcp server --transport streamable-http
 ```
 
 ```yaml

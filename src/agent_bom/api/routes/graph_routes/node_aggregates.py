@@ -62,7 +62,7 @@ def _aggregates(store, *, tenant: str, scan_id: str, node_ids: list[str], suppre
 async def get_graph_node_aggregates(
     request: Request,
     node_id: list[str] = Query(..., description=f"Node ids to aggregate (at most {MAX_NODE_AGGREGATES}), e.g. a selected path's hops"),
-    scan_id: Optional[str] = Query(None, description="Scan snapshot ID; latest if omitted"),
+    scan_id: Optional[str] = Query(None, max_length=256, description="Scan snapshot ID; latest if omitted"),
     snapshot_generation: Optional[str] = Query(None, max_length=128, description="Read revision the caller pinned"),
 ) -> dict:
     """Each node's roll-up aggregate (issue_count, worst_severity, exposed_count, ...) and semantic layer."""
@@ -115,7 +115,7 @@ def _scope_findings(
 async def get_scope_findings(
     request: Request,
     node_id: str = Query(..., min_length=1, max_length=2048),
-    scan_id: Optional[str] = Query(None),
+    scan_id: Optional[str] = Query(None, max_length=256),
     snapshot_generation: Optional[str] = Query(None, max_length=128),
     finding_revision: Optional[str] = Query(None, max_length=128),
     offset: int = Query(0, ge=0),
