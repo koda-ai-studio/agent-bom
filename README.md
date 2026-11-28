@@ -21,6 +21,10 @@ For AppSec, platform and AI teams who run Claude Code, Cursor, Codex or any MCP
 client: findings are ranked by that reach on one graph that runs on your
 machine or your own infrastructure. Local scans need no account.
 
+<p align="center"><a href="docs/images/agent-exposure-path-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/agent-exposure-path-light-live.png"><img src="docs/images/agent-exposure-path-dark-live.png" alt="Sample exposure path: from the Internet, an exposed copilot-portal workload with a critical CVE hosts Developer Copilot, which uses a filesystem MCP server that exposes AWS_ROLE_SESSION; that credential can access the crown-jewel s3-ai-training-data bucket, and the server also offers execute_command" width="1100"></picture></a></p>
+
+*Sample data.* [What the sample shows](docs/GALLERY.md#what-the-readme-sample-shows)
+
 <p align="center">
   <a href="#quick-start"><b>Quick start</b></a> ·
   <a href="site-docs/getting-started/start-by-role.md"><b>Start by role</b></a> ·
@@ -94,10 +98,6 @@ credential matters by what the agent that loads it can reach. agent-bom records
 the chain, agent → MCP server → tool → package → credential → data, keeps the
 evidence for every edge, and ranks findings by that reach. Start with the
 [five-minute path for your role](site-docs/getting-started/start-by-role.md).
-
-<p align="center"><a href="docs/images/agent-exposure-path-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/agent-exposure-path-light-live.png"><img src="docs/images/agent-exposure-path-dark-live.png" alt="Sample exposure path: from the Internet, an exposed copilot-portal workload with a critical CVE hosts Developer Copilot, which uses a filesystem MCP server that exposes AWS_ROLE_SESSION; that credential can access the crown-jewel s3-ai-training-data bucket, and the server also offers execute_command" width="1100"></picture></a></p>
-
-*Sample data.* [What the sample shows](docs/GALLERY.md#what-the-readme-sample-shows)
 
 ## What it covers
 
@@ -387,5 +387,7 @@ Ask in [GitHub Discussions](https://github.com/koda-ai-studio/agent-bom/discussi
 or follow the [maintainer path](GOVERNANCE.md) ([review owners](MAINTAINERS.md)).
 
 [Contributing](CONTRIBUTING.md) · [Capabilities and roadmap](docs/ROADMAP.md) · [Support](SUPPORT.md) · [Report an inaccurate finding](https://github.com/koda-ai-studio/agent-bom/issues/new?template=inaccurate_finding.yml) · [Apache-2.0](LICENSE)
+
+If agent-bom is useful to you, a star on GitHub helps other teams find it.
 
 Source version: **v0.115.6** · Latest release: **v0.115.6** · [Changelog](CHANGELOG.md)
