@@ -234,9 +234,10 @@ export function CompactGraphNode({ data, borderClass, bgClass, ringClass, iconCl
       <NameWords text={canvasName(preview)} hidden={canvasName(preview) !== fullTitle} />
     </p>
     {canvasName(preview) !== fullTitle && <span className="sr-only">{fullTitle}</span>}
-    <span data-graph-caption data-entity-role className={`block max-w-full truncate leading-[1.15] text-ink-secondary ${data.scopePorts ? "mx-auto w-fit" : ""}`} style={META}>
+    {/* On a path the globe and its position already say "exposure"; its type line would only repeat it. */}
+    {!(anchor && data.pathPresentation) && <span data-graph-caption data-entity-role className={`block max-w-full truncate leading-[1.15] text-ink-secondary ${data.scopePorts ? "mx-auto w-fit" : ""}`} style={META}>
       {scope ? scope.visible : typeLine(data, fullTitle)}
-    </span>
+    </span>}
     {scope && <span className="sr-only">{scope.spoken}</span>}
     {data.scopeAdmin && <button data-graph-caption type="button" className="nodrag nopan mt-1 whitespace-nowrap bg-[var(--graph-canvas)] text-[11px] text-ink-secondary" onClick={event => { event.stopPropagation(); data.scopeAdmin!.inspect(); }}>admin via {data.scopeAdmin.label}</button>}
     {!!data.scopePeers?.length && <div className="mt-1 flex items-center flex-col gap-1">

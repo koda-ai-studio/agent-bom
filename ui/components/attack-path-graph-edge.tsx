@@ -68,7 +68,8 @@ export function AttackPathGraphEdge(props: EdgeProps<AttackPathFlowEdge>) {
   // rows leave below it). A phone column has no room beside the line, so there every link names itself on hover or focus.
   const transform = direction === "TB"
     ? `translate(10px, -50%) translate(${label.x}px, ${label.y}px)`
-    : `translate(-50%, -100%) translate(${label.x}px, ${label.y - 4}px)`;
+    // An inspected link's tooltip clears the 56px glyphs it joins, however short the link between them is.
+    : `translate(-50%, -100%) translate(${label.x}px, ${label.y - (active ? 34 : 4)}px)`;
   return <>
     <BaseEdge id={id} path={path} interactionWidth={18} data-line-style={style.name} data-two-way={edge.bidirectional || undefined} {...ends}
       style={{

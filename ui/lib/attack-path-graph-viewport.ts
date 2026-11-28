@@ -2,8 +2,8 @@ import type { AttackPathLayout } from "@/lib/attack-path-graph-layout";
 
 /** Frame padding in screen px; the bottom keeps nodes clear of the zoom controls in that corner. */
 export const ATTACK_PATH_FIT_PADDING = { top: 24, right: 24, bottom: 56, left: 24 } as const;
-/** How far a node's findings badge ("1 medium +2") reaches past the right of its box at zoom 1. */
-export const FINDING_BADGE_OVERHANG = 64;
+/** Right margin kept for a findings count badge; it sits on the glyph, inside the card, so a small safety margin. */
+export const FINDING_BADGE_OVERHANG = 16;
 
 export type AttackPathViewport = {
   x: number;

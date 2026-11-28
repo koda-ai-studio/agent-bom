@@ -29,6 +29,12 @@ pytest_plugins = [
 os.environ.setdefault("AGENT_BOM_ALLOW_UNAUTHENTICATED_API", "1")
 os.environ.setdefault("AGENT_BOM_NO_AUTH_ROLE", "admin")
 
+# Graph fixtures carry fixed calendar dates. Under the 180-day default retention a
+# snapshot dated 2026-06-01 drops out of history reads on 2026-11-28, so suites
+# start failing as the calendar advances. Keep fixture history readable for the
+# session; retention tests remove this and exercise the real default.
+os.environ.setdefault("AGENT_BOM_GRAPH_RETENTION_DAYS", "36500")
+
 # Force a wide, deterministic console width. Under pytest-xdist there is no TTY,
 # so Rich defaults to 80 cols and wraps long output (e.g. file paths) across
 # lines — breaking substring assertions on CLI output. Pin it so tests render
