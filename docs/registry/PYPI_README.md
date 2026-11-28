@@ -12,16 +12,19 @@ machine or your own infrastructure. Local scans need no account.
 [Try it in your browser](https://koda-ai-studio.github.io/agent-bom/demo/) first,
 no install.
 
-With [uv installed](https://docs.astral.sh/uv/getting-started/installation/), run
-from the repository you want to inspect:
+With [uv installed](https://docs.astral.sh/uv/getting-started/installation/), see
+what the AI tools on this machine can reach:
 
 ```bash
-uvx agent-bom scan . -f html -o agent-bom-report.html
+uvx agent-bom scan -f html -o agent-bom-report.html
 ```
 
-Open `agent-bom-report.html` for inventory, findings and fix guidance. Run it
-again later to see what changed. The scan stays inside this repository. No MCP
-configuration? Package findings still apply. Incomplete evidence is not a clean
+It finds the agents you use (Claude Desktop and Claude Code, Cursor, Codex and
+others), the MCP servers each one runs, and the packages, tools and credential
+variables behind them. Open `agent-bom-report.html` for inventory, findings and
+fix guidance; `uvx agent-bom scan --dry-run` lists every file it would read
+first. To scan a repository instead, run `uvx agent-bom scan . -f html -o agent-bom-report.html` from its root; the scan stays
+inside it. No MCP configuration? Package findings still apply. Incomplete evidence is not a clean
 result: [what a scan does and does not establish](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/FIRST_RUN.md#what-this-scan-does-and-does-not-establish).
 For a bundled sample, run `uvx agent-bom scan --demo --offline`; status `1` is
 the expected security verdict for its blocking findings.

@@ -17,15 +17,20 @@ machine or your own infrastructure. Local scans need no account.
 [Try it in your browser](https://koda-ai-studio.github.io/agent-bom/demo/) first, no install.
 
 ```bash
-uvx agent-bom scan . -f html -o agent-bom-report.html
+uvx agent-bom scan -f html -o agent-bom-report.html
 ```
 
-Open `agent-bom-report.html` to inspect inventory, findings, coverage and fix
-guidance. Run the same scan again later and agent-bom prints what changed since
-the last one. The scan stays inside the repository, including its secrets and
-personal data, and does not read agent configuration elsewhere on the machine. No MCP
-configuration? Package findings remain useful; agent/tool relationships require
-discovered configuration or an explicit inventory.
+This finds the agents on this machine (Claude Desktop and Claude Code, Cursor,
+Codex and others), the MCP servers each one runs, and the packages, tools and
+credential variables behind them. Open `agent-bom-report.html` to inspect
+inventory, findings, coverage and fix guidance; `uvx agent-bom scan --dry-run`
+lists every file it would read first. Run the same scan again later and
+agent-bom prints what changed since the last one.
+
+To scan a repository instead, run `uvx agent-bom scan . -f html -o agent-bom-report.html` from its root. That scan stays inside
+the repository, including its secrets and personal data. No MCP configuration?
+Package findings remain useful; agent/tool relationships require discovered
+configuration or an explicit inventory.
 [Measured matching accuracy on real repositories](features/real-repository-accuracy.md).
 New here? [Start with the five-minute path for your role](getting-started/start-by-role.md).
 

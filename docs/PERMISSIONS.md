@@ -111,7 +111,7 @@ If a file does not exist, it is silently skipped.
 - `compose.yaml`
 
 The exact path set changes as supported clients are added. Use
-`agent-bom where --json` or `agent-bom where --dry-run` to preview the paths
+`agent-bom where` (or `agent-bom where --json`) to preview the paths
 that would be read on a given machine before any scan runs.
 
 Default discovery stays scoped to known agent, MCP, Docker Compose, JetBrains,

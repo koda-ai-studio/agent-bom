@@ -1,4 +1,4 @@
-"""End-to-end decision sequence of the SSE/HTTP proxy loop.
+"""End-to-end decision sequence of the remote proxy loop (--compat-endpoints).
 
 One session drives every gate in order (pass-through, oversize drop,
 undeclared, policy, inline scanner, replay, upstream errors, allowed
@@ -83,7 +83,11 @@ def _run_session(tmp_path: Path, monkeypatch) -> tuple[list[dict], list[str], li
 
     exit_code = asyncio.run(
         proxy._proxy_sse_server(
-            "https://upstream.example.test/", policy_path=str(policy_path), log_path=str(log_path), block_undeclared=True
+            "https://upstream.example.test/",
+            policy_path=str(policy_path),
+            log_path=str(log_path),
+            block_undeclared=True,
+            compat_endpoints=True,
         )
     )
     assert exit_code == 0

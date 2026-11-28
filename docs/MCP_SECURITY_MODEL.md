@@ -202,8 +202,8 @@ The proxy wraps any MCP server without modifying it. The client connects to `age
 # stdio server
 agent-bom proxy "uvx mcp-server-filesystem /" --policy policy.yml
 
-# SSE server
-agent-bom proxy --url http://localhost:3000 --policy policy.yml
+# Streamable HTTP server
+agent-bom proxy --url http://localhost:3000/mcp --policy policy.yml
 ```
 
 **7 inline proxy detectors on every message:**

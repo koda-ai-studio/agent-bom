@@ -9,19 +9,8 @@ import click
 from rich.console import Console
 
 from agent_bom.cli._common import OPTIONAL_PORT_RANGE, PORT_RANGE
-from agent_bom.runtime.injection_protection import SSE_UNSUPPORTED, InjectionModeError
-
-
-def _run_sse_proxy(
-    url: str, policy: str | None, log_path: str | None, block_undeclared: bool, alert_webhook: str | None, mode: str | None
-) -> int:
-    if (mode or "").lower() == "enforce":
-        raise click.UsageError(SSE_UNSUPPORTED)
-    from agent_bom.proxy import _proxy_sse_server
-
-    return asyncio.run(
-        _proxy_sse_server(url=url, policy_path=policy, log_path=log_path, block_undeclared=block_undeclared, alert_webhook=alert_webhook)
-    )
+from agent_bom.cli._remote_proxy import run_remote_proxy
+from agent_bom.runtime.injection_protection import InjectionModeError
 
 
 @click.command("proxy")
@@ -67,8 +56,9 @@ def _run_sse_proxy(
     "--url",
     default=None,
     envvar="AGENT_BOM_PROXY_URL",
-    help="SSE/HTTP MCP server URL (use instead of server_cmd for HTTP/SSE transport)",
+    help="Remote MCP endpoint URL, spoken to over MCP Streamable HTTP (use instead of server_cmd)",
 )
+@click.option("--compat-endpoints", is_flag=True, help="With --url: use legacy /tools/list, /tools/call, /message endpoints")
 @click.option(
     "--isolate/--no-isolate",
     default=True,
@@ -193,6 +183,7 @@ def proxy_cmd(
     audit_push_interval,
     response_sign_key,
     url,
+    compat_endpoints,
     isolate,
     sandbox_runtime,
     sandbox_image,
@@ -240,10 +231,9 @@ def proxy_cmd(
         --sandbox-image-pin-policy enforce --block-undeclared -- npx @mcp/server-postgres
 
     \b
-    Usage (SSE/HTTP — remote server):
-      agent-bom proxy --url http://localhost:3000
-      agent-bom proxy --url https://mcp.example.com --log audit.jsonl --detect-credentials --block-undeclared
-      agent-bom proxy --url http://localhost:3000 --policy policy.json
+    Usage (Streamable HTTP — remote server):
+      agent-bom proxy --url https://mcp.example.com/mcp --log audit.jsonl --detect-credentials --block-undeclared
+      agent-bom proxy --url http://localhost:3000 --compat-endpoints   # legacy /tools/call, /message
 
     \b
     Configure in your MCP client (e.g. Claude Desktop):
@@ -266,8 +256,8 @@ def proxy_cmd(
         if _cfg and (cfg_policy := get_policy_path(_cfg)):
             policy = str(cfg_policy)
 
-    if url:  # SSE/HTTP mode
-        sys.exit(_run_sse_proxy(url, policy, log_path, block_undeclared, alert_webhook, injection_mode))
+    if url or compat_endpoints:  # remote MCP over Streamable HTTP (or the legacy endpoints)
+        sys.exit(run_remote_proxy(url, policy, log_path, block_undeclared, alert_webhook, injection_mode, compat_endpoints))
 
     # Stdio mode: server_cmd required
     if not server_cmd:

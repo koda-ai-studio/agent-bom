@@ -245,7 +245,7 @@ async def test_sse_proxy_does_not_block_a_tool_declared_on_a_later_page(monkeypa
     stdout = io.BytesIO()
     monkeypatch.setattr(proxy.sys, "stdout", type("Stdout", (), {"buffer": stdout})())
 
-    assert await proxy._proxy_sse_server(url="https://fixture.example", block_undeclared=True) == 0
+    assert await proxy._proxy_sse_server(url="https://fixture.example", block_undeclared=True, compat_endpoints=True) == 0
 
     listing_cursors = [body.get("params", {}).get("cursor") for _url, body in posted if body.get("method") == "tools/list"]
     assert listing_cursors == [None, "p2"]
